@@ -1,0 +1,533 @@
+/* Sales Dashboard Styles */
+.sales-dashboard {
+  padding: 20px;
+  background: transparent;
+  min-height: calc(100vh - 60px); /* Adjust based on header height */
+}
+
+.dashboard-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.dashboard-header h1 {
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  font-size: 2rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.dashboard-header p {
+  color: #64748b;
+  margin: 0;
+  font-size: 16px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.dashboard-tabs {
+  display: flex;
+  margin-bottom: 20px;
+  background: transparent;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.tab-button {
+  background: transparent;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #64748b;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+}
+
+.tab-button:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.5);
+  color: #475569;
+}
+
+.tab-button.active {
+  background: rgba(255, 255, 255, 0.9);
+  color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-content {
+  background: transparent;
+  padding: 0;
+}
+
+/* Overview Section */
+.overview-section {
+  padding: 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+}
+
+.stat-card {
+  padding: 0;
+  text-align: left;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  background: #4299e1;
+  color: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+}
+
+.stat-card h3 {
+  color: #3b82f6;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.stat-card p {
+  color: #475569;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #3b82f6;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Filters Section */
+.filters-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.filters-section h4 {
+  margin: 0 0 16px 0;
+  color: #2d3748;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.filter-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Listings Section */
+.listings-section {
+  padding: 24px;
+}
+
+.section-header {
+  margin-bottom: 24px;
+}
+
+.section-header h3 {
+  margin: 0 0 8px 0;
+  color: #2d3748;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.section-header p {
+  margin: 0;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.listing-actions {
+  margin-bottom: 24px;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-button.primary {
+  background: #4299e1;
+  color: white;
+}
+
+.action-button.primary:hover {
+  background: #3182ce;
+}
+
+.listing-filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: white;
+}
+
+.listing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.listing-item {
+  display: flex;
+  padding: 20px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.listing-image {
+  width: 120px;
+  height: 80px;
+  margin-right: 16px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.placeholder-image {
+  width: 100%;
+  height: 100%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #718096;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.listing-info {
+  flex: 1;
+}
+
+.listing-info h4 {
+  margin: 0 0 4px 0;
+  color: #2d3748;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.listing-info p {
+  margin: 0 0 12px 0;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.listing-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.price {
+  color: #4299e1;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status.available {
+  background: #f0fff4;
+  color: #38a169;
+}
+
+.status.occupied {
+  background: #fef5e7;
+  color: #d69e2e;
+}
+
+.listing-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-primary, .btn-secondary, .btn-success {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-primary {
+  background: #4299e1;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #3182ce;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.btn-secondary:hover {
+  background: #cbd5e0;
+}
+
+.btn-success {
+  background: #38a169;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #2f855a;
+}
+
+/* Visits Section */
+.visits-section {
+  padding: 24px;
+}
+
+.visit-actions {
+  margin-bottom: 24px;
+}
+
+.visit-calendar {
+  margin-bottom: 32px;
+}
+
+.visit-calendar h4 {
+  margin: 0 0 16px 0;
+  color: #2d3748;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.visit-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.visit-time {
+  width: 80px;
+  color: #4299e1;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.visit-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.property {
+  color: #2d3748;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.client {
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.visit-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.visit-status.scheduled {
+  background: #fef5e7;
+  color: #d69e2e;
+}
+
+.visit-status.completed {
+  background: #f0fff4;
+  color: #38a169;
+}
+
+.visit-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.stat-item {
+  padding: 16px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  color: #718096;
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  color: #4299e1;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+/* Requests Section */
+.requests-section {
+  padding: 24px;
+}
+
+.request-filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.request-item {
+  padding: 20px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.request-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.request-info h4 {
+  margin: 0 0 4px 0;
+  color: #2d3748;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.request-info p {
+  margin: 0;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.request-date {
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.request-details p {
+  margin: 0 0 12px 0;
+  color: #4a5568;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .sales-dashboard {
+    padding: 16px;
+  }
+  
+  .dashboard-tabs {
+    flex-wrap: wrap;
+  }
+  
+  .tab-button {
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .listing-item {
+    flex-direction: column;
+  }
+  
+  .listing-image {
+    width: 100%;
+    height: 120px;
+    margin-right: 0;
+    margin-bottom: 12px;
+  }
+  
+  .listing-actions {
+    flex-direction: column;
+  }
+  
+  .visit-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .request-filters {
+    flex-direction: column;
+  }
+  
+  .request-actions {
+    flex-direction: column;
+  }
+}

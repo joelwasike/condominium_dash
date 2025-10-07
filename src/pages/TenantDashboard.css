@@ -1,0 +1,254 @@
+.tenant-dashboard {
+  padding: 20px;
+  background: transparent;
+  min-height: calc(100vh - 60px); /* Adjust based on header height */
+}
+
+.dashboard-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.dashboard-header h1 {
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  font-size: 2rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.dashboard-header p {
+  color: #64748b;
+  margin: 0;
+  font-size: 16px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+  background: transparent;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.tabs button {
+  background: transparent;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #64748b;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+}
+
+.tabs button:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.5);
+  color: #475569;
+}
+
+.tabs button.active {
+  background: rgba(255, 255, 255, 0.9);
+  color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content {
+  background: transparent;
+  padding: 0;
+}
+
+.tab-content h2 {
+  color: #1e293b;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.overview-section p, .documents-section p, .payments-section p, .maintenance-section p {
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.stat-card {
+  padding: 0;
+  text-align: left;
+}
+
+.stat-card h3 {
+  color: #3b82f6;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.stat-card p {
+  color: #475569;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.action-buttons {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.document-actions {
+  margin-bottom: 30px;
+  display: flex;
+  gap: 15px;
+}
+
+.action-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.document-list ul {
+  list-style: none;
+  padding: 0;
+}
+
+.document-list li {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s ease;
+}
+
+.document-list li:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: translateY(-1px);
+}
+
+.document-list .status {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+}
+
+.document-list .status.approved {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.document-list .status.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.document-list .status.rejected {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.payments-section table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.payments-section th, .payments-section td {
+  border: none;
+  padding: 12px 16px;
+  text-align: left;
+  font-family: 'Poppins', sans-serif;
+}
+
+.payments-section th {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.payments-section tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.payments-section tr:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.payments-section .status.paid {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.maintenance-section ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 20px;
+}
+
+.maintenance-section li {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s ease;
+}
+
+.maintenance-section li:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: translateY(-1px);
+}
+
+.maintenance-section .status.in-progress {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+}

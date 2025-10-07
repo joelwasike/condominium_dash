@@ -1,0 +1,193 @@
+/* Header Styles */
+.dashboard-header {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+  padding: 0 32px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 20px rgba(0, 0, 0, 0.08);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-title {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.1rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-info-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+.company-info, .role-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-family: 'Poppins', sans-serif;
+  color: #475569;
+}
+
+.company-info {
+  font-weight: 500;
+}
+
+.role-info {
+  font-weight: 400;
+  color: #64748b;
+}
+
+.company-name, .role-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.notification-button {
+  position: relative;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.notification-button:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.role-selector {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: white;
+  color: #374151;
+  font-size: 0.875rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.role-selector:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.role-selector:hover {
+  border-color: #9ca3af;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #374151;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  transition: background-color 0.2s;
+}
+
+.user-button:hover {
+  background-color: #f3f4f6;
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 0 16px;
+    height: 64px;
+  }
+  
+  .header-title {
+    font-size: 1rem;
+  }
+  
+  .header-right {
+    gap: 8px;
+  }
+  
+  .user-info-display {
+    padding: 6px 8px;
+  }
+  
+  .company-info, .role-info {
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+  
+  .user-button span {
+    display: none;
+  }
+  
+  .role-selector {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-info-display {
+    display: none;
+  }
+}

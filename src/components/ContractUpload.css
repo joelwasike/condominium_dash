@@ -1,0 +1,263 @@
+/* Contract Upload Styles */
+.contract-upload {
+  width: 100%;
+  max-width: 800px;
+}
+
+.upload-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.upload-header h4 {
+  margin: 0 0 8px 0;
+  color: #2d3748;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.upload-header p {
+  margin: 0;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.contract-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-section, .upload-section {
+  background: #f7fafc;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.form-section h5, .upload-section h5 {
+  margin: 0 0 16px 0;
+  color: #2d3748;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 6px;
+  color: #4a5568;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.upload-area {
+  border: 2px dashed #cbd5e0;
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  margin-bottom: 16px;
+}
+
+.upload-area:hover {
+  border-color: #4299e1;
+  background: #ebf8ff;
+}
+
+.upload-area.drag-active {
+  border-color: #4299e1;
+  background: #ebf8ff;
+  transform: scale(1.02);
+}
+
+.upload-icon {
+  color: #a0aec0;
+  margin-bottom: 16px;
+}
+
+.upload-area h5 {
+  margin: 0 0 8px 0;
+  color: #2d3748;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.upload-area p {
+  margin: 0 0 4px 0;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.upload-hint {
+  font-size: 0.75rem !important;
+  color: #a0aec0 !important;
+}
+
+.file-list {
+  margin-top: 16px;
+}
+
+.file-list h5 {
+  margin: 0 0 12px 0;
+  color: #2d3748;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.file-icon {
+  color: #4299e1;
+  margin-right: 12px;
+}
+
+.file-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-name {
+  font-weight: 500;
+  color: #2d3748;
+  font-size: 0.875rem;
+  margin-bottom: 2px;
+}
+
+.file-size {
+  color: #718096;
+  font-size: 0.75rem;
+}
+
+.remove-file {
+  background: none;
+  border: none;
+  color: #e53e3e;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.remove-file:hover {
+  background: #fed7d7;
+}
+
+.upload-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+}
+
+.btn-primary {
+  background: #4299e1;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #3182ce;
+}
+
+.btn-primary:disabled {
+  background: #a0aec0;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.btn-secondary:hover {
+  background: #cbd5e0;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .upload-area {
+    padding: 30px 15px;
+  }
+  
+  .upload-actions {
+    flex-direction: column;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+}
