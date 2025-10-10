@@ -1,15 +1,48 @@
 import React, { useState } from 'react';
-import { Home, Users, Calendar, TrendingUp, Plus, Eye, CheckCircle } from 'lucide-react';
+import { Home, Users, Calendar, TrendingUp, Plus, Eye, CheckCircle, FileText, Upload, UserPlus } from 'lucide-react';
+import Modal from '../components/Modal';
+import DocumentUpload from '../components/DocumentUpload';
+import ContractUpload from '../components/ContractUpload';
 import './SalesDashboard.css';
 
 const SalesDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showKycModal, setShowKycModal] = useState(false);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [showTenantCreationModal, setShowTenantCreationModal] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  const addNotification = (message, type = 'info') => {
+    const id = Date.now();
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 3000);
+  };
+
+  const handleKycUpload = (file, userRole) => {
+    console.log('KYC Document uploaded:', file.name, 'for role:', userRole);
+    addNotification('KYC documents uploaded successfully!', 'success');
+  };
+
+  const handleContractUpload = (contractDetails) => {
+    console.log('Contract uploaded:', contractDetails);
+    addNotification('Contract uploaded successfully!', 'success');
+  };
+
+  const handleCreateTenant = (tenantData) => {
+    console.log('New tenant created:', tenantData);
+    addNotification('Tenant account created successfully!', 'success');
+    setShowTenantCreationModal(false);
+  };
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'listings', label: 'Listings', icon: Home },
     { id: 'visits', label: 'Visits', icon: Calendar },
-    { id: 'requests', label: 'Requests', icon: Users }
+    { id: 'requests', label: 'Requests', icon: Users },
+    { id: 'documents', label: 'Documents', icon: FileText },
+    { id: 'tenants', label: 'Tenant Management', icon: UserPlus }
   ];
 
   const renderOverview = () => (
@@ -267,10 +300,133 @@ const SalesDashboard = () => {
             </div>
           </div>
               </div>
+              </div>
+            </div>
+          );
+
+  const renderDocuments = () => (
+    <div className="documents-section">
+      <h2>Document Management</h2>
+      <p>Upload and manage tenant KYC documents and contracts</p>
+      
+      <div className="document-actions">
+        <button className="action-button primary" onClick={() => setShowKycModal(true)}>
+          <Upload size={20} />
+          Upload Tenant KYC Documents
+        </button>
+        <button className="action-button primary" onClick={() => setShowContractModal(true)}>
+          <FileText size={20} />
+          Upload Essential Contract
+        </button>
+      </div>
+
+      <div className="document-list modern-card">
+        <h3>Uploaded Documents</h3>
+        <div className="document-filters">
+          <select className="filter-select">
+            <option value="">All Documents</option>
+            <option value="kyc">KYC Documents</option>
+            <option value="contracts">Contracts</option>
+          </select>
+          <select className="filter-select">
+            <option value="">All Tenants</option>
+            <option value="john">John Doe</option>
+            <option value="jane">Jane Smith</option>
+          </select>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Document Name</th>
+              <th>Tenant</th>
+              <th>Type</th>
+              <th>Upload Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Passport Copy</td>
+              <td>John Doe</td>
+              <td>KYC</td>
+              <td>2024-11-20</td>
+              <td><span className="status approved">Approved</span></td>
+              <td>
+                <button className="action-button small">View</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Lease Agreement</td>
+              <td>Jane Smith</td>
+              <td>Contract</td>
+              <td>2024-11-19</td>
+              <td><span className="status pending">Pending</span></td>
+              <td>
+                <button className="action-button small">View</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderTenantManagement = () => (
+    <div className="tenant-management-section">
+      <h2>Tenant Account Management</h2>
+      <p>Create and manage tenant accounts for new tenants</p>
+      
+      <div className="tenant-actions">
+        <button className="action-button primary" onClick={() => setShowTenantCreationModal(true)}>
+          <UserPlus size={20} />
+          Create New Tenant Account
+        </button>
+      </div>
+
+      <div className="tenants-list modern-card">
+        <h3>Existing Tenants</h3>
+        <div className="tenant-filters">
+          <select className="filter-select">
+            <option value="">All Tenants</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <input type="text" placeholder="Search tenants..." className="search-input" />
+        </div>
+        
+        <div className="tenants-grid">
+          <div className="tenant-card">
+            <div className="tenant-info">
+              <h4>John Doe</h4>
+              <p>john.doe@email.com</p>
+              <p>Property: 123 Main St</p>
+              <span className="status active">Active</span>
+            </div>
+            <div className="tenant-actions">
+              <button className="action-button small">Edit</button>
+              <button className="action-button small">View Details</button>
             </div>
           </div>
-        );
-      
+          
+          <div className="tenant-card">
+            <div className="tenant-info">
+              <h4>Jane Smith</h4>
+              <p>jane.smith@email.com</p>
+              <p>Property: 456 Oak Ave</p>
+              <span className="status active">Active</span>
+            </div>
+            <div className="tenant-actions">
+              <button className="action-button small">Edit</button>
+              <button className="action-button small">View Details</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+        
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -281,6 +437,10 @@ const SalesDashboard = () => {
         return renderVisits();
       case 'requests':
         return renderRequests();
+      case 'documents':
+        return renderDocuments();
+      case 'tenants':
+        return renderTenantManagement();
       default:
         return renderOverview();
     }
@@ -312,6 +472,86 @@ const SalesDashboard = () => {
       <div className="dashboard-content modern-container">
         {renderContent()}
       </div>
+
+      {/* Notification System */}
+      <div className="notifications-container">
+        {notifications.map(notification => (
+          <div key={notification.id} className={`notification notification-${notification.type}`}>
+            <span>{notification.message}</span>
+            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Document Upload Modals */}
+      <Modal isOpen={showKycModal} onClose={() => setShowKycModal(false)}>
+        <h2>Upload Tenant KYC Documents</h2>
+        <DocumentUpload onFileUpload={(file) => handleKycUpload(file, 'tenant')} />
+      </Modal>
+
+      <Modal isOpen={showContractModal} onClose={() => setShowContractModal(false)}>
+        <ContractUpload onContractUpload={handleContractUpload} />
+      </Modal>
+
+      {/* Tenant Creation Modal */}
+      {showTenantCreationModal && (
+        <div className="modal-overlay" onClick={() => setShowTenantCreationModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Create New Tenant Account</h3>
+              <button className="modal-close" onClick={() => setShowTenantCreationModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const tenantData = {
+                  firstName: formData.get('firstName'),
+                  lastName: formData.get('lastName'),
+                  email: formData.get('email'),
+                  phone: formData.get('phone'),
+                  property: formData.get('property')
+                };
+                handleCreateTenant(tenantData);
+              }}>
+                <div className="form-group">
+                  <label>First Name</label>
+                  <input type="text" name="firstName" required />
+                </div>
+                <div className="form-group">
+                  <label>Last Name</label>
+                  <input type="text" name="lastName" required />
+                </div>
+                <div className="form-group">
+                  <label>Email</label>
+                  <input type="email" name="email" required />
+                </div>
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input type="tel" name="phone" required />
+                </div>
+                <div className="form-group">
+                  <label>Property</label>
+                  <select name="property" required>
+                    <option value="">Select Property</option>
+                    <option value="123-main">123 Main Street</option>
+                    <option value="456-oak">456 Oak Avenue</option>
+                    <option value="789-pine">789 Pine Lane</option>
+                  </select>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowTenantCreationModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary">
+                    Create Tenant Account
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

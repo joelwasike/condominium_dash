@@ -1,28 +1,74 @@
 import React, { useState } from 'react';
-import Modal from '../components/Modal';
-import DocumentUpload from '../components/DocumentUpload';
-import ContractUpload from '../components/ContractUpload';
 import ReportSubmission from '../components/ReportSubmission';
-import { FileText, Home, DollarSign, Wrench, Calendar } from 'lucide-react';
+import { Home, DollarSign, Wrench, Calendar, Camera, Upload, X } from 'lucide-react';
 import './TenantDashboard.css';
 
 const TenantDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [isKycModalOpen, setIsKycModalOpen] = useState(false);
-  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [maintenanceForm, setMaintenanceForm] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    photos: []
+  });
+  const [notifications, setNotifications] = useState([]);
 
-  const handleKycUpload = (file) => {
-    console.log('KYC Document uploaded:', file.name);
-    // Here you would typically send the file to a backend service
-    // After successful upload, you might close the modal or show a success message
-    // setIsKycModalOpen(false);
+  const addNotification = (message, type = 'info') => {
+    const id = Date.now();
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 3000);
   };
 
-  const handleContractUpload = (contractDetails) => {
-    console.log('Contract uploaded:', contractDetails);
-    // Here you would typically send the contract details and file to a backend service
-    // After successful upload, you might close the modal or show a success message
-    // setIsContractModalOpen(false);
+  const handleMaintenanceSubmit = (e) => {
+    e.preventDefault();
+    
+    const maintenanceRequest = {
+      id: Date.now(),
+      title: maintenanceForm.title,
+      description: maintenanceForm.description,
+      priority: maintenanceForm.priority,
+      photos: maintenanceForm.photos,
+      status: 'pending',
+      date: new Date().toLocaleDateString(),
+      tenant: 'Current Tenant'
+    };
+
+    console.log('Maintenance request submitted:', maintenanceRequest);
+    addNotification('Maintenance request submitted successfully!', 'success');
+    
+    // Reset form
+    setMaintenanceForm({
+      title: '',
+      description: '',
+      priority: 'medium',
+      photos: []
+    });
+    setShowMaintenanceModal(false);
+  };
+
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const newPhotos = files.map(file => ({
+      id: Date.now() + Math.random(),
+      file: file,
+      name: file.name,
+      preview: URL.createObjectURL(file)
+    }));
+    
+    setMaintenanceForm(prev => ({
+      ...prev,
+      photos: [...prev.photos, ...newPhotos]
+    }));
+  };
+
+  const removePhoto = (photoId) => {
+    setMaintenanceForm(prev => ({
+      ...prev,
+      photos: prev.photos.filter(photo => photo.id !== photoId)
+    }));
   };
 
         return (
@@ -35,9 +81,6 @@ const TenantDashboard = () => {
       <div className="tabs modern-container">
         <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>
           <Home size={18} /> Overview
-        </button>
-        <button className={activeTab === 'documents' ? 'active' : ''} onClick={() => setActiveTab('documents')}>
-          <FileText size={18} /> Documents
         </button>
         <button className={activeTab === 'payments' ? 'active' : ''} onClick={() => setActiveTab('payments')}>
           <DollarSign size={18} /> Payments
@@ -73,38 +116,6 @@ const TenantDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'documents' && (
-          <div className="documents-section">
-            <h2>Your Documents</h2>
-            <p>Manage your KYC documents and essential contracts here.</p>
-            <div className="document-actions">
-              <button className="action-button" onClick={() => setIsKycModalOpen(true)}>
-                Upload KYC Documents
-              </button>
-              <button className="action-button" onClick={() => setIsContractModalOpen(true)}>
-                Upload Essential Contract
-              </button>
-            </div>
-
-            <div className="document-list modern-card">
-              <h3>Uploaded Documents</h3>
-              <ul>
-                <li>Lease Agreement (PDF) - <span className="status approved">Approved</span></li>
-                <li>Passport Copy (JPG) - <span className="status pending">Pending Review</span></li>
-                <li>Utility Bill (PDF) - <span className="status approved">Approved</span></li>
-              </ul>
-            </div>
-
-            <Modal isOpen={isKycModalOpen} onClose={() => setIsKycModalOpen(false)}>
-              <h2>Upload KYC Documents</h2>
-              <DocumentUpload onFileUpload={handleKycUpload} />
-            </Modal>
-
-            <Modal isOpen={isContractModalOpen} onClose={() => setIsContractModalOpen(false)}>
-              <ContractUpload onContractUpload={handleContractUpload} />
-            </Modal>
-          </div>
-        )}
 
         {activeTab === 'payments' && (
           <div className="payments-section">
@@ -149,7 +160,7 @@ const TenantDashboard = () => {
           <div className="maintenance-section">
             <h2>Maintenance Requests</h2>
             <p>Submit new requests or check the status of existing ones.</p>
-            <button className="action-button">Submit New Request</button>
+            <button className="action-button" onClick={() => setShowMaintenanceModal(true)}>Submit New Request</button>
 
             <div className="modern-card">
               <h3>Open Requests</h3>
@@ -161,6 +172,116 @@ const TenantDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Notification System */}
+      <div className="notifications-container">
+        {notifications.map(notification => (
+          <div key={notification.id} className={`notification notification-${notification.type}`}>
+            <span>{notification.message}</span>
+            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Maintenance Request Modal */}
+      {showMaintenanceModal && (
+        <div className="modal-overlay" onClick={() => setShowMaintenanceModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Submit Maintenance Request</h3>
+              <button className="modal-close" onClick={() => setShowMaintenanceModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleMaintenanceSubmit}>
+                <div className="form-group">
+                  <label htmlFor="title">Issue Title</label>
+                  <input
+                    type="text"
+                    id="title"
+                    value={maintenanceForm.title}
+                    onChange={(e) => setMaintenanceForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g., Leaky faucet in kitchen"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="priority">Priority Level</label>
+                  <select
+                    id="priority"
+                    value={maintenanceForm.priority}
+                    onChange={(e) => setMaintenanceForm(prev => ({ ...prev, priority: e.target.value }))}
+                    required
+                  >
+                    <option value="low">Low - Can wait</option>
+                    <option value="medium">Medium - Should be fixed soon</option>
+                    <option value="high">High - Urgent</option>
+                    <option value="emergency">Emergency - Immediate attention needed</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="description">Description</label>
+                  <textarea
+                    id="description"
+                    value={maintenanceForm.description}
+                    onChange={(e) => setMaintenanceForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Please describe the issue in detail..."
+                    rows="4"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="photos">Upload Photos (Optional)</label>
+                  <div className="photo-upload-area">
+                    <input
+                      type="file"
+                      id="photos"
+                      accept="image/*"
+                      multiple
+                      onChange={handlePhotoUpload}
+                      style={{ display: 'none' }}
+                    />
+                    <label htmlFor="photos" className="photo-upload-button">
+                      <Camera size={20} />
+                      <span>Choose Photos</span>
+                    </label>
+                    <p className="photo-help-text">Upload photos to help describe the issue (max 5 photos)</p>
+                  </div>
+
+                  {maintenanceForm.photos.length > 0 && (
+                    <div className="photo-preview-grid">
+                      {maintenanceForm.photos.map(photo => (
+                        <div key={photo.id} className="photo-preview-item">
+                          <img src={photo.preview} alt={photo.name} />
+                          <button
+                            type="button"
+                            className="remove-photo-button"
+                            onClick={() => removePhoto(photo.id)}
+                          >
+                            <X size={16} />
+                          </button>
+                          <span className="photo-name">{photo.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowMaintenanceModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary">
+                    Submit Request
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

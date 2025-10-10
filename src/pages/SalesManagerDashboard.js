@@ -1,9 +1,27 @@
 import React, { useState } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText } from 'lucide-react';
+import Modal from '../components/Modal';
+import DocumentUpload from '../components/DocumentUpload';
+import ContractUpload from '../components/ContractUpload';
 import './SalesManagerDashboard.css';
 
 const SalesManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showTenantCreationModal, setShowTenantCreationModal] = useState(false);
+  const [showKycModal, setShowKycModal] = useState(false);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [newTenantData, setNewTenantData] = useState(null);
+  const [uploadedDocuments, setUploadedDocuments] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Documents
+
+  const addNotification = (message, type = 'info') => {
+    const id = Date.now();
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 3000);
+  };
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
@@ -20,12 +38,61 @@ const SalesManagerDashboard = () => {
     { id: 5, address: '654 Maple Dr', type: 'House', status: 'Vacant', tenant: null, rent: 2200, urgency: 'high' },
   ];
 
-  const mockClients = [
+  const [mockClients, setMockClients] = useState([
     { id: 1, name: 'John Doe', property: '123 Main St, Apt 4B', status: 'Active', lastPayment: '2024-11-01', amount: 1500, phone: '+1-555-0123', email: 'john@example.com' },
     { id: 2, name: 'Jane Smith', property: '789 Pine Ln', status: 'Active', lastPayment: '2024-11-01', amount: 2000, phone: '+1-555-0124', email: 'jane@example.com' },
     { id: 3, name: 'Bob Johnson', property: '321 Elm St, Apt 1A', status: 'Overdue', lastPayment: '2024-10-15', amount: 1800, phone: '+1-555-0125', email: 'bob@example.com' },
     { id: 4, name: 'Alice Brown', property: '456 Oak Ave, Unit 2', status: 'Waiting List', lastPayment: null, amount: 1200, phone: '+1-555-0126', email: 'alice@example.com' },
-  ];
+  ]);
+
+  const handleKycUpload = (file, userRole) => {
+    setUploadedDocuments(prev => [...prev, { type: 'KYC', file: file, name: file.name }]);
+    addNotification('KYC document uploaded successfully!', 'success');
+    setShowKycModal(false);
+  };
+
+  const handleContractUpload = (files, contractDetails, userRole) => {
+    setUploadedDocuments(prev => [...prev, { type: 'Contract', files: files, details: contractDetails }]);
+    addNotification('Contract uploaded successfully!', 'success');
+    setShowContractModal(false);
+  };
+
+  const handleCreateTenant = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const tenantData = {
+      id: Date.now(),
+      name: `${formData.get('firstName')} ${formData.get('lastName')}`,
+      property: formData.get('property'),
+      status: 'Active',
+      lastPayment: new Date().toLocaleDateString(),
+      amount: parseFloat(formData.get('rent')),
+      phone: formData.get('phone'),
+      email: formData.get('email'),
+      documents: uploadedDocuments
+    };
+    
+    setNewTenantData(tenantData);
+    setCurrentStep(2); // Move to document upload step
+  };
+
+  const finalizeTenantCreation = () => {
+    if (newTenantData) {
+      setMockClients(prev => [...prev, { ...newTenantData, documents: uploadedDocuments }]);
+      addNotification(`Tenant "${newTenantData.name}" created successfully!`, 'success');
+      
+      // Reset states
+      setShowTenantCreationModal(false);
+      setNewTenantData(null);
+      setUploadedDocuments([]);
+      setCurrentStep(1);
+    }
+  };
+
+  const removeDocument = (index) => {
+    setUploadedDocuments(prev => prev.filter((_, i) => i !== index));
+    addNotification('Document removed', 'info');
+  };
 
   const renderOverview = () => (
     <div className="overview-section">
@@ -198,6 +265,13 @@ const SalesManagerDashboard = () => {
       <div className="section-header">
         <h3>Centralized Client/Tenant Profile Management</h3>
         <p>Manage all tenant profiles and track their status</p>
+      </div>
+
+      <div className="client-actions">
+        <button className="action-button primary" onClick={() => setShowTenantCreationModal(true)}>
+          <UserPlus size={20} />
+          Create New Tenant
+        </button>
       </div>
 
       <div className="client-filters">
@@ -402,6 +476,169 @@ const SalesManagerDashboard = () => {
       <div className="dashboard-content">
         {renderContent()}
       </div>
+
+      {/* Notification System */}
+      <div className="notifications-container">
+        {notifications.map(notification => (
+          <div key={notification.id} className={`notification notification-${notification.type}`}>
+            <span>{notification.message}</span>
+            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Tenant Creation Modal */}
+      {showTenantCreationModal && (
+        <div className="modal-overlay" onClick={() => {
+          setShowTenantCreationModal(false);
+          setCurrentStep(1);
+          setNewTenantData(null);
+          setUploadedDocuments([]);
+        }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{currentStep === 1 ? 'Create New Tenant - Basic Information' : 'Create New Tenant - Upload Documents'}</h3>
+              <button className="modal-close" onClick={() => {
+                setShowTenantCreationModal(false);
+                setCurrentStep(1);
+                setNewTenantData(null);
+                setUploadedDocuments([]);
+              }}>×</button>
+            </div>
+            <div className="modal-body">
+              {currentStep === 1 ? (
+                <form onSubmit={handleCreateTenant}>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="firstName">First Name</label>
+                      <input type="text" name="firstName" required placeholder="Enter first name" />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="lastName">Last Name</label>
+                      <input type="text" name="lastName" required placeholder="Enter last name" />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="email">Email Address</label>
+                      <input type="email" name="email" required placeholder="tenant@example.com" />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="phone">Phone Number</label>
+                      <input type="tel" name="phone" required placeholder="+1-555-0000" />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="property">Property</label>
+                      <select name="property" required>
+                        <option value="">Select Property</option>
+                        <option value="123 Main St, Apt 4B">123 Main St, Apt 4B</option>
+                        <option value="456 Oak Ave, Unit 2">456 Oak Ave, Unit 2</option>
+                        <option value="789 Pine Ln">789 Pine Ln</option>
+                        <option value="321 Elm St, Apt 1A">321 Elm St, Apt 1A</option>
+                        <option value="654 Maple Dr">654 Maple Dr</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="rent">Monthly Rent</label>
+                      <input type="number" name="rent" step="0.01" required placeholder="0.00" />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="moveInDate">Move-in Date</label>
+                    <input type="date" name="moveInDate" required />
+                  </div>
+
+                  <div className="modal-footer">
+                    <button type="button" className="action-button secondary" onClick={() => {
+                      setShowTenantCreationModal(false);
+                      setCurrentStep(1);
+                    }}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="action-button primary">
+                      Next: Upload Documents
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="document-upload-step">
+                  <div className="tenant-summary">
+                    <h4>Tenant Information:</h4>
+                    <p><strong>Name:</strong> {newTenantData?.name}</p>
+                    <p><strong>Email:</strong> {newTenantData?.email}</p>
+                    <p><strong>Property:</strong> {newTenantData?.property}</p>
+                    <p><strong>Rent:</strong> €{newTenantData?.amount?.toFixed(2)}</p>
+                  </div>
+
+                  <div className="document-upload-section">
+                    <h4>Upload Required Documents</h4>
+                    <p>Please upload the tenant's KYC documents and lease contract</p>
+
+                    <div className="upload-buttons">
+                      <button className="action-button primary" onClick={() => setShowKycModal(true)}>
+                        <Upload size={20} />
+                        Upload KYC Documents
+                      </button>
+                      <button className="action-button primary" onClick={() => setShowContractModal(true)}>
+                        <FileText size={20} />
+                        Upload Lease Contract
+                      </button>
+                    </div>
+
+                    {uploadedDocuments.length > 0 && (
+                      <div className="uploaded-documents-list">
+                        <h5>Uploaded Documents:</h5>
+                        {uploadedDocuments.map((doc, index) => (
+                          <div key={index} className="document-item">
+                            <FileText size={16} />
+                            <span>{doc.type}: {doc.name || doc.details?.contractType || 'Contract'}</span>
+                            <button 
+                              className="remove-doc-button"
+                              onClick={() => removeDocument(index)}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="modal-footer">
+                    <button type="button" className="action-button secondary" onClick={() => setCurrentStep(1)}>
+                      Back
+                    </button>
+                    <button 
+                      type="button" 
+                      className="action-button primary" 
+                      onClick={finalizeTenantCreation}
+                      disabled={uploadedDocuments.length === 0}
+                    >
+                      Create Tenant Account
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KYC Upload Modal */}
+      <Modal isOpen={showKycModal} onClose={() => setShowKycModal(false)}>
+        <h2>Upload Tenant KYC Documents</h2>
+        <DocumentUpload onFileUpload={(file) => handleKycUpload(file, 'tenant')} />
+      </Modal>
+
+      {/* Contract Upload Modal */}
+      <Modal isOpen={showContractModal} onClose={() => setShowContractModal(false)}>
+        <ContractUpload onContractUpload={handleContractUpload} />
+      </Modal>
     </div>
   );
 };
