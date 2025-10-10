@@ -29,7 +29,8 @@ const LoginPage = ({ onLogin }) => {
     { value: 'sales-manager', label: 'Sales Manager' },
     { value: 'technician', label: 'Technical Manager' },
     { value: 'landlord', label: 'Landlord (Portal)' },
-    { value: 'system', label: 'System (Automation)' }
+    { value: 'system', label: 'System (Automation)' },
+    { value: 'super-admin', label: 'Super Admin' }
   ];
 
   const handleInputChange = (e) => {

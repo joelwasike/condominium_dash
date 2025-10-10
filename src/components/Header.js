@@ -16,7 +16,8 @@ const Header = ({ userRole, onRoleChange, onMenuClick, userCompany }) => {
       'sales-manager': 'Sales Manager',
       'technician': 'Technical Manager',
       'landlord': 'Landlord (Portal)',
-      'system': 'System (Automation)'
+      'system': 'System (Automation)',
+      'super-admin': 'Super Admin'
     };
     return roleMap[role] || role;
   };
@@ -65,6 +66,7 @@ const Header = ({ userRole, onRoleChange, onMenuClick, userCompany }) => {
             <option value="technician">Technical Manager</option>
             <option value="landlord">Landlord (Portal)</option>
             <option value="system">System (Automation)</option>
+            <option value="super-admin">Super Admin</option>
           </select>
         </div>
       </div>

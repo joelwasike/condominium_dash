@@ -11,6 +11,7 @@ import SalesManagerDashboard from './pages/SalesManagerDashboard';
 import TechnicianDashboard from './pages/TechnicianDashboard';
 import LandlordDashboard from './pages/LandlordDashboard';
 import SystemDashboard from './pages/SystemDashboard';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import CheckoutPage from './pages/CheckoutPage';
@@ -101,6 +102,12 @@ function App() {
           <Route path="/system" element={
             <DashboardLayout>
               <SystemDashboard />
+            </DashboardLayout>
+          } />
+          
+          <Route path="/super-admin" element={
+            <DashboardLayout>
+              <SuperAdminDashboard />
             </DashboardLayout>
           } />
           
