@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, TrendingUp, Building, Receipt, Download, Filter, Search, CreditCard, CheckCircle, XCircle, User, FileText } from 'lucide-react';
+import { DollarSign, TrendingUp, Building, Receipt, Download, Filter, Search, CreditCard, CheckCircle, XCircle, User, FileText, Mail, ArrowRightLeft } from 'lucide-react';
 import './AccountingDashboard.css';
 
 const AccountingDashboard = () => {
@@ -9,6 +9,11 @@ const AccountingDashboard = () => {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenses, setExpenses] = useState([
+    { id: 1, scope: 'Building', building: '123 Main St', category: 'Maintenance', amount: 320.00, date: '2024-11-03', notes: 'Plumbing fix' },
+    { id: 2, scope: 'SAAF IMMO', building: '-', category: 'Software', amount: 199.00, date: '2024-11-05', notes: 'SaaS subscription' }
+  ]);
 
   const addNotification = (message, type = 'info') => {
     const id = Date.now();
@@ -23,7 +28,8 @@ const AccountingDashboard = () => {
     { id: 'collections', label: 'Collections', icon: TrendingUp },
     { id: 'payments', label: 'Landlord Payments', icon: Building },
     { id: 'tenant-payments', label: 'Tenant Payments', icon: CreditCard },
-    { id: 'reports', label: 'Reports', icon: Receipt }
+    { id: 'reports', label: 'Reports', icon: Receipt },
+    { id: 'expenses', label: 'Expenses', icon: FileText }
   ];
 
   const mockCollections = [
@@ -40,10 +46,10 @@ const AccountingDashboard = () => {
   ];
 
   const [tenantPayments, setTenantPayments] = useState([
-    { id: 1, tenant: 'John Doe', property: '123 Main St', amount: 1500, method: 'Cash', date: '2024-11-20', status: 'Pending', receiptNumber: null },
-    { id: 2, tenant: 'Jane Smith', property: '456 Oak Ave', amount: 1200, method: 'Mobile Money', date: '2024-11-20', status: 'Pending', receiptNumber: null },
-    { id: 3, tenant: 'Bob Johnson', property: '789 Pine Ln', amount: 2000, method: 'Bank Transfer', date: '2024-11-19', status: 'Approved', receiptNumber: 'RCP-001' },
-    { id: 4, tenant: 'Alice Brown', property: '321 Elm St', amount: 800, method: 'Cash', date: '2024-11-19', status: 'Approved', receiptNumber: 'RCP-002' },
+    { id: 1, tenant: 'John Doe', property: '123 Main St', amount: 1500, method: 'Cash', date: '2024-11-20', status: 'Pending', receiptNumber: null, chargeType: 'Rent' },
+    { id: 2, tenant: 'Jane Smith', property: '456 Oak Ave', amount: 1200, method: 'Mobile Money', date: '2024-11-20', status: 'Pending', receiptNumber: null, chargeType: 'Deposit' },
+    { id: 3, tenant: 'Bob Johnson', property: '789 Pine Ln', amount: 2000, method: 'Bank Transfer', date: '2024-11-19', status: 'Approved', receiptNumber: 'RCP-001', chargeType: 'Rent' },
+    { id: 4, tenant: 'Alice Brown', property: '321 Elm St', amount: 800, method: 'Cash', date: '2024-11-19', status: 'Approved', receiptNumber: 'RCP-002', chargeType: 'Late Fee' },
   ]);
 
   const generateReceipt = (payment) => {
@@ -58,6 +64,7 @@ const AccountingDashboard = () => {
       Tenant: ${payment.tenant}
       Property: ${payment.property}
       Amount Paid: €${payment.amount.toFixed(2)}
+      Charge Type: ${payment.chargeType || 'N/A'}
       Payment Method: ${payment.method}
       Payment Date: ${payment.date}
       
@@ -87,6 +94,18 @@ const AccountingDashboard = () => {
     ));
 
     addNotification('Receipt generated and downloaded!', 'success');
+  };
+
+  const sendReceipt = (payment) => {
+    if (!payment.receiptNumber) {
+      addNotification('Generate receipt before sending.', 'warning');
+      return;
+    }
+    addNotification(`Receipt ${payment.receiptNumber} emailed to ${payment.tenant}.`, 'success');
+  };
+
+  const transferToLandlord = (paymentId) => {
+    addNotification(`Transfer to landlord initiated for payment #${paymentId}.`, 'success');
   };
 
   const approvePayment = (payment) => {
@@ -334,7 +353,9 @@ const AccountingDashboard = () => {
                 <td className={`status ${payment.status.toLowerCase()}`}>{payment.status}</td>
                 <td>
                   <button className="table-action-button view">View</button>
-                  <button className="table-action-button transfer">Transfer</button>
+                  <button className="table-action-button transfer" onClick={() => transferToLandlord(payment.id)} title="Automatic Transfer">
+                    <ArrowRightLeft size={16} /> Transfer
+                  </button>
                 </td>
               </tr>
             ))}
@@ -410,6 +431,44 @@ const AccountingDashboard = () => {
             <button className="btn-secondary">Download</button>
           </div>
         </div>
+      </div>
+
+      <div className="monthly-summary">
+        <h4>Monthly Payment Summary</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Building</th>
+              <th>Rent Collected</th>
+              <th>Deposits Collected</th>
+              <th>Commission</th>
+              <th>Net to Landlords</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>123 Main St</td>
+              <td>€8,500</td>
+              <td>€1,200</td>
+              <td>€950</td>
+              <td>€8,750</td>
+            </tr>
+            <tr>
+              <td>456 Oak Ave</td>
+              <td>€6,200</td>
+              <td>€0</td>
+              <td>€620</td>
+              <td>€5,580</td>
+            </tr>
+            <tr>
+              <td>789 Pine Ln</td>
+              <td>€12,800</td>
+              <td>€500</td>
+              <td>€1,330</td>
+              <td>€11,970</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -511,6 +570,15 @@ const AccountingDashboard = () => {
                         </button>
                       </>
                     )}
+                    {payment.receiptNumber && (
+                      <button 
+                        className="action-button small"
+                        onClick={() => sendReceipt(payment)}
+                        title="Send Receipt"
+                      >
+                        <Mail size={16} />
+                      </button>
+                    )}
                     <button 
                       className="action-button small"
                       onClick={() => generateReceipt(payment)}
@@ -520,6 +588,49 @@ const AccountingDashboard = () => {
                     </button>
                   </div>
                 </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderExpenses = () => (
+    <div className="expenses-section">
+      <div className="section-header">
+        <h3>Expense Management</h3>
+        <p>Track expenses by building or for SAAF IMMO</p>
+      </div>
+
+      <div className="payment-actions">
+        <button className="action-button primary" onClick={() => setShowExpenseModal(true)}>
+          <FileText size={20} />
+          Add Expense
+        </button>
+      </div>
+
+      <div className="payments-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Scope</th>
+              <th>Building</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {expenses.map(exp => (
+              <tr key={exp.id}>
+                <td>{exp.date}</td>
+                <td>{exp.scope}</td>
+                <td>{exp.building}</td>
+                <td>{exp.category}</td>
+                <td>€{exp.amount.toFixed(2)}</td>
+                <td>{exp.notes}</td>
               </tr>
             ))}
           </tbody>
@@ -540,6 +651,8 @@ const AccountingDashboard = () => {
         return renderTenantPayments();
       case 'reports':
         return renderReports();
+      case 'expenses':
+        return renderExpenses();
       default:
         return renderOverview();
     }
@@ -602,7 +715,8 @@ const AccountingDashboard = () => {
                   method: formData.get('method'),
                   date: new Date().toLocaleDateString(),
                   status: 'Pending',
-                  receiptNumber: null
+                  receiptNumber: null,
+                  chargeType: formData.get('chargeType') || 'Rent'
                 };
                 setTenantPayments(prev => [newPayment, ...prev]);
                 addNotification('Payment recorded successfully!', 'success');
@@ -633,6 +747,16 @@ const AccountingDashboard = () => {
                     <option value="Cash">Cash</option>
                     <option value="Mobile Money">Mobile Money</option>
                     <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="chargeType">Charge Type</label>
+                  <select name="chargeType" required>
+                    <option value="">Select Charge</option>
+                    <option value="Rent">Rent</option>
+                    <option value="Deposit">Deposit</option>
+                    <option value="Late Fee">Late Fee</option>
+                    <option value="Maintenance">Maintenance</option>
                   </select>
                 </div>
                 <div className="modal-footer">
@@ -675,6 +799,86 @@ const AccountingDashboard = () => {
                   Approve Payment
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expense Modal */}
+      {showExpenseModal && (
+        <div className="modal-overlay" onClick={() => setShowExpenseModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Expense</h3>
+              <button className="modal-close" onClick={() => setShowExpenseModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const expense = {
+                  id: Date.now(),
+                  scope: formData.get('scope'),
+                  building: formData.get('scope') === 'SAAF IMMO' ? '-' : formData.get('building'),
+                  category: formData.get('category'),
+                  amount: parseFloat(formData.get('amount')),
+                  date: formData.get('date'),
+                  notes: formData.get('notes')
+                };
+                setExpenses(prev => [expense, ...prev]);
+                addNotification('Expense added successfully!', 'success');
+                setShowExpenseModal(false);
+              }}>
+                <div className="form-group">
+                  <label>Scope</label>
+                  <select name="scope" required>
+                    <option value="">Select Scope</option>
+                    <option value="Building">Building</option>
+                    <option value="SAAF IMMO">SAAF IMMO</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Building (if Building scope)</label>
+                  <select name="building">
+                    <option value="">Select Building</option>
+                    <option value="123 Main St">123 Main St</option>
+                    <option value="456 Oak Ave">456 Oak Ave</option>
+                    <option value="789 Pine Ln">789 Pine Ln</option>
+                    <option value="321 Elm St">321 Elm St</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Category</label>
+                  <select name="category" required>
+                    <option value="">Select Category</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Taxes">Taxes</option>
+                    <option value="Software">Software</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Amount</label>
+                  <input type="number" name="amount" step="0.01" required />
+                </div>
+                <div className="form-group">
+                  <label>Date</label>
+                  <input type="date" name="date" required />
+                </div>
+                <div className="form-group">
+                  <label>Notes</label>
+                  <input type="text" name="notes" placeholder="Optional" />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowExpenseModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary">
+                    Add Expense
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

@@ -8,7 +8,8 @@
 # testing
 /coverage
 
-
+/backend/
+/backend/.env
 
 # misc
 .DS_Store

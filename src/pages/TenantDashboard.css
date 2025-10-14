@@ -554,6 +554,137 @@
   }
 }
 
+/* Payment Options Styles */
+.payment-options {
+  margin-bottom: 30px;
+}
+
+.payment-options h3 {
+  color: #1e293b;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.payment-options p {
+  color: #64748b;
+  margin-bottom: 20px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.payment-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.payment-method-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.payment-method-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+.payment-method-btn svg {
+  color: white;
+}
+
+.payment-method-btn span {
+  font-weight: 500;
+}
+
+/* Payment History Styles */
+.payment-history {
+  margin-top: 30px;
+}
+
+.payment-history h3 {
+  color: #1e293b;
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.payments-section table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.payments-section th, .payments-section td {
+  border: none;
+  padding: 12px 16px;
+  text-align: left;
+  font-family: 'Poppins', sans-serif;
+}
+
+.payments-section th {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.payments-section tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.payments-section tr:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.payments-section .status.paid {
+  color: #10b981;
+  font-weight: 500;
+}
+
+/* Download Button Styles */
+.download-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.download-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.download-btn svg {
+  color: white;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .modal-content {
@@ -583,5 +714,29 @@
   .notification {
     min-width: auto;
     max-width: none;
+  }
+  
+  /* Mobile-specific payment styles */
+  .payment-methods {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .payment-method-btn {
+    padding: 16px;
+    font-size: 13px;
+  }
+  
+  .payments-section table {
+    font-size: 0.8rem;
+  }
+  
+  .payments-section th, .payments-section td {
+    padding: 8px 12px;
+  }
+  
+  .download-btn {
+    padding: 6px 10px;
+    font-size: 11px;
   }
 }

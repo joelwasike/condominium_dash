@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
-import { Home, Users, Calendar, TrendingUp, Plus, Eye, CheckCircle, FileText, Upload, UserPlus } from 'lucide-react';
-import Modal from '../components/Modal';
-import DocumentUpload from '../components/DocumentUpload';
-import ContractUpload from '../components/ContractUpload';
+import { Home, Users, Calendar, TrendingUp, Plus, Eye, CheckCircle } from 'lucide-react';
 import './SalesDashboard.css';
 
 const SalesDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [showKycModal, setShowKycModal] = useState(false);
-  const [showContractModal, setShowContractModal] = useState(false);
-  const [showTenantCreationModal, setShowTenantCreationModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [showAddListingModal, setShowAddListingModal] = useState(false);
+  const [showEditListingModal, setShowEditListingModal] = useState(false);
+  const [showScheduleVisitModal, setShowScheduleVisitModal] = useState(false);
+  const [selectedListing, setSelectedListing] = useState(null);
 
   const addNotification = (message, type = 'info') => {
     const id = Date.now();
@@ -20,29 +18,36 @@ const SalesDashboard = () => {
     }, 3000);
   };
 
-  const handleKycUpload = (file, userRole) => {
-    console.log('KYC Document uploaded:', file.name, 'for role:', userRole);
-    addNotification('KYC documents uploaded successfully!', 'success');
+  const handleAddListing = (listingData) => {
+    console.log('New listing added:', listingData);
+    addNotification('Listing added successfully!', 'success');
+    setShowAddListingModal(false);
   };
 
-  const handleContractUpload = (contractDetails) => {
-    console.log('Contract uploaded:', contractDetails);
-    addNotification('Contract uploaded successfully!', 'success');
+  const handleEditListing = (listingData) => {
+    console.log('Listing updated:', listingData);
+    addNotification('Listing updated successfully!', 'success');
+    setShowEditListingModal(false);
+    setSelectedListing(null);
   };
 
-  const handleCreateTenant = (tenantData) => {
-    console.log('New tenant created:', tenantData);
-    addNotification('Tenant account created successfully!', 'success');
-    setShowTenantCreationModal(false);
+  const handleScheduleVisit = (visitData) => {
+    console.log('Visit scheduled:', visitData);
+    addNotification('Visit scheduled successfully!', 'success');
+    setShowScheduleVisitModal(false);
   };
+
+  const openEditListing = (listing) => {
+    setSelectedListing(listing);
+    setShowEditListingModal(true);
+  };
+
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'listings', label: 'Listings', icon: Home },
     { id: 'visits', label: 'Visits', icon: Calendar },
-    { id: 'requests', label: 'Requests', icon: Users },
-    { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'tenants', label: 'Tenant Management', icon: UserPlus }
+    { id: 'requests', label: 'Requests', icon: Users }
   ];
 
   const renderOverview = () => (
@@ -115,7 +120,7 @@ const SalesDashboard = () => {
       </div>
       
       <div className="listing-actions">
-        <button className="action-button primary">
+        <button className="action-button primary" onClick={() => setShowAddListingModal(true)}>
           <Plus size={20} />
           Add New Listing
         </button>
@@ -153,7 +158,7 @@ const SalesDashboard = () => {
                 <Eye size={16} />
                 View Details
               </button>
-              <button className="btn-primary">
+              <button className="btn-primary" onClick={() => openEditListing({ id: 1, address: '123 Main Street', type: '3 Bedroom, 2 Bathroom Apartment', price: '$1,200/month', status: 'Available' })}>
                 Edit Listing
               </button>
             </div>
@@ -175,7 +180,7 @@ const SalesDashboard = () => {
                 <Eye size={16} />
                 View Details
               </button>
-              <button className="btn-primary">
+              <button className="btn-primary" onClick={() => openEditListing({ id: 2, address: '456 Oak Avenue', type: '2 Bedroom, 1 Bathroom House', price: '$900/month', status: 'Occupied' })}>
                 Edit Listing
               </button>
             </div>
@@ -193,7 +198,7 @@ const SalesDashboard = () => {
       </div>
       
       <div className="visit-actions">
-        <button className="action-button primary">
+        <button className="action-button primary" onClick={() => setShowScheduleVisitModal(true)}>
           <Plus size={20} />
           Schedule New Visit
         </button>
@@ -304,128 +309,6 @@ const SalesDashboard = () => {
             </div>
           );
 
-  const renderDocuments = () => (
-    <div className="documents-section">
-      <h2>Document Management</h2>
-      <p>Upload and manage tenant KYC documents and contracts</p>
-      
-      <div className="document-actions">
-        <button className="action-button primary" onClick={() => setShowKycModal(true)}>
-          <Upload size={20} />
-          Upload Tenant KYC Documents
-        </button>
-        <button className="action-button primary" onClick={() => setShowContractModal(true)}>
-          <FileText size={20} />
-          Upload Essential Contract
-        </button>
-      </div>
-
-      <div className="document-list modern-card">
-        <h3>Uploaded Documents</h3>
-        <div className="document-filters">
-          <select className="filter-select">
-            <option value="">All Documents</option>
-            <option value="kyc">KYC Documents</option>
-            <option value="contracts">Contracts</option>
-          </select>
-          <select className="filter-select">
-            <option value="">All Tenants</option>
-            <option value="john">John Doe</option>
-            <option value="jane">Jane Smith</option>
-          </select>
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Document Name</th>
-              <th>Tenant</th>
-              <th>Type</th>
-              <th>Upload Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Passport Copy</td>
-              <td>John Doe</td>
-              <td>KYC</td>
-              <td>2024-11-20</td>
-              <td><span className="status approved">Approved</span></td>
-              <td>
-                <button className="action-button small">View</button>
-              </td>
-            </tr>
-            <tr>
-              <td>Lease Agreement</td>
-              <td>Jane Smith</td>
-              <td>Contract</td>
-              <td>2024-11-19</td>
-              <td><span className="status pending">Pending</span></td>
-              <td>
-                <button className="action-button small">View</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  const renderTenantManagement = () => (
-    <div className="tenant-management-section">
-      <h2>Tenant Account Management</h2>
-      <p>Create and manage tenant accounts for new tenants</p>
-      
-      <div className="tenant-actions">
-        <button className="action-button primary" onClick={() => setShowTenantCreationModal(true)}>
-          <UserPlus size={20} />
-          Create New Tenant Account
-        </button>
-      </div>
-
-      <div className="tenants-list modern-card">
-        <h3>Existing Tenants</h3>
-        <div className="tenant-filters">
-          <select className="filter-select">
-            <option value="">All Tenants</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <input type="text" placeholder="Search tenants..." className="search-input" />
-        </div>
-        
-        <div className="tenants-grid">
-          <div className="tenant-card">
-            <div className="tenant-info">
-              <h4>John Doe</h4>
-              <p>john.doe@email.com</p>
-              <p>Property: 123 Main St</p>
-              <span className="status active">Active</span>
-            </div>
-            <div className="tenant-actions">
-              <button className="action-button small">Edit</button>
-              <button className="action-button small">View Details</button>
-            </div>
-          </div>
-          
-          <div className="tenant-card">
-            <div className="tenant-info">
-              <h4>Jane Smith</h4>
-              <p>jane.smith@email.com</p>
-              <p>Property: 456 Oak Ave</p>
-              <span className="status active">Active</span>
-            </div>
-            <div className="tenant-actions">
-              <button className="action-button small">Edit</button>
-              <button className="action-button small">View Details</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
         
   const renderContent = () => {
     switch (activeTab) {
@@ -437,10 +320,6 @@ const SalesDashboard = () => {
         return renderVisits();
       case 'requests':
         return renderRequests();
-      case 'documents':
-        return renderDocuments();
-      case 'tenants':
-        return renderTenantManagement();
       default:
         return renderOverview();
     }
@@ -449,7 +328,7 @@ const SalesDashboard = () => {
   return (
     <div className="sales-dashboard">
       <div className="dashboard-header modern-container">
-        <h1>Sales Dashboard</h1>
+        <h1>Commercial Dashboard</h1>
         <p>Manage property listings, visits, and client relationships</p>
       </div>
       
@@ -483,53 +362,186 @@ const SalesDashboard = () => {
         ))}
       </div>
 
-      {/* Document Upload Modals */}
-      <Modal isOpen={showKycModal} onClose={() => setShowKycModal(false)}>
-        <h2>Upload Tenant KYC Documents</h2>
-        <DocumentUpload onFileUpload={(file) => handleKycUpload(file, 'tenant')} />
-      </Modal>
-
-      <Modal isOpen={showContractModal} onClose={() => setShowContractModal(false)}>
-        <ContractUpload onContractUpload={handleContractUpload} />
-      </Modal>
-
-      {/* Tenant Creation Modal */}
-      {showTenantCreationModal && (
-        <div className="modal-overlay" onClick={() => setShowTenantCreationModal(false)}>
+      {/* Add Listing Modal */}
+      {showAddListingModal && (
+        <div className="modal-overlay" onClick={() => setShowAddListingModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Create New Tenant Account</h3>
-              <button className="modal-close" onClick={() => setShowTenantCreationModal(false)}>×</button>
+              <h3>Add New Listing</h3>
+              <button className="modal-close" onClick={() => setShowAddListingModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
-                const tenantData = {
-                  firstName: formData.get('firstName'),
-                  lastName: formData.get('lastName'),
-                  email: formData.get('email'),
-                  phone: formData.get('phone'),
-                  property: formData.get('property')
+                const listingData = {
+                  address: formData.get('address'),
+                  type: formData.get('type'),
+                  bedrooms: formData.get('bedrooms'),
+                  bathrooms: formData.get('bathrooms'),
+                  price: formData.get('price'),
+                  description: formData.get('description'),
+                  status: formData.get('status')
                 };
-                handleCreateTenant(tenantData);
+                handleAddListing(listingData);
               }}>
                 <div className="form-group">
-                  <label>First Name</label>
-                  <input type="text" name="firstName" required />
+                  <label>Property Address</label>
+                  <input type="text" name="address" required placeholder="e.g., 123 Main Street" />
                 </div>
                 <div className="form-group">
-                  <label>Last Name</label>
-                  <input type="text" name="lastName" required />
+                  <label>Property Type</label>
+                  <select name="type" required>
+                    <option value="">Select Type</option>
+                    <option value="apartment">Apartment</option>
+                    <option value="house">House</option>
+                    <option value="studio">Studio</option>
+                    <option value="condo">Condo</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Bedrooms</label>
+                    <input type="number" name="bedrooms" min="0" required />
+                  </div>
+                  <div className="form-group">
+                    <label>Bathrooms</label>
+                    <input type="number" name="bathrooms" min="0" step="0.5" required />
+                  </div>
                 </div>
                 <div className="form-group">
-                  <label>Email</label>
-                  <input type="email" name="email" required />
+                  <label>Monthly Rent</label>
+                  <input type="text" name="price" required placeholder="e.g., $1,200/month" />
                 </div>
                 <div className="form-group">
-                  <label>Phone</label>
-                  <input type="tel" name="phone" required />
+                  <label>Status</label>
+                  <select name="status" required>
+                    <option value="">Select Status</option>
+                    <option value="available">Available</option>
+                    <option value="occupied">Occupied</option>
+                    <option value="maintenance">Under Maintenance</option>
+                  </select>
                 </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <textarea name="description" rows="4" placeholder="Describe the property features, amenities, etc."></textarea>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowAddListingModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary">
+                    Add Listing
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Listing Modal */}
+      {showEditListingModal && (
+        <div className="modal-overlay" onClick={() => setShowEditListingModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Listing</h3>
+              <button className="modal-close" onClick={() => setShowEditListingModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const listingData = {
+                  id: selectedListing.id,
+                  address: formData.get('address'),
+                  type: formData.get('type'),
+                  bedrooms: formData.get('bedrooms'),
+                  bathrooms: formData.get('bathrooms'),
+                  price: formData.get('price'),
+                  description: formData.get('description'),
+                  status: formData.get('status')
+                };
+                handleEditListing(listingData);
+              }}>
+                <div className="form-group">
+                  <label>Property Address</label>
+                  <input type="text" name="address" defaultValue={selectedListing?.address} required />
+                </div>
+                <div className="form-group">
+                  <label>Property Type</label>
+                  <select name="type" defaultValue={selectedListing?.type?.includes('Apartment') ? 'apartment' : 'house'} required>
+                    <option value="">Select Type</option>
+                    <option value="apartment">Apartment</option>
+                    <option value="house">House</option>
+                    <option value="studio">Studio</option>
+                    <option value="condo">Condo</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Bedrooms</label>
+                    <input type="number" name="bedrooms" min="0" defaultValue={selectedListing?.type?.includes('3 Bedroom') ? '3' : '2'} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Bathrooms</label>
+                    <input type="number" name="bathrooms" min="0" step="0.5" defaultValue={selectedListing?.type?.includes('2 Bathroom') ? '2' : '1'} required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Monthly Rent</label>
+                  <input type="text" name="price" defaultValue={selectedListing?.price} required />
+                </div>
+                <div className="form-group">
+                  <label>Status</label>
+                  <select name="status" defaultValue={selectedListing?.status?.toLowerCase()} required>
+                    <option value="">Select Status</option>
+                    <option value="available">Available</option>
+                    <option value="occupied">Occupied</option>
+                    <option value="maintenance">Under Maintenance</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <textarea name="description" rows="4" placeholder="Describe the property features, amenities, etc."></textarea>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowEditListingModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary">
+                    Update Listing
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Visit Modal */}
+      {showScheduleVisitModal && (
+        <div className="modal-overlay" onClick={() => setShowScheduleVisitModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Schedule New Visit</h3>
+              <button className="modal-close" onClick={() => setShowScheduleVisitModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const visitData = {
+                  property: formData.get('property'),
+                  clientName: formData.get('clientName'),
+                  clientEmail: formData.get('clientEmail'),
+                  clientPhone: formData.get('clientPhone'),
+                  visitDate: formData.get('visitDate'),
+                  visitTime: formData.get('visitTime'),
+                  notes: formData.get('notes')
+                };
+                handleScheduleVisit(visitData);
+              }}>
                 <div className="form-group">
                   <label>Property</label>
                   <select name="property" required>
@@ -539,12 +551,38 @@ const SalesDashboard = () => {
                     <option value="789-pine">789 Pine Lane</option>
                   </select>
                 </div>
+                <div className="form-group">
+                  <label>Client Name</label>
+                  <input type="text" name="clientName" required placeholder="Full name" />
+                </div>
+                <div className="form-group">
+                  <label>Client Email</label>
+                  <input type="email" name="clientEmail" required placeholder="email@example.com" />
+                </div>
+                <div className="form-group">
+                  <label>Client Phone</label>
+                  <input type="tel" name="clientPhone" required placeholder="Phone number" />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Visit Date</label>
+                    <input type="date" name="visitDate" required />
+                  </div>
+                  <div className="form-group">
+                    <label>Visit Time</label>
+                    <input type="time" name="visitTime" required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Notes</label>
+                  <textarea name="notes" rows="3" placeholder="Any special requirements or notes for the visit"></textarea>
+                </div>
                 <div className="modal-footer">
-                  <button type="button" className="action-button secondary" onClick={() => setShowTenantCreationModal(false)}>
+                  <button type="button" className="action-button secondary" onClick={() => setShowScheduleVisitModal(false)}>
                     Cancel
                   </button>
                   <button type="submit" className="action-button primary">
-                    Create Tenant Account
+                    Schedule Visit
                   </button>
                 </div>
               </form>
@@ -552,6 +590,7 @@ const SalesDashboard = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

@@ -1,14 +1,26 @@
 import React, { useState } from 'react';
-import { Wrench, CheckCircle, AlertTriangle, Building, Calendar, User, Clock } from 'lucide-react';
+import { Wrench, CheckCircle, AlertTriangle, Building, Calendar, User, Clock, Mail, Send, FileText, BarChart2 } from 'lucide-react';
 import './TechnicianDashboard.css';
 
 const TechnicianDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [quotes, setQuotes] = useState([
+    { id: 101, maintenanceId: 1, property: '123 Main St, Apt 4B', issue: 'HVAC Maintenance', amount: 450, recipient: 'Management', date: '2024-11-20', status: 'Sent' },
+    { id: 102, maintenanceId: 3, property: '789 Pine Ln', issue: 'Electrical Inspection', amount: 280, recipient: 'Owner', date: '2024-11-19', status: 'Sent' }
+  ]);
+  const [requests, setRequests] = useState([
+    { id: 1, tenant: 'John Doe', email: 'john@example.com', property: '123 Main St, Apt 4B', subject: 'Leaking sink', date: '2024-11-20', status: 'Unread' },
+    { id: 2, tenant: 'Jane Smith', email: 'jane@example.com', property: '456 Oak Ave, Unit 2', subject: 'No hot water', date: '2024-11-19', status: 'Read' }
+  ]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Building },
     { id: 'inspections', label: 'Inspections', icon: CheckCircle },
+    { id: 'inventories', label: 'Inventories', icon: FileText },
     { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+    { id: 'requests', label: 'Requests', icon: Mail },
+    { id: 'quotes', label: 'Quotes', icon: Send },
+    { id: 'progress', label: 'Progress', icon: BarChart2 },
     { id: 'tasks', label: 'Tasks', icon: Calendar }
   ];
 
@@ -285,6 +297,18 @@ const TechnicianDashboard = () => {
                   {maintenance.status === 'Pending' && (
                     <button className="table-action-button start">Start</button>
                   )}
+                  {maintenance.quoteGenerated && (
+                    <>
+                      <button className="table-action-button edit" title="Submit to Management" onClick={() => {
+                        const q = { id: Date.now(), maintenanceId: maintenance.id, property: maintenance.property, issue: maintenance.issue, amount: maintenance.estimatedCost, recipient: 'Management', date: new Date().toLocaleDateString(), status: 'Sent' };
+                        setQuotes(prev => [q, ...prev]);
+                      }}>To Mgmt</button>
+                      <button className="table-action-button edit" title="Submit to Owner" onClick={() => {
+                        const q = { id: Date.now()+1, maintenanceId: maintenance.id, property: maintenance.property, issue: maintenance.issue, amount: maintenance.estimatedCost, recipient: 'Owner', date: new Date().toLocaleDateString(), status: 'Sent' };
+                        setQuotes(prev => [q, ...prev]);
+                      }}>To Owner</button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
@@ -309,6 +333,162 @@ const TechnicianDashboard = () => {
           <h4>Total Cost of Ongoing Repairs</h4>
           <span className="amount">$1,200</span>
         </div>
+      </div>
+    </div>
+  );
+
+  const renderInventories = () => (
+    <div className="inspections-section">
+      <div className="section-header">
+        <h3>Move-in and Move-out Inventories</h3>
+        <p>Create and manage detailed inventory reports</p>
+      </div>
+
+      <div className="inspections-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Inspector</th>
+              <th>Report</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mockInspections.filter(i => i.type === 'Move-in' || i.type === 'Move-out').map(inv => (
+              <tr key={`inv-${inv.id}`}>
+                <td>{inv.property}</td>
+                <td>
+                  <span className={`type-badge ${inv.type.toLowerCase().replace(' ', '-')}`}>{inv.type}</span>
+                </td>
+                <td>{inv.date}</td>
+                <td>{inv.inspector}</td>
+                <td>
+                  <button className="table-action-button view">View</button>
+                </td>
+                <td>
+                  <button className="table-action-button edit">Edit</button>
+                  <button className="table-action-button quote">Generate Report</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderRequests = () => (
+    <div className="inspections-section">
+      <div className="section-header">
+        <h3>Tenant Requests (Mail Inbox)</h3>
+        <p>Receive and triage tenant maintenance requests</p>
+      </div>
+
+      <div className="inspections-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Tenant</th>
+              <th>Email</th>
+              <th>Property</th>
+              <th>Subject</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.map(req => (
+              <tr key={req.id}>
+                <td>{req.date}</td>
+                <td>{req.tenant}</td>
+                <td><Mail size={14} /> {req.email}</td>
+                <td>{req.property}</td>
+                <td>{req.subject}</td>
+                <td>
+                  <span className={`status-badge ${req.status.toLowerCase()}`}>{req.status}</span>
+                </td>
+                <td>
+                  <button className="table-action-button view" onClick={() => setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'Read' } : r))}>Mark Read</button>
+                  <button className="table-action-button edit">Assign</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderQuotes = () => (
+    <div className="inspections-section">
+      <div className="section-header">
+        <h3>Submitted Quotes</h3>
+        <p>Track quotes sent to management and owners</p>
+      </div>
+      <div className="inspections-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Recipient</th>
+              <th>Property</th>
+              <th>Issue</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {quotes.map(q => (
+              <tr key={q.id}>
+                <td>{q.date}</td>
+                <td>{q.recipient}</td>
+                <td>{q.property}</td>
+                <td>{q.issue}</td>
+                <td>${q.amount}</td>
+                <td><span className="status-badge completed">{q.status}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderProgress = () => (
+    <div className="inspections-section">
+      <div className="section-header">
+        <h3>Work Progress Report</h3>
+        <p>Monitor progress of ongoing maintenance tasks</p>
+      </div>
+      <div className="inspections-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Issue</th>
+              <th>Status</th>
+              <th>Progress</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mockMaintenance.map(m => (
+              <tr key={`prog-${m.id}`}>
+                <td>{m.property}</td>
+                <td>{m.issue}</td>
+                <td><span className={`status-badge ${m.status.toLowerCase().replace(' ', '-')}`}>{m.status}</span></td>
+                <td>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: m.status === 'Completed' ? '100%' : m.status === 'In Progress' ? '60%' : m.status === 'Scheduled' ? '20%' : '10%' }} />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -430,8 +610,16 @@ const TechnicianDashboard = () => {
         return renderOverview();
       case 'inspections':
         return renderInspections();
+      case 'inventories':
+        return renderInventories();
       case 'maintenance':
         return renderMaintenance();
+      case 'requests':
+        return renderRequests();
+      case 'quotes':
+        return renderQuotes();
+      case 'progress':
+        return renderProgress();
       case 'tasks':
         return renderTasks();
       default:

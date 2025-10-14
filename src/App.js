@@ -16,8 +16,8 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import CheckoutPage from './pages/CheckoutPage';
 import ReceiptPage from './pages/ReceiptPage';
-// Import Layout Components
-// Import Layout Components
+
+// Import Layout  Components
 import Header from './components/Header';
 import ChatBubble from './components/ChatBubble';
 

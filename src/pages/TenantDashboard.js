@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReportSubmission from '../components/ReportSubmission';
-import { Home, DollarSign, Wrench, Calendar, Camera, Upload, X } from 'lucide-react';
+import { Home, DollarSign, Wrench, Calendar, Camera, Upload, X, CreditCard, Smartphone, Banknote, Download } from 'lucide-react';
 import './TenantDashboard.css';
 
 const TenantDashboard = () => {
@@ -13,6 +13,12 @@ const TenantDashboard = () => {
     photos: []
   });
   const [notifications, setNotifications] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    paymentMethod: '',
+    reference: ''
+  });
 
   const addNotification = (message, type = 'info') => {
     const id = Date.now();
@@ -71,6 +77,70 @@ const TenantDashboard = () => {
     }));
   };
 
+  const handlePaymentSubmit = (e) => {
+    e.preventDefault();
+    
+    const payment = {
+      id: Date.now(),
+      amount: paymentForm.amount,
+      paymentMethod: paymentForm.paymentMethod,
+      reference: paymentForm.reference,
+      status: 'completed',
+      date: new Date().toLocaleDateString(),
+      description: 'Monthly Rent Payment'
+    };
+
+    console.log('Payment submitted:', payment);
+    addNotification('Payment submitted successfully!', 'success');
+    
+    // Reset form
+    setPaymentForm({
+      amount: '',
+      paymentMethod: '',
+      reference: ''
+    });
+    setShowPaymentModal(false);
+  };
+
+  const downloadReceipt = (paymentId) => {
+    // Simulate receipt download
+    const receiptData = {
+      paymentId: paymentId,
+      date: new Date().toLocaleDateString(),
+      amount: '$1,500',
+      description: 'Monthly Rent Payment',
+      paymentMethod: 'Bank Transfer',
+      reference: 'REF123456789'
+    };
+    
+    // Create a simple text receipt
+    const receiptText = `
+RENT PAYMENT RECEIPT
+===================
+Payment ID: ${receiptData.paymentId}
+Date: ${receiptData.date}
+Amount: ${receiptData.amount}
+Description: ${receiptData.description}
+Payment Method: ${receiptData.paymentMethod}
+Reference: ${receiptData.reference}
+
+Thank you for your payment!
+    `.trim();
+    
+    // Create and download the file
+    const blob = new Blob([receiptText], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receipt_${paymentId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    addNotification('Receipt downloaded successfully!', 'success');
+  };
+
         return (
     <div className="tenant-dashboard">
       <div className="dashboard-header modern-container">
@@ -119,39 +189,105 @@ const TenantDashboard = () => {
 
         {activeTab === 'payments' && (
           <div className="payments-section">
-            <h2>Payment History</h2>
-            <p>View your past payments and upcoming due dates.</p>
-            <div className="modern-card">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>2024-10-01</td>
-                    <td>Monthly Rent</td>
-                    <td>$1,500</td>
-                    <td className="status paid">Paid</td>
-                  </tr>
-                  <tr>
-                    <td>2024-09-01</td>
-                    <td>Monthly Rent</td>
-                    <td>$1,500</td>
-                    <td className="status paid">Paid</td>
-                  </tr>
-                  <tr>
-                    <td>2024-08-01</td>
-                    <td>Monthly Rent</td>
-                    <td>$1,500</td>
-                    <td className="status paid">Paid</td>
-                  </tr>
-                </tbody>
-              </table>
+            <h2>Payment Management</h2>
+            <p>Make payments and view your payment history.</p>
+            
+            {/* Payment Options */}
+            <div className="payment-options modern-card">
+              <h3>Make a Payment</h3>
+              <p>Choose your preferred payment method:</p>
+              <div className="payment-methods">
+                <button 
+                  className="payment-method-btn" 
+                  onClick={() => setShowPaymentModal(true)}
+                >
+                  <Banknote size={24} />
+                  <span>Cash Payment</span>
+                </button>
+                <button 
+                  className="payment-method-btn" 
+                  onClick={() => setShowPaymentModal(true)}
+                >
+                  <Smartphone size={24} />
+                  <span>Mobile Money</span>
+                </button>
+                <button 
+                  className="payment-method-btn" 
+                  onClick={() => setShowPaymentModal(true)}
+                >
+                  <CreditCard size={24} />
+                  <span>Bank Transfer</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Payment History */}
+            <div className="payment-history">
+              <h3>Payment History</h3>
+              <div className="modern-card">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Amount</th>
+                      <th>Method</th>
+                      <th>Status</th>
+                      <th>Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>2024-10-01</td>
+                      <td>Monthly Rent</td>
+                      <td>$1,500</td>
+                      <td>Bank Transfer</td>
+                      <td className="status paid">Paid</td>
+                      <td>
+                        <button 
+                          className="download-btn" 
+                          onClick={() => downloadReceipt('PAY001')}
+                          title="Download Receipt"
+                        >
+                          <Download size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>2024-09-01</td>
+                      <td>Monthly Rent</td>
+                      <td>$1,500</td>
+                      <td>Mobile Money</td>
+                      <td className="status paid">Paid</td>
+                      <td>
+                        <button 
+                          className="download-btn" 
+                          onClick={() => downloadReceipt('PAY002')}
+                          title="Download Receipt"
+                        >
+                          <Download size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>2024-08-01</td>
+                      <td>Monthly Rent</td>
+                      <td>$1,500</td>
+                      <td>Cash</td>
+                      <td className="status paid">Paid</td>
+                      <td>
+                        <button 
+                          className="download-btn" 
+                          onClick={() => downloadReceipt('PAY003')}
+                          title="Download Receipt"
+                        >
+                          <Download size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -275,6 +411,69 @@ const TenantDashboard = () => {
                   </button>
                   <button type="submit" className="action-button primary">
                     Submit Request
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Make Payment</h3>
+              <button className="modal-close" onClick={() => setShowPaymentModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handlePaymentSubmit}>
+                <div className="form-group">
+                  <label htmlFor="amount">Amount</label>
+                  <input
+                    type="number"
+                    id="amount"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                    placeholder="Enter amount"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="paymentMethod">Payment Method</label>
+                  <select
+                    id="paymentMethod"
+                    value={paymentForm.paymentMethod}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                    required
+                  >
+                    <option value="">Select payment method</option>
+                    <option value="cash">Cash Payment</option>
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="reference">Reference Number</label>
+                  <input
+                    type="text"
+                    id="reference"
+                    value={paymentForm.reference}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, reference: e.target.value }))}
+                    placeholder="Enter transaction reference"
+                    required
+                  />
+                </div>
+
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowPaymentModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary">
+                    Submit Payment
                   </button>
                 </div>
               </form>
