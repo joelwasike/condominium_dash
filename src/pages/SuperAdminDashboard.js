@@ -130,7 +130,7 @@ const SuperAdminDashboard = () => {
       setUsers(Array.isArray(usersData) ? usersData : []);
       setProperties(Array.isArray(propertiesData) ? propertiesData : []);
       setFinancialData(financial);
-      setWorksData(works);
+      setWorksData(Array.isArray(works) ? works : []);
       setAccountingOverview(accountingOverviewData);
       setAccountingTenantPayments(Array.isArray(tenantPaymentsData) ? tenantPaymentsData : []);
       setAccountingLandlordPayments(Array.isArray(landlordPaymentsData) ? landlordPaymentsData : []);
@@ -987,15 +987,15 @@ const SuperAdminDashboard = () => {
           <div className="works-stats">
             <div className="stat-card modern-card">
               <h3>Active Works</h3>
-              <span className="stat-value">{worksData.filter(w => (w.Status || w.status) === 'Active').length}</span>
+              <span className="stat-value">{(worksData || []).filter(w => (w.Status || w.status) === 'Active').length}</span>
             </div>
             <div className="stat-card modern-card">
               <h3>Pending Claims</h3>
-              <span className="stat-value">{worksData.filter(w => (w.Status || w.status) === 'Pending').length}</span>
+              <span className="stat-value">{(worksData || []).filter(w => (w.Status || w.status) === 'Pending').length}</span>
             </div>
             <div className="stat-card modern-card">
               <h3>Completed This Month</h3>
-              <span className="stat-value">{worksData.filter(w => (w.Status || w.status) === 'Completed').length}</span>
+              <span className="stat-value">{(worksData || []).filter(w => (w.Status || w.status) === 'Completed').length}</span>
             </div>
             <div className="stat-card modern-card">
               <h3>Avg Resolution Time</h3>
@@ -1003,7 +1003,7 @@ const SuperAdminDashboard = () => {
             </div>
           </div>
 
-          {worksData.length === 0 ? (
+          {(!worksData || worksData.length === 0) ? (
             <div className="no-data">No works found</div>
           ) : (
             <div className="data-table-wrapper">
@@ -1027,7 +1027,7 @@ const SuperAdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {worksData.map((work, workIndex) => (
+                  {(worksData || []).map((work, workIndex) => (
                     <tr key={`work-${work.ID || work.id || 'no-id'}-${workIndex}`}>
                       <td className="table-select">
                         <label className="checkbox">
