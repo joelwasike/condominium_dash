@@ -126,9 +126,9 @@ const SuperAdminDashboard = () => {
       ]);
 
       setOverviewData(overview);
-      setCompanies(companiesData);
-      setUsers(usersData);
-      setProperties(propertiesData);
+      setCompanies(Array.isArray(companiesData) ? companiesData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
+      setProperties(Array.isArray(propertiesData) ? propertiesData : []);
       setFinancialData(financial);
       setWorksData(works);
       setAccountingOverview(accountingOverviewData);
@@ -596,6 +596,9 @@ const SuperAdminDashboard = () => {
 
   // Filter users based on filters
   const filteredUsers = useMemo(() => {
+    if (!users || !Array.isArray(users)) {
+      return [];
+    }
     return users.filter(user => {
       // Company filter - compare by company name since user.Company is a name string
       if (userCompanyFilter) {
@@ -741,6 +744,9 @@ const SuperAdminDashboard = () => {
 
   // Filter properties based on filters
   const filteredProperties = useMemo(() => {
+    if (!properties || !Array.isArray(properties)) {
+      return [];
+    }
     return properties.filter(property => {
       // Company filter - compare by company name since property.Company might be a name string
       if (propertyCompanyFilter) {
