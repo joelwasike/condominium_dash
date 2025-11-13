@@ -1,7 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReportSubmission from '../components/ReportSubmission';
-import { Home, DollarSign, Wrench, Calendar, Camera, Upload, X, CreditCard, Smartphone, Banknote, Download } from 'lucide-react';
+import {
+  Home,
+  DollarSign,
+  Wrench,
+  Calendar,
+  Camera,
+  Upload,
+  X,
+  CreditCard,
+  Smartphone,
+  Banknote,
+  Download,
+  Settings,
+  Plus
+} from 'lucide-react';
+import RoleLayout from '../components/RoleLayout';
+import SettingsPage from './SettingsPage';
+import '../components/RoleLayout.css';
+import '../pages/TechnicianDashboard.css';
 import './TenantDashboard.css';
+import { tenantService } from '../services/tenantService';
 
 const TenantDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -19,40 +38,78 @@ const TenantDashboard = () => {
     paymentMethod: '',
     reference: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [overviewData, setOverviewData] = useState(null);
+  const [payments, setPayments] = useState([]);
+  const [maintenanceRequests, setMaintenanceRequests] = useState([]);
+
+  const tabs = useMemo(
+    () => [
+      { id: 'overview', label: 'Overview', icon: Home },
+      { id: 'payments', label: 'Payments', icon: DollarSign },
+      { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+      { id: 'settings', label: 'Profile Settings', icon: Settings }
+    ],
+    []
+  );
 
   const addNotification = (message, type = 'info') => {
-    const id = Date.now();
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 3000);
   };
 
-  const handleMaintenanceSubmit = (e) => {
-    e.preventDefault();
-    
-    const maintenanceRequest = {
-      id: Date.now(),
-      title: maintenanceForm.title,
-      description: maintenanceForm.description,
-      priority: maintenanceForm.priority,
-      photos: maintenanceForm.photos,
-      status: 'pending',
-      date: new Date().toLocaleDateString(),
-      tenant: 'Current Tenant'
-    };
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [overview, paymentsData, maintenanceData] = await Promise.all([
+        tenantService.getOverview(),
+        tenantService.listPayments(),
+        tenantService.listMaintenance()
+      ]);
 
-    console.log('Maintenance request submitted:', maintenanceRequest);
-    addNotification('Maintenance request submitted successfully!', 'success');
-    
-    // Reset form
-    setMaintenanceForm({
-      title: '',
-      description: '',
-      priority: 'medium',
-      photos: []
-    });
-    setShowMaintenanceModal(false);
+      setOverviewData(overview);
+      setPayments(paymentsData);
+      setMaintenanceRequests(maintenanceData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      addNotification('Failed to load dashboard data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleMaintenanceSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+      const maintenanceData = {
+        property: 'Apartment 4B, 123 Main St',
+        title: maintenanceForm.title,
+        description: maintenanceForm.description,
+        priority: maintenanceForm.priority,
+        tenant: 'Current Tenant'
+      };
+
+      const newRequest = await tenantService.createMaintenance(maintenanceData);
+      setMaintenanceRequests(prev => [newRequest, ...prev]);
+      addNotification('Maintenance request submitted successfully!', 'success');
+
+      setMaintenanceForm({ title: '', description: '', priority: 'medium', photos: [] });
+      setShowMaintenanceModal(false);
+    } catch (error) {
+      console.error('Error submitting maintenance request:', error);
+      addNotification('Failed to submit maintenance request', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePhotoUpload = (e) => {
@@ -63,7 +120,7 @@ const TenantDashboard = () => {
       name: file.name,
       preview: URL.createObjectURL(file)
     }));
-    
+
     setMaintenanceForm(prev => ({
       ...prev,
       photos: [...prev.photos, ...newPhotos]
@@ -77,247 +134,323 @@ const TenantDashboard = () => {
     }));
   };
 
-  const handlePaymentSubmit = (e) => {
+  const handlePaymentSubmit = async (e) => {
     e.preventDefault();
-    
-    const payment = {
-      id: Date.now(),
-      amount: paymentForm.amount,
-      paymentMethod: paymentForm.paymentMethod,
-      reference: paymentForm.reference,
-      status: 'completed',
-      date: new Date().toLocaleDateString(),
-      description: 'Monthly Rent Payment'
-    };
 
-    console.log('Payment submitted:', payment);
-    addNotification('Payment submitted successfully!', 'success');
-    
-    // Reset form
-    setPaymentForm({
-      amount: '',
-      paymentMethod: '',
-      reference: ''
-    });
-    setShowPaymentModal(false);
+    try {
+      setLoading(true);
+      const paymentData = {
+        tenant: 'Current Tenant',
+        property: 'Apartment 4B, 123 Main St',
+        amount: parseFloat(paymentForm.amount),
+        method: paymentForm.paymentMethod,
+        chargeType: 'rent',
+        reference: paymentForm.reference
+      };
+
+      const newPayment = await tenantService.recordPayment(paymentData);
+      setPayments(prev => [newPayment, ...prev]);
+      addNotification('Payment submitted successfully!', 'success');
+
+      setPaymentForm({ amount: '', paymentMethod: '', reference: '' });
+      setShowPaymentModal(false);
+    } catch (error) {
+      console.error('Error submitting payment:', error);
+      addNotification('Failed to submit payment', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const downloadReceipt = (paymentId) => {
-    // Simulate receipt download
-    const receiptData = {
-      paymentId: paymentId,
-      date: new Date().toLocaleDateString(),
-      amount: '$1,500',
-      description: 'Monthly Rent Payment',
-      paymentMethod: 'Bank Transfer',
-      reference: 'REF123456789'
-    };
-    
-    // Create a simple text receipt
-    const receiptText = `
+  const downloadReceipt = async (paymentId) => {
+    try {
+      const payment = payments.find(p => p.ID === paymentId);
+      if (!payment) {
+        addNotification('Payment not found', 'error');
+        return;
+      }
+
+      await tenantService.generateReceipt(paymentId);
+
+      const receiptText = `
 RENT PAYMENT RECEIPT
 ===================
-Payment ID: ${receiptData.paymentId}
-Date: ${receiptData.date}
-Amount: ${receiptData.amount}
-Description: ${receiptData.description}
-Payment Method: ${receiptData.paymentMethod}
-Reference: ${receiptData.reference}
+Payment ID: ${payment.ID}
+Receipt Number: ${payment.ReceiptNumber}
+Date: ${new Date(payment.Date).toLocaleDateString()}
+Amount: ${payment.Amount} XOF
+Description: ${payment.ChargeType}
+Payment Method: ${payment.Method}
+Status: ${payment.Status}
 
 Thank you for your payment!
-    `.trim();
-    
-    // Create and download the file
-    const blob = new Blob([receiptText], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `receipt_${paymentId}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    addNotification('Receipt downloaded successfully!', 'success');
+      `.trim();
+
+      const blob = new Blob([receiptText], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt_${payment.ReceiptNumber || paymentId}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      addNotification('Receipt downloaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      addNotification('Failed to download receipt', 'error');
+    }
   };
 
+  const renderOverview = () => (
+    <div className="overview-section tenant-overview">
+      <div className="section-header">
+        <div>
+          <h2>Tenant Dashboard Overview</h2>
+          <p>Welcome, {overviewData?.tenant || 'Tenant'}! Here's a quick overview of your current property status and upcoming activities.</p>
+        </div>
+      </div>
+      {loading ? (
+        <div className="loading">Loading...</div>
+      ) : (
+        <div className="dashboard-overview">
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Current Lease</span>
+            </div>
+            <div className="card-value">
+              <span>{overviewData?.lease?.property || 'Apartment 4B, 123 Main St'}</span>
+              <small>Ends: {overviewData?.lease?.endDate || '2024-12-31'}</small>
+            </div>
+          </div>
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Next Rent Due</span>
+            </div>
+            <div className="card-value">
+              <span>{overviewData?.nextRentDue?.amount || 1500} XOF</span>
+              <small>Due: {overviewData?.nextRentDue?.date || '2024-11-01'}</small>
+            </div>
+          </div>
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Open Maintenance Tickets</span>
+            </div>
+            <div className="card-value">
+              <span>{overviewData?.openMaintenanceTickets || 0}</span>
+              <small>Active requests</small>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="action-buttons" style={{ marginTop: '24px' }}>
+        <ReportSubmission />
+      </div>
+    </div>
+  );
+
+  const renderPayments = () => (
+    <div className="payments-section">
+      <div className="section-header">
+        <div>
+          <h2>Payment Management</h2>
+          <p>Make payments and view your payment history</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowPaymentModal(true)} disabled={loading}>
+          <Plus size={18} />
+          Make Payment
+        </button>
+      </div>
+
+      <div className="section-header" style={{ marginBottom: '20px' }}>
+        <div>
+          <h2>Payment History</h2>
+          <p>View all your past payments and download receipts</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="loading">Loading payments...</div>
+      ) : payments.length === 0 ? (
+        <div className="no-data">No payments found</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Status</th>
+                <th className="table-menu"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((payment, index) => (
+                <tr key={payment.ID || `payment-${index}`}>
+                  <td>{new Date(payment.Date).toLocaleDateString()}</td>
+                  <td>
+                    <span className="row-primary">{payment.ChargeType}</span>
+                  </td>
+                  <td>{payment.Amount} XOF</td>
+                  <td>{payment.Method}</td>
+                  <td>
+                    <span className={`status-badge ${(payment.Status || 'pending').toLowerCase().replace(' ', '-')}`}>
+                      {payment.Status}
+                    </span>
+                  </td>
+                  <td className="table-menu">
+                    <div className="table-actions">
+                      <button
+                        className="table-action-button view"
+                        onClick={() => downloadReceipt(payment.ID)}
+                        title="Download Receipt"
+                      >
+                        <Download size={14} />
+                        Download
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderMaintenance = () => (
+    <div className="maintenance-section">
+      <div className="section-header">
+        <div>
+          <h2>Maintenance Requests</h2>
+          <p>Submit new requests or check the status of existing ones</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowMaintenanceModal(true)} disabled={loading}>
+          <Plus size={18} />
+          Submit New Request
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="loading">Loading maintenance requests...</div>
+      ) : maintenanceRequests.length === 0 ? (
+        <div className="no-data">No maintenance requests found</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Issue</th>
+                <th>Priority</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th className="table-menu"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {maintenanceRequests.map((request, index) => (
+                <tr key={request.ID || `request-${index}`}>
+                  <td>
+                    <span className="row-primary">{request.Issue || request.Title || 'Maintenance Request'}</span>
+                    {request.Description && (
+                      <div className="row-secondary">{request.Description}</div>
+                    )}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${(request.Priority || 'medium').toLowerCase()}`}>
+                      {request.Priority || 'Medium'}
+                    </span>
+                  </td>
+                  <td>{new Date(request.Date).toLocaleDateString()}</td>
+                  <td>
+                    <span className={`status-badge ${(request.Status || 'pending').toLowerCase().replace(' ', '-')}`}>
+                      {request.Status}
+                    </span>
+                  </td>
+                  <td className="table-menu">
+                    <div className="table-actions">
+                      <button
+                        className="table-action-button view"
+                        onClick={() => addNotification('Viewing maintenance request details', 'info')}
+                      >
+                        View
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderContent = (tabId = activeTab) => {
+    switch (tabId) {
+      case 'overview':
+        return renderOverview();
+      case 'payments':
+        return renderPayments();
+      case 'maintenance':
+        return renderMaintenance();
+      case 'settings':
         return (
-    <div className="tenant-dashboard">
-      <div className="dashboard-header modern-container">
-        <h1>Tenant Dashboard</h1>
-        <p>Manage your property, payments, and communicate with support</p>
-      </div>
+          <div className="embedded-settings">
+            <SettingsPage />
+          </div>
+        );
+      default:
+        return renderOverview();
+    }
+  };
 
-      <div className="tabs modern-container">
-        <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>
-          <Home size={18} /> Overview
-        </button>
-        <button className={activeTab === 'payments' ? 'active' : ''} onClick={() => setActiveTab('payments')}>
-          <DollarSign size={18} /> Payments
-        </button>
-        <button className={activeTab === 'maintenance' ? 'active' : ''} onClick={() => setActiveTab('maintenance')}>
-          <Wrench size={18} /> Maintenance
-        </button>
-      </div>
+  const layoutMenu = useMemo(
+    () =>
+      tabs.map(tab => ({
+        ...tab,
+        onSelect: () => setActiveTab(tab.id),
+        active: activeTab === tab.id
+      })),
+    [tabs, activeTab]
+  );
 
-      <div className="tab-content modern-container">
-        {activeTab === 'overview' && (
-          <div className="overview-section">
-            <h2>Welcome, Tenant!</h2>
-            <p>Here's a quick overview of your current property status and upcoming activities.</p>
-            <div className="stats-grid">
-              <div className="stat-card modern-card">
-                <h3>Current Lease</h3>
-                <p>Apartment 4B, 123 Main St</p>
-                <p>Ends: 2024-12-31</p>
-              </div>
-              <div className="stat-card modern-card">
-                <h3>Next Rent Due</h3>
-                <p>$1,500 on 2024-11-01</p>
-              </div>
-              <div className="stat-card modern-card">
-                <h3>Open Maintenance Tickets</h3>
-                <p>2</p>
-              </div>
-            </div>
-            <div className="action-buttons">
-              <ReportSubmission />
-            </div>
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    window.location.href = '/';
+  };
+
+  return (
+    <>
+      <RoleLayout
+        brand={{ name: 'SAAF IMMO', caption: 'Tenant Portal', logo: 'SAAF', logoImage: `${process.env.PUBLIC_URL}/download.jpeg` }}
+        menu={layoutMenu}
+        activeId={activeTab}
+        onActiveChange={setActiveTab}
+        onLogout={handleLogout}
+      >
+        {({ activeId }) => (
+          <div className="content-body tenant-content">
+            {renderContent(activeId)}
           </div>
         )}
+      </RoleLayout>
 
-
-        {activeTab === 'payments' && (
-          <div className="payments-section">
-            <h2>Payment Management</h2>
-            <p>Make payments and view your payment history.</p>
-            
-            {/* Payment Options */}
-            <div className="payment-options modern-card">
-              <h3>Make a Payment</h3>
-              <p>Choose your preferred payment method:</p>
-              <div className="payment-methods">
-                <button 
-                  className="payment-method-btn" 
-                  onClick={() => setShowPaymentModal(true)}
-                >
-                  <Banknote size={24} />
-                  <span>Cash Payment</span>
-                </button>
-                <button 
-                  className="payment-method-btn" 
-                  onClick={() => setShowPaymentModal(true)}
-                >
-                  <Smartphone size={24} />
-                  <span>Mobile Money</span>
-                </button>
-                <button 
-                  className="payment-method-btn" 
-                  onClick={() => setShowPaymentModal(true)}
-                >
-                  <CreditCard size={24} />
-                  <span>Bank Transfer</span>
-                </button>
-              </div>
+      {notifications.length > 0 && (
+        <div className="notifications-container">
+          {notifications.map(notification => (
+            <div key={notification.id} className={`notification notification-${notification.type}`}>
+              <span>{notification.message}</span>
+              <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
             </div>
-
-            {/* Payment History */}
-            <div className="payment-history">
-              <h3>Payment History</h3>
-              <div className="modern-card">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Description</th>
-                      <th>Amount</th>
-                      <th>Method</th>
-                      <th>Status</th>
-                      <th>Receipt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>2024-10-01</td>
-                      <td>Monthly Rent</td>
-                      <td>$1,500</td>
-                      <td>Bank Transfer</td>
-                      <td className="status paid">Paid</td>
-                      <td>
-                        <button 
-                          className="download-btn" 
-                          onClick={() => downloadReceipt('PAY001')}
-                          title="Download Receipt"
-                        >
-                          <Download size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>2024-09-01</td>
-                      <td>Monthly Rent</td>
-                      <td>$1,500</td>
-                      <td>Mobile Money</td>
-                      <td className="status paid">Paid</td>
-                      <td>
-                        <button 
-                          className="download-btn" 
-                          onClick={() => downloadReceipt('PAY002')}
-                          title="Download Receipt"
-                        >
-                          <Download size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>2024-08-01</td>
-                      <td>Monthly Rent</td>
-                      <td>$1,500</td>
-                      <td>Cash</td>
-                      <td className="status paid">Paid</td>
-                      <td>
-                        <button 
-                          className="download-btn" 
-                          onClick={() => downloadReceipt('PAY003')}
-                          title="Download Receipt"
-                        >
-                          <Download size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'maintenance' && (
-          <div className="maintenance-section">
-            <h2>Maintenance Requests</h2>
-            <p>Submit new requests or check the status of existing ones.</p>
-            <button className="action-button" onClick={() => setShowMaintenanceModal(true)}>Submit New Request</button>
-
-            <div className="modern-card">
-              <h3>Open Requests</h3>
-              <ul>
-                <li>Leaky Faucet - <span className="status pending">Pending</span></li>
-                <li>AC Not Cooling - <span className="status in-progress">In Progress</span></li>
-              </ul>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Notification System */}
-      <div className="notifications-container">
-        {notifications.map(notification => (
-          <div key={notification.id} className={`notification notification-${notification.type}`}>
-            <span>{notification.message}</span>
-            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Maintenance Request Modal */}
       {showMaintenanceModal && (
@@ -409,8 +542,8 @@ Thank you for your payment!
                   <button type="button" className="action-button secondary" onClick={() => setShowMaintenanceModal(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="action-button primary">
-                    Submit Request
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Submitting...' : 'Submit Request'}
                   </button>
                 </div>
               </form>
@@ -472,8 +605,8 @@ Thank you for your payment!
                   <button type="button" className="action-button secondary" onClick={() => setShowPaymentModal(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="action-button primary">
-                    Submit Payment
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Submitting...' : 'Submit Payment'}
                   </button>
                 </div>
               </form>
@@ -481,7 +614,7 @@ Thank you for your payment!
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

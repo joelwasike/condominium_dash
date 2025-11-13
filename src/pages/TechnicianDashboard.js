@@ -1,124 +1,232 @@
-import React, { useState } from 'react';
-import { Wrench, CheckCircle, AlertTriangle, Building, Calendar, User, Clock, Mail, Send, FileText, BarChart2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Wrench,
+  CheckCircle,
+  AlertTriangle,
+  Building,
+  Calendar,
+  Mail,
+  Send,
+  FileText,
+  BarChart2,
+  MoreHorizontal,
+  Settings
+} from 'lucide-react';
+import { technicianService } from '../services/technicianService';
 import './TechnicianDashboard.css';
+import SettingsPage from './SettingsPage';
+import RoleLayout from '../components/RoleLayout';
 
 const TechnicianDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [quotes, setQuotes] = useState([
-    { id: 101, maintenanceId: 1, property: '123 Main St, Apt 4B', issue: 'HVAC Maintenance', amount: 450, recipient: 'Management', date: '2024-11-20', status: 'Sent' },
-    { id: 102, maintenanceId: 3, property: '789 Pine Ln', issue: 'Electrical Inspection', amount: 280, recipient: 'Owner', date: '2024-11-19', status: 'Sent' }
-  ]);
-  const [requests, setRequests] = useState([
-    { id: 1, tenant: 'John Doe', email: 'john@example.com', property: '123 Main St, Apt 4B', subject: 'Leaking sink', date: '2024-11-20', status: 'Unread' },
-    { id: 2, tenant: 'Jane Smith', email: 'jane@example.com', property: '456 Oak Ave, Unit 2', subject: 'No hot water', date: '2024-11-19', status: 'Read' }
-  ]);
+  const [loading, setLoading] = useState(false);
+  const [overviewData, setOverviewData] = useState(null);
+  const [maintenanceRequests, setMaintenanceRequests] = useState([]);
+  const [inspections, setInspections] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [quotes, setQuotes] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [showInspectionModal, setShowInspectionModal] = useState(false);
+  const [inspectionForm, setInspectionForm] = useState({
+    property: '',
+    type: 'routine',
+    inspector: '',
+    notes: ''
+  });
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [taskForm, setTaskForm] = useState({
+    status: '',
+    estimatedHours: 0,
+    estimatedCost: 0
+  });
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: Building },
-    { id: 'inspections', label: 'Inspections', icon: CheckCircle },
-    { id: 'inventories', label: 'Inventories', icon: FileText },
-    { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-    { id: 'requests', label: 'Requests', icon: Mail },
-    { id: 'quotes', label: 'Quotes', icon: Send },
-    { id: 'progress', label: 'Progress', icon: BarChart2 },
-    { id: 'tasks', label: 'Tasks', icon: Calendar }
-  ];
+  // Load data from backend
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const mockInspections = [
-    { id: 1, property: '123 Main St, Apt 4B', type: 'Move-in', status: 'Completed', date: '2024-11-20', inspector: 'John Tech', notes: 'All systems functional' },
-    { id: 2, property: '456 Oak Ave, Unit 2', type: 'Move-out', status: 'Scheduled', date: '2024-11-22', inspector: 'Jane Tech', notes: 'Scheduled for 10 AM' },
-    { id: 3, property: '789 Pine Ln', type: 'Routine', status: 'In Progress', date: '2024-11-21', inspector: 'Mike Tech', notes: 'Checking HVAC system' },
-    { id: 4, property: '321 Elm St, Apt 1A', type: 'Emergency', status: 'Completed', date: '2024-11-19', inspector: 'John Tech', notes: 'Fixed water leak' },
-  ];
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [overview, maintenance, inspection, task] = await Promise.all([
+        technicianService.getOverview(),
+        technicianService.listMaintenanceRequests(),
+        technicianService.listInspections(),
+        technicianService.listTasks()
+      ]);
+      
+      setOverviewData(overview);
+      setMaintenanceRequests(maintenance);
+      setInspections(inspection);
+      setTasks(task);
+    } catch (error) {
+      console.error('Error loading technician data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const mockMaintenance = [
-    { id: 1, property: '123 Main St, Apt 4B', issue: 'HVAC Maintenance', priority: 'High', status: 'In Progress', assigned: 'John Tech', date: '2024-11-21', estimatedHours: 4, estimatedCost: 450, quoteGenerated: true },
-    { id: 2, property: '456 Oak Ave, Unit 2', issue: 'Plumbing Repair', priority: 'Urgent', status: 'Pending', assigned: 'Jane Tech', date: '2024-11-22', estimatedHours: 2, estimatedCost: 320, quoteGenerated: false },
-    { id: 3, property: '789 Pine Ln', issue: 'Electrical Inspection', priority: 'Medium', status: 'Completed', assigned: 'Mike Tech', date: '2024-11-20', estimatedHours: 3, estimatedCost: 280, quoteGenerated: true },
-    { id: 4, property: '321 Elm St, Apt 1A', issue: 'Appliance Repair', priority: 'Low', status: 'Scheduled', assigned: 'John Tech', date: '2024-11-23', estimatedHours: 1, estimatedCost: 150, quoteGenerated: false },
-  ];
+  const handleInspectionSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await technicianService.createInspection(inspectionForm);
+      setShowInspectionModal(false);
+      setInspectionForm({ property: '', type: 'routine', inspector: '', notes: '' });
+      loadData(); // Reload data to show new inspection
+    } catch (error) {
+      console.error('Error creating inspection:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const mockTasks = [
-    { id: 1, title: 'Monthly HVAC Check', property: '123 Main St, Apt 4B', priority: 'Medium', dueDate: '2024-11-25', status: 'Pending', estimatedHours: 2 },
-    { id: 2, title: 'Safety Equipment Inspection', property: '456 Oak Ave, Unit 2', priority: 'High', dueDate: '2024-11-22', status: 'In Progress', estimatedHours: 1 },
-    { id: 3, title: 'Fire Safety Check', property: '789 Pine Ln', priority: 'Urgent', dueDate: '2024-11-21', status: 'Pending', estimatedHours: 3 },
-    { id: 4, title: 'Quarterly Deep Clean', property: '321 Elm St, Apt 1A', priority: 'Low', dueDate: '2024-11-30', status: 'Scheduled', estimatedHours: 4 },
-  ];
+  const handleTaskView = (task) => {
+    setSelectedTask(task);
+    setTaskForm({
+      status: task.Status || 'Pending',
+      estimatedHours: task.EstimatedHours || 0,
+      estimatedCost: task.EstimatedCost || 0
+    });
+    setShowTaskModal(true);
+  };
+
+  const handleTaskUpdate = async (e) => {
+    e.preventDefault();
+    if (!selectedTask) return;
+    
+    setLoading(true);
+    try {
+      await technicianService.updateTask(selectedTask.ID, taskForm);
+      setShowTaskModal(false);
+      setSelectedTask(null);
+      loadData(); // Reload data to show updated task
+    } catch (error) {
+      console.error('Error updating task:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTaskComplete = async (task) => {
+    setLoading(true);
+    try {
+      await technicianService.updateTask(task.ID, { status: 'Completed' });
+      loadData(); // Reload data to show updated task
+    } catch (error) {
+      console.error('Error completing task:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+  };
+
+  const tabs = useMemo(
+    () => [
+      { id: 'overview', label: 'Overview', icon: Building },
+      { id: 'inspections', label: 'Inspections', icon: CheckCircle },
+      { id: 'inventories', label: 'Inventories', icon: FileText },
+      { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+      { id: 'requests', label: 'Requests', icon: Mail },
+      { id: 'quotes', label: 'Quotes', icon: Send },
+      { id: 'progress', label: 'Progress', icon: BarChart2 },
+      { id: 'tasks', label: 'Tasks', icon: Calendar },
+      { id: 'settings', label: 'Settings', icon: Settings }
+    ],
+    []
+  );
 
   const renderOverview = () => (
     <div className="overview-section">
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <CheckCircle size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Inspections Completed</h3>
-            <p>This month</p>
-            <span className="stat-value">18</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <Wrench size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Maintenance Tasks</h3>
-            <p>Active assignments</p>
-            <span className="stat-value">12</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <AlertTriangle size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Urgent Issues</h3>
-            <p>Requires immediate attention</p>
-            <span className="stat-value">3</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <Calendar size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Average Resolution Time</h3>
-            <p>Days to complete</p>
-            <span className="stat-value">2.1</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="quick-actions">
-        <h3>Quick Actions</h3>
-        <div className="action-buttons">
-          <button className="action-button primary">
-            <CheckCircle size={20} />
-            Schedule Inspection
-          </button>
-          <button className="action-button secondary">
-            <Wrench size={20} />
-            Report Maintenance
-          </button>
-          <button className="action-button secondary">
-            <AlertTriangle size={20} />
-            Emergency Repair
-          </button>
-          <button className="action-button secondary">
-            <Calendar size={20} />
-            View Calendar
-          </button>
-        </div>
+      <div className="data-table-wrapper">
+        <table className="data-table">
+        <thead>
+          <tr>
+            <th className="table-select">
+              <label className="checkbox">
+                <input type="checkbox" />
+                <span />
+              </label>
+            </th>
+            <th>Date</th>
+            <th>Tenant</th>
+            <th>Property</th>
+            <th>Work Type</th>
+            <th>Severity</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? (
+            <tr>
+              <td colSpan={8} className="loading">Loading overview data...</td>
+            </tr>
+          ) : maintenanceRequests.length === 0 ? (
+            <tr>
+              <td colSpan={8} className="loading">No maintenance requests found</td>
+            </tr>
+          ) : (
+            maintenanceRequests.slice(0, 6).map(request => (
+              <tr key={request.ID}>
+                <td className="table-select">
+                  <label className="checkbox">
+                    <input type="checkbox" />
+                    <span />
+                  </label>
+                </td>
+                <td>{new Date(request.Date).toLocaleDateString()}</td>
+                <td>
+                  <span className="row-primary">{request.Tenant || 'Tenant'}</span>
+                  <span className="row-secondary">{request.Email || 'tenant@example.com'}</span>
+                </td>
+                <td>
+                  <span className="row-primary">{request.Property}</span>
+                  <span className="row-secondary">Unit #{request.Unit || '1A'}</span>
+                </td>
+                <td>{request.Category || 'Plumbing'}</td>
+                <td>
+                  <span className={`severity-chip ${(request.Priority || 'Medium').toLowerCase()}`}>
+                    {request.Priority || 'Medium'}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" className="status-pill">
+                    View
+                  </button>
+                </td>
+                <td className="table-menu">
+                  <button type="button" className="dots-button" aria-label="More options">
+                    <MoreHorizontal size={20} />
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+        </table>
       </div>
     </div>
   );
 
   const renderInspections = () => (
-    <div className="inspections-section">
+    <div className="inspections-section panel">
       <div className="section-header">
         <h3>Property Inspections</h3>
         <p>Manage move-in, move-out, and routine inspections</p>
+        <button 
+          className="btn-primary"
+          onClick={() => setShowInspectionModal(true)}
+        >
+          <CheckCircle size={16} />
+          Add Inspection
+        </button>
       </div>
 
       <div className="filters-section">
@@ -153,8 +261,8 @@ const TechnicianDashboard = () => {
         </div>
       </div>
 
-      <div className="inspections-table">
-        <table>
+      <div className="data-table-wrapper">
+        <table className="data-table">
           <thead>
             <tr>
               <th>Property</th>
@@ -167,31 +275,39 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {mockInspections.map(inspection => (
-              <tr key={inspection.id}>
-                <td>{inspection.property}</td>
-                <td>
-                  <span className={`type-badge ${inspection.type.toLowerCase().replace('-', '-')}`}>
-                    {inspection.type}
-                  </span>
-                </td>
-                <td>
-                  <span className={`status-badge ${inspection.status.toLowerCase().replace(' ', '-')}`}>
-                    {inspection.status}
-                  </span>
-                </td>
-                <td>{inspection.date}</td>
-                <td>{inspection.inspector}</td>
-                <td>{inspection.notes}</td>
-                <td>
-                  <button className="table-action-button view">View</button>
-                  <button className="table-action-button edit">Edit</button>
-                  {inspection.status === 'Scheduled' && (
-                    <button className="table-action-button complete">Start</button>
-                  )}
+            {inspections.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
+                  No inspections found
                 </td>
               </tr>
-            ))}
+            ) : (
+              inspections.map(inspection => (
+                <tr key={inspection.ID}>
+                  <td>{inspection.Property}</td>
+                  <td>
+                    <span className={`type-badge ${inspection.Type?.toLowerCase().replace('-', '-') || 'routine'}`}>
+                      {inspection.Type || 'Routine'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge ${inspection.Status?.toLowerCase().replace(' ', '-') || 'pending'}`}>
+                      {inspection.Status || 'Pending'}
+                    </span>
+                  </td>
+                  <td>{new Date(inspection.Date).toLocaleDateString()}</td>
+                  <td>{inspection.Inspector || 'Unassigned'}</td>
+                  <td>{inspection.Notes || 'No notes'}</td>
+                  <td>
+                    <button className="table-action-button view">View</button>
+                    <button className="table-action-button edit">Edit</button>
+                    {inspection.Status === 'Scheduled' && (
+                      <button className="table-action-button complete">Start</button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -218,7 +334,7 @@ const TechnicianDashboard = () => {
   );
 
   const renderMaintenance = () => (
-    <div className="maintenance-section">
+    <div className="maintenance-section panel">
       <div className="section-header">
         <h3>Maintenance & Repairs</h3>
         <p>Track maintenance tasks and repair work</p>
@@ -248,8 +364,8 @@ const TechnicianDashboard = () => {
         </select>
       </div>
 
-      <div className="maintenance-table">
-        <table>
+      <div className="data-table-wrapper">
+        <table className="data-table">
           <thead>
             <tr>
               <th>Property</th>
@@ -265,53 +381,61 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {mockMaintenance.map(maintenance => (
-              <tr key={maintenance.id}>
-                <td>{maintenance.property}</td>
-                <td>{maintenance.issue}</td>
-                <td>
-                  <span className={`priority-badge ${maintenance.priority.toLowerCase()}`}>
-                    {maintenance.priority}
-                  </span>
-                </td>
-                <td>
-                  <span className={`status-badge ${maintenance.status.toLowerCase().replace(' ', '-')}`}>
-                    {maintenance.status}
-                  </span>
-                </td>
-                <td>{maintenance.assigned}</td>
-                <td>{maintenance.date}</td>
-                <td>{maintenance.estimatedHours}h</td>
-                <td>${maintenance.estimatedCost}</td>
-                <td>
-                  <span className={`quote-badge ${maintenance.quoteGenerated ? 'generated' : 'pending'}`}>
-                    {maintenance.quoteGenerated ? 'Generated' : 'Pending'}
-                  </span>
-                </td>
-                <td>
-                  <button className="table-action-button view">View</button>
-                  <button className="table-action-button edit">Edit</button>
-                  {!maintenance.quoteGenerated && (
-                    <button className="table-action-button quote">Generate Quote</button>
-                  )}
-                  {maintenance.status === 'Pending' && (
-                    <button className="table-action-button start">Start</button>
-                  )}
-                  {maintenance.quoteGenerated && (
-                    <>
-                      <button className="table-action-button edit" title="Submit to Management" onClick={() => {
-                        const q = { id: Date.now(), maintenanceId: maintenance.id, property: maintenance.property, issue: maintenance.issue, amount: maintenance.estimatedCost, recipient: 'Management', date: new Date().toLocaleDateString(), status: 'Sent' };
-                        setQuotes(prev => [q, ...prev]);
-                      }}>To Mgmt</button>
-                      <button className="table-action-button edit" title="Submit to Owner" onClick={() => {
-                        const q = { id: Date.now()+1, maintenanceId: maintenance.id, property: maintenance.property, issue: maintenance.issue, amount: maintenance.estimatedCost, recipient: 'Owner', date: new Date().toLocaleDateString(), status: 'Sent' };
-                        setQuotes(prev => [q, ...prev]);
-                      }}>To Owner</button>
-                    </>
-                  )}
+            {maintenanceRequests.length === 0 ? (
+              <tr>
+                <td colSpan="10" style={{ textAlign: 'center', padding: '20px' }}>
+                  No maintenance requests found
                 </td>
               </tr>
-            ))}
+            ) : (
+              maintenanceRequests.map(maintenance => (
+                <tr key={maintenance.ID}>
+                  <td>{maintenance.Property}</td>
+                  <td>{maintenance.Issue}</td>
+                  <td>
+                    <span className={`priority-badge ${maintenance.Priority?.toLowerCase() || 'medium'}`}>
+                      {maintenance.Priority || 'Medium'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge ${maintenance.Status?.toLowerCase().replace(' ', '-') || 'pending'}`}>
+                      {maintenance.Status || 'Pending'}
+                    </span>
+                  </td>
+                  <td>{maintenance.Assigned || 'Unassigned'}</td>
+                  <td>{new Date(maintenance.Date).toLocaleDateString()}</td>
+                  <td>{maintenance.EstimatedHours || 0}h</td>
+                  <td>${maintenance.EstimatedCost || 0}</td>
+                  <td>
+                    <span className={`quote-badge ${maintenance.QuoteGenerated ? 'generated' : 'pending'}`}>
+                      {maintenance.QuoteGenerated ? 'Generated' : 'Pending'}
+                    </span>
+                  </td>
+                  <td>
+                    <button className="table-action-button view">View</button>
+                    <button className="table-action-button edit">Edit</button>
+                    {!maintenance.QuoteGenerated && (
+                      <button className="table-action-button quote">Generate Quote</button>
+                    )}
+                    {maintenance.Status === 'Pending' && (
+                      <button className="table-action-button start">Start</button>
+                    )}
+                    {maintenance.QuoteGenerated && (
+                      <>
+                        <button className="table-action-button edit" title="Submit to Management" onClick={() => {
+                          const q = { id: Date.now(), maintenanceId: maintenance.ID, property: maintenance.Property, issue: maintenance.Issue, amount: maintenance.EstimatedCost, recipient: 'Management', date: new Date().toLocaleDateString(), status: 'Sent' };
+                          setQuotes(prev => [q, ...prev]);
+                        }}>To Mgmt</button>
+                        <button className="table-action-button edit" title="Submit to Owner" onClick={() => {
+                          const q = { id: Date.now()+1, maintenanceId: maintenance.ID, property: maintenance.Property, issue: maintenance.Issue, amount: maintenance.EstimatedCost, recipient: 'Owner', date: new Date().toLocaleDateString(), status: 'Sent' };
+                          setQuotes(prev => [q, ...prev]);
+                        }}>To Owner</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -338,14 +462,14 @@ const TechnicianDashboard = () => {
   );
 
   const renderInventories = () => (
-    <div className="inspections-section">
+    <div className="inspections-section panel">
       <div className="section-header">
         <h3>Move-in and Move-out Inventories</h3>
         <p>Create and manage detailed inventory reports</p>
       </div>
 
-      <div className="inspections-table">
-        <table>
+      <div className="data-table-wrapper">
+        <table className="data-table">
           <thead>
             <tr>
               <th>Property</th>
@@ -357,23 +481,31 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {mockInspections.filter(i => i.type === 'Move-in' || i.type === 'Move-out').map(inv => (
-              <tr key={`inv-${inv.id}`}>
-                <td>{inv.property}</td>
-                <td>
-                  <span className={`type-badge ${inv.type.toLowerCase().replace(' ', '-')}`}>{inv.type}</span>
-                </td>
-                <td>{inv.date}</td>
-                <td>{inv.inspector}</td>
-                <td>
-                  <button className="table-action-button view">View</button>
-                </td>
-                <td>
-                  <button className="table-action-button edit">Edit</button>
-                  <button className="table-action-button quote">Generate Report</button>
+            {inspections.filter(i => i.Type === 'Move-in' || i.Type === 'Move-out').length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
+                  No inventory inspections found
                 </td>
               </tr>
-            ))}
+            ) : (
+              inspections.filter(i => i.Type === 'Move-in' || i.Type === 'Move-out').map(inv => (
+                <tr key={`inv-${inv.ID}`}>
+                  <td>{inv.Property}</td>
+                  <td>
+                    <span className={`type-badge ${inv.Type?.toLowerCase().replace(' ', '-') || 'move-in'}`}>{inv.Type || 'Move-in'}</span>
+                  </td>
+                  <td>{new Date(inv.Date).toLocaleDateString()}</td>
+                  <td>{inv.Inspector || 'Unassigned'}</td>
+                  <td>
+                    <button className="table-action-button view">View</button>
+                  </td>
+                  <td>
+                    <button className="table-action-button edit">Edit</button>
+                    <button className="table-action-button quote">Generate Report</button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -381,14 +513,14 @@ const TechnicianDashboard = () => {
   );
 
   const renderRequests = () => (
-    <div className="inspections-section">
+    <div className="inspections-section panel">
       <div className="section-header">
         <h3>Tenant Requests (Mail Inbox)</h3>
         <p>Receive and triage tenant maintenance requests</p>
       </div>
 
-      <div className="inspections-table">
-        <table>
+      <div className="data-table-wrapper">
+        <table className="data-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -424,13 +556,13 @@ const TechnicianDashboard = () => {
   );
 
   const renderQuotes = () => (
-    <div className="inspections-section">
+    <div className="inspections-section panel">
       <div className="section-header">
         <h3>Submitted Quotes</h3>
         <p>Track quotes sent to management and owners</p>
       </div>
-      <div className="inspections-table">
-        <table>
+      <div className="data-table-wrapper">
+        <table className="data-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -448,7 +580,7 @@ const TechnicianDashboard = () => {
                 <td>{q.recipient}</td>
                 <td>{q.property}</td>
                 <td>{q.issue}</td>
-                <td>${q.amount}</td>
+                <td>{q.amount} XOF</td>
                 <td><span className="status-badge completed">{q.status}</span></td>
               </tr>
             ))}
@@ -459,13 +591,13 @@ const TechnicianDashboard = () => {
   );
 
   const renderProgress = () => (
-    <div className="inspections-section">
+    <div className="inspections-section panel">
       <div className="section-header">
         <h3>Work Progress Report</h3>
         <p>Monitor progress of ongoing maintenance tasks</p>
       </div>
-      <div className="inspections-table">
-        <table>
+      <div className="data-table-wrapper">
+        <table className="data-table">
           <thead>
             <tr>
               <th>Property</th>
@@ -475,18 +607,26 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {mockMaintenance.map(m => (
-              <tr key={`prog-${m.id}`}>
-                <td>{m.property}</td>
-                <td>{m.issue}</td>
-                <td><span className={`status-badge ${m.status.toLowerCase().replace(' ', '-')}`}>{m.status}</span></td>
-                <td>
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: m.status === 'Completed' ? '100%' : m.status === 'In Progress' ? '60%' : m.status === 'Scheduled' ? '20%' : '10%' }} />
-                  </div>
+            {maintenanceRequests.length === 0 ? (
+              <tr>
+                <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
+                  No maintenance requests found
                 </td>
               </tr>
-            ))}
+            ) : (
+              maintenanceRequests.map(m => (
+                <tr key={`prog-${m.ID}`}>
+                  <td>{m.Property}</td>
+                  <td>{m.Issue}</td>
+                  <td><span className={`status-badge ${m.Status?.toLowerCase().replace(' ', '-') || 'pending'}`}>{m.Status || 'Pending'}</span></td>
+                  <td>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: m.Status === 'Completed' ? '100%' : m.Status === 'In Progress' ? '60%' : m.Status === 'Scheduled' ? '20%' : '10%' }} />
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -494,7 +634,7 @@ const TechnicianDashboard = () => {
   );
 
   const renderTasks = () => (
-    <div className="tasks-section">
+    <div className="tasks-section panel">
       <div className="section-header">
         <h3>Task Management</h3>
         <p>Manage scheduled tasks and maintenance calendar</p>
@@ -522,8 +662,8 @@ const TechnicianDashboard = () => {
         />
       </div>
 
-      <div className="tasks-table">
-        <table>
+      <div className="data-table-wrapper">
+        <table className="data-table">
           <thead>
             <tr>
               <th>Task Title</th>
@@ -536,29 +676,55 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {mockTasks.map(task => (
-              <tr key={task.id}>
-                <td>{task.title}</td>
-                <td>{task.property}</td>
-                <td>
-                  <span className={`priority-badge ${task.priority.toLowerCase()}`}>
-                    {task.priority}
-                  </span>
-                </td>
-                <td>{task.dueDate}</td>
-                <td>
-                  <span className={`status-badge ${task.status.toLowerCase().replace(' ', '-')}`}>
-                    {task.status}
-                  </span>
-                </td>
-                <td>{task.estimatedHours}h</td>
-                <td>
-                  <button className="table-action-button view">View</button>
-                  <button className="table-action-button edit">Edit</button>
-                  <button className="table-action-button complete">Complete</button>
+            {tasks.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
+                  No tasks found
                 </td>
               </tr>
-            ))}
+            ) : (
+              tasks.map(task => (
+                <tr key={task.ID}>
+                  <td>{task.Issue || 'Maintenance Task'}</td>
+                  <td>{task.Property}</td>
+                  <td>
+                    <span className={`priority-badge ${task.Priority?.toLowerCase() || 'medium'}`}>
+                      {task.Priority || 'Medium'}
+                    </span>
+                  </td>
+                  <td>{new Date(task.Date).toLocaleDateString()}</td>
+                  <td>
+                    <span className={`status-badge ${task.Status?.toLowerCase().replace(' ', '-') || 'pending'}`}>
+                      {task.Status || 'Pending'}
+                    </span>
+                  </td>
+                  <td>{task.EstimatedHours || 0}h</td>
+                  <td>
+                    <button 
+                      className="table-action-button view"
+                      onClick={() => handleTaskView(task)}
+                    >
+                      View
+                    </button>
+                    <button 
+                      className="table-action-button edit"
+                      onClick={() => handleTaskView(task)}
+                    >
+                      Edit
+                    </button>
+                    {task.Status !== 'Completed' && (
+                      <button 
+                        className="table-action-button complete"
+                        onClick={() => handleTaskComplete(task)}
+                        disabled={loading}
+                      >
+                        Complete
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -604,8 +770,8 @@ const TechnicianDashboard = () => {
     </div>
   );
 
-  const renderContent = () => {
-    switch (activeTab) {
+  const renderContent = (tabId = activeTab) => {
+    switch (tabId) {
       case 'overview':
         return renderOverview();
       case 'inspections':
@@ -622,38 +788,283 @@ const TechnicianDashboard = () => {
         return renderProgress();
       case 'tasks':
         return renderTasks();
+      case 'settings':
+        return (
+          <div className="embedded-settings">
+            <SettingsPage />
+          </div>
+        );
       default:
         return renderOverview();
     }
   };
 
+  const layoutMenu = useMemo(
+    () =>
+      tabs.map(tab => ({
+        ...tab,
+        onSelect: () => setActiveTab(tab.id),
+        active: activeTab === tab.id
+      })),
+    [tabs, activeTab]
+  );
+
   return (
-    <div className="technician-dashboard">
-      <div className="dashboard-header">
-        <h1>Technical Manager Dashboard</h1>
-        <p>Manage inspections, maintenance, and technical tasks</p>
-      </div>
-
-      <div className="dashboard-tabs">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
+    <>
+      <RoleLayout
+        brand={{ name: 'SAAF IMMO', caption: 'Operations', logo: 'SAAF', logoImage: `${process.env.PUBLIC_URL}/download.jpeg` }}
+        menu={layoutMenu}
+        activeId={activeTab}
+        onActiveChange={setActiveTab}
+        onLogout={handleLogout}
+      >
+        {({ activeId }) => {
+          const currentTab = activeId || activeTab;
           return (
-            <button
-              key={tab.id}
-              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <Icon size={20} />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+            <>
+              {currentTab === 'overview' && (
+                <div className="dashboard-overview">
+                  <div className="overview-card">
+                    <div className="card-label">
+                      <span>Quotes Created</span>
+                      <span className="card-trend positive">
+                        <CheckCircle size={16} />
+                        {overviewData?.trendQuotes || '+10.6%'}
+                      </span>
+                    </div>
+                    <div className="card-value">
+                      <span>{overviewData?.quotes || 23}</span>
+                      <small>This month</small>
+                    </div>
+                  </div>
+                  <div className="overview-card">
+                    <div className="card-label">
+                      <span>Jobs In Progress</span>
+                      <span className="card-trend positive">
+                        <Wrench size={16} />
+                        {overviewData?.trendJobs || '+14.2%'}
+                      </span>
+                    </div>
+                    <div className="card-value">
+                      <span>{overviewData?.activeMaintenance || 8}</span>
+                      <small>Current workload</small>
+                    </div>
+                  </div>
+                  <div className="overview-card">
+                    <div className="card-label">
+                      <span>Repair Requests</span>
+                      <span className="card-trend neutral">
+                        <AlertTriangle size={16} />
+                        {overviewData?.trendRepairs || 'This week'}
+                      </span>
+                    </div>
+                    <div className="card-value">
+                      <span>{overviewData?.repairRequests || 72}</span>
+                      <small>Awaiting review</small>
+                    </div>
+                  </div>
+                  <div className="overview-card">
+                    <div className="card-label">
+                      <span>Portfolio Assets</span>
+                      <span className="card-trend positive">
+                        <Building size={16} />
+                        {overviewData?.trendPortfolio || '+14.2%'}
+                      </span>
+                    </div>
+                    <div className="card-value">
+                      <span>{overviewData?.portfolio || 100}</span>
+                      <small>Managed units</small>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-      <div className="dashboard-content">
-        {renderContent()}
-      </div>
-    </div>
+              <div className="content-body">
+                {renderContent(currentTab)}
+              </div>
+            </>
+          );
+        }}
+      </RoleLayout>
+
+      {/* Add Inspection Modal */}
+      {showInspectionModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Add New Inspection</h3>
+              <button 
+                className="modal-close"
+                onClick={() => setShowInspectionModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleInspectionSubmit} className="modal-form">
+              <div className="form-group">
+                <label>Property</label>
+                <input
+                  type="text"
+                  value={inspectionForm.property}
+                  onChange={(e) => setInspectionForm({...inspectionForm, property: e.target.value})}
+                  placeholder="Enter property address"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Inspection Type</label>
+                <select
+                  value={inspectionForm.type}
+                  onChange={(e) => setInspectionForm({...inspectionForm, type: e.target.value})}
+                  required
+                >
+                  <option value="routine">Routine</option>
+                  <option value="move-in">Move-in</option>
+                  <option value="move-out">Move-out</option>
+                  <option value="emergency">Emergency</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Inspector</label>
+                <input
+                  type="text"
+                  value={inspectionForm.inspector}
+                  onChange={(e) => setInspectionForm({...inspectionForm, inspector: e.target.value})}
+                  placeholder="Enter inspector name"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Notes</label>
+                <textarea
+                  value={inspectionForm.notes}
+                  onChange={(e) => setInspectionForm({...inspectionForm, notes: e.target.value})}
+                  placeholder="Enter inspection notes"
+                  rows="3"
+                />
+              </div>
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => setShowInspectionModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Adding...' : 'Add Inspection'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Task Management Modal */}
+      {showTaskModal && selectedTask && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Task Details - {selectedTask.Issue || 'Maintenance Task'}</h3>
+              <button 
+                className="modal-close"
+                onClick={() => {
+                  setShowTaskModal(false);
+                  setSelectedTask(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleTaskUpdate} className="modal-form">
+              <div className="form-group">
+                <label>Property</label>
+                <input
+                  type="text"
+                  value={selectedTask.Property}
+                  disabled
+                  className="disabled-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Issue</label>
+                <textarea
+                  value={selectedTask.Issue || 'Maintenance Task'}
+                  disabled
+                  className="disabled-input"
+                  rows="2"
+                />
+              </div>
+              <div className="form-group">
+                <label>Priority</label>
+                <input
+                  type="text"
+                  value={selectedTask.Priority || 'Medium'}
+                  disabled
+                  className="disabled-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Status</label>
+                <select
+                  value={taskForm.status}
+                  onChange={(e) => setTaskForm({...taskForm, status: e.target.value})}
+                  required
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Scheduled">Scheduled</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Estimated Hours</label>
+                <input
+                  type="number"
+                  value={taskForm.estimatedHours}
+                  onChange={(e) => setTaskForm({...taskForm, estimatedHours: parseFloat(e.target.value) || 0})}
+                  min="0"
+                  step="0.5"
+                />
+              </div>
+              <div className="form-group">
+                <label>Estimated Cost ($)</label>
+                <input
+                  type="number"
+                  value={taskForm.estimatedCost}
+                  onChange={(e) => setTaskForm({...taskForm, estimatedCost: parseFloat(e.target.value) || 0})}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowTaskModal(false);
+                    setSelectedTask(null);
+                  }}
+                >
+                  Close
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Updating...' : 'Update Task'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

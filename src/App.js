@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 
@@ -12,33 +12,57 @@ import TechnicianDashboard from './pages/TechnicianDashboard';
 import LandlordDashboard from './pages/LandlordDashboard';
 import SystemDashboard from './pages/SystemDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import SettingsPage from './pages/SettingsPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import CheckoutPage from './pages/CheckoutPage';
 import ReceiptPage from './pages/ReceiptPage';
 
 // Import Layout  Components
-import Header from './components/Header';
 import ChatBubble from './components/ChatBubble';
 
 function App() {
-  const [userRole, setUserRole] = useState('tenant'); // Default role for demo
-  const [userCompany, setUserCompany] = useState('Premium Properties Ltd'); // Default company for demo
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogin = (loginData) => {
-    setUserCompany(loginData.company);
-    setUserRole(loginData.role);
+  // Check for existing login on app start
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    const storedToken = localStorage.getItem('token');
+    
+    if (storedUser && storedToken) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+  };
+
+  // Role-based route mapping
+  const getDashboardRoute = (role) => {
+    switch (role) {
+      case 'tenant': return '/tenant';
+      case 'commercial': return '/sales';
+      case 'admin': return '/administrative';
+      case 'accounting': return '/accounting';
+      case 'salesmanager': return '/sales-manager';
+      case 'technician': return '/technician';
+      case 'landlord': return '/landlord';
+      case 'superadmin': return '/super-admin';
+      default: return '/tenant';
+    }
   };
 
   const DashboardLayout = ({ children }) => (
     <div className="dashboard-layout">
-      <Header 
-        userRole={userRole} 
-        onRoleChange={setUserRole}
-        onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-        userCompany={userCompany}
-      />
       <div className="main-content">
         {children}
       </div>
@@ -46,69 +70,128 @@ function App() {
     </div>
   );
 
+  // Protected Route component
+  const ProtectedRoute = ({ children, requiredRole }) => {
+    if (!user) {
+      return <Navigate to="/" replace />;
+    }
+    
+    if (requiredRole && user.role !== requiredRole) {
+      return <Navigate to={getDashboardRoute(user.role)} replace />;
+    }
+    
+    return children;
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <Router>
       <div className="App">
         <Routes>
-                  {/* Public Routes */}
-                  <Route path="/" element={<LoginPage onLogin={handleLogin} />} />
+          {/* Public Routes */}
+          <Route 
+            path="/" 
+            element={
+              user ? (
+                <Navigate to={getDashboardRoute(user.role)} replace />
+              ) : (
+                <LoginPage onLogin={handleLogin} />
+              )
+            } 
+          />
+          
+          {/* Public pages that don't require authentication */}
           <Route path="/home" element={<HomePage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/receipt" element={<ReceiptPage />} />
           
-          {/* Dashboard Routes */}
+          {/* Protected Dashboard Routes */}
           <Route path="/tenant" element={
-            <DashboardLayout>
-              <TenantDashboard />
-            </DashboardLayout>
+            <ProtectedRoute requiredRole="tenant">
+              <DashboardLayout>
+                <TenantDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
           } />
           
           <Route path="/sales" element={
-            <DashboardLayout>
-              <SalesDashboard />
-            </DashboardLayout>
+            <ProtectedRoute requiredRole="commercial">
+              <DashboardLayout>
+                <SalesDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
           } />
           
           <Route path="/administrative" element={
-            <DashboardLayout>
-              <AdministrativeDashboard />
-            </DashboardLayout>
+            <ProtectedRoute requiredRole="admin">
+              <DashboardLayout>
+                <AdministrativeDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
           } />
           
           <Route path="/accounting" element={
-            <DashboardLayout>
-              <AccountingDashboard />
-            </DashboardLayout>
+            <ProtectedRoute requiredRole="accounting">
+              <DashboardLayout>
+                <AccountingDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
           } />
           
           <Route path="/sales-manager" element={
-            <DashboardLayout>
-              <SalesManagerDashboard />
-            </DashboardLayout>
+            <ProtectedRoute requiredRole="salesmanager">
+              <DashboardLayout>
+                <SalesManagerDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
           } />
           
           <Route path="/technician" element={
-            <DashboardLayout>
-              <TechnicianDashboard />
-            </DashboardLayout>
+            <ProtectedRoute requiredRole="technician">
+              <DashboardLayout>
+                <TechnicianDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
           } />
           
           <Route path="/landlord" element={
-            <DashboardLayout>
-              <LandlordDashboard />
-            </DashboardLayout>
+            <ProtectedRoute requiredRole="landlord">
+              <DashboardLayout>
+                <LandlordDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
           } />
           
           <Route path="/system" element={
-            <DashboardLayout>
-              <SystemDashboard />
-            </DashboardLayout>
+            <ProtectedRoute requiredRole="superadmin">
+              <DashboardLayout>
+                <SystemDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
           } />
           
           <Route path="/super-admin" element={
-            <DashboardLayout>
-              <SuperAdminDashboard />
-            </DashboardLayout>
+            <ProtectedRoute requiredRole="superadmin">
+              <DashboardLayout>
+                <SuperAdminDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <SettingsPage />
+              </DashboardLayout>
+            </ProtectedRoute>
           } />
           
           {/* Default redirect */}

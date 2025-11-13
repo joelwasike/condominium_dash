@@ -1,19 +1,28 @@
-import React, { useState } from 'react';
-import { DollarSign, TrendingUp, Building, Receipt, Download, Filter, Search, CreditCard, CheckCircle, XCircle, User, FileText, Mail, ArrowRightLeft } from 'lucide-react';
-import './AccountingDashboard.css';
+import React, { useState, useEffect, useMemo } from 'react';
+import { DollarSign, TrendingUp, Building, Receipt, Download, Filter, Search, CreditCard, CheckCircle, XCircle, User, FileText, Mail, ArrowRightLeft, Plus } from 'lucide-react';
+import { accountingService } from '../services/accountingService';
+import RoleLayout from '../components/RoleLayout';
+import '../components/RoleLayout.css';
+import '../pages/TechnicianDashboard.css';
 
 const AccountingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showLandlordPaymentModal, setShowLandlordPaymentModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [expenses, setExpenses] = useState([
-    { id: 1, scope: 'Building', building: '123 Main St', category: 'Maintenance', amount: 320.00, date: '2024-11-03', notes: 'Plumbing fix' },
-    { id: 2, scope: 'SAAF IMMO', building: '-', category: 'Software', amount: 199.00, date: '2024-11-05', notes: 'SaaS subscription' }
-  ]);
+  const [loading, setLoading] = useState(false);
+  
+  // API Data States
+  const [overviewData, setOverviewData] = useState(null);
+  const [tenantPayments, setTenantPayments] = useState([]);
+  const [landlordPayments, setLandlordPayments] = useState([]);
+  const [collections, setCollections] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [monthlySummary, setMonthlySummary] = useState(null);
 
   const addNotification = (message, type = 'info') => {
     const id = Date.now();
@@ -23,105 +32,174 @@ const AccountingDashboard = () => {
     }, 3000);
   };
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: DollarSign },
-    { id: 'collections', label: 'Collections', icon: TrendingUp },
-    { id: 'payments', label: 'Landlord Payments', icon: Building },
-    { id: 'tenant-payments', label: 'Tenant Payments', icon: CreditCard },
-    { id: 'reports', label: 'Reports', icon: Receipt },
-    { id: 'expenses', label: 'Expenses', icon: FileText }
-  ];
+  const tabs = useMemo(
+    () => [
+      { id: 'overview', label: 'Overview', icon: DollarSign },
+      { id: 'collections', label: 'Collections', icon: TrendingUp },
+      { id: 'payments', label: 'Landlord Payments', icon: Building },
+      { id: 'tenant-payments', label: 'Tenant Payments', icon: CreditCard },
+      { id: 'reports', label: 'Reports', icon: Receipt },
+      { id: 'expenses', label: 'Expenses', icon: FileText }
+    ],
+    []
+  );
 
-  const mockCollections = [
-    { id: 1, building: '123 Main St', landlord: 'John Smith', amount: 1500, status: 'Collected', date: '2024-11-01', chargeType: 'Rent' },
-    { id: 2, building: '456 Oak Ave', landlord: 'Jane Doe', amount: 1200, status: 'Pending', date: '2024-11-01', chargeType: 'Rent' },
-    { id: 3, building: '789 Pine Ln', landlord: 'Bob Johnson', amount: 2000, status: 'Collected', date: '2024-10-31', chargeType: 'Rent' },
-    { id: 4, building: '321 Elm St', landlord: 'Alice Brown', amount: 500, status: 'Collected', date: '2024-10-30', chargeType: 'Late Fee' },
-  ];
-
-  const mockLandlordPayments = [
-    { id: 1, landlord: 'John Smith', building: '123 Main St', netAmount: 1350, commission: 150, date: '2024-11-05', status: 'Paid' },
-    { id: 2, landlord: 'Jane Doe', building: '456 Oak Ave', netAmount: 1080, commission: 120, date: '2024-11-05', status: 'Paid' },
-    { id: 3, landlord: 'Bob Johnson', building: '789 Pine Ln', netAmount: 1800, commission: 200, date: '2024-11-05', status: 'Pending' },
-  ];
-
-  const [tenantPayments, setTenantPayments] = useState([
-    { id: 1, tenant: 'John Doe', property: '123 Main St', amount: 1500, method: 'Cash', date: '2024-11-20', status: 'Pending', receiptNumber: null, chargeType: 'Rent' },
-    { id: 2, tenant: 'Jane Smith', property: '456 Oak Ave', amount: 1200, method: 'Mobile Money', date: '2024-11-20', status: 'Pending', receiptNumber: null, chargeType: 'Deposit' },
-    { id: 3, tenant: 'Bob Johnson', property: '789 Pine Ln', amount: 2000, method: 'Bank Transfer', date: '2024-11-19', status: 'Approved', receiptNumber: 'RCP-001', chargeType: 'Rent' },
-    { id: 4, tenant: 'Alice Brown', property: '321 Elm St', amount: 800, method: 'Cash', date: '2024-11-19', status: 'Approved', receiptNumber: 'RCP-002', chargeType: 'Late Fee' },
-  ]);
-
-  const generateReceipt = (payment) => {
-    const receiptNumber = `RCP-${Date.now()}`;
-    const receiptContent = `
-      RENTAL PAYMENT RECEIPT
-      =====================
+  // Load data from APIs
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      console.log('Loading accounting dashboard data...');
       
-      Receipt No: ${receiptNumber}
-      Date: ${new Date().toLocaleDateString()}
-      
-      Tenant: ${payment.tenant}
-      Property: ${payment.property}
-      Amount Paid: €${payment.amount.toFixed(2)}
-      Charge Type: ${payment.chargeType || 'N/A'}
-      Payment Method: ${payment.method}
-      Payment Date: ${payment.date}
-      
-      Status: CONFIRMED
-      
-      Thank you for your payment!
-      
-      Generated by: Accounting Department
-      Generated on: ${new Date().toLocaleString()}
-    `;
+      const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary] = await Promise.all([
+        accountingService.getOverview(),
+        accountingService.getTenantPayments(),
+        accountingService.getLandlordPayments(),
+        accountingService.getCollections(),
+        accountingService.getExpenses(),
+        accountingService.getMonthlySummary()
+      ]);
 
-    const blob = new Blob([receiptContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `receipt-${receiptNumber}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    // Update payment with receipt number
-    setTenantPayments(prev => prev.map(p => 
-      p.id === payment.id 
-        ? { ...p, receiptNumber: receiptNumber }
-        : p
-    ));
-
-    addNotification('Receipt generated and downloaded!', 'success');
+      setOverviewData(overview);
+      setTenantPayments(tenantPaymentsData);
+      setLandlordPayments(landlordPaymentsData);
+      setCollections(collectionsData);
+      setExpenses(expensesData);
+      setMonthlySummary(summary);
+      
+      console.log('Accounting data loaded successfully:', { overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary });
+    } catch (error) {
+      console.error('Failed to load accounting data:', error);
+      addNotification('Failed to load dashboard data', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const sendReceipt = (payment) => {
-    if (!payment.receiptNumber) {
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const generateReceipt = async (payment) => {
+    try {
+      setLoading(true);
+      const updatedPayment = await accountingService.generateReceipt(payment.ID);
+      
+      // Update local state
+      setTenantPayments(prev => prev.map(p => 
+        p.ID === payment.ID ? updatedPayment : p
+      ));
+
+      // Generate downloadable receipt
+      const receiptContent = `
+        RENTAL PAYMENT RECEIPT
+        =====================
+        
+        Receipt No: ${updatedPayment.ReceiptNumber}
+        Date: ${new Date().toLocaleDateString()}
+        
+        Tenant: ${payment.Tenant}
+        Property: ${payment.Property}
+        Amount Paid: ${payment.Amount.toFixed(2)} XOF
+        Charge Type: ${payment.ChargeType || 'N/A'}
+        Payment Method: ${payment.Method}
+        Payment Date: ${new Date(payment.Date).toLocaleDateString()}
+        
+        Status: CONFIRMED
+        
+        Thank you for your payment!
+        
+        Generated by: Accounting Department
+        Generated on: ${new Date().toLocaleString()}
+      `;
+
+      const blob = new Blob([receiptContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${updatedPayment.ReceiptNumber}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      addNotification('Receipt generated and downloaded!', 'success');
+    } catch (error) {
+      console.error('Failed to generate receipt:', error);
+      addNotification('Failed to generate receipt', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendReceipt = async (payment) => {
+    if (!payment.ReceiptNumber) {
       addNotification('Generate receipt before sending.', 'warning');
       return;
     }
-    addNotification(`Receipt ${payment.receiptNumber} emailed to ${payment.tenant}.`, 'success');
+    
+    try {
+      setLoading(true);
+      const email = prompt('Enter tenant email address:');
+      if (email) {
+        await accountingService.sendReceipt(payment.ID, email);
+        addNotification(`Receipt sent to ${email}`, 'success');
+      }
+    } catch (error) {
+      console.error('Failed to send receipt:', error);
+      addNotification('Failed to send receipt', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const transferToLandlord = (paymentId) => {
-    addNotification(`Transfer to landlord initiated for payment #${paymentId}.`, 'success');
+  const transferToLandlord = async (paymentId) => {
+    try {
+      setLoading(true);
+      await accountingService.transferToLandlord(paymentId);
+      
+      // Update local state
+      setLandlordPayments(prev => prev.map(p => 
+        p.ID === paymentId ? { ...p, Status: 'Paid' } : p
+      ));
+      
+      addNotification(`Transfer to landlord completed for payment #${paymentId}.`, 'success');
+    } catch (error) {
+      console.error('Failed to transfer to landlord:', error);
+      addNotification('Failed to transfer to landlord', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const approvePayment = (payment) => {
-    setSelectedPayment(payment);
-    setShowApprovalModal(true);
+  const approvePayment = async (payment) => {
+    try {
+      setLoading(true);
+      const updatedPayment = await accountingService.approveTenantPayment(payment.ID);
+      
+      // Update local state
+      setTenantPayments(prev => prev.map(p => 
+        p.ID === payment.ID ? updatedPayment : p
+      ));
+      
+      addNotification(`Payment approved for ${payment.Tenant}`, 'success');
+    } catch (error) {
+      console.error('Failed to approve payment:', error);
+      addNotification('Failed to approve payment', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const confirmApproval = () => {
     if (selectedPayment) {
       setTenantPayments(prev => prev.map(p => 
-        p.id === selectedPayment.id 
-          ? { ...p, status: 'Approved', receiptNumber: p.receiptNumber || `RCP-${Date.now()}` }
+        p.ID === selectedPayment.ID 
+          ? { ...p, Status: 'Approved', ReceiptNumber: p.ReceiptNumber || `RCP-${Date.now()}` }
           : p
       ));
 
-      addNotification(`Payment from ${selectedPayment.tenant} approved successfully!`, 'success');
+      addNotification(`Payment from ${selectedPayment.Tenant} approved successfully!`, 'success');
       setShowApprovalModal(false);
       setSelectedPayment(null);
     }
@@ -129,77 +207,66 @@ const AccountingDashboard = () => {
 
   const rejectPayment = (payment) => {
     setTenantPayments(prev => prev.map(p => 
-      p.id === payment.id 
-        ? { ...p, status: 'Rejected' }
+      p.ID === payment.ID 
+        ? { ...p, Status: 'Rejected' }
         : p
     ));
 
-    addNotification(`Payment from ${payment.tenant} rejected.`, 'warning');
+    addNotification(`Payment from ${payment.Tenant} rejected.`, 'warning');
   };
 
   const renderOverview = () => (
     <div className="overview-section">
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <DollarSign size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Total Available Balance</h3>
-            <p>Current balance</p>
-            <span className="stat-value">$45,230</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <TrendingUp size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Total Collected This Month</h3>
-            <p>November 2024</p>
-            <span className="stat-value">$28,450</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <Building size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Total Transferred to Landlords</h3>
-            <p>This month</p>
-            <span className="stat-value">$25,605</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <Receipt size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Company Commission Earned</h3>
-            <p>This month</p>
-            <span className="stat-value">$2,845</span>
-          </div>
+      <div className="section-header">
+        <div>
+          <h2>Accounting Overview</h2>
+          <p>Financial summary and balance tracking</p>
         </div>
       </div>
 
-      <div className="balance-breakdown">
-        <h3>Balance by Building</h3>
-        <div className="balance-list">
-          <div className="balance-item">
-            <span className="building">123 Main St</span>
-            <span className="amount">$8,500</span>
+      <div className="dashboard-overview accounting-overview">
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Total Available Balance</span>
           </div>
-          <div className="balance-item">
-            <span className="building">456 Oak Ave</span>
-            <span className="amount">$6,200</span>
+          <div className="card-value">
+            <span>
+              {overviewData ? `${overviewData.netRevenue?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
+            </span>
+            <small>Current balance</small>
           </div>
-          <div className="balance-item">
-            <span className="building">789 Pine Ln</span>
-            <span className="amount">$12,800</span>
+        </div>
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Total Collected This Month</span>
           </div>
-          <div className="balance-item">
-            <span className="building">321 Elm St</span>
-            <span className="amount">$4,730</span>
+          <div className="card-value">
+            <span>
+              {overviewData ? `${overviewData.totalTenantPayments?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
+            </span>
+            <small>November 2024</small>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Total Transferred to Landlords</span>
+          </div>
+          <div className="card-value">
+            <span>
+              {overviewData ? `${overviewData.totalLandlordPayments?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
+            </span>
+            <small>This month</small>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Company Commission Earned</span>
+          </div>
+          <div className="card-value">
+            <span>
+              {overviewData ? `${overviewData.pendingPayments || 0} XOF` : 'Loading...'}
+            </span>
+            <small>This month</small>
           </div>
         </div>
       </div>
@@ -209,105 +276,114 @@ const AccountingDashboard = () => {
   const renderCollections = () => (
     <div className="collections-section">
       <div className="section-header">
-        <h3>Real-time Collections Tracking</h3>
-        <p>Track rent and deposit payments per building</p>
-      </div>
-
-      <div className="filters-section">
-        <div className="filter-row">
-          <select className="filter-select">
-            <option value="">All Buildings/Properties</option>
-            <option value="123-main">123 Main St</option>
-            <option value="456-oak">456 Oak Ave</option>
-            <option value="789-pine">789 Pine Ln</option>
-            <option value="321-elm">321 Elm St</option>
-          </select>
-          <select className="filter-select">
-            <option value="">All Landlords</option>
-            <option value="john-smith">John Smith</option>
-            <option value="jane-doe">Jane Doe</option>
-            <option value="bob-johnson">Bob Johnson</option>
-            <option value="alice-brown">Alice Brown</option>
-          </select>
-          <select className="filter-select">
-            <option value="">All Periods</option>
-            <option value="current-month">Current Month</option>
-            <option value="last-month">Last Month</option>
-            <option value="last-3-months">Last 3 Months</option>
-          </select>
-          <select className="filter-select">
-            <option value="">All Payment Status</option>
-            <option value="collected">Collected</option>
-            <option value="pending">Pending</option>
-            <option value="overdue">Overdue</option>
-          </select>
-          <select className="filter-select">
-            <option value="">All Charge Types</option>
-            <option value="rent">Rent</option>
-            <option value="deposit">Deposit</option>
-            <option value="late-fee">Late Fee</option>
-            <option value="maintenance">Maintenance</option>
-          </select>
+        <div>
+          <h2>Real-time Collections Tracking</h2>
+          <p>Track rent and deposit payments per building</p>
         </div>
       </div>
 
-      <div className="collections-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Building/Property</th>
-              <th>Landlord</th>
-              <th>Amount</th>
-              <th>Payment Status</th>
-              <th>Charge Type</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockCollections.map(collection => (
-              <tr key={collection.id}>
-                <td>{collection.building}</td>
-                <td>{collection.landlord}</td>
-                <td>${collection.amount}</td>
-                <td className={`status ${collection.status.toLowerCase()}`}>{collection.status}</td>
-                <td>{collection.chargeType}</td>
-                <td>{collection.date}</td>
-                <td>
-                  <button className="table-action-button view">View</button>
-                  <button className="table-action-button receipt">Receipt</button>
-                </td>
+      <div className="filters-section" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <select className="filter-select">
+          <option value="">All Buildings/Properties</option>
+          <option value="123-main">123 Main St</option>
+          <option value="456-oak">456 Oak Ave</option>
+          <option value="789-pine">789 Pine Ln</option>
+          <option value="321-elm">321 Elm St</option>
+        </select>
+        <select className="filter-select">
+          <option value="">All Landlords</option>
+          <option value="john-smith">John Smith</option>
+          <option value="jane-doe">Jane Doe</option>
+          <option value="bob-johnson">Bob Johnson</option>
+          <option value="alice-brown">Alice Brown</option>
+        </select>
+        <select className="filter-select">
+          <option value="">All Periods</option>
+          <option value="current-month">Current Month</option>
+          <option value="last-month">Last Month</option>
+          <option value="last-3-months">Last 3 Months</option>
+        </select>
+        <select className="filter-select">
+          <option value="">All Payment Status</option>
+          <option value="collected">Collected</option>
+          <option value="pending">Pending</option>
+          <option value="overdue">Overdue</option>
+        </select>
+        <select className="filter-select">
+          <option value="">All Charge Types</option>
+          <option value="rent">Rent</option>
+          <option value="deposit">Deposit</option>
+          <option value="late-fee">Late Fee</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="loading">Loading collections...</div>
+      ) : collections.length === 0 ? (
+        <div className="no-data">No collections found</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Building/Property</th>
+                <th>Landlord</th>
+                <th>Amount</th>
+                <th>Payment Status</th>
+                <th>Charge Type</th>
+                <th>Date</th>
+                <th className="table-menu"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="collection-stats">
-        <div className="stat-item">
-          <span className="stat-label">Pending Rent Amount</span>
-          <span className="stat-value">$3,200</span>
+            </thead>
+            <tbody>
+              {collections.map((collection, index) => (
+                <tr key={collection.ID || `collection-${index}`}>
+                  <td>
+                    <span className="row-primary">{collection.Building || 'N/A'}</span>
+                  </td>
+                  <td>{collection.Landlord || 'N/A'}</td>
+                  <td>{collection.Amount?.toFixed(2) || '0.00'} XOF</td>
+                  <td>
+                    <span className={`status-badge ${(collection.Status || 'unknown').toLowerCase()}`}>
+                      {collection.Status || 'Unknown'}
+                    </span>
+                  </td>
+                  <td>{collection.ChargeType || 'N/A'}</td>
+                  <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
+                  <td className="table-menu">
+                    <div className="table-actions">
+                      <button className="table-action-button view">View</button>
+                      <button className="table-action-button edit">Receipt</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="stat-item">
-          <span className="stat-label">Overdue Payments</span>
-          <span className="stat-value">2</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">Collection Rate</span>
-          <span className="stat-value">94%</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 
   const renderPayments = () => (
     <div className="payments-section">
       <div className="section-header">
-        <h3>Landlord Payment Table</h3>
-        <p>Net payments after commission deduction</p>
+        <div>
+          <h2>Landlord Payment Table</h2>
+          <p>Net payments after commission deduction</p>
+        </div>
+        <button 
+          className="btn-primary" 
+          onClick={() => setShowLandlordPaymentModal(true)}
+          disabled={loading}
+        >
+          <Plus size={18} />
+          Record Payment
+        </button>
       </div>
 
-      <div className="payment-filters">
+      <div className="filters-section" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <select className="filter-select">
           <option value="">All Landlords</option>
           <option value="john-smith">John Smith</option>
@@ -327,115 +403,73 @@ const AccountingDashboard = () => {
         </select>
       </div>
 
-      <div className="payments-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Landlord</th>
-              <th>Building</th>
-              <th>Net Amount</th>
-              <th>Commission</th>
-              <th>Transaction Type</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockLandlordPayments.map(payment => (
-              <tr key={payment.id}>
-                <td>{payment.landlord}</td>
-                <td>{payment.building}</td>
-                <td>${payment.netAmount}</td>
-                <td>${payment.commission}</td>
-                <td>Payout</td>
-                <td>{payment.date}</td>
-                <td className={`status ${payment.status.toLowerCase()}`}>{payment.status}</td>
-                <td>
-                  <button className="table-action-button view">View</button>
-                  <button className="table-action-button transfer" onClick={() => transferToLandlord(payment.id)} title="Automatic Transfer">
-                    <ArrowRightLeft size={16} /> Transfer
-                  </button>
-                </td>
+      {loading ? (
+        <div className="loading">Loading landlord payments...</div>
+      ) : landlordPayments.length === 0 ? (
+        <div className="no-data">No landlord payments found</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Landlord</th>
+                <th>Building</th>
+                <th>Net Amount</th>
+                <th>Commission</th>
+                <th>Transaction Type</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th className="table-menu"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="payment-summary">
-        <div className="summary-card">
-          <h4>Total Commission This Month</h4>
-          <span className="amount">$2,845</span>
+            </thead>
+            <tbody>
+              {landlordPayments.map((payment, index) => (
+                <tr key={payment.ID || `landlord-payment-${index}`}>
+                  <td>
+                    <span className="row-primary">{payment.Landlord || 'N/A'}</span>
+                  </td>
+                  <td>{payment.Building || 'N/A'}</td>
+                  <td>{payment.NetAmount?.toFixed(2) || '0.00'} XOF</td>
+                  <td>{payment.Commission?.toFixed(2) || '0.00'} XOF</td>
+                  <td>Payout</td>
+                  <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
+                  <td>
+                    <span className={`status-badge ${(payment.Status || 'unknown').toLowerCase()}`}>
+                      {payment.Status || 'Unknown'}
+                    </span>
+                  </td>
+                  <td className="table-menu">
+                    <div className="table-actions">
+                      <button className="table-action-button view">View</button>
+                      <button className="table-action-button edit" onClick={() => transferToLandlord(payment.ID)} title="Automatic Transfer">
+                        Transfer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="summary-card">
-          <h4>Total Net Payouts</h4>
-          <span className="amount">$25,605</span>
-        </div>
-        <div className="summary-card">
-          <h4>Pending Transfers</h4>
-          <span className="amount">$1,800</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 
   const renderReports = () => (
     <div className="reports-section">
       <div className="section-header">
-        <h3>Monthly Financial Reports</h3>
-        <p>Generate and download comprehensive financial reports</p>
-      </div>
-
-      <div className="report-actions">
-        <button className="action-button primary">
-          <Download size={20} />
+        <div>
+          <h2>Monthly Financial Reports</h2>
+          <p>Generate and download comprehensive financial reports</p>
+        </div>
+        <button className="btn-primary">
+          <Download size={18} />
           Generate Monthly Report
         </button>
-        <button className="action-button secondary">
-          <Building size={20} />
-          Building Performance Report
-        </button>
-        <button className="action-button secondary">
-          <TrendingUp size={20} />
-          Revenue Analysis Report
-        </button>
-        <button className="action-button secondary">
-          <Receipt size={20} />
-          Commission Report
-        </button>
       </div>
 
-      <div className="recent-reports">
-        <h4>Recent Reports</h4>
-        <div className="report-list">
-          <div className="report-item">
-            <div className="report-info">
-              <h5>November 2024 Financial Report</h5>
-              <p>Generated on Nov 1, 2024</p>
-            </div>
-            <button className="btn-secondary">Download</button>
-          </div>
-          <div className="report-item">
-            <div className="report-info">
-              <h5>October 2024 Building Performance</h5>
-              <p>Generated on Oct 31, 2024</p>
-            </div>
-            <button className="btn-secondary">Download</button>
-          </div>
-          <div className="report-item">
-            <div className="report-info">
-              <h5>Q3 2024 Commission Report</h5>
-              <p>Generated on Oct 1, 2024</p>
-            </div>
-            <button className="btn-secondary">Download</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="monthly-summary">
-        <h4>Monthly Payment Summary</h4>
-        <table>
+      <div className="data-table-wrapper" style={{ marginBottom: '32px' }}>
+        <table className="data-table">
           <thead>
             <tr>
               <th>Building</th>
@@ -447,45 +481,123 @@ const AccountingDashboard = () => {
           </thead>
           <tbody>
             <tr>
-              <td>123 Main St</td>
-              <td>€8,500</td>
-              <td>€1,200</td>
-              <td>€950</td>
-              <td>€8,750</td>
+              <td>
+                <span className="row-primary">123 Main St</span>
+              </td>
+              <td>8,500 XOF</td>
+              <td>1,200 XOF</td>
+              <td>950 XOF</td>
+              <td>8,750 XOF</td>
             </tr>
             <tr>
-              <td>456 Oak Ave</td>
-              <td>€6,200</td>
-              <td>€0</td>
-              <td>€620</td>
-              <td>€5,580</td>
+              <td>
+                <span className="row-primary">456 Oak Ave</span>
+              </td>
+              <td>6,200 XOF</td>
+              <td>0 XOF</td>
+              <td>620 XOF</td>
+              <td>5,580 XOF</td>
             </tr>
             <tr>
-              <td>789 Pine Ln</td>
-              <td>€12,800</td>
-              <td>€500</td>
-              <td>€1,330</td>
-              <td>€11,970</td>
+              <td>
+                <span className="row-primary">789 Pine Ln</span>
+              </td>
+              <td>12,800 XOF</td>
+              <td>500 XOF</td>
+              <td>1,330 XOF</td>
+              <td>11,970 XOF</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <div className="section-header" style={{ marginBottom: '20px' }}>
+        <div>
+          <h2>Recent Reports</h2>
+          <p>Download previously generated reports</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="loading">Loading reports...</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Report Name</th>
+                <th>Generated Date</th>
+                <th className="table-menu"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <span className="row-primary">November 2024 Financial Report</span>
+                </td>
+                <td>Nov 1, 2024</td>
+                <td className="table-menu">
+                  <div className="table-actions">
+                    <button className="table-action-button view">
+                      <Download size={14} />
+                      Download
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <span className="row-primary">October 2024 Building Performance</span>
+                </td>
+                <td>Oct 31, 2024</td>
+                <td className="table-menu">
+                  <div className="table-actions">
+                    <button className="table-action-button view">
+                      <Download size={14} />
+                      Download
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <span className="row-primary">Q3 2024 Commission Report</span>
+                </td>
+                <td>Oct 1, 2024</td>
+                <td className="table-menu">
+                  <div className="table-actions">
+                    <button className="table-action-button view">
+                      <Download size={14} />
+                      Download
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 
   const renderTenantPayments = () => (
     <div className="tenant-payments-section">
-      <h2>Tenant Payment Management</h2>
-      <p>Review, approve, and manage tenant payments</p>
-      
-      <div className="payment-actions">
-        <button className="action-button primary" onClick={() => setShowPaymentModal(true)}>
-          <CreditCard size={20} />
+      <div className="section-header">
+        <div>
+          <h2>Tenant Payment Management</h2>
+          <p>Review, approve, and manage tenant payments</p>
+        </div>
+        <button 
+          className="btn-primary" 
+          onClick={() => setShowPaymentModal(true)}
+          disabled={loading}
+        >
+          <Plus size={18} />
           Record New Payment
         </button>
       </div>
 
-      <div className="payment-filters">
+      <div className="filters-section" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <select className="filter-select">
           <option value="">All Payments</option>
           <option value="pending">Pending</option>
@@ -498,149 +610,152 @@ const AccountingDashboard = () => {
           <option value="mobile">Mobile Money</option>
           <option value="bank">Bank Transfer</option>
         </select>
-        <input type="text" placeholder="Search by tenant..." className="search-input" />
+        <input type="text" placeholder="Search by tenant..." className="search-input" style={{ padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(15, 31, 96, 0.12)', background: '#f7f8ff', minWidth: '200px' }} />
       </div>
 
-      <div className="payments-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Tenant</th>
-              <th>Property</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Receipt</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tenantPayments.map(payment => (
-              <tr key={payment.id}>
-                <td>
-                  <div className="tenant-info">
-                    <User size={16} />
-                    <span>{payment.tenant}</span>
-                  </div>
-                </td>
-                <td>{payment.property}</td>
-                <td>€{payment.amount.toFixed(2)}</td>
-                <td>
-                  <span className={`method ${payment.method.toLowerCase().replace(' ', '-')}`}>
-                    {payment.method}
-                  </span>
-                </td>
-                <td>{payment.date}</td>
-                <td>
-                  <span className={`status ${payment.status.toLowerCase()}`}>
-                    {payment.status}
-                  </span>
-                </td>
-                <td>
-                  {payment.receiptNumber ? (
-                    <button 
-                      className="action-button small"
-                      onClick={() => generateReceipt(payment)}
-                    >
-                      <FileText size={16} />
-                      {payment.receiptNumber}
-                    </button>
-                  ) : (
-                    <span className="no-receipt">No Receipt</span>
-                  )}
-                </td>
-                <td>
-                  <div className="action-buttons">
-                    {payment.status === 'Pending' && (
-                      <>
-                        <button 
-                          className="action-button small approve"
-                          onClick={() => approvePayment(payment)}
-                          title="Approve Payment"
-                        >
-                          <CheckCircle size={16} />
-                        </button>
-                        <button 
-                          className="action-button small reject"
-                          onClick={() => rejectPayment(payment)}
-                          title="Reject Payment"
-                        >
-                          <XCircle size={16} />
-                        </button>
-                      </>
-                    )}
-                    {payment.receiptNumber && (
-                      <button 
-                        className="action-button small"
-                        onClick={() => sendReceipt(payment)}
-                        title="Send Receipt"
-                      >
-                        <Mail size={16} />
-                      </button>
-                    )}
-                    <button 
-                      className="action-button small"
-                      onClick={() => generateReceipt(payment)}
-                      title="Generate Receipt"
-                    >
-                      <Receipt size={16} />
-                    </button>
-                  </div>
-                </td>
+      {loading ? (
+        <div className="loading">Loading tenant payments...</div>
+      ) : tenantPayments.length === 0 ? (
+        <div className="no-data">No tenant payments found</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Tenant</th>
+                <th>Property</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Receipt</th>
+                <th className="table-menu"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {tenantPayments.map((payment, index) => (
+                <tr key={payment.ID || `payment-${index}`}>
+                  <td>
+                    <span className="row-primary">{payment.Tenant || 'N/A'}</span>
+                  </td>
+                  <td>{payment.Property || 'N/A'}</td>
+                  <td>{payment.Amount?.toFixed(2) || '0.00'} XOF</td>
+                  <td>{payment.Method || 'N/A'}</td>
+                  <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
+                  <td>
+                    <span className={`status-badge ${(payment.Status || 'unknown').toLowerCase()}`}>
+                      {payment.Status || 'Unknown'}
+                    </span>
+                  </td>
+                  <td>
+                    {payment.ReceiptNumber ? (
+                      <span className="row-primary">{payment.ReceiptNumber}</span>
+                    ) : (
+                      <span style={{ color: 'rgba(15, 31, 96, 0.5)' }}>No Receipt</span>
+                    )}
+                  </td>
+                  <td className="table-menu">
+                    <div className="table-actions">
+                      {payment.Status === 'Pending' && (
+                        <>
+                          <button 
+                            className="table-action-button edit"
+                            onClick={() => approvePayment(payment)}
+                            title="Approve Payment"
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            className="table-action-button delete"
+                            onClick={() => rejectPayment(payment)}
+                            title="Reject Payment"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      <button 
+                        className="table-action-button view"
+                        onClick={() => generateReceipt(payment)}
+                        title="Generate Receipt"
+                      >
+                        Receipt
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 
   const renderExpenses = () => (
     <div className="expenses-section">
       <div className="section-header">
-        <h3>Expense Management</h3>
-        <p>Track expenses by building or for SAAF IMMO</p>
-      </div>
-
-      <div className="payment-actions">
-        <button className="action-button primary" onClick={() => setShowExpenseModal(true)}>
-          <FileText size={20} />
+        <div>
+          <h2>Expense Management</h2>
+          <p>Track expenses by building or for SAAF IMMO</p>
+        </div>
+        <button 
+          className="btn-primary" 
+          onClick={() => setShowExpenseModal(true)}
+          disabled={loading}
+        >
+          <Plus size={18} />
           Add Expense
         </button>
       </div>
 
-      <div className="payments-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Scope</th>
-              <th>Building</th>
-              <th>Category</th>
-              <th>Amount</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {expenses.map(exp => (
-              <tr key={exp.id}>
-                <td>{exp.date}</td>
-                <td>{exp.scope}</td>
-                <td>{exp.building}</td>
-                <td>{exp.category}</td>
-                <td>€{exp.amount.toFixed(2)}</td>
-                <td>{exp.notes}</td>
+      {loading ? (
+        <div className="loading">Loading expenses...</div>
+      ) : expenses.length === 0 ? (
+        <div className="no-data">No expenses found</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Scope</th>
+                <th>Building</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Notes</th>
+                <th className="table-menu"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {expenses.map((exp, index) => (
+                <tr key={exp.ID || exp.id || `expense-${index}`}>
+                  <td>{exp.Date ? new Date(exp.Date).toLocaleDateString() : (exp.date || 'N/A')}</td>
+                  <td>{exp.Scope || exp.scope || 'N/A'}</td>
+                  <td>
+                    <span className="row-primary">{exp.Building || exp.building || 'N/A'}</span>
+                  </td>
+                  <td>{exp.Category || exp.category || 'N/A'}</td>
+                  <td>{(exp.Amount || exp.amount || 0).toFixed(2)} XOF</td>
+                  <td>{exp.Notes || exp.notes || 'N/A'}</td>
+                  <td className="table-menu">
+                    <div className="table-actions">
+                      <button className="table-action-button view">View</button>
+                      <button className="table-action-button edit">Edit</button>
+                      <button className="table-action-button delete">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 
-  const renderContent = () => {
-    switch (activeTab) {
+  const renderContent = (tabId = activeTab) => {
+    switch (tabId) {
       case 'overview':
         return renderOverview();
       case 'collections':
@@ -658,37 +773,42 @@ const AccountingDashboard = () => {
     }
   };
 
+  const layoutMenu = useMemo(
+    () =>
+      tabs.map(tab => ({
+        ...tab,
+        onSelect: () => setActiveTab(tab.id),
+        active: activeTab === tab.id
+      })),
+    [tabs, activeTab]
+  );
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+  };
+
   return (
-    <div className="accounting-dashboard">
-      <div className="dashboard-header modern-container">
-        <h1>Accounting Dashboard</h1>
-        <p>Track collections, manage landlord payments, and generate financial reports</p>
-      </div>
+    <>
+      <RoleLayout
+        brand={{ name: 'SAAF IMMO', caption: 'Accounting', logo: 'SAAF', logoImage: `${process.env.PUBLIC_URL}/download.jpeg` }}
+        menu={layoutMenu}
+        activeId={activeTab}
+        onActiveChange={setActiveTab}
+        onLogout={handleLogout}
+      >
+        {({ activeId }) => (
+          <div className="content-body accounting-content">
+            {loading && <div className="loading-indicator">Loading data...</div>}
+            {renderContent(activeId || activeTab)}
+          </div>
+        )}
+      </RoleLayout>
 
-      <div className="dashboard-tabs modern-container">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <Icon size={20} />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="dashboard-content modern-container">
-        {renderContent()}
-      </div>
-
-      {/* Notification System */}
       <div className="notifications-container">
-        {notifications.map(notification => (
-          <div key={notification.id} className={`notification notification-${notification.type}`}>
+        {notifications.map((notification, index) => (
+          <div key={notification.id || `notification-${index}`} className={`notification notification-${notification.type}`}>
             <span>{notification.message}</span>
             <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
           </div>
@@ -704,23 +824,35 @@ const AccountingDashboard = () => {
               <button className="modal-close" onClick={() => setShowPaymentModal(false)}>×</button>
             </div>
             <div className="modal-body">
-              <form onSubmit={(e) => {
+              <form onSubmit={async (e) => {
                 e.preventDefault();
-                const formData = new FormData(e.target);
-                const newPayment = {
-                  id: Date.now(),
-                  tenant: formData.get('tenant'),
-                  property: formData.get('property'),
-                  amount: parseFloat(formData.get('amount')),
-                  method: formData.get('method'),
-                  date: new Date().toLocaleDateString(),
-                  status: 'Pending',
-                  receiptNumber: null,
-                  chargeType: formData.get('chargeType') || 'Rent'
-                };
-                setTenantPayments(prev => [newPayment, ...prev]);
-                addNotification('Payment recorded successfully!', 'success');
-                setShowPaymentModal(false);
+                try {
+                  setLoading(true);
+                  const formData = new FormData(e.target);
+                  const paymentData = {
+                    tenant: formData.get('tenant'),
+                    property: formData.get('property'),
+                    amount: parseFloat(formData.get('amount')),
+                    method: formData.get('method'),
+                    chargeType: formData.get('chargeType') || 'Rent'
+                  };
+                  
+                  // Call the backend API
+                  const newPayment = await accountingService.recordTenantPayment(paymentData);
+                  
+                  // Update local state with the response from backend
+                  setTenantPayments(prev => [newPayment, ...prev]);
+                  addNotification('Payment recorded successfully!', 'success');
+                  setShowPaymentModal(false);
+                  
+                  // Reset form
+                  e.target.reset();
+                } catch (error) {
+                  console.error('Error recording payment:', error);
+                  addNotification('Failed to record payment. Please try again.', 'error');
+                } finally {
+                  setLoading(false);
+                }
               }}>
                 <div className="form-group">
                   <label htmlFor="tenant">Tenant Name</label>
@@ -763,8 +895,8 @@ const AccountingDashboard = () => {
                   <button type="button" className="action-button secondary" onClick={() => setShowPaymentModal(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="action-button primary">
-                    Record Payment
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Recording...' : 'Record Payment'}
                   </button>
                 </div>
               </form>
@@ -786,7 +918,7 @@ const AccountingDashboard = () => {
                 <h4>Payment Details:</h4>
                 <p><strong>Tenant:</strong> {selectedPayment.tenant}</p>
                 <p><strong>Property:</strong> {selectedPayment.property}</p>
-                <p><strong>Amount:</strong> €{selectedPayment.amount.toFixed(2)}</p>
+                <p><strong>Amount:</strong> {selectedPayment.amount.toFixed(2)} XOF</p>
                 <p><strong>Method:</strong> {selectedPayment.method}</p>
                 <p><strong>Date:</strong> {selectedPayment.date}</p>
               </div>
@@ -804,6 +936,81 @@ const AccountingDashboard = () => {
         </div>
       )}
 
+      {/* Landlord Payment Recording Modal */}
+      {showLandlordPaymentModal && (
+        <div className="modal-overlay" onClick={() => setShowLandlordPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Record Landlord Payment</h3>
+              <button className="modal-close" onClick={() => setShowLandlordPaymentModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  setLoading(true);
+                  const formData = new FormData(e.target);
+                  const paymentData = {
+                    landlord: formData.get('landlord'),
+                    building: formData.get('building'),
+                    netAmount: parseFloat(formData.get('netAmount')),
+                    commission: parseFloat(formData.get('commission'))
+                  };
+                  
+                  // Call the backend API
+                  const newPayment = await accountingService.recordLandlordPayment(paymentData);
+                  
+                  // Update local state with the response from backend
+                  setLandlordPayments(prev => [newPayment, ...prev]);
+                  addNotification('Landlord payment recorded successfully!', 'success');
+                  setShowLandlordPaymentModal(false);
+                  
+                  // Reset form
+                  e.target.reset();
+                } catch (error) {
+                  console.error('Error recording landlord payment:', error);
+                  addNotification('Failed to record landlord payment. Please try again.', 'error');
+                } finally {
+                  setLoading(false);
+                }
+              }}>
+                <div className="form-group">
+                  <label htmlFor="landlord">Landlord Name</label>
+                  <input type="text" name="landlord" required placeholder="Enter landlord name" />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="building">Building</label>
+                  <select name="building" required>
+                    <option value="">Select Building</option>
+                    <option value="123 Main St">123 Main St</option>
+                    <option value="456 Oak Ave">456 Oak Ave</option>
+                    <option value="789 Pine Ln">789 Pine Ln</option>
+                    <option value="321 Elm St">321 Elm St</option>
+                    <option value="654 Maple Dr">654 Maple Dr</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="netAmount">Net Amount ($)</label>
+                  <input type="number" name="netAmount" step="0.01" required placeholder="Enter net amount" />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="commission">Commission ($)</label>
+                  <input type="number" name="commission" step="0.01" required placeholder="Enter commission amount" />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowLandlordPaymentModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Recording...' : 'Record Payment'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Expense Modal */}
       {showExpenseModal && (
         <div className="modal-overlay" onClick={() => setShowExpenseModal(false)}>
@@ -813,21 +1020,36 @@ const AccountingDashboard = () => {
               <button className="modal-close" onClick={() => setShowExpenseModal(false)}>×</button>
             </div>
             <div className="modal-body">
-              <form onSubmit={(e) => {
+              <form onSubmit={async (e) => {
                 e.preventDefault();
-                const formData = new FormData(e.target);
-                const expense = {
-                  id: Date.now(),
-                  scope: formData.get('scope'),
-                  building: formData.get('scope') === 'SAAF IMMO' ? '-' : formData.get('building'),
-                  category: formData.get('category'),
-                  amount: parseFloat(formData.get('amount')),
-                  date: formData.get('date'),
-                  notes: formData.get('notes')
-                };
-                setExpenses(prev => [expense, ...prev]);
-                addNotification('Expense added successfully!', 'success');
-                setShowExpenseModal(false);
+                try {
+                  setLoading(true);
+                  const formData = new FormData(e.target);
+                  const expenseData = {
+                    scope: formData.get('scope'),
+                    building: formData.get('scope') === 'SAAF IMMO' ? '-' : formData.get('building'),
+                    category: formData.get('category'),
+                    amount: parseFloat(formData.get('amount')),
+                    date: formData.get('date'),
+                    notes: formData.get('notes')
+                  };
+                  
+                  // Call the backend API
+                  const newExpense = await accountingService.addExpense(expenseData);
+                  
+                  // Update local state with the response from backend
+                  setExpenses(prev => [newExpense, ...prev]);
+                  addNotification('Expense added successfully!', 'success');
+                  setShowExpenseModal(false);
+                  
+                  // Reset form
+                  e.target.reset();
+                } catch (error) {
+                  console.error('Error adding expense:', error);
+                  addNotification('Failed to add expense. Please try again.', 'error');
+                } finally {
+                  setLoading(false);
+                }
               }}>
                 <div className="form-group">
                   <label>Scope</label>
@@ -874,8 +1096,8 @@ const AccountingDashboard = () => {
                   <button type="button" className="action-button secondary" onClick={() => setShowExpenseModal(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="action-button primary">
-                    Add Expense
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Adding...' : 'Add Expense'}
                   </button>
                 </div>
               </form>
@@ -883,7 +1105,7 @@ const AccountingDashboard = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

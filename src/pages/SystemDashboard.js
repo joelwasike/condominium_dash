@@ -1,19 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Settings, Database, Bell, TrendingUp, RefreshCw, AlertTriangle } from 'lucide-react';
-import './SystemDashboard.css';
+import RoleLayout from '../components/RoleLayout';
+import '../components/RoleLayout.css';
+import '../pages/TechnicianDashboard.css';
 
 const SystemDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: TrendingUp },
-    { id: 'automation', label: 'Automation', icon: Settings },
-    { id: 'alerts', label: 'Alerts', icon: Bell },
-    { id: 'kpis', label: 'Real-time KPIs', icon: Database }
-  ];
+  const tabs = useMemo(
+    () => [
+      { id: 'overview', label: 'Overview', icon: TrendingUp },
+      { id: 'automation', label: 'Automation', icon: Settings },
+      { id: 'alerts', label: 'Alerts', icon: Bell },
+      { id: 'kpis', label: 'Real-time KPIs', icon: Database }
+    ],
+    []
+  );
 
   const renderOverview = () => (
-    <div className="overview-section">
+    <div className="overview-section panel">
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon">
@@ -98,7 +103,7 @@ const SystemDashboard = () => {
   );
 
   const renderAutomation = () => (
-    <div className="automation-section">
+    <div className="automation-section panel">
       <div className="section-header">
         <h3>Automation & Processing</h3>
         <p>Manage automated workflows and system processes</p>
@@ -189,7 +194,7 @@ const SystemDashboard = () => {
   );
 
   const renderAlerts = () => (
-    <div className="alerts-section">
+    <div className="alerts-section panel">
       <div className="section-header">
         <h3>System Alerts & Notifications</h3>
         <p>Monitor and manage system-generated alerts</p>
@@ -266,7 +271,7 @@ const SystemDashboard = () => {
   );
 
   const renderKPIs = () => (
-    <div className="kpis-section">
+    <div className="kpis-section panel">
       <div className="section-header">
         <h3>Real-time Key Performance Indicators</h3>
         <p>Live updates of critical business metrics</p>
@@ -325,8 +330,8 @@ const SystemDashboard = () => {
     </div>
   );
 
-  const renderContent = () => {
-    switch (activeTab) {
+  const renderContent = (tabId = activeTab) => {
+    switch (tabId) {
       case 'overview':
         return renderOverview();
       case 'automation':
@@ -340,33 +345,38 @@ const SystemDashboard = () => {
     }
   };
 
+  const layoutMenu = useMemo(
+    () =>
+      tabs.map(tab => ({
+        ...tab,
+        onSelect: () => setActiveTab(tab.id),
+        active: activeTab === tab.id
+      })),
+    [tabs, activeTab]
+  );
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+  };
+
   return (
-    <div className="system-dashboard">
-      <div className="dashboard-header">
-        <h1>System Dashboard (Automation)</h1>
-        <p>Automated workflows, alerts, and real-time KPI monitoring</p>
-      </div>
-
-      <div className="dashboard-tabs">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <Icon size={20} />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="dashboard-content">
-        {renderContent()}
-      </div>
-    </div>
+    <RoleLayout
+      brand={{ name: 'SAAF IMMO', caption: 'Automation Ops', logo: 'SAAF', logoImage: `${process.env.PUBLIC_URL}/download.jpeg` }}
+      menu={layoutMenu}
+      activeId={activeTab}
+      onActiveChange={setActiveTab}
+      onLogout={handleLogout}
+      title="System Dashboard"
+      subtitle="Automated workflows, alerts, and real-time KPI monitoring"
+    >
+      {({ activeId }) => (
+        <div className="content-body system-content">
+          {renderContent(activeId || activeTab)}
+        </div>
+      )}
+    </RoleLayout>
   );
 };
 

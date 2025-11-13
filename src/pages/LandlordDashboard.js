@@ -1,16 +1,52 @@
-import React, { useState } from 'react';
-import { Home, FileText, DollarSign, Users, Upload, Plus, TrendingUp, Wrench, ClipboardList, Receipt, CreditCard, FileEdit, Package, BarChart3 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Home,
+  FileText,
+  DollarSign,
+  Users,
+  Upload,
+  Plus,
+  TrendingUp,
+  Wrench,
+  ClipboardList,
+  Receipt,
+  CreditCard,
+  FileEdit,
+  Package,
+  BarChart3,
+  Settings
+} from 'lucide-react';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
 import ContractUpload from '../components/ContractUpload';
 import ReportSubmission from '../components/ReportSubmission';
+import RoleLayout from '../components/RoleLayout';
+import SettingsPage from './SettingsPage';
 import './LandlordDashboard.css';
+import '../components/RoleLayout.css';
+import '../pages/TechnicianDashboard.css';
+import { landlordService } from '../services/landlordService';
 
 const LandlordDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showKycModal, setShowKycModal] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
+  const [showPropertyModal, setShowPropertyModal] = useState(false);
+  const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // API Data States
+  const [overviewData, setOverviewData] = useState(null);
+  const [properties, setProperties] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [claims, setClaims] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const [businessTracking, setBusinessTracking] = useState(null);
 
   const handleKycUpload = (files, userRole) => {
     console.log('KYC files uploaded:', files, 'for role:', userRole);
@@ -23,11 +59,107 @@ const LandlordDashboard = () => {
   };
 
   const addNotification = (message, type = 'info') => {
-    const id = Date.now();
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 3000);
+  };
+
+  // Load data from APIs
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [overview, propertiesData, paymentsData, workOrdersData, claimsData, inventoryData, trackingData] = await Promise.all([
+        landlordService.getOverview(),
+        landlordService.getProperties(),
+        landlordService.getPayments(),
+        landlordService.getWorkOrders(),
+        landlordService.getClaims(),
+        landlordService.getInventory(),
+        landlordService.getBusinessTracking()
+      ]);
+      
+      setOverviewData(overview);
+      setProperties(propertiesData);
+      setPayments(paymentsData);
+      setWorkOrders(workOrdersData);
+      setClaims(claimsData);
+      setInventory(inventoryData);
+      setBusinessTracking(trackingData);
+    } catch (error) {
+      console.error('Error loading landlord data:', error);
+      addNotification('Failed to load dashboard data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Action handlers
+  const handleAddProperty = async (propertyData) => {
+    try {
+      await landlordService.addProperty(propertyData);
+      addNotification('Property added successfully', 'success');
+      setShowPropertyModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error adding property:', error);
+      addNotification('Failed to add property', 'error');
+    }
+  };
+
+  const handleCreateWorkOrder = async (workOrderData) => {
+    try {
+      await landlordService.createWorkOrder(workOrderData);
+      addNotification('Work order created successfully', 'success');
+      setShowWorkOrderModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error creating work order:', error);
+      addNotification('Failed to create work order', 'error');
+    }
+  };
+
+  const handleCreateClaim = async (claimData) => {
+    try {
+      await landlordService.createClaim(claimData);
+      addNotification('Claim created successfully', 'success');
+      setShowClaimModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error creating claim:', error);
+      addNotification('Failed to create claim', 'error');
+    }
+  };
+
+  const handleAddInventory = async (inventoryData) => {
+    try {
+      await landlordService.addInventory(inventoryData);
+      addNotification('Inventory added successfully', 'success');
+      setShowInventoryModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error adding inventory:', error);
+      addNotification('Failed to add inventory', 'error');
+    }
+  };
+
+  const handleGenerateReceipt = async (receiptData) => {
+    try {
+      const receipt = await landlordService.generateReceipt(receiptData);
+      addNotification('Receipt generated successfully', 'success');
+      setShowReceiptModal(false);
+      // You could also trigger a download here
+      console.log('Generated receipt:', receipt);
+    } catch (error) {
+      console.error('Error generating receipt:', error);
+      addNotification('Failed to generate receipt', 'error');
+    }
   };
 
   // Generate Receipt Function
@@ -38,7 +170,7 @@ const LandlordDashboard = () => {
       landlord: 'John Doe',
       property: '123 Main Street',
       tenant: 'Jane Smith',
-      amount: '€1,200.00',
+      amount: '1,200.00 XOF',
       period: 'November 2024',
       description: 'Monthly Rent Payment'
     };
@@ -88,8 +220,8 @@ const LandlordDashboard = () => {
       landlord: 'John Doe',
       tenant: 'Jane Smith',
       property: '123 Main Street',
-      rent: '€1,200.00',
-      deposit: '€2,400.00',
+      rent: '1,200.00 XOF',
+      deposit: '2,400.00 XOF',
       startDate: '2024-01-01',
       endDate: '2024-12-31'
     };
@@ -130,10 +262,6 @@ const LandlordDashboard = () => {
   };
 
   // Other button functions
-  const handleAddProperty = () => {
-    addNotification('Add Property feature opened!', 'info');
-  };
-
   const handleScheduleVisit = () => {
     addNotification('Visit scheduling feature opened!', 'info');
   };
@@ -146,9 +274,6 @@ const LandlordDashboard = () => {
     addNotification('POS terminal opened!', 'info');
   };
 
-  const handleCreateWorkOrder = () => {
-    addNotification('Work order creation opened!', 'info');
-  };
 
   const handleGenerateReport = () => {
     const reportContent = `
@@ -159,19 +284,19 @@ const LandlordDashboard = () => {
       Period: November 2024
       
       INCOME:
-      - Total Rent Collected: €6,000.00
-      - Late Fees: €0.00
-      - Other Income: €0.00
-      Total Income: €6,000.00
+      - Total Rent Collected: 6,000.00 XOF
+      - Late Fees: 0.00 XOF
+      - Other Income: 0.00 XOF
+      Total Income: 6,000.00 XOF
       
       EXPENSES:
-      - Maintenance: €400.00
-      - Management Fee: €600.00
-      - Insurance: €150.00
-      - Utilities: €200.00
-      Total Expenses: €1,350.00
+      - Maintenance: 400.00 XOF
+      - Management Fee: 600.00 XOF
+      - Insurance: 150.00 XOF
+      - Utilities: 200.00 XOF
+      Total Expenses: 1,350.00 XOF
       
-      NET INCOME: €4,650.00
+      NET INCOME: 4,650.00 XOF
       
       Generated on: ${new Date().toLocaleString()}
     `;
@@ -189,334 +314,421 @@ const LandlordDashboard = () => {
     addNotification('Financial report generated and downloaded!', 'success');
   };
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: Home },
-    { id: 'properties', label: 'Property & Asset', icon: Home },
-    { id: 'rental', label: 'Rental Management', icon: ClipboardList },
-    { id: 'payments', label: 'Payments & Cash Flow', icon: DollarSign },
-    { id: 'works', label: 'Works & Claims', icon: Wrench },
-    { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'inventory', label: 'Inventory', icon: Package },
-    { id: 'tracking', label: 'Business Tracking', icon: BarChart3 }
-  ];
+  const tabs = useMemo(
+    () => [
+      { id: 'overview', label: 'Overview', icon: Home },
+      { id: 'properties', label: 'Property & Asset', icon: Home },
+      { id: 'payments', label: 'Payments & Cash Flow', icon: DollarSign },
+      { id: 'works', label: 'Works & Claims', icon: Wrench },
+      { id: 'documents', label: 'Documents', icon: FileText },
+      { id: 'inventory', label: 'Inventory', icon: Package },
+      { id: 'tracking', label: 'Business Tracking', icon: BarChart3 },
+      { id: 'settings', label: 'Profile Settings', icon: Settings }
+    ],
+    []
+  );
 
   const renderOverview = () => (
     <div className="overview-section">
-      <h2>Dynamic Dashboard Overview</h2>
+      <div className="section-header">
+        <div>
+          <h2>Landlord Dashboard Overview</h2>
       <p>Track your real estate business performance and key metrics</p>
+        </div>
+      </div>
       
-      <div className="stats-grid">
-        <div className="stat-card modern-card">
-          <h3>Total Properties</h3>
-          <p>Active assets under management</p>
-          <span className="stat-value">5</span>
+      {loading ? (
+        <div className="loading">Loading overview data...</div>
+      ) : (
+        <div className="dashboard-overview">
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Total Properties</span>
+          </div>
+            <div className="card-value">
+              <span>{overviewData?.totalProperties || 0}</span>
+              <small>Active assets under management</small>
+          </div>
+          </div>
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Total Rent Collected</span>
+          </div>
+            <div className="card-value">
+              <span>{overviewData?.totalRent?.toLocaleString() || 0} XOF</span>
+              <small>This month</small>
+          </div>
+          </div>
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Cash Flow</span>
+          </div>
+            <div className="card-value">
+              <span>{overviewData?.netCashFlow?.toLocaleString() || 0} XOF</span>
+              <small>Net payout after commission</small>
+          </div>
         </div>
-        <div className="stat-card modern-card">
-          <h3>Total Rent Collected</h3>
-          <p>This month</p>
-          <span className="stat-value">€6,000</span>
-        </div>
-        <div className="stat-card modern-card">
-          <h3>Cash Flow</h3>
-          <p>Net payout after commission</p>
-          <span className="stat-value">€5,400</span>
-        </div>
-        <div className="stat-card modern-card">
-          <h3>Payment Rate</h3>
-          <p>On time vs late</p>
-          <span className="stat-value">95%</span>
-                  </div>
-        <div className="stat-card modern-card">
-          <h3>Active Tenants</h3>
-          <p>Current occupants</p>
-          <span className="stat-value">12</span>
-                  </div>
-        <div className="stat-card modern-card">
-          <h3>Pending Claims</h3>
-          <p>Awaiting resolution</p>
-          <span className="stat-value">3</span>
-                  </div>
-        <div className="stat-card modern-card">
-          <h3>Works in Progress</h3>
-          <p>Ongoing interventions</p>
-          <span className="stat-value">2</span>
-                  </div>
-        <div className="stat-card modern-card">
-          <h3>Occupancy Rate</h3>
-          <p>Properties occupied</p>
-          <span className="stat-value">80%</span>
-                </div>
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Payment Rate</span>
               </div>
-              
-              <div className="quick-actions">
-                <h3>Quick Actions</h3>
-                <div className="action-grid">
-                  <button className="action-button" onClick={generateReceipt}><Receipt size={20} /> Generate Receipt</button>
-                  <button className="action-button" onClick={generateLease}><FileEdit size={20} /> Generate Lease</button>
-                  <button className="action-button" onClick={handleMobilePayment}><CreditCard size={20} /> Mobile Payment</button>
-                  <ReportSubmission />
-              </div>
+            <div className="card-value">
+              <span>{overviewData?.paymentRate || 0}%</span>
+              <small>On time vs late</small>
             </div>
+          </div>
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Active Tenants</span>
+            </div>
+            <div className="card-value">
+              <span>{overviewData?.activeTenants || 0}</span>
+              <small>Current occupants</small>
+            </div>
+          </div>
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Pending Claims</span>
+            </div>
+            <div className="card-value">
+              <span>{overviewData?.pendingClaims || 0}</span>
+              <small>Awaiting resolution</small>
+            </div>
+          </div>
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Works in Progress</span>
+            </div>
+            <div className="card-value">
+              <span>{overviewData?.worksInProgress || 0}</span>
+              <small>Ongoing interventions</small>
+            </div>
+          </div>
+          <div className="overview-card">
+            <div className="card-label">
+              <span>Occupancy Rate</span>
+            </div>
+            <div className="card-value">
+              <span>{overviewData?.occupancyRate || 0}%</span>
+              <small>Properties occupied</small>
+            </div>
+          </div>
+        </div>
+      )}
           </div>
         );
       
   const renderProperties = () => (
     <div className="properties-section">
       <div className="section-header">
-        <h3>Property Management</h3>
+        <div>
+          <h2>Property Management</h2>
         <p>Manage your rental properties and listings</p>
-              </div>
+      </div>
+        <button className="btn-primary" onClick={() => setShowPropertyModal(true)} disabled={loading}>
+          <Plus size={18} />
+          Add New Property
+        </button>
+      </div>
               
-              <div className="property-actions">
-                <button className="action-button primary" onClick={handleAddProperty}>
-                  <Plus size={20} />
-                  Add New Property
-                </button>
+      {loading ? (
+        <div className="loading">Loading properties...</div>
+      ) : properties.length === 0 ? (
+        <div className="no-data">No properties found</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Property Address</th>
+                <th>Type</th>
+                <th>Bedrooms</th>
+                <th>Bathrooms</th>
+                <th>Rent</th>
+                <th>Status</th>
+                <th className="table-menu"></th>
+              </tr>
+            </thead>
+            <tbody>
+          {properties.map((property, index) => (
+                <tr key={property.ID || `property-${index}`}>
+                  <td>
+                    <span className="row-primary">{property.Address || 'Unknown Address'}</span>
+                  </td>
+                  <td>{property.Type || 'N/A'}</td>
+                  <td>{property.Bedrooms || 0}</td>
+                  <td>{property.Bathrooms || 0}</td>
+                  <td>{property.Rent?.toLocaleString() || 0} XOF/month</td>
+                  <td>
+                    <span className={`status-badge ${(property.Status || 'vacant').toLowerCase()}`}>
+                      {property.Status || 'Vacant'}
+                    </span>
+                  </td>
+                  <td className="table-menu">
+                    <div className="table-actions">
+                      <button className="table-action-button view">View</button>
+                      <button className="table-action-button edit">Edit</button>
               </div>
-              
-      <div className="property-list">
-        <div className="property-item">
-          <div className="property-image">
-            <div className="placeholder-image">123 Main St</div>
-                  </div>
-          <div className="property-info">
-            <h4>123 Main Street</h4>
-            <p>3 Bedroom, 2 Bathroom</p>
-            <div className="property-details">
-              <span className="rent">$1,200/month</span>
-              <span className="status occupied">Occupied</span>
-            </div>
-                    </div>
-                  </div>
-        <div className="property-item">
-          <div className="property-image">
-            <div className="placeholder-image">456 Oak Ave</div>
-                    </div>
-          <div className="property-info">
-            <h4>456 Oak Avenue</h4>
-            <p>2 Bedroom, 1 Bathroom</p>
-            <div className="property-details">
-              <span className="rent">$900/month</span>
-              <span className="status vacant">Vacant</span>
-                  </div>
-                </div>
-              </div>
-                    </div>
-                  </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 
   const renderDocuments = () => (
     <div className="documents-section">
       <div className="section-header">
-        <h3>Document Management</h3>
+        <div>
+          <h2>Document Management</h2>
         <p>Upload and manage your property documents and contracts</p>
                       </div>
-      
-      <div className="document-actions">
+        <div style={{ display: 'flex', gap: '12px' }}>
         <button 
-          className="action-button primary"
+            className="btn-primary"
           onClick={() => setShowKycModal(true)}
+            disabled={loading}
         >
-          <Upload size={20} />
+            <Upload size={18} />
           Upload KYC Documents
         </button>
         <button 
-          className="action-button secondary"
+            className="btn-primary"
           onClick={() => setShowContractModal(true)}
+            disabled={loading}
         >
-          <Plus size={20} />
+            <Plus size={18} />
           Upload Essential Contract
         </button>
+        </div>
                     </div>
 
-      <div className="document-list">
-        <h4>Recent Documents</h4>
-        <div className="document-item">
-          <FileText size={20} />
-          <div className="document-info">
-            <span className="document-name">Property Deed</span>
-            <span className="document-status approved">Approved</span>
+      <div className="data-table-wrapper">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Document Name</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Upload Date</th>
+              <th className="table-menu"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span className="row-primary">Property Deed</span>
+              </td>
+              <td>KYC Document</td>
+              <td>
+                <span className="status-badge approved">Approved</span>
+              </td>
+              <td>Nov 15, 2024</td>
+              <td className="table-menu">
+                <div className="table-actions">
+                  <button className="table-action-button view">View</button>
+                  <button className="table-action-button edit">Download</button>
                     </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <span className="row-primary">Lease Agreement</span>
+              </td>
+              <td>Contract</td>
+              <td>
+                <span className="status-badge pending">Pending Review</span>
+              </td>
+              <td>Nov 10, 2024</td>
+              <td className="table-menu">
+                <div className="table-actions">
+                  <button className="table-action-button view">View</button>
+                  <button className="table-action-button edit">Download</button>
                   </div>
-        <div className="document-item">
-          <FileText size={20} />
-          <div className="document-info">
-            <span className="document-name">Lease Agreement</span>
-            <span className="document-status pending">Pending Review</span>
-                    </div>
-                  </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
                 </div>
               </div>
   );
 
   const renderPayments = () => (
     <div className="payments-section">
+      <div className="section-header">
+        <div>
       <h2>Payments & Cash Flow Management</h2>
       <p>Comprehensive payment tracking with multiple collection methods</p>
-      
-      <div className="payment-features">
-                <div className="feature-card modern-card">
-                  <h3><Receipt size={20} /> Rent Collection + Receipts</h3>
-                  <p>Automated rent collection with instant receipt generation</p>
-                  <button className="action-button" onClick={() => addNotification('Collections view opened!', 'info')}>View Collections</button>
-                </div>
-                
-                <div className="feature-card modern-card">
-                  <h3><CreditCard size={20} /> Mobile Rent Payment</h3>
-                  <p>Enable tenants to pay rent via mobile devices</p>
-                  <button className="action-button" onClick={handleMobilePayment}>Mobile Payment Portal</button>
-                </div>
-                
-                <div className="feature-card modern-card">
-                  <h3><FileText size={20} /> Electronic Receipts</h3>
-                  <p>Generate and send electronic receipts automatically</p>
-                  <button className="action-button" onClick={generateReceipt}>Generate Receipt</button>
-                </div>
-                
-                <div className="feature-card modern-card">
-                  <h3><DollarSign size={20} /> POS for On-Site Collection</h3>
-                  <p>Point of sale system for in-person payments</p>
-                  <button className="action-button" onClick={handlePOSPayment}>Open POS Terminal</button>
-                </div>
-                    </div>
-      
-      <div className="payment-summary">
-        <div className="stat-card modern-card">
-          <h4>Total Collected This Month</h4>
-          <span className="amount">€6,000.00</span>
-          <p>From 12 transactions</p>
         </div>
-        <div className="stat-card modern-card">
-          <h4>Net Cash Flow</h4>
-          <span className="amount">€5,400.00</span>
-          <p>After 10% commission</p>
-                      </div>
-        <div className="stat-card modern-card">
-          <h4>Pending Payments</h4>
-          <span className="amount">€0.00</span>
-          <p>All payments collected</p>
-                    </div>
-        <div className="stat-card modern-card">
-          <h4>Payment Methods</h4>
-          <p>Mobile: 60% | POS: 25% | Bank: 15%</p>
-                  </div>
-                </div>
-                
-      <div className="payment-history">
-        <h3>Recent Transactions</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Property</th>
-              <th>Tenant</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Receipt</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Nov 1, 2024</td>
-              <td>123 Main St</td>
-              <td>John Doe</td>
-              <td>€1,200.00</td>
-              <td>Mobile Payment</td>
-              <td><button className="action-button small">Download</button></td>
-            </tr>
-            <tr>
-              <td>Nov 1, 2024</td>
-              <td>456 Oak Ave</td>
-              <td>Jane Smith</td>
-              <td>€900.00</td>
-              <td>POS</td>
-              <td><button className="action-button small">Download</button></td>
-            </tr>
-            <tr>
-              <td>Oct 31, 2024</td>
-              <td>789 Pine Ln</td>
-              <td>Bob Johnson</td>
-              <td>€1,500.00</td>
-              <td>Bank Transfer</td>
-              <td><button className="action-button small">Download</button></td>
-            </tr>
-          </tbody>
-        </table>
+        <button className="btn-primary" onClick={() => setShowReceiptModal(true)} disabled={loading}>
+          <Receipt size={18} />
+          Generate Receipt
+        </button>
       </div>
       
-              <div className="receipt-actions">
-                <button className="action-button primary" onClick={generateReceipt}><Receipt size={20} /> Print Rent Receipt</button>
-                <button className="action-button primary" onClick={handleGenerateReport}><FileText size={20} /> Generate Monthly Report</button>
-              </div>
+      {loading ? (
+        <div className="loading">Loading payment data...</div>
+          ) : payments.length === 0 ? (
+            <div className="no-data">No payment transactions found</div>
+          ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Property</th>
+                  <th>Tenant</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Status</th>
+                <th className="table-menu"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((payment, index) => (
+                  <tr key={payment.ID || `payment-${index}`}>
+                    <td>{new Date(payment.Date || payment.CreatedAt).toLocaleDateString()}</td>
+                  <td>
+                    <span className="row-primary">{payment.Property || 'Unknown'}</span>
+                  </td>
+                    <td>{payment.Tenant || 'Unknown'}</td>
+                  <td>{payment.Amount?.toLocaleString() || 0} XOF</td>
+                    <td>{payment.Method || 'Unknown'}</td>
+                  <td>
+                    <span className={`status-badge ${(payment.Status || 'pending').toLowerCase()}`}>
+                      {payment.Status || 'Pending'}
+                    </span>
+                  </td>
+                  <td className="table-menu">
+                    <div className="table-actions">
+                      <button className="table-action-button view" onClick={() => setShowReceiptModal(true)}>
+                        Receipt
+                      </button>
                     </div>
+                  </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+      )}
+    </div>
   );
 
   const renderTenants = () => (
     <div className="tenants-section">
       <div className="section-header">
-        <h3>Tenant Management</h3>
+        <div>
+          <h2>Tenant Management</h2>
         <p>Manage your tenants and their information</p>
+        </div>
       </div>
       
-      <div className="tenant-list">
-        <div className="tenant-item">
-          <div className="tenant-avatar">
-            <Users size={24} />
+      {loading ? (
+        <div className="loading">Loading tenants...</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Tenant Name</th>
+                <th>Property</th>
+                <th>Rent</th>
+                <th>Status</th>
+                <th>Contact</th>
+                <th className="table-menu"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <span className="row-primary">John Doe</span>
+                </td>
+                <td>123 Main Street, Apt 4B</td>
+                <td>1,200 XOF/month</td>
+                <td>
+                  <span className="status-badge active">Active</span>
+                </td>
+                <td>N/A</td>
+                <td className="table-menu">
+                  <div className="table-actions">
+                    <button className="table-action-button view">View</button>
+                    <button className="table-action-button edit">Contact</button>
                       </div>
-          <div className="tenant-info">
-            <h4>John Doe</h4>
-            <p>123 Main Street, Apt 4B</p>
-            <div className="tenant-details">
-              <span className="rent">$1,200/month</span>
-              <span className="status active">Active</span>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <span className="row-primary">Jane Smith</span>
+                </td>
+                <td>456 Oak Avenue, Unit 2</td>
+                <td>900 XOF/month</td>
+                <td>
+                  <span className="status-badge active">Active</span>
+                </td>
+                <td>N/A</td>
+                <td className="table-menu">
+                  <div className="table-actions">
+                    <button className="table-action-button view">View</button>
+                    <button className="table-action-button edit">Contact</button>
                     </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
                   </div>
-                </div>
-        <div className="tenant-item">
-          <div className="tenant-avatar">
-            <Users size={24} />
-              </div>
-          <div className="tenant-info">
-            <h4>Jane Smith</h4>
-            <p>456 Oak Avenue, Unit 2</p>
-            <div className="tenant-details">
-              <span className="rent">$900/month</span>
-              <span className="status active">Active</span>
-            </div>
-                </div>
-              </div>
-            </div>
+      )}
           </div>
         );
       
   const renderRentalManagement = () => (
     <div className="rental-section">
+      <div className="section-header">
+        <div>
       <h2>Rental Management</h2>
       <p>Manage your rental agreements, rent reviews, and charge adjustments</p>
-      
-      <div className="rental-features">
-                <div className="feature-card modern-card">
-                  <h3><FileEdit size={20} /> Generation of Lease Agreements</h3>
-                  <p>Create and manage lease contracts automatically</p>
-                  <button className="action-button" onClick={generateLease}>Generate New Lease</button>
               </div>
-              
-                <div className="feature-card modern-card">
-                  <h3><TrendingUp size={20} /> Rent Reviews</h3>
-                  <p>Track and manage rent adjustments and reviews</p>
-                  <button className="action-button" onClick={() => addNotification('Rent review scheduled!', 'info')}>Schedule Review</button>
                 </div>
                 
-                <div className="feature-card modern-card">
-                  <h3><DollarSign size={20} /> Adjustment of Charges</h3>
-                  <p>Modify utility charges and other fees</p>
-                  <button className="action-button" onClick={() => addNotification('Charge adjustment feature opened!', 'info')}>Adjust Charges</button>
+      <div className="dashboard-overview">
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Generation of Lease Agreements</span>
                 </div>
-                
-                <div className="feature-card modern-card">
-                  <h3><Users size={20} /> Tenant Interface</h3>
-                  <p>Manage tenant communications and requests</p>
-                  <button className="action-button" onClick={() => addNotification('Tenant interface opened!', 'info')}>View Interface</button>
+          <div className="card-value">
+            <span>Active</span>
+            <small>Create and manage lease contracts automatically</small>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Rent Reviews</span>
+          </div>
+          <div className="card-value">
+            <span>Track</span>
+            <small>Track and manage rent adjustments and reviews</small>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Adjustment of Charges</span>
+          </div>
+          <div className="card-value">
+            <span>Available</span>
+            <small>Modify utility charges and other fees</small>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Tenant Interface</span>
+          </div>
+          <div className="card-value">
+            <span>Active</span>
+            <small>Manage tenant communications and requests</small>
+          </div>
                 </div>
       </div>
                   </div>
@@ -524,114 +736,245 @@ const LandlordDashboard = () => {
 
   const renderWorksAndClaims = () => (
     <div className="works-section">
+      <div className="section-header">
+        <div>
       <h2>Works & Interventions Management</h2>
       <p>Track maintenance works, interventions, and automatic claims management</p>
-      
-      <div className="claims-list">
-        <div className="claim-item modern-card">
-          <h4>Plumbing Issue - 123 Main St</h4>
-          <p>Status: <span className="status in-progress">In Progress</span></p>
-          <p>Assigned to: John's Plumbing Service</p>
-          <button className="action-button">View Details</button>
+        </div>
+        <button className="btn-primary" onClick={() => setShowWorkOrderModal(true)} disabled={loading}>
+          <Plus size={18} />
+          Create Work Order
+        </button>
                 </div>
                 
-        <div className="claim-item modern-card">
-          <h4>Electrical Repair - 456 Oak Ave</h4>
-          <p>Status: <span className="status pending">Pending</span></p>
-          <p>Auto-assigned via claim system</p>
-          <button className="action-button">View Details</button>
+      {loading ? (
+        <div className="loading">Loading works and claims...</div>
+      ) : workOrders.length === 0 && claims.length === 0 ? (
+        <div className="no-data">No works or claims found</div>
+      ) : (
+        <>
+          {workOrders.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <div className="section-header" style={{ marginBottom: '20px' }}>
+                <div>
+                  <h2>Work Orders</h2>
+                  <p>Maintenance and intervention requests</p>
                 </div>
               </div>
-              
-              <div className="works-actions">
-                <button className="action-button" onClick={handleCreateWorkOrder}><Plus size={20} /> Create Work Order</button>
-                <button className="action-button" onClick={() => addNotification('Intervention scheduling opened!', 'info')}><Wrench size={20} /> Schedule Intervention</button>
-                <ReportSubmission />
+              <div className="data-table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Property</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      <th className="table-menu"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workOrders.map((work, index) => (
+                      <tr key={work.ID || `work-${index}`}>
+                        <td>
+                          <span className="row-primary">{work.Title || work.title || 'N/A'}</span>
+                        </td>
+                        <td>{work.Property || work.property || 'N/A'}</td>
+                        <td>{work.Description || work.description || 'N/A'}</td>
+                        <td>
+                          <span className={`status-badge ${(work.Status || work.status || 'pending').toLowerCase()}`}>
+                            {work.Status || work.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td>{work.Date ? new Date(work.Date).toLocaleDateString() : (work.date ? new Date(work.date).toLocaleDateString() : 'N/A')}</td>
+                        <td className="table-menu">
+                          <div className="table-actions">
+                            <button className="table-action-button view">View</button>
+                            <button className="table-action-button edit">Edit</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+            </div>
+          )}
+
+          {claims.length > 0 && (
+            <div>
+              <div className="section-header" style={{ marginBottom: '20px' }}>
+                <div>
+                  <h2>Claims</h2>
+                  <p>Property claims and requests</p>
+              </div>
+                <button className="btn-primary" onClick={() => setShowClaimModal(true)} disabled={loading}>
+                  <Plus size={18} />
+                  Create Claim
+                </button>
+              </div>
+              <div className="data-table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Property</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      <th className="table-menu"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {claims.map((claim, index) => (
+                      <tr key={claim.ID || `claim-${index}`}>
+                        <td>
+                          <span className="row-primary">{claim.Title || claim.title || 'N/A'}</span>
+                        </td>
+                        <td>{claim.Property || claim.property || 'N/A'}</td>
+                        <td>{claim.Description || claim.description || 'N/A'}</td>
+                        <td>
+                          <span className={`status-badge ${(claim.Status || claim.status || 'pending').toLowerCase()}`}>
+                            {claim.Status || claim.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td>{claim.Date ? new Date(claim.Date).toLocaleDateString() : (claim.date ? new Date(claim.date).toLocaleDateString() : 'N/A')}</td>
+                        <td className="table-menu">
+                          <div className="table-actions">
+                            <button className="table-action-button view">View</button>
+                            <button className="table-action-button edit">Edit</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
           </div>
         );
       
   const renderInventory = () => (
     <div className="inventory-section">
+      <div className="section-header">
+        <div>
       <h2>Inventory Management</h2>
       <p>Track property inventories, equipment, and assets</p>
-      
-      <div className="inventory-grid">
-        <div className="inventory-card modern-card">
-          <h3>123 Main Street</h3>
-          <p>Last updated: Nov 15, 2024</p>
-          <ul>
-            <li>Kitchen Appliances: 5 items</li>
-            <li>Furniture: 12 items</li>
-            <li>Electronics: 3 items</li>
-          </ul>
-          <button className="action-button">View Full Inventory</button>
+        </div>
+        <button className="btn-primary" onClick={() => setShowInventoryModal(true)} disabled={loading}>
+          <Plus size={18} />
+          Add New Inventory
+        </button>
                 </div>
         
-        <div className="inventory-card modern-card">
-          <h3>456 Oak Avenue</h3>
-          <p>Last updated: Nov 10, 2024</p>
-          <ul>
-            <li>Kitchen Appliances: 4 items</li>
-            <li>Furniture: 8 items</li>
-            <li>Electronics: 2 items</li>
-          </ul>
-          <button className="action-button">View Full Inventory</button>
+      {loading ? (
+        <div className="loading">Loading inventory...</div>
+      ) : inventory.length === 0 ? (
+        <div className="no-data">No inventory found</div>
+      ) : (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Condition</th>
+                <th>Last Updated</th>
+                <th className="table-menu"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {inventory.map((item, index) => (
+                <tr key={item.ID || item.id || `inventory-${index}`}>
+                  <td>
+                    <span className="row-primary">{item.Property || item.property || 'N/A'}</span>
+                  </td>
+                  <td>{item.ItemName || item.itemName || item.Name || item.name || 'N/A'}</td>
+                  <td>{item.Category || item.category || 'N/A'}</td>
+                  <td>{item.Quantity || item.quantity || 0}</td>
+                  <td>
+                    <span className={`status-badge ${(item.Condition || item.condition || 'good').toLowerCase()}`}>
+                      {item.Condition || item.condition || 'Good'}
+                    </span>
+                  </td>
+                  <td>{item.UpdatedAt ? new Date(item.UpdatedAt).toLocaleDateString() : (item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A')}</td>
+                  <td className="table-menu">
+                    <div className="table-actions">
+                      <button className="table-action-button view">View</button>
+                      <button className="table-action-button edit">Edit</button>
+                      <button className="table-action-button delete">Delete</button>
                 </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
               </div>
-              
-      <button className="action-button primary"><Plus size={20} /> Add New Inventory</button>
+      )}
                   </div>
   );
 
   const renderBusinessTracking = () => (
     <div className="tracking-section">
+      <div className="section-header">
+        <div>
       <h2>Track Your Business</h2>
       <p>Comprehensive analytics and business performance tracking</p>
-      
-      <div className="tracking-stats">
-        <div className="stat-card modern-card">
-          <h3>Revenue Trends</h3>
-          <p>Monthly income analysis</p>
-          <span className="stat-value">+12%</span>
                   </div>
-        
-        <div className="stat-card modern-card">
-          <h3>Occupancy Rate</h3>
-          <p>Average across properties</p>
-          <span className="stat-value">80%</span>
                 </div>
                 
-        <div className="stat-card modern-card">
-          <h3>Maintenance Costs</h3>
-          <p>This quarter</p>
-          <span className="stat-value">€2,400</span>
+      <div className="dashboard-overview">
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Revenue Trends</span>
                 </div>
-                
-        <div className="stat-card modern-card">
-          <h3>ROI</h3>
-          <p>Return on investment</p>
-          <span className="stat-value">8.5%</span>
+          <div className="card-value">
+            <span>+12%</span>
+            <small>Monthly income analysis</small>
                 </div>
               </div>
-              
-              <div className="reports-section">
-                <h3>Download Reports</h3>
-                <button className="action-button" onClick={handleGenerateReport}><Receipt size={20} /> Financial Report</button>
-                <button className="action-button" onClick={() => addNotification('Performance report generated!', 'success')}><BarChart3 size={20} /> Performance Report</button>
-                <button className="action-button" onClick={() => addNotification('Tax report generated!', 'success')}><FileText size={20} /> Tax Report</button>
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Occupancy Rate</span>
+          </div>
+          <div className="card-value">
+            <span>80%</span>
+            <small>Average across properties</small>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="card-label">
+            <span>Maintenance Costs</span>
+          </div>
+          <div className="card-value">
+            <span>{businessTracking?.maintenanceCosts?.toLocaleString() || '2,400'} XOF</span>
+            <small>This quarter</small>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="card-label">
+            <span>ROI</span>
+          </div>
+          <div className="card-value">
+            <span>{businessTracking?.roi || '8.5'}%</span>
+            <small>Return on investment</small>
+          </div>
+        </div>
               </div>
           </div>
         );
       
-  const renderContent = () => {
-    switch (activeTab) {
+  const renderContent = (tabId = activeTab) => {
+    switch (tabId) {
       case 'overview':
         return renderOverview();
       case 'properties':
         return renderProperties();
-      case 'rental':
-        return renderRentalManagement();
       case 'payments':
         return renderPayments();
       case 'works':
@@ -642,39 +985,49 @@ const LandlordDashboard = () => {
         return renderInventory();
       case 'tracking':
         return renderBusinessTracking();
+      case 'settings':
+        return (
+          <div className="embedded-settings">
+            <SettingsPage />
+          </div>
+        );
       default:
         return renderOverview();
     }
   };
 
+  const layoutMenu = useMemo(
+    () =>
+      tabs.map(tab => ({
+        ...tab,
+        onSelect: () => setActiveTab(tab.id),
+        active: activeTab === tab.id
+      })),
+    [tabs, activeTab]
+  );
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    window.location.href = '/';
+  };
+
   return (
-    <div className="landlord-dashboard">
-      <div className="dashboard-header modern-container">
-        <h1>Landlord Dashboard</h1>
-        <p>Manage your rental properties and tenants</p>
-      </div>
-      
-      <div className="dashboard-tabs modern-container">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <Icon size={20} />
-              {tab.label}
-            </button>
-          );
-        })}
-        </div>
+    <>
+      <RoleLayout
+        brand={{ name: 'SAAF IMMO', caption: 'Landlord Portal', logo: 'SAAF', logoImage: `${process.env.PUBLIC_URL}/download.jpeg` }}
+        menu={layoutMenu}
+        activeId={activeTab}
+        onActiveChange={setActiveTab}
+        onLogout={handleLogout}
+      >
+        {({ activeId }) => (
+          <div className="content-body landlord-content">
+            {renderContent(activeId)}
+          </div>
+        )}
+      </RoleLayout>
 
-      <div className="dashboard-content modern-container">
-        {renderContent()}
-      </div>
-
-      {/* Notification System */}
       <div className="notifications-container">
         {notifications.map(notification => (
           <div key={notification.id} className={`notification notification-${notification.type}`}>
@@ -709,7 +1062,269 @@ const LandlordDashboard = () => {
           onClose={() => setShowContractModal(false)}
         />
       </Modal>
-    </div>
+
+      {/* Add Property Modal */}
+      <Modal
+        isOpen={showPropertyModal}
+        onClose={() => setShowPropertyModal(false)}
+        title="Add New Property"
+        size="lg"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const propertyData = {
+            address: formData.get('address'),
+            type: formData.get('type'),
+            bedrooms: parseInt(formData.get('bedrooms')),
+            bathrooms: parseFloat(formData.get('bathrooms')),
+            rent: parseFloat(formData.get('rent')),
+            landlordId: 1 // Default landlord ID
+          };
+          handleAddProperty(propertyData);
+        }}>
+          <div className="form-group">
+            <label>Address</label>
+            <input type="text" name="address" required />
+          </div>
+          <div className="form-group">
+            <label>Property Type</label>
+            <select name="type" required>
+              <option value="apartment">Apartment</option>
+              <option value="house">House</option>
+              <option value="condo">Condo</option>
+              <option value="studio">Studio</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Bedrooms</label>
+            <input type="number" name="bedrooms" min="0" required />
+          </div>
+          <div className="form-group">
+            <label>Bathrooms</label>
+            <input type="number" name="bathrooms" min="0" step="0.5" required />
+          </div>
+          <div className="form-group">
+            <label>Monthly Rent (XOF)</label>
+            <input type="number" name="rent" min="0" step="0.01" required />
+          </div>
+          <div className="modal-actions">
+            <button type="button" onClick={() => setShowPropertyModal(false)}>Cancel</button>
+            <button type="submit" disabled={loading}>Add Property</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Create Work Order Modal */}
+      <Modal
+        isOpen={showWorkOrderModal}
+        onClose={() => setShowWorkOrderModal(false)}
+        title="Create Work Order"
+        size="lg"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const workOrderData = {
+            property: formData.get('property'),
+            type: formData.get('type'),
+            priority: formData.get('priority'),
+            description: formData.get('description'),
+            assignedTo: formData.get('assignedTo') || null,
+            amount: formData.get('amount') ? parseFloat(formData.get('amount')) : null
+          };
+          handleCreateWorkOrder(workOrderData);
+        }}>
+          <div className="form-group">
+            <label>Property</label>
+            <input type="text" name="property" required />
+          </div>
+          <div className="form-group">
+            <label>Work Type</label>
+            <select name="type" required>
+              <option value="maintenance">Maintenance</option>
+              <option value="repair">Repair</option>
+              <option value="renovation">Renovation</option>
+              <option value="cleaning">Cleaning</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Priority</label>
+            <select name="priority" required>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <textarea name="description" rows="4" required></textarea>
+          </div>
+          <div className="form-group">
+            <label>Assigned To (Optional)</label>
+            <input type="text" name="assignedTo" />
+          </div>
+          <div className="form-group">
+            <label>Estimated Cost (XOF)</label>
+            <input type="number" name="amount" min="0" step="0.01" />
+          </div>
+          <div className="modal-actions">
+            <button type="button" onClick={() => setShowWorkOrderModal(false)}>Cancel</button>
+            <button type="submit" disabled={loading}>Create Work Order</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Create Claim Modal */}
+      <Modal
+        isOpen={showClaimModal}
+        onClose={() => setShowClaimModal(false)}
+        title="Create Claim"
+        size="lg"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const claimData = {
+            property: formData.get('property'),
+            type: formData.get('type'),
+            description: formData.get('description'),
+            amount: formData.get('amount') ? parseFloat(formData.get('amount')) : null
+          };
+          handleCreateClaim(claimData);
+        }}>
+          <div className="form-group">
+            <label>Property</label>
+            <input type="text" name="property" required />
+          </div>
+          <div className="form-group">
+            <label>Claim Type</label>
+            <select name="type" required>
+              <option value="damage">Damage</option>
+              <option value="insurance">Insurance</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <textarea name="description" rows="4" required></textarea>
+          </div>
+          <div className="form-group">
+            <label>Claim Amount (XOF)</label>
+            <input type="number" name="amount" min="0" step="0.01" />
+          </div>
+          <div className="modal-actions">
+            <button type="button" onClick={() => setShowClaimModal(false)}>Cancel</button>
+            <button type="submit" disabled={loading}>Create Claim</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Inventory Modal */}
+      <Modal
+        isOpen={showInventoryModal}
+        onClose={() => setShowInventoryModal(false)}
+        title="Add Inventory"
+        size="lg"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const inventoryData = {
+            property: formData.get('property'),
+            type: formData.get('type'),
+            inspector: formData.get('inspector')
+          };
+          handleAddInventory(inventoryData);
+        }}>
+          <div className="form-group">
+            <label>Property</label>
+            <input type="text" name="property" required />
+          </div>
+          <div className="form-group">
+            <label>Inventory Type</label>
+            <select name="type" required>
+              <option value="move-in">Move-in</option>
+              <option value="move-out">Move-out</option>
+              <option value="routine">Routine</option>
+              <option value="emergency">Emergency</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Inspector</label>
+            <input type="text" name="inspector" required />
+          </div>
+          <div className="modal-actions">
+            <button type="button" onClick={() => setShowInventoryModal(false)}>Cancel</button>
+            <button type="submit" disabled={loading}>Add Inventory</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Generate Receipt Modal */}
+      <Modal
+        isOpen={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        title="Generate Receipt"
+        size="lg"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const receiptData = {
+            receiptNumber: formData.get('receiptNumber'),
+            date: formData.get('date'),
+            landlord: formData.get('landlord'),
+            property: formData.get('property'),
+            tenant: formData.get('tenant'),
+            amount: parseFloat(formData.get('amount')),
+            period: formData.get('period'),
+            description: formData.get('description')
+          };
+          handleGenerateReceipt(receiptData);
+        }}>
+          <div className="form-group">
+            <label>Receipt Number</label>
+            <input type="text" name="receiptNumber" placeholder="Auto-generated if empty" />
+          </div>
+          <div className="form-group">
+            <label>Date</label>
+            <input type="date" name="date" required />
+          </div>
+          <div className="form-group">
+            <label>Landlord</label>
+            <input type="text" name="landlord" required />
+          </div>
+          <div className="form-group">
+            <label>Property</label>
+            <input type="text" name="property" required />
+          </div>
+          <div className="form-group">
+            <label>Tenant</label>
+            <input type="text" name="tenant" required />
+          </div>
+          <div className="form-group">
+            <label>Amount (XOF)</label>
+            <input type="number" name="amount" min="0" step="0.01" required />
+          </div>
+          <div className="form-group">
+            <label>Period</label>
+            <input type="text" name="period" placeholder="e.g., January 2024" required />
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <textarea name="description" rows="3"></textarea>
+          </div>
+          <div className="modal-actions">
+            <button type="button" onClick={() => setShowReceiptModal(false)}>Cancel</button>
+            <button type="submit" disabled={loading}>Generate Receipt</button>
+          </div>
+        </form>
+      </Modal>
+
+    </>
   );
 };
 

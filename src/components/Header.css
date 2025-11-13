@@ -153,6 +153,24 @@
   background-color: #f3f4f6;
 }
 
+.logout-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
 @media (max-width: 768px) {
   .dashboard-header {
     padding: 0 16px;
