@@ -1,172 +1,221 @@
-import { API_CONFIG } from '../config/api';
-
-const ACCOUNTING_BASE_URL = `${API_CONFIG.BASE_URL}/api/accounting`;
+import { buildApiUrl, apiRequest } from '../config/api';
 
 export const accountingService = {
   // Overview APIs
   getOverview: async () => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/overview`);
-    if (!response.ok) throw new Error('Failed to fetch overview');
-    return response.json();
+    const url = buildApiUrl('/api/accounting/overview');
+    return await apiRequest(url);
   },
 
   // Tenant Payments APIs
-  getTenantPayments: async () => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/tenant-payments`);
-    if (!response.ok) throw new Error('Failed to fetch tenant payments');
-    return response.json();
+  getTenantPayments: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/tenant-payments');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.property) queryParams.append('property', filters.property);
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.chargeType) queryParams.append('chargeType', filters.chargeType);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   recordTenantPayment: async (paymentData) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/tenant-payments`, {
+    const url = buildApiUrl('/api/accounting/tenant-payments');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(paymentData)
+      body: JSON.stringify(paymentData),
     });
-    if (!response.ok) throw new Error('Failed to record tenant payment');
-    return response.json();
   },
 
   approveTenantPayment: async (paymentId) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/tenant-payments/${paymentId}/approve`, {
-      method: 'POST'
+    const url = buildApiUrl(`/api/accounting/tenant-payments/${paymentId}/approve`);
+    return await apiRequest(url, {
+      method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to approve tenant payment');
-    return response.json();
   },
 
   generateReceipt: async (paymentId) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/tenant-payments/${paymentId}/receipt`, {
-      method: 'POST'
+    const url = buildApiUrl(`/api/accounting/tenant-payments/${paymentId}/receipt`);
+    return await apiRequest(url, {
+      method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to generate receipt');
-    return response.json();
   },
 
   sendReceipt: async (paymentId, email) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/tenant-payments/${paymentId}/send-receipt`, {
+    const url = buildApiUrl(`/api/accounting/tenant-payments/${paymentId}/send-receipt`);
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email }),
     });
-    if (!response.ok) throw new Error('Failed to send receipt');
-    return response.json();
   },
 
   // Landlord Payments APIs
-  getLandlordPayments: async () => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/landlord-payments`);
-    if (!response.ok) throw new Error('Failed to fetch landlord payments');
-    return response.json();
+  getLandlordPayments: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/landlord-payments');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.building) queryParams.append('building', filters.building);
+    if (filters.landlord) queryParams.append('landlord', filters.landlord);
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   recordLandlordPayment: async (paymentData) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/landlord-payments`, {
+    const url = buildApiUrl('/api/accounting/landlord-payments');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(paymentData)
+      body: JSON.stringify(paymentData),
     });
-    if (!response.ok) throw new Error('Failed to record landlord payment');
-    return response.json();
   },
 
   transferToLandlord: async (paymentId) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/landlord-payments/${paymentId}/transfer`, {
-      method: 'POST'
+    const url = buildApiUrl(`/api/accounting/landlord-payments/${paymentId}/transfer`);
+    return await apiRequest(url, {
+      method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to transfer to landlord');
-    return response.json();
   },
 
   // Collections APIs
-  getCollections: async () => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/collections`);
-    if (!response.ok) throw new Error('Failed to fetch collections');
-    return response.json();
+  getCollections: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/collections');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.building) queryParams.append('building', filters.building);
+    if (filters.landlord) queryParams.append('landlord', filters.landlord);
+    if (filters.chargeType) queryParams.append('chargeType', filters.chargeType);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
+  },
+
+  getCollectionsPerBuilding: async () => {
+    const url = buildApiUrl('/api/accounting/collections/per-building');
+    return await apiRequest(url);
   },
 
   recordCollection: async (collectionData) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/collections`, {
+    const url = buildApiUrl('/api/accounting/collections');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(collectionData)
+      body: JSON.stringify(collectionData),
     });
-    if (!response.ok) throw new Error('Failed to record collection');
-    return response.json();
   },
 
   // Expenses APIs
-  getExpenses: async () => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/expenses`);
-    if (!response.ok) throw new Error('Failed to fetch expenses');
-    return response.json();
+  getExpenses: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/expenses');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.building) queryParams.append('building', filters.building);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   addExpense: async (expenseData) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/expenses`, {
+    const url = buildApiUrl('/api/accounting/expenses');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(expenseData)
+      body: JSON.stringify(expenseData),
     });
-    if (!response.ok) throw new Error('Failed to add expense');
-    return response.json();
   },
 
   updateExpense: async (expenseId, expenseData) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/expenses/${expenseId}`, {
+    const url = buildApiUrl(`/api/accounting/expenses/${expenseId}`);
+    return await apiRequest(url, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(expenseData)
+      body: JSON.stringify(expenseData),
     });
-    if (!response.ok) throw new Error('Failed to update expense');
-    return response.json();
   },
 
   deleteExpense: async (expenseId) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/expenses/${expenseId}`, {
-      method: 'DELETE'
+    const url = buildApiUrl(`/api/accounting/expenses/${expenseId}`);
+    return await apiRequest(url, {
+      method: 'DELETE',
     });
-    if (!response.ok) throw new Error('Failed to delete expense');
-    return response.json();
   },
 
   // Reports APIs
   getMonthlySummary: async () => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/summary/monthly`);
-    if (!response.ok) throw new Error('Failed to fetch monthly summary');
-    return response.json();
+    const url = buildApiUrl('/api/accounting/summary/monthly');
+    return await apiRequest(url);
   },
 
   getFinancialReport: async (startDate, endDate) => {
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/reports/financial?start=${startDate}&end=${endDate}`);
-    if (!response.ok) throw new Error('Failed to fetch financial report');
-    return response.json();
+    const url = buildApiUrl(`/api/accounting/reports/financial?start=${startDate}&end=${endDate}`);
+    return await apiRequest(url);
+  },
+
+  getGlobalBalance: async () => {
+    const url = buildApiUrl('/api/accounting/balance/global');
+    return await apiRequest(url);
   },
 
   // Document Upload APIs
   uploadReceiptDocument: async (paymentId, file) => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('paymentId', paymentId);
     
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/tenant-payments/${paymentId}/upload-receipt`, {
+    const url = buildApiUrl(`/api/accounting/tenant-payments/${paymentId}/upload-receipt`);
+    const token = localStorage.getItem('token');
+    
+    return await fetch(url, {
       method: 'POST',
+      headers: {
+        'Authorization': token || '',
+      },
       body: formData
+    }).then(async (response) => {
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to upload receipt document');
+      }
+      return response.json();
     });
-    if (!response.ok) throw new Error('Failed to upload receipt document');
-    return response.json();
   },
 
   uploadExpenseDocument: async (expenseId, file) => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('expenseId', expenseId);
     
-    const response = await fetch(`${ACCOUNTING_BASE_URL}/expenses/${expenseId}/upload-document`, {
+    const url = buildApiUrl(`/api/accounting/expenses/${expenseId}/upload-document`);
+    const token = localStorage.getItem('token');
+    
+    return await fetch(url, {
       method: 'POST',
+      headers: {
+        'Authorization': token || '',
+      },
       body: formData
+    }).then(async (response) => {
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to upload expense document');
+      }
+      return response.json();
     });
-    if (!response.ok) throw new Error('Failed to upload expense document');
-    return response.json();
   }
 };

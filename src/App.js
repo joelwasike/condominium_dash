@@ -12,6 +12,7 @@ import TechnicianDashboard from './pages/TechnicianDashboard';
 import LandlordDashboard from './pages/LandlordDashboard';
 import SystemDashboard from './pages/SystemDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import AgencyDirectorDashboard from './pages/AgencyDirectorDashboard';
 import SettingsPage from './pages/SettingsPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -57,6 +58,7 @@ function App() {
       case 'technician': return '/technician';
       case 'landlord': return '/landlord';
       case 'superadmin': return '/super-admin';
+      case 'agency_director': return '/agency-director';
       default: return '/tenant';
     }
   };
@@ -182,6 +184,14 @@ function App() {
             <ProtectedRoute requiredRole="superadmin">
               <DashboardLayout>
                 <SuperAdminDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/agency-director" element={
+            <ProtectedRoute requiredRole="agency_director">
+              <DashboardLayout>
+                <AgencyDirectorDashboard />
               </DashboardLayout>
             </ProtectedRoute>
           } />

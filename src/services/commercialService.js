@@ -1,79 +1,117 @@
-import { API_CONFIG } from '../config/api';
-
-const COMMERCIAL_BASE_URL = `${API_CONFIG.BASE_URL}/api/commercial`;
+import { buildApiUrl, apiRequest } from '../config/api';
 
 export const commercialService = {
+  // Overview
   getOverview: async () => {
-    const response = await fetch(`${COMMERCIAL_BASE_URL}/overview`);
-    if (!response.ok) throw new Error('Failed to fetch commercial overview');
-    return response.json();
+    const url = buildApiUrl('/api/commercial/overview');
+    return await apiRequest(url);
   },
 
-  listListings: async () => {
-    const response = await fetch(`${COMMERCIAL_BASE_URL}/listings`);
-    if (!response.ok) throw new Error('Failed to fetch listings');
-    return response.json();
+  // Listings
+  listListings: async (filters = {}) => {
+    let url = buildApiUrl('/api/commercial/listings');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.type) queryParams.append('type', filters.type);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   createListing: async (listingData) => {
-    const response = await fetch(`${COMMERCIAL_BASE_URL}/listings`, {
+    const url = buildApiUrl('/api/commercial/listings');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(listingData)
+      body: JSON.stringify(listingData),
     });
-    if (!response.ok) throw new Error('Failed to create listing');
-    return response.json();
   },
 
   updateListing: async (id, listingData) => {
-    const response = await fetch(`${COMMERCIAL_BASE_URL}/listings/${id}`, {
+    const url = buildApiUrl(`/api/commercial/listings/${id}`);
+    return await apiRequest(url, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(listingData)
+      body: JSON.stringify(listingData),
     });
-    if (!response.ok) throw new Error('Failed to update listing');
-    return response.json();
   },
 
-  listVisits: async () => {
-    const response = await fetch(`${COMMERCIAL_BASE_URL}/visits`);
-    if (!response.ok) throw new Error('Failed to fetch visits');
-    return response.json();
+  // Visits
+  listVisits: async (filters = {}) => {
+    let url = buildApiUrl('/api/commercial/visits');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.property) queryParams.append('property', filters.property);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   scheduleVisit: async (visitData) => {
-    const response = await fetch(`${COMMERCIAL_BASE_URL}/visits`, {
+    const url = buildApiUrl('/api/commercial/visits');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(visitData)
+      body: JSON.stringify(visitData),
     });
-    if (!response.ok) throw new Error('Failed to schedule visit');
-    return response.json();
   },
 
-  listRequests: async () => {
-    const response = await fetch(`${COMMERCIAL_BASE_URL}/requests`);
-    if (!response.ok) throw new Error('Failed to fetch visit requests');
-    return response.json();
+  updateVisitStatus: async (id, status, notes) => {
+    const url = buildApiUrl(`/api/commercial/visits/${id}/status`);
+    return await apiRequest(url, {
+      method: 'PUT',
+      body: JSON.stringify({ status, notes }),
+    });
+  },
+
+  // Interested Clients History
+  getInterestedClientsHistory: async () => {
+    const url = buildApiUrl('/api/commercial/clients/history');
+    return await apiRequest(url);
+  },
+
+  // Visit Requests
+  listRequests: async (filters = {}) => {
+    let url = buildApiUrl('/api/commercial/requests');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.status) queryParams.append('status', filters.status);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   createVisitRequest: async (requestData) => {
-    const response = await fetch(`${COMMERCIAL_BASE_URL}/requests`, {
+    const url = buildApiUrl('/api/commercial/requests');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestData)
+      body: JSON.stringify(requestData),
     });
-    if (!response.ok) throw new Error('Failed to create visit request');
-    return response.json();
   },
 
   updateVisitRequest: async (id, status) => {
-    const response = await fetch(`${COMMERCIAL_BASE_URL}/requests/${id}`, {
+    const url = buildApiUrl(`/api/commercial/requests/${id}`);
+    return await apiRequest(url, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      body: JSON.stringify({ status }),
     });
-    if (!response.ok) throw new Error('Failed to update visit request');
-    return response.json();
+  },
+
+  followUpVisitRequest: async (id, message) => {
+    const url = buildApiUrl(`/api/commercial/requests/${id}/follow-up`);
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
   },
 };

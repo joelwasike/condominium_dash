@@ -1,5 +1,5 @@
-/* Sales Manager Dashboard Styles – matching Super Admin Dashboard exactly */
-.administrative-content {
+/* Accounting Dashboard Styles – matching Sales Manager Dashboard exactly */
+.accounting-content {
   padding: 24px;
   background: transparent;
   min-height: calc(100vh - 60px);
@@ -225,6 +225,12 @@
   color: #6b7280;
 }
 
+.sa-section-header h2 {
+  margin: 0 0 12px;
+  font-size: 1.4rem;
+  color: #111827;
+}
+
 /* === Generic table + notification reused by new UI === */
 
 .sa-table-wrapper {
@@ -345,24 +351,9 @@
   color: #dc2626;
 }
 
-.sa-status-pill.scheduled {
-  background: rgba(245, 158, 11, 0.12);
-  color: #d97706;
-}
-
-.sa-status-pill.completed {
-  background: rgba(16, 185, 129, 0.12);
-  color: #047857;
-}
-
-.sa-status-pill.ready {
-  background: rgba(59, 130, 246, 0.12);
+.sa-status-pill.collected {
+  background: rgba(37, 99, 235, 0.12);
   color: #1d4ed8;
-}
-
-.sa-status-pill.sent {
-  background: rgba(16, 185, 129, 0.12);
-  color: #047857;
 }
 
 /* === Transactions (Historique des transactions) === */
@@ -435,27 +426,6 @@
 
 .sa-search-input input:focus {
   outline: none;
-}
-
-.sa-filters-section {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.sa-filter-select {
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  background: white;
-  min-width: 150px;
-}
-
-.sa-filter-select:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 /* === Clients (Liste des clients) === */
@@ -924,7 +894,7 @@
 }
 
 @media (max-width: 768px) {
-  .administrative-content {
+  .accounting-content {
     padding: 16px;
   }
 
@@ -1207,22 +1177,112 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.modal-form {
+/* Filter and search styles */
+.sa-filters-section {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.modal-form .form-row {
-  display: flex;
-  gap: 16px;
+  gap: 12px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
-.modal-form .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  min-width: 220px;
+.sa-filter-select {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 31, 96, 0.12);
+  background: #f7f8ff;
+  font-size: 0.85rem;
+  font-family: 'Poppins', sans-serif;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
 }
+
+.sa-filter-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.sa-search-input-wrapper {
+  flex: 1;
+  min-width: 200px;
+}
+
+.sa-search-input-wrapper input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 31, 96, 0.12);
+  background: #f7f8ff;
+  font-size: 0.85rem;
+  font-family: 'Poppins', sans-serif;
+  color: #374151;
+}
+
+.sa-search-input-wrapper input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.sa-search-input-wrapper input::placeholder {
+  color: #9ca3af;
+}
+
+/* Loading and empty states */
+.loading,
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-size: 0.9rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.loading-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+/* Button styles */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: none;
+  padding: 10px 18px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.85rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+

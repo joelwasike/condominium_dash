@@ -20,11 +20,40 @@ const parseJson = async (response) => {
   }
 };
 
+const getAuthHeaders = (includeContentType = true) => {
+  const token = localStorage.getItem('token');
+  const headers = {};
+  
+  if (includeContentType) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  if (token) {
+    const tokenStr = String(token).trim();
+    // Sanitize token to ensure it only contains ISO-8859-1 compatible characters
+    const sanitizedToken = tokenStr
+      .split('')
+      .map(char => {
+        const code = char.charCodeAt(0);
+        return (code >= 32 && code <= 126) ? char : '';
+      })
+      .join('');
+    
+    if (sanitizedToken && sanitizedToken.length > 0) {
+      headers['Authorization'] = sanitizedToken;
+    }
+  }
+  
+  return headers;
+};
+
 export const superAdminService = {
-  // Overview
+  // Overview / subscription stats (agency-level)
   getOverview: async () => {
-    const response = await fetch(`${SUPERADMIN_BASE_URL}/overview`);
-    if (!response.ok) throw new Error('Failed to fetch super admin overview');
+    // The backend exposes aggregated subscription / agency stats for the global
+    // super admin under /agency-stats according to the API collection.
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/agency-stats`);
+    if (!response.ok) throw new Error('Failed to fetch super admin overview / agency stats');
     return parseJson(response);
   },
 
@@ -78,6 +107,41 @@ export const superAdminService = {
       method: 'POST',
     });
     if (!response.ok) throw new Error('Failed to reactivate company');
+    return parseJson(response);
+  },
+
+  // Agency Directors (Super Admin <-> Agency Director communication layer)
+  getAgencyAdmins: async () => {
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/agency-directors`);
+    if (!response.ok) throw new Error('Failed to fetch agency directors');
+    return parseJson(response);
+  },
+
+  addAgencyAdmin: async (adminData) => {
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/agency-admins`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(adminData),
+    });
+    if (!response.ok) throw new Error('Failed to add agency admin');
+    return parseJson(response);
+  },
+
+  updateAgencyAdmin: async (id, adminData) => {
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/agency-admins/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(adminData),
+    });
+    if (!response.ok) throw new Error('Failed to update agency admin');
+    return parseJson(response);
+  },
+
+  deleteAgencyAdmin: async (id) => {
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/agency-admins/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete agency admin');
     return parseJson(response);
   },
 
@@ -165,6 +229,110 @@ export const superAdminService = {
     return parseJson(response);
   },
 
+  // Advertisements (global marketing banner management)
+  getAdvertisements: async () => {
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/advertisements`);
+    if (!response.ok) throw new Error('Failed to fetch advertisements');
+    return parseJson(response);
+  },
+
+  createAdvertisement: async (adData) => {
+    // Create FormData for multipart/form-data request
+    const formData = new FormData();
+    formData.append('title', adData.title);
+    formData.append('text', adData.text);
+    
+    // Handle image: must be a File object
+    if (adData.image instanceof File) {
+      formData.append('image', adData.image);
+    } else {
+      throw new Error('Image file is required. Please upload an image file.');
+    }
+    
+    // Get auth token for Authorization header
+    const token = localStorage.getItem('token');
+    const headers = {};
+    
+    if (token) {
+      const tokenStr = String(token).trim();
+      const sanitizedToken = tokenStr
+        .split('')
+        .map(char => {
+          const code = char.charCodeAt(0);
+          return (code >= 32 && code <= 126) ? char : '';
+        })
+        .join('');
+      
+      if (sanitizedToken && sanitizedToken.length > 0) {
+        headers['Authorization'] = sanitizedToken;
+      }
+    }
+    
+    // Don't set Content-Type header - browser will set it with boundary for FormData
+    
+    console.log('Creating advertisement with FormData:', { title: adData.title, text: adData.text, hasImage: !!adData.image });
+    
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/advertisements`, {
+      method: 'POST',
+      headers: headers,
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Advertisement creation failed:', response.status, errorText);
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.error || errorJson.message || `Failed to create advertisement: ${response.status}`);
+      } catch (e) {
+        throw new Error(`Failed to create advertisement: ${response.status} ${response.statusText}. ${errorText}`);
+      }
+    }
+    
+    return parseJson(response);
+  },
+
+  // Chat between global super admin and agency admins
+  getChatWithAdmin: async (adminId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/chat/${adminId}/messages`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to fetch chat messages:', response.status, errorText);
+      throw new Error(`Failed to fetch chat messages: ${response.status}`);
+    }
+    return parseJson(response);
+  },
+
+  sendChatMessage: async (messagePayload) => {
+    const headers = getAuthHeaders(true);
+    const body = JSON.stringify(messagePayload);
+    
+    console.log('Sending chat message:', { messagePayload, body, headers });
+    
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/chat/messages`, {
+      method: 'POST',
+      headers: headers,
+      body: body,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Chat message send failed:', response.status, errorText);
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.error || errorJson.message || `Failed to send chat message: ${response.status}`);
+      } catch (e) {
+        throw new Error(`Failed to send chat message: ${response.status} ${response.statusText}. ${errorText}`);
+      }
+    }
+    
+    return parseJson(response);
+  },
+
   // System
   getSystemSettings: async () => {
     const response = await fetch(`${SUPERADMIN_BASE_URL}/system`);
@@ -218,6 +386,18 @@ export const superAdminService = {
   getExpenses: async () => {
     const response = await fetch(`${SUPERADMIN_BASE_URL}/accounting/expenses`);
     if (!response.ok) throw new Error('Failed to fetch expenses');
+    return parseJson(response);
+  },
+
+  // Subscription/Transaction History - MISSING API - needs to be created
+  // Expected endpoint: GET /api/superadmin/subscriptions
+  // Expected response: Array of subscription/transaction objects with:
+  //   - id, agencyId/companyId, agencyName, email, amount, subscriptionAmount
+  //   - paymentStatus (paid/pending/deactivated), accountStatus (active/inactive)
+  //   - dueDate, paymentDate, createdAt
+  getSubscriptions: async () => {
+    const response = await fetch(`${SUPERADMIN_BASE_URL}/subscriptions`);
+    if (!response.ok) throw new Error('Failed to fetch subscriptions');
     return parseJson(response);
   },
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   FileText,
   Users,
@@ -11,29 +11,50 @@ import {
   Bell,
   DollarSign,
   Download,
-  Plus
+  Plus,
+  MessageCircle
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
 import Modal from '../components/Modal';
 import '../components/RoleLayout.css';
-import '../pages/TechnicianDashboard.css';
 import './AdministrativeDashboard.css';
 import { adminService } from '../services/adminService';
+import { messagingService } from '../services/messagingService';
 
 const AdministrativeDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showLeaseModal, setShowLeaseModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingDocId, setRejectingDocId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   
   // API Data States
+  const [overviewData, setOverviewData] = useState(null);
   const [inboxDocs, setInboxDocs] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [utilities, setUtilities] = useState([]);
   const [debts, setDebts] = useState([]);
   const [reminders, setReminders] = useState([]);
   const [leases, setLeases] = useState([]);
+  const [pendingPaymentFollowUps, setPendingPaymentFollowUps] = useState([]);
+  
+  // Filter states
+  const [documentStatusFilter, setDocumentStatusFilter] = useState('');
+  const [documentTypeFilter, setDocumentTypeFilter] = useState('');
+  const [documentTenantFilter, setDocumentTenantFilter] = useState('');
+  const [utilityStatusFilter, setUtilityStatusFilter] = useState('');
+  const [leaseStatusFilter, setLeaseStatusFilter] = useState('');
+
+  // Messaging states
+  const [chatUsers, setChatUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const isLoadingUsersRef = useRef(false);
+  const messagesEndRef = useRef(null);
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -43,37 +64,198 @@ const AdministrativeDashboard = () => {
     }, 3000);
   }, []);
 
+  // Scroll to bottom of messages
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [chatMessages, scrollToBottom]);
+
+  // Load chat for a specific user
+  const loadChatForUser = useCallback(async (userId) => {
+    if (!userId) return;
+    
+    try {
+      setSelectedUserId(userId);
+      const messages = await messagingService.getConversation(userId);
+      
+      const normalizedMessages = Array.isArray(messages) ? messages : [];
+      setChatMessages(normalizedMessages);
+      
+      try {
+        await messagingService.markMessagesAsRead(userId);
+      } catch (readError) {
+        console.error('Error marking messages as read:', readError);
+      }
+    } catch (error) {
+      console.error('Error loading chat:', error);
+      addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
+      setChatMessages([]);
+    }
+  }, [addNotification]);
+
+  // Load users for messaging
+  const loadUsers = useCallback(async () => {
+    if (isLoadingUsersRef.current) {
+      return;
+    }
+
+    try {
+      isLoadingUsersRef.current = true;
+      const users = await messagingService.getUsers();
+      
+      let usersArray = [];
+      if (Array.isArray(users)) {
+        usersArray = users;
+      } else if (users && Array.isArray(users.users)) {
+        usersArray = users.users;
+      } else if (users && typeof users === 'object') {
+        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+      }
+      
+      const storedUser = localStorage.getItem('user');
+      let currentUserId = null;
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          currentUserId = user.id || user.ID;
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+      
+      const chatUsersList = usersArray
+        .filter(user => {
+          const userId = user.id || user.ID;
+          const userIdStr = userId ? String(userId) : null;
+          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+          return userIdStr && userIdStr !== currentUserIdStr;
+        })
+        .map(user => {
+          const userId = user.id || user.ID;
+          return {
+            userId: userId,
+            name: user.name || user.Name || 'User',
+            email: user.email || user.Email || '',
+            role: user.role || user.Role || '',
+            company: user.company || user.Company || '',
+            status: user.status || user.Status || 'Active',
+            unreadCount: 0
+          };
+        })
+        .sort((a, b) => {
+          const nameA = (a.name || '').toLowerCase();
+          const nameB = (b.name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+      
+      try {
+        const conversations = await messagingService.getConversations();
+        if (Array.isArray(conversations)) {
+          conversations.forEach(conv => {
+            const chatUser = chatUsersList.find(u => {
+              const uId = String(u.userId);
+              const convId = String(conv.userId);
+              return uId === convId;
+            });
+            if (chatUser && conv.unreadCount) {
+              chatUser.unreadCount = conv.unreadCount;
+            }
+          });
+        }
+      } catch (convError) {
+        console.error('Error loading conversations for unread counts:', convError);
+      }
+      
+      setChatUsers(chatUsersList);
+      
+      setSelectedUserId(prevSelected => {
+        if (chatUsersList.length > 0 && !prevSelected) {
+          const firstUserId = chatUsersList[0].userId;
+          setTimeout(() => {
+            loadChatForUser(firstUserId);
+          }, 0);
+          return firstUserId;
+        }
+        return prevSelected;
+      });
+      
+      if (chatUsersList.length === 0) {
+        addNotification('No users available for messaging', 'info');
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      addNotification(`Failed to load users: ${error.message || 'Unknown error'}`, 'error');
+      setChatUsers([]);
+    } finally {
+      isLoadingUsersRef.current = false;
+    }
+  }, [loadChatForUser, addNotification]);
+
   // Load data from APIs
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [inboxData, documentsData, utilitiesData, debtsData, remindersData, leasesData] = await Promise.all([
-        adminService.getInbox(),
-        adminService.getDocuments(),
-        adminService.getUtilities(),
-        adminService.getDebts(),
-        adminService.getReminders(),
-        adminService.getLeases()
+      const [
+        overview,
+        inboxData,
+        documentsData,
+        utilitiesData,
+        debtsData,
+        remindersData,
+        leasesData,
+        paymentFollowUpsData
+      ] = await Promise.all([
+        adminService.getOverview().catch(() => null),
+        adminService.getInbox().catch(() => ({ items: [] })),
+        adminService.getDocuments({
+          status: documentStatusFilter || undefined,
+          tenant: documentTenantFilter || undefined,
+          type: documentTypeFilter || undefined,
+        }).catch(() => []),
+        adminService.getUtilities({
+          status: utilityStatusFilter || undefined,
+        }).catch(() => ({ items: [] })),
+        adminService.getDebts().catch(() => ({ items: [] })),
+        adminService.getReminders().catch(() => []),
+        adminService.getLeases({
+          status: leaseStatusFilter || undefined,
+        }).catch(() => []),
+        adminService.getPendingPaymentFollowUps().catch(() => [])
       ]);
       
+      setOverviewData(overview);
       setInboxDocs(inboxData.items || []);
-      setDocuments(documentsData);
+      setDocuments(Array.isArray(documentsData) ? documentsData : []);
       setUtilities(utilitiesData.items || []);
       setDebts(debtsData.items || []);
-      setReminders(remindersData);
-      setLeases(leasesData);
+      setReminders(Array.isArray(remindersData) ? remindersData : []);
+      setLeases(Array.isArray(leasesData) ? leasesData : []);
+      setPendingPaymentFollowUps(Array.isArray(paymentFollowUpsData) ? paymentFollowUpsData : []);
     } catch (error) {
       console.error('Error loading admin data:', error);
       addNotification('Failed to load dashboard data', 'error');
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, [addNotification, documentStatusFilter, documentTypeFilter, documentTenantFilter, utilityStatusFilter, leaseStatusFilter]);
 
   // Load data on component mount
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Load users when chat tab is active
+  useEffect(() => {
+    if (activeTab === 'chat' && !isLoadingUsersRef.current) {
+      loadUsers();
+    }
+  }, [activeTab, loadUsers]);
 
   const tabs = useMemo(
     () => [
@@ -85,10 +267,69 @@ const AdministrativeDashboard = () => {
       { id: 'reminders', label: 'Reminders', icon: Bell },
       { id: 'leases', label: 'Leases', icon: FileText },
       { id: 'automation', label: 'Automation & Reports', icon: TrendingUp },
+      { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
     []
   );
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedUserId) return;
+    
+    const storedUser = localStorage.getItem('user');
+    let currentUserId = null;
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        currentUserId = user.id || user.ID;
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+      }
+    }
+    
+    if (!currentUserId) {
+      addNotification('Unable to identify current user. Please log in again.', 'error');
+      return;
+    }
+    
+    const content = chatInput.trim();
+    const tempMessageId = `temp-${Date.now()}`;
+    
+    const optimisticMessage = {
+      id: tempMessageId,
+      ID: tempMessageId,
+      fromUserId: currentUserId,
+      toUserId: selectedUserId,
+      content: content,
+      createdAt: new Date().toISOString(),
+      Content: content,
+      CreatedAt: new Date().toISOString(),
+      FromUserId: currentUserId,
+      ToUserId: selectedUserId,
+    };
+    
+    setChatMessages(prev => [...prev, optimisticMessage]);
+    setChatInput('');
+    
+    try {
+      const response = await messagingService.sendMessage({
+        toUserId: selectedUserId,
+        content: content,
+      });
+      
+      setChatMessages(prev => {
+        const filtered = prev.filter(msg => msg.id !== tempMessageId);
+        return [...filtered, response];
+      });
+      
+      await loadChatForUser(selectedUserId);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      addNotification(error.message || 'Failed to send message', 'error');
+      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      setChatInput(content);
+    }
+  };
 
   const handleForwardInbox = async (id) => {
     try {
@@ -112,14 +353,32 @@ const AdministrativeDashboard = () => {
     }
   };
 
-  const handleRejectDocument = async (id) => {
+  const handleRejectDocument = async () => {
+    if (!rejectingDocId || !rejectionReason.trim()) {
+      addNotification('Please provide a rejection reason', 'error');
+      return;
+    }
     try {
-      await adminService.rejectDocument(id);
+      await adminService.rejectDocument(rejectingDocId, rejectionReason);
       addNotification('Document rejected successfully', 'success');
+      setShowRejectModal(false);
+      setRejectingDocId(null);
+      setRejectionReason('');
       loadData();
     } catch (error) {
       console.error('Error rejecting document:', error);
       addNotification('Failed to reject document', 'error');
+    }
+  };
+
+  const handleFollowUpDocument = async (id) => {
+    try {
+      await adminService.followUpDocument(id);
+      addNotification('Follow-up sent successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error sending follow-up:', error);
+      addNotification('Failed to send follow-up', 'error');
     }
   };
 
@@ -134,34 +393,147 @@ const AdministrativeDashboard = () => {
     }
   };
 
-  const handleCreateReminder = () => {
-    const reminder = {
-      id: Date.now(),
-      subject: 'Scheduled Reminder',
-      description: 'Automated follow up',
-      date: new Date().toLocaleDateString(),
-      channel: 'Email',
-      status: 'Scheduled'
-    };
-    setReminders(prev => [reminder, ...prev]);
-    addNotification('Reminder scheduled', 'success');
+  const handleTransferUtility = async (id) => {
+    try {
+      await adminService.transferUtility(id);
+      addNotification('Utility transfer completed successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error transferring utility:', error);
+      addNotification('Failed to transfer utility', 'error');
+    }
+  };
+
+  const handleGenerateLeaseDocument = async (id) => {
+    try {
+      await adminService.generateLeaseDocument(id);
+      addNotification('Lease document generated successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error generating lease document:', error);
+      addNotification('Failed to generate lease document', 'error');
+    }
+  };
+
+  const handleCreateReminder = async (reminderData) => {
+    try {
+      await adminService.createReminder(reminderData);
+      addNotification('Reminder created successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error creating reminder:', error);
+      addNotification('Failed to create reminder', 'error');
+    }
+  };
+
+  const handleDeleteReminder = async (id) => {
+    try {
+      await adminService.deleteReminder(id);
+      addNotification('Reminder deleted successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting reminder:', error);
+      addNotification('Failed to delete reminder', 'error');
+    }
+  };
+
+  const handleRemindDebt = async (id) => {
+    try {
+      await adminService.remindDebt(id);
+      addNotification('Reminder sent successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      addNotification('Failed to send reminder', 'error');
+    }
+  };
+
+  const handleMarkDebtPaid = async (id) => {
+    try {
+      await adminService.markDebtPaid(id);
+      addNotification('Debt marked as paid successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error marking debt as paid:', error);
+      addNotification('Failed to mark debt as paid', 'error');
+    }
+  };
+
+  const renderOverview = () => {
+    const stats = overviewData || {};
+    
+    return (
+      <div className="sa-overview-page">
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <div>
+              <h3>Administrative Dashboard Overview</h3>
+              <p>Track document verification, automation, and administrative tasks</p>
+            </div>
+          </div>
+
+          <div className="sa-overview-metrics">
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Files Received</p>
+              <p className="sa-metric-value">{stats.totalFilesReceived || 0}</p>
+              <span className="sa-metric-period">Total documents</span>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Files Approved</p>
+              <p className="sa-metric-value">{stats.filesApproved || 0}</p>
+              <span className="sa-metric-period">Approved documents</span>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Pending Review</p>
+              <p className="sa-metric-value">{stats.filesPending || 0}</p>
+              <span className="sa-metric-period">Awaiting verification</span>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Files Rejected</p>
+              <p className="sa-metric-value">{stats.filesRejected || 0}</p>
+              <span className="sa-metric-period">Rejected documents</span>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Average Approval Time</p>
+              <p className="sa-metric-value">{stats.averageApprovalTimeHours ? `${stats.averageApprovalTimeHours.toFixed(1)}h` : '0h'}</p>
+              <span className="sa-metric-period">Hours per file</span>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Follow-ups Sent</p>
+              <p className="sa-metric-value">{stats.numberOfFollowUpsSent || 0}</p>
+              <span className="sa-metric-period">Total follow-ups</span>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Utility Documents</p>
+              <p className="sa-metric-value">{stats.utilityDocumentsSent || 0}</p>
+              <span className="sa-metric-period">Sent to utilities</span>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Pending Follow-ups</p>
+              <p className="sa-metric-value">{stats.pendingFollowUpCount || 0}</p>
+              <span className="sa-metric-period">Needing follow-up</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderInbox = () => (
-    <div className="inbox-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
-          <h2>Received Documents</h2>
+          <h3>Received Documents</h3>
           <p>Incoming tenant documents (email/inbox)</p>
         </div>
       </div>
       {loading ? (
-        <div className="loading">Loading inbox documents...</div>
+        <div className="sa-table-empty">Loading inbox documents...</div>
       ) : inboxDocs.length === 0 ? (
-        <div className="no-data">No documents in inbox</div>
+        <div className="sa-table-empty">No documents in inbox</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Tenant</th>
@@ -169,26 +541,28 @@ const AdministrativeDashboard = () => {
                 <th>Source</th>
                 <th>Received</th>
                 <th>Status</th>
-                <th className="table-menu"></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {inboxDocs.map((doc, index) => (
                 <tr key={doc.id || `doc-${index}`}>
                   <td>
-                    <div className="row-primary">{doc.tenant || 'Unknown Tenant'}</div>
-                    <div className="row-secondary">{doc.reference || doc.id || 'No reference'}</div>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{doc.tenant || 'Unknown Tenant'}</span>
+                      <span className="sa-cell-sub">{doc.reference || doc.id || 'No reference'}</span>
+                    </div>
                   </td>
                   <td>{doc.type || 'Unknown Type'}</td>
                   <td>{doc.from || 'Unknown'}</td>
                   <td>{doc.date || 'Unknown Date'}</td>
                   <td>
-                    <span className={`status-badge ${(doc.status || 'new').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(doc.status || 'new').toLowerCase()}`}>
                       {doc.status || 'New'}
                     </span>
                   </td>
-                  <td className="table-menu">
-                    <div className="table-actions">
+                  <td>
+                    <div className="sa-row-actions">
                       <button
                         className="table-action-button edit"
                         onClick={() => addNotification('Document archived', 'success')}
@@ -213,133 +587,84 @@ const AdministrativeDashboard = () => {
     </div>
   );
 
-  const renderOverview = () => {
-    const approvedCount = documents.filter(
-      d => (d.status || '').toLowerCase() === 'approved'
-    ).length;
-    const pendingCount = documents.filter(
-      d => (d.status || '').toLowerCase() === 'pending'
-    ).length;
-    const remindersCount = reminders.filter(
-      r => (r.status || '').toLowerCase() === 'scheduled'
-    ).length;
-
-    return (
-      <div className="overview-section">
-        <div className="section-header">
-          <div>
-            <h2>Administrative Dashboard Overview</h2>
-            <p>Track document verification, automation, and administrative tasks</p>
-          </div>
-        </div>
-
-        <div className="dashboard-overview">
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Files Received</span>
-            </div>
-            <div className="card-value">
-              <span>{inboxDocs.length + documents.length}</span>
-              <small>Total documents</small>
-            </div>
-          </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Files Approved</span>
-            </div>
-            <div className="card-value">
-              <span>{approvedCount}</span>
-              <small>Approved documents</small>
-            </div>
-          </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Pending Review</span>
-            </div>
-            <div className="card-value">
-              <span>{pendingCount}</span>
-              <small>Awaiting verification</small>
-            </div>
-          </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Active Reminders</span>
-            </div>
-            <div className="card-value">
-              <span>{remindersCount}</span>
-              <small>Scheduled reminders</small>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderDocuments = () => (
-    <div className="documents-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
-          <h2>Document Verification</h2>
+          <h3>Document Verification</h3>
           <p>Review and approve tenant documents</p>
         </div>
       </div>
 
-      <div className="filters-section" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <select className="filter-select">
+      <div className="sa-filters-section">
+        <select 
+          className="sa-filter-select"
+          value={documentStatusFilter}
+          onChange={(e) => setDocumentStatusFilter(e.target.value)}
+        >
           <option value="">All Documents</option>
-          <option value="pending">Pending Review</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
+          <option value="Pending">Pending Review</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
         </select>
-        <select className="filter-select">
+        <select 
+          className="sa-filter-select"
+          value={documentTypeFilter}
+          onChange={(e) => setDocumentTypeFilter(e.target.value)}
+        >
           <option value="">All Types</option>
-          <option value="id">ID Documents</option>
-          <option value="income">Income Proof</option>
-          <option value="reference">References</option>
+          <option value="ID">ID Documents</option>
+          <option value="Income">Income Proof</option>
+          <option value="Reference">References</option>
         </select>
         <input
-          className="search-input"
+          className="sa-search-input"
           type="text"
-          placeholder="Search by client name..."
-          style={{ padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(15, 31, 96, 0.12)', background: '#f7f8ff', minWidth: '200px' }}
+          placeholder="Search by tenant name..."
+          value={documentTenantFilter}
+          onChange={(e) => setDocumentTenantFilter(e.target.value)}
         />
       </div>
 
       {loading ? (
-        <div className="loading">Loading documents...</div>
+        <div className="sa-table-empty">Loading documents...</div>
       ) : documents.length === 0 ? (
-        <div className="no-data">No documents pending review</div>
+        <div className="sa-table-empty">No documents pending review</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Tenant</th>
                 <th>Document</th>
                 <th>Submitted</th>
                 <th>Status</th>
-                <th className="table-menu"></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {documents.map((doc, index) => (
                 <tr key={doc.id || `document-${index}`}>
                   <td>
-                    <div className="row-primary">{doc.tenant || 'Unknown Tenant'}</div>
-                    <div className="row-secondary">{doc.email || doc.reference || 'No reference'}</div>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{doc.tenant || 'Unknown Tenant'}</span>
+                      <span className="sa-cell-sub">{doc.email || doc.reference || 'No reference'}</span>
+                    </div>
                   </td>
                   <td>
-                    <div className="row-primary">{doc.documentType || doc.type || 'Document'}</div>
-                    <div className="row-secondary">{doc.category || 'General'}</div>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{doc.documentType || doc.type || 'Document'}</span>
+                      <span className="sa-cell-sub">{doc.category || 'General'}</span>
+                    </div>
                   </td>
                   <td>{doc.submittedAt || doc.date || 'Unknown'}</td>
                   <td>
-                    <span className={`status-badge ${(doc.status || 'pending').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(doc.status || 'pending').toLowerCase()}`}>
                       {doc.status || 'Pending'}
                     </span>
                   </td>
-                  <td className="table-menu">
-                    <div className="table-actions">
+                  <td>
+                    <div className="sa-row-actions">
                       <button
                         className="table-action-button view"
                         onClick={() => addNotification('Opening document viewer', 'info')}
@@ -354,9 +679,18 @@ const AdministrativeDashboard = () => {
                       </button>
                       <button
                         className="table-action-button delete"
-                        onClick={() => handleRejectDocument(doc.id)}
+                        onClick={() => {
+                          setRejectingDocId(doc.id);
+                          setShowRejectModal(true);
+                        }}
                       >
                         Reject
+                      </button>
+                      <button
+                        className="table-action-button contact"
+                        onClick={() => handleFollowUpDocument(doc.id)}
+                      >
+                        Follow-up
                       </button>
                       <button
                         className="table-action-button view"
@@ -376,14 +710,14 @@ const AdministrativeDashboard = () => {
   );
 
   const renderUtilities = () => (
-    <div className="utilities-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
-          <h2>CIE / SODECI Transfers</h2>
+          <h3>CIE / SODECI Transfers</h3>
           <p>Send tenant and lease details to utility companies</p>
         </div>
         <button
-          className="btn-primary"
+          className="sa-primary-cta"
           onClick={() => addNotification('Batch export started', 'success')}
           disabled={loading}
         >
@@ -391,13 +725,26 @@ const AdministrativeDashboard = () => {
           Send Batch
         </button>
       </div>
+      
+      <div className="sa-filters-section">
+        <select 
+          className="sa-filter-select"
+          value={utilityStatusFilter}
+          onChange={(e) => setUtilityStatusFilter(e.target.value)}
+        >
+          <option value="">All Status</option>
+          <option value="Sent">Sent</option>
+          <option value="Confirmed">Confirmed</option>
+        </select>
+      </div>
+
       {loading ? (
-        <div className="loading">Loading utility transfers...</div>
+        <div className="sa-table-empty">Loading utility transfers...</div>
       ) : utilities.length === 0 ? (
-        <div className="no-data">No pending transfers</div>
+        <div className="sa-table-empty">No pending transfers</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Tenant</th>
@@ -405,29 +752,33 @@ const AdministrativeDashboard = () => {
                 <th>Utility Account</th>
                 <th>Status</th>
                 <th>Scheduled</th>
-                <th className="table-menu"></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {utilities.map((item, index) => (
                 <tr key={item.id || `utility-${index}`}>
                   <td>
-                    <div className="row-primary">{item.tenant || 'Unknown Tenant'}</div>
-                    <div className="row-secondary">{item.email || item.phone || '—'}</div>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{item.tenant || 'Unknown Tenant'}</span>
+                      <span className="sa-cell-sub">{item.email || item.phone || '—'}</span>
+                    </div>
                   </td>
                   <td>
-                    <div className="row-primary">{item.property || 'Unknown property'}</div>
-                    <div className="row-secondary">{item.city || item.reference || '—'}</div>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{item.property || 'Unknown property'}</span>
+                      <span className="sa-cell-sub">{item.city || item.reference || '—'}</span>
+                    </div>
                   </td>
                   <td>{item.utilityAccount || item.meter || '—'}</td>
                   <td>
-                    <span className={`status-badge ${(item.status || 'ready').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(item.status || 'ready').toLowerCase()}`}>
                       {item.status || 'Ready'}
                     </span>
                   </td>
                   <td>{item.scheduled || item.date || '—'}</td>
-                  <td className="table-menu">
-                    <div className="table-actions">
+                  <td>
+                    <div className="sa-row-actions">
                       <button
                         className="table-action-button view"
                         onClick={() => addNotification('Previewing payload', 'info')}
@@ -436,9 +787,9 @@ const AdministrativeDashboard = () => {
                       </button>
                       <button
                         className="table-action-button edit"
-                        onClick={() => handleSendToUtility(item.id)}
+                        onClick={() => handleTransferUtility(item.id)}
                       >
-                        Send
+                        Transfer
                       </button>
                     </div>
                   </td>
@@ -452,14 +803,14 @@ const AdministrativeDashboard = () => {
   );
 
   const renderDebt = () => (
-    <div className="debt-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
-          <h2>Debt Collection</h2>
+          <h3>Debt Collection</h3>
           <p>Track overdue balances and manage collections</p>
         </div>
         <button
-          className="btn-primary"
+          className="sa-primary-cta"
           onClick={() => addNotification('Debt report exported', 'success')}
           disabled={loading}
         >
@@ -468,12 +819,12 @@ const AdministrativeDashboard = () => {
         </button>
       </div>
       {loading ? (
-        <div className="loading">Syncing balances...</div>
+        <div className="sa-table-empty">Syncing balances...</div>
       ) : debts.length === 0 ? (
-        <div className="no-data">No outstanding debts</div>
+        <div className="sa-table-empty">No outstanding debts</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Tenant</th>
@@ -481,51 +832,47 @@ const AdministrativeDashboard = () => {
                 <th>Amount Due</th>
                 <th>Due Date</th>
                 <th>Status</th>
-                <th className="table-menu"></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {debts.map(debt => (
                 <tr key={debt.id}>
                   <td>
-                    <div className="row-primary">{debt.tenant}</div>
-                    <div className="row-secondary">{debt.email || debt.contact || '—'}</div>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{debt.tenant}</span>
+                      <span className="sa-cell-sub">{debt.email || debt.contact || '—'}</span>
+                    </div>
                   </td>
                   <td>
-                    <div className="row-primary">{debt.property}</div>
-                    <div className="row-secondary">{debt.unit || debt.city || '—'}</div>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{debt.property}</span>
+                      <span className="sa-cell-sub">{debt.unit || debt.city || '—'}</span>
+                    </div>
                   </td>
                   <td>
-                    <div className="row-primary">{debt.amount || debt.balance}</div>
-                    <div className="row-secondary">Reminders: {debt.reminders || 0}</div>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{debt.amount || debt.balance}</span>
+                      <span className="sa-cell-sub">Reminders: {debt.reminders || 0}</span>
+                    </div>
                   </td>
                   <td>{debt.dueDate}</td>
                   <td>
-                    <span className={`status-badge ${(debt.status || 'pending').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(debt.status || 'pending').toLowerCase()}`}>
                       {debt.status}
                     </span>
                   </td>
-                  <td className="table-menu">
-                    <div className="table-actions">
+                  <td>
+                    <div className="sa-row-actions">
                       <button
                         className="table-action-button view"
-                        onClick={() =>
-                          setDebts(prev =>
-                            prev.map(d =>
-                              d.id === debt.id ? { ...d, reminders: (d.reminders || 0) + 1 } : d
-                            )
-                          )
-                        }
+                        onClick={() => handleRemindDebt(debt.id)}
                       >
                         Reminder
                       </button>
                       <button
                         className="table-action-button edit"
-                        onClick={() =>
-                          setDebts(prev =>
-                            prev.map(d => (d.id === debt.id ? { ...d, status: 'Paid' } : d))
-                          )
-                        }
+                        onClick={() => handleMarkDebtPaid(debt.id)}
                       >
                         Mark Paid
                       </button>
@@ -547,47 +894,55 @@ const AdministrativeDashboard = () => {
   );
 
   const renderReminders = () => (
-    <div className="reminders-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
-          <h2>Reminders</h2>
+          <h3>Reminders</h3>
           <p>Create and manage payment and document reminders</p>
         </div>
-        <button className="btn-primary" onClick={handleCreateReminder} disabled={loading}>
+        <button className="sa-primary-cta" onClick={() => handleCreateReminder({
+          subject: 'Scheduled Reminder',
+          description: 'Automated follow up',
+          date: new Date().toISOString(),
+          channel: 'Email',
+          status: 'Scheduled'
+        })} disabled={loading}>
           <Plus size={18} />
           Schedule Reminder
         </button>
       </div>
       {reminders.length === 0 ? (
-        <div className="no-data">No reminders scheduled</div>
+        <div className="sa-table-empty">No reminders scheduled</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Reminder</th>
                 <th>Channel</th>
                 <th>Scheduled</th>
                 <th>Status</th>
-                <th className="table-menu"></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {reminders.map(rem => (
                 <tr key={rem.id}>
                   <td>
-                    <div className="row-primary">{rem.subject}</div>
-                    <div className="row-secondary">{rem.description || 'Automated follow up'}</div>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{rem.subject}</span>
+                      <span className="sa-cell-sub">{rem.description || 'Automated follow up'}</span>
+                    </div>
                   </td>
                   <td>{rem.channel}</td>
-                  <td>{rem.date}</td>
+                  <td>{rem.date || rem.scheduledAt}</td>
                   <td>
-                    <span className={`status-badge ${(rem.status || 'scheduled').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(rem.status || 'scheduled').toLowerCase()}`}>
                       {rem.status}
                     </span>
                   </td>
-                  <td className="table-menu">
-                    <div className="table-actions">
+                  <td>
+                    <div className="sa-row-actions">
                       <button
                         className="table-action-button edit"
                         onClick={() => addNotification('Reminder updated', 'success')}
@@ -596,7 +951,7 @@ const AdministrativeDashboard = () => {
                       </button>
                       <button
                         className="table-action-button delete"
-                        onClick={() => setReminders(prev => prev.filter(r => r.id !== rem.id))}
+                        onClick={() => handleDeleteReminder(rem.id)}
                       >
                         Cancel
                       </button>
@@ -612,22 +967,36 @@ const AdministrativeDashboard = () => {
   );
 
   const renderLeases = () => (
-    <div className="leases-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
-          <h2>Lease Agreements</h2>
+          <h3>Lease Agreements</h3>
           <p>Generate and manage lease contracts for approved tenants</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowLeaseModal(true)} disabled={loading}>
+        <button className="sa-primary-cta" onClick={() => setShowLeaseModal(true)} disabled={loading}>
           <Plus size={18} />
           Create Lease
         </button>
       </div>
+      
+      <div className="sa-filters-section">
+        <select 
+          className="sa-filter-select"
+          value={leaseStatusFilter}
+          onChange={(e) => setLeaseStatusFilter(e.target.value)}
+        >
+          <option value="">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Pending">Pending</option>
+          <option value="Expired">Expired</option>
+        </select>
+      </div>
+
       {leases.length === 0 ? (
-        <div className="no-data">No leases created yet</div>
+        <div className="sa-table-empty">No leases created yet</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Tenant</th>
@@ -635,40 +1004,54 @@ const AdministrativeDashboard = () => {
                 <th>Term</th>
                 <th>Rent</th>
                 <th>Status</th>
-                <th className="table-menu"></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {leases.map(lease => (
                 <tr key={lease.id}>
                   <td>
-                    <div className="row-primary">{lease.tenant}</div>
-                    <div className="row-secondary">{lease.email || '—'}</div>
-                  </td>
-                  <td>
-                    <div className="row-primary">{lease.property}</div>
-                    <div className="row-secondary">{lease.unit || lease.city || '—'}</div>
-                  </td>
-                  <td>
-                    <div className="row-primary">
-                      {lease.startDate} - {lease.endDate}
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{lease.tenant}</span>
+                      <span className="sa-cell-sub">{lease.email || '—'}</span>
                     </div>
-                    <div className="row-secondary">{lease.duration || '1 year'}</div>
+                  </td>
+                  <td>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{lease.property}</span>
+                      <span className="sa-cell-sub">{lease.unit || lease.city || '—'}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">
+                        {lease.startDate} - {lease.endDate}
+                      </span>
+                      <span className="sa-cell-sub">{lease.duration || '1 year'}</span>
+                    </div>
                   </td>
                   <td>{lease.rent}</td>
                   <td>
-                    <span className={`status-badge ${(lease.status || 'active').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(lease.status || 'active').toLowerCase()}`}>
                       {lease.status || 'Active'}
                     </span>
                   </td>
-                  <td className="table-menu">
-                    <div className="table-actions">
+                  <td>
+                    <div className="sa-row-actions">
                       <button
                         className="table-action-button view"
                         onClick={() => addNotification('Lease opened', 'info')}
                       >
                         View
                       </button>
+                      {lease.status === 'Pending' && (
+                        <button
+                          className="table-action-button edit"
+                          onClick={() => handleGenerateLeaseDocument(lease.id)}
+                        >
+                          Generate
+                        </button>
+                      )}
                       <button
                         className="table-action-button edit"
                         onClick={() => addNotification('Lease downloaded', 'success')}
@@ -693,27 +1076,27 @@ const AdministrativeDashboard = () => {
   );
 
   const renderAutomation = () => (
-    <div className="automation-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
-          <h2>Automation & Reports</h2>
+          <h3>Automation & Reports</h3>
           <p>Manage automated workflows and generate reports</p>
         </div>
-        <button className="btn-primary" onClick={() => addNotification('Monthly report generated', 'success')}>
+        <button className="sa-primary-cta" onClick={() => addNotification('Monthly report generated', 'success')}>
           <Download size={18} />
           Generate Monthly Report
         </button>
       </div>
 
-      <div className="data-table-wrapper">
-        <table className="data-table">
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
           <thead>
             <tr>
               <th>Automation Type</th>
               <th>Description</th>
               <th>Status</th>
               <th>Statistics</th>
-              <th className="table-menu"></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -745,17 +1128,17 @@ const AdministrativeDashboard = () => {
             ].map((card, index) => (
               <tr key={card.title || index}>
                 <td>
-                  <span className="row-primary">{card.title}</span>
+                  <span className="sa-cell-title">{card.title}</span>
                 </td>
                 <td>{card.description}</td>
                 <td>
-                  <span className={`status-badge ${card.status}`}>
+                  <span className={`sa-status-pill ${card.status}`}>
                     {card.status === 'active' ? 'Active' : 'Pending'}
                   </span>
                 </td>
                 <td>{card.stats}</td>
-                <td className="table-menu">
-                  <div className="table-actions">
+                <td>
+                  <div className="sa-row-actions">
                     <button className="table-action-button view">View</button>
                     <button className="table-action-button edit">Configure</button>
                   </div>
@@ -764,6 +1147,157 @@ const AdministrativeDashboard = () => {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+
+  // Render messaging page
+  const renderMessages = () => (
+    <div className="sa-chat-page">
+      <div className="sa-chat-layout">
+        <div className="sa-chat-list">
+          <h3>Users</h3>
+          <ul>
+            {chatUsers.map((user) => {
+              const active = user.userId === selectedUserId;
+              return (
+                <li
+                  key={`chat-user-${user.userId}`}
+                  className={active ? 'active' : ''}
+                  onClick={() => loadChatForUser(user.userId)}
+                >
+                  <div className="sa-cell-main">
+                    <span className="sa-cell-title">{user.name || 'User'}</span>
+                    <span className="sa-cell-sub">{user.email || ''}</span>
+                    {user.role && (
+                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {user.role}
+                      </span>
+                    )}
+                    {user.unreadCount > 0 && (
+                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                        {user.unreadCount} unread
+                      </span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+            {chatUsers.length === 0 && (
+              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                No users available
+              </li>
+            )}
+          </ul>
+        </div>
+        
+        <div className="sa-chat-conversation">
+          <div className="sa-chat-header">
+            <h3>Messages</h3>
+            {selectedUserId && (
+              <span className="sa-chat-subtitle">
+                Chat with{' '}
+                {
+                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
+                    .name || 'User'
+                }
+              </span>
+            )}
+          </div>
+          <div className="sa-chat-messages">
+            {chatMessages.map((msg, index) => {
+              const messageContent = msg.content || msg.Content || '';
+              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+              const messageFromUserId = msg.fromUserId || msg.FromUserId;
+              const messageId = msg.id || msg.ID || index;
+              
+              const storedUser = localStorage.getItem('user');
+              let isOutgoing = false;
+              if (storedUser) {
+                try {
+                  const user = JSON.parse(storedUser);
+                  const currentUserId = user.id || user.ID;
+                  isOutgoing = String(messageFromUserId) === String(currentUserId);
+                } catch (e) {
+                }
+              }
+              
+              return (
+                <div
+                  key={`msg-${messageId}`}
+                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
+                >
+                  <p>{messageContent}</p>
+                  <span className="sa-chat-meta">
+                    {messageCreatedAt
+                      ? new Date(messageCreatedAt).toLocaleString()
+                      : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {chatMessages.length === 0 && (
+              <div className="sa-table-empty">
+                {selectedUserId 
+                  ? 'No messages yet. Start the conversation!'
+                  : 'Select a conversation on the left to start messaging.'}
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="sa-chat-input-row">
+            <input
+              type="text"
+              placeholder="Reply..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={!selectedUserId}
+            />
+            <button 
+              className="sa-primary-cta" 
+              onClick={handleSendMessage}
+              disabled={!selectedUserId || !chatInput.trim()}
+            >
+              <MessageCircle size={16} />
+              Send
+            </button>
+          </div>
+        </div>
+        
+        <div className="sa-chat-details">
+          <h4>Contact Details</h4>
+          {selectedUserId ? (
+            (() => {
+              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
+              return (
+                <>
+                  <p>
+                    <strong>Name:</strong> {user.name || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {user.email || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Role:</strong> {user.role || 'N/A'}
+                  </p>
+                  {user.company && (
+                    <p>
+                      <strong>Company:</strong> {user.company}
+                    </p>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <p>Select a conversation to view details.</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -786,6 +1320,8 @@ const AdministrativeDashboard = () => {
         return renderLeases();
       case 'automation':
         return renderAutomation();
+      case 'chat':
+        return renderMessages();
       case 'settings':
         return (
           <div className="embedded-settings">
@@ -842,40 +1378,46 @@ const AdministrativeDashboard = () => {
             e.preventDefault();
             const formData = new FormData(e.target);
             const newLease = {
-              id: Date.now(),
               tenant: formData.get('tenant'),
               property: formData.get('property'),
               startDate: formData.get('start'),
               endDate: formData.get('end'),
               rent: formData.get('rent'),
-              status: 'Active'
+              status: 'Pending'
             };
-            setLeases(prev => [newLease, ...prev]);
-            addNotification('Lease created successfully', 'success');
-            setShowLeaseModal(false);
+            adminService.createLease(newLease).then(() => {
+              addNotification('Lease created successfully', 'success');
+              setShowLeaseModal(false);
+              loadData();
+            }).catch((error) => {
+              addNotification('Failed to create lease', 'error');
+              console.error(error);
+            });
           }}
         >
-          <div className="form-grid">
-            <div className="form-field">
-              <label>Tenant</label>
-              <input type="text" name="tenant" placeholder="Tenant name" required />
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="lease-tenant">Tenant</label>
+              <input type="text" id="lease-tenant" name="tenant" placeholder="Tenant name" required />
             </div>
-            <div className="form-field">
-              <label>Property</label>
-              <input type="text" name="property" placeholder="Property address" required />
+            <div className="form-group">
+              <label htmlFor="lease-property">Property</label>
+              <input type="text" id="lease-property" name="property" placeholder="Property address" required />
             </div>
-            <div className="form-field">
-              <label>Start Date</label>
-              <input type="date" name="start" required />
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="lease-start">Start Date</label>
+              <input type="date" id="lease-start" name="start" required />
             </div>
-            <div className="form-field">
-              <label>End Date</label>
-              <input type="date" name="end" required />
+            <div className="form-group">
+              <label htmlFor="lease-end">End Date</label>
+              <input type="date" id="lease-end" name="end" required />
             </div>
-            <div className="form-field">
-              <label>Monthly Rent</label>
-              <input type="number" name="rent" min="0" step="0.01" placeholder="$0.00" required />
-            </div>
+          </div>
+          <div className="form-group">
+            <label htmlFor="lease-rent">Monthly Rent</label>
+            <input type="number" id="lease-rent" name="rent" min="0" step="0.01" placeholder="$0.00" required />
           </div>
           <div className="modal-footer">
             <button type="button" className="action-button secondary" onClick={() => setShowLeaseModal(false)}>
@@ -887,6 +1429,51 @@ const AdministrativeDashboard = () => {
           </div>
         </form>
       </Modal>
+
+      {showRejectModal && (
+        <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Reject Document</h3>
+              <button className="modal-close" onClick={() => setShowRejectModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="rejection-reason">Rejection Reason *</label>
+                <textarea
+                  id="rejection-reason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Please provide a reason for rejection..."
+                  rows="4"
+                  required
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="action-button secondary"
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectingDocId(null);
+                  setRejectionReason('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="action-button primary"
+                onClick={handleRejectDocument}
+                disabled={!rejectionReason.trim()}
+              >
+                Reject Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="notifications-container">
         {notifications.map(notification => (

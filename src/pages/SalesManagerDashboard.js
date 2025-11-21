@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign, Filter, Search, Plus, MessageCircle, Settings } from 'lucide-react';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
 import ContractUpload from '../components/ContractUpload';
 import { salesManagerService } from '../services/salesManagerService';
+import { messagingService } from '../services/messagingService';
 import { cloudinaryService, validateFileType, validateFileSize } from '../services/cloudinaryService';
 import RoleLayout from '../components/RoleLayout';
+import SettingsPage from './SettingsPage';
 import '../components/RoleLayout.css';
-import '../pages/TechnicianDashboard.css';
+import './SalesManagerDashboard.css';
 
 const SalesManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -23,6 +25,8 @@ const SalesManagerDashboard = () => {
   const [overviewData, setOverviewData] = useState(null);
   const [properties, setProperties] = useState([]);
   const [clients, setClients] = useState([]);
+  const [waitingListClients, setWaitingListClients] = useState([]);
+  const [unpaidRents, setUnpaidRents] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   
@@ -30,6 +34,29 @@ const SalesManagerDashboard = () => {
   const [clientStatusFilter, setClientStatusFilter] = useState('');
   const [clientPropertyFilter, setClientPropertyFilter] = useState('');
   const [clientSearchText, setClientSearchText] = useState('');
+  const [propertyStatusFilter, setPropertyStatusFilter] = useState('');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
+  const [propertyUrgencyFilter, setPropertyUrgencyFilter] = useState('');
+  const [alertTypeFilter, setAlertTypeFilter] = useState('');
+  
+  // Edit states
+  const [showEditClientModal, setShowEditClientModal] = useState(false);
+  const [editingClient, setEditingClient] = useState(null);
+  const [showUnpaidRentModal, setShowUnpaidRentModal] = useState(false);
+  const [editingUnpaidRent, setEditingUnpaidRent] = useState(null);
+  
+  // Property states
+  const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false);
+  const [showEditPropertyModal, setShowEditPropertyModal] = useState(false);
+  const [editingProperty, setEditingProperty] = useState(null);
+  
+  // Messaging states
+  const [chatUsers, setChatUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const isLoadingUsersRef = useRef(false);
+  const messagesEndRef = useRef(null);
 
   const addNotification = (message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -43,18 +70,26 @@ const SalesManagerDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [overview, propertiesData, clientsData, alertsData] = await Promise.all([
+      const [overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData] = await Promise.all([
         salesManagerService.getOverview(),
-        salesManagerService.getProperties(),
+        salesManagerService.getProperties({
+          status: propertyStatusFilter || undefined,
+          type: propertyTypeFilter || undefined,
+          urgency: propertyUrgencyFilter || undefined,
+        }),
         salesManagerService.getClients(),
-        salesManagerService.getAlerts(),
+        salesManagerService.getWaitingListClients().catch(() => []),
+        salesManagerService.getUnpaidRents().catch(() => []),
+        salesManagerService.getAlerts(alertTypeFilter || null),
       ]);
 
-      console.log('Loaded clients data:', clientsData);
+      console.log('Loaded data:', { overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData });
       setOverviewData(overview);
-      setProperties(propertiesData);
-      setClients(clientsData);
-      setAlerts(alertsData);
+      setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      setClients(Array.isArray(clientsData) ? clientsData : []);
+      setWaitingListClients(Array.isArray(waitingListData) ? waitingListData : []);
+      setUnpaidRents(Array.isArray(unpaidRentsData) ? unpaidRentsData : []);
+      setAlerts(Array.isArray(alertsData) ? alertsData : []);
     } catch (error) {
       console.error('Failed to load data:', error);
       addNotification('Failed to load dashboard data', 'error');
@@ -63,17 +98,195 @@ const SalesManagerDashboard = () => {
     }
   };
 
+  // Reload data when filters change
+  useEffect(() => {
+    loadData();
+  }, [propertyStatusFilter, propertyTypeFilter, propertyUrgencyFilter, alertTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll to bottom of messages
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [chatMessages, scrollToBottom]);
+
+  // Load chat for a specific user
+  const loadChatForUser = useCallback(async (userId) => {
+    if (!userId) return;
+    
+    try {
+      setSelectedUserId(userId);
+      const messages = await messagingService.getConversation(userId);
+      
+      // Normalize messages array
+      const normalizedMessages = Array.isArray(messages) ? messages : [];
+      setChatMessages(normalizedMessages);
+      
+      // Mark messages as read
+      try {
+        await messagingService.markMessagesAsRead(userId);
+      } catch (readError) {
+        console.error('Error marking messages as read:', readError);
+      }
+    } catch (error) {
+      console.error('Error loading chat:', error);
+      addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
+      setChatMessages([]);
+    }
+  }, [addNotification]);
+
+  // Load users for messaging (from same company)
+  const loadUsers = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (isLoadingUsersRef.current) {
+      console.log('Users already loading, skipping...');
+      return;
+    }
+
+    try {
+      isLoadingUsersRef.current = true;
+      console.log('Loading users for messaging...');
+      // Use the new getUsers endpoint
+      const users = await messagingService.getUsers();
+      console.log('Users API response:', users);
+      
+      // Handle different response formats
+      let usersArray = [];
+      if (Array.isArray(users)) {
+        usersArray = users;
+      } else if (users && Array.isArray(users.users)) {
+        usersArray = users.users;
+      } else if (users && typeof users === 'object') {
+        // Try to find array in response
+        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+      }
+      
+      console.log('Processed users array:', usersArray);
+      
+      // Get current user ID to exclude from list
+      const storedUser = localStorage.getItem('user');
+      let currentUserId = null;
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          currentUserId = user.id || user.ID;
+          console.log('Current user ID:', currentUserId);
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+      
+      // Map users to chat format and exclude current user
+      const chatUsersList = usersArray
+        .filter(user => {
+          const userId = user.id || user.ID;
+          // Convert both to strings for comparison to handle type mismatches
+          const userIdStr = userId ? String(userId) : null;
+          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+          if (!shouldInclude && userIdStr) {
+            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+          }
+          return shouldInclude;
+        })
+        .map(user => {
+          const userId = user.id || user.ID;
+          return {
+            userId: userId,
+            name: user.name || user.Name || 'User',
+            email: user.email || user.Email || '',
+            role: user.role || user.Role || '',
+            company: user.company || user.Company || '',
+            status: user.status || user.Status || 'Active',
+            unreadCount: 0 // Will be updated from conversations if needed
+          };
+        })
+        .sort((a, b) => {
+          const nameA = (a.name || '').toLowerCase();
+          const nameB = (b.name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+      
+      console.log('Final chat users list:', chatUsersList);
+      
+      // Get conversations to update unread counts
+      try {
+        const conversations = await messagingService.getConversations();
+        if (Array.isArray(conversations)) {
+          conversations.forEach(conv => {
+            const chatUser = chatUsersList.find(u => {
+              const uId = String(u.userId);
+              const convId = String(conv.userId);
+              return uId === convId;
+            });
+            if (chatUser && conv.unreadCount) {
+              chatUser.unreadCount = conv.unreadCount;
+            }
+          });
+        }
+      } catch (convError) {
+        console.error('Error loading conversations for unread counts:', convError);
+      }
+      
+      setChatUsers(chatUsersList);
+      
+      // Auto-select first user if available and no user is selected
+      // Use functional update to avoid dependency on selectedUserId
+      setSelectedUserId(prevSelected => {
+        if (chatUsersList.length > 0 && !prevSelected) {
+          const firstUserId = chatUsersList[0].userId;
+          // Load chat for first user asynchronously
+          setTimeout(() => {
+            loadChatForUser(firstUserId);
+          }, 0);
+          return firstUserId;
+        }
+        return prevSelected;
+      });
+      
+      if (chatUsersList.length === 0) {
+        console.warn('No users found. This could mean:');
+        console.warn('1. No other users in the same company');
+        console.warn('2. API endpoint returned empty array');
+        console.warn('3. All users were filtered out');
+        addNotification('No users available for messaging', 'info');
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      console.error('Error details:', error.message, error.stack);
+      addNotification(`Failed to load users: ${error.message || 'Unknown error'}`, 'error');
+      setChatUsers([]);
+    } finally {
+      isLoadingUsersRef.current = false;
+    }
+  }, [loadChatForUser, addNotification]);
+
   // Load data on component mount
   useEffect(() => {
     loadData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load users when chat tab is active (only once per tab switch)
+  useEffect(() => {
+    if (activeTab === 'chat' && !isLoadingUsersRef.current) {
+      loadUsers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]); // Only depend on activeTab, not loadUsers
 
   const tabs = useMemo(
     () => [
       { id: 'overview', label: 'Overview', icon: TrendingUp },
       { id: 'occupancy', label: 'Occupancy', icon: Building },
       { id: 'clients', label: 'Client Management', icon: Users },
-      { id: 'alerts', label: 'Alerts', icon: AlertTriangle }
+      { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
+      { id: 'chat', label: 'Messages', icon: MessageCircle },
+      { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
     []
   );
@@ -262,95 +475,321 @@ const SalesManagerDashboard = () => {
     try {
       await salesManagerService.updateAlert(alertId, status);
       addNotification('Alert updated successfully!', 'success');
-      // Reload alerts data
-      const updatedAlerts = await salesManagerService.getAlerts();
-      setAlerts(updatedAlerts);
+      await loadData();
     } catch (error) {
       console.error('Failed to update alert:', error);
       addNotification('Failed to update alert', 'error');
     }
   };
 
+  const handleEditClient = (client) => {
+    setEditingClient(client);
+    setShowEditClientModal(true);
+  };
+
+  const handleUpdateClient = async (e) => {
+    e.preventDefault();
+    if (!editingClient) return;
+
+    const formData = new FormData(e.target);
+    const updateData = {
+      name: formData.get('name')?.trim() || editingClient.Name,
+      email: formData.get('email')?.trim() || editingClient.Email,
+      phone: formData.get('phone')?.trim() || editingClient.Phone,
+      property: formData.get('property')?.trim() || editingClient.Property,
+      amount: formData.get('amount') ? parseFloat(formData.get('amount')) : editingClient.Amount,
+      status: formData.get('status') || editingClient.Status,
+    };
+
+    try {
+      setLoading(true);
+      await salesManagerService.updateClient(editingClient.ID || editingClient.id, updateData);
+      addNotification('Client updated successfully!', 'success');
+      setShowEditClientModal(false);
+      setEditingClient(null);
+      await loadData();
+    } catch (error) {
+      console.error('Failed to update client:', error);
+      addNotification('Failed to update client', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditUnpaidRent = (unpaidRent) => {
+    setEditingUnpaidRent(unpaidRent);
+    setShowUnpaidRentModal(true);
+  };
+
+  const handleUpdateUnpaidRent = async (e) => {
+    e.preventDefault();
+    if (!editingUnpaidRent) return;
+
+    const formData = new FormData(e.target);
+    const updateData = {
+      status: formData.get('status') || 'Paid',
+      amount: formData.get('amount') ? parseFloat(formData.get('amount')) : editingUnpaidRent.Amount,
+      paidAmount: formData.get('paidAmount') ? parseFloat(formData.get('paidAmount')) : null,
+      paymentDate: formData.get('paymentDate') || null,
+      notes: formData.get('notes')?.trim() || null,
+    };
+
+    try {
+      setLoading(true);
+      await salesManagerService.updateUnpaidRent(editingUnpaidRent.ID || editingUnpaidRent.id, updateData);
+      addNotification('Unpaid rent updated successfully!', 'success');
+      setShowUnpaidRentModal(false);
+      setEditingUnpaidRent(null);
+      await loadData();
+    } catch (error) {
+      console.error('Failed to update unpaid rent:', error);
+      addNotification('Failed to update unpaid rent', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProperty = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    const propertyData = {
+      address: formData.get('address')?.trim(),
+      type: formData.get('type')?.trim(),
+      status: formData.get('status')?.trim(),
+      rent: formData.get('rent') ? parseFloat(formData.get('rent')) : undefined,
+      bedrooms: formData.get('bedrooms') ? parseInt(formData.get('bedrooms')) : undefined,
+      bathrooms: formData.get('bathrooms') ? parseFloat(formData.get('bathrooms')) : undefined,
+      urgency: formData.get('urgency')?.trim() || 'normal',
+      tenant: formData.get('tenant')?.trim() || null,
+    };
+
+    // Validate required fields
+    if (!propertyData.address || !propertyData.type || !propertyData.status || !propertyData.rent) {
+      addNotification('Please fill in all required fields (Address, Type, Status, Rent)', 'error');
+      return;
+    }
+
+    // Validate status
+    if (propertyData.status !== 'Vacant' && propertyData.status !== 'Occupied') {
+      addNotification('Status must be either "Vacant" or "Occupied"', 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await salesManagerService.createProperty(propertyData);
+      addNotification('Property created successfully', 'success');
+      setShowCreatePropertyModal(false);
+      await loadData();
+    } catch (error) {
+      console.error('Error creating property:', error);
+      addNotification(error.message || 'Failed to create property', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateProperty = async (e) => {
+    e.preventDefault();
+    if (!editingProperty) return;
+
+    const formData = new FormData(e.target);
+    const updateData = {};
+    
+    // Only include fields that are provided
+    if (formData.get('address')) updateData.address = formData.get('address').trim();
+    if (formData.get('type')) updateData.type = formData.get('type').trim();
+    if (formData.get('status')) updateData.status = formData.get('status').trim();
+    if (formData.get('rent')) updateData.rent = parseFloat(formData.get('rent'));
+    if (formData.get('bedrooms')) updateData.bedrooms = parseInt(formData.get('bedrooms'));
+    if (formData.get('bathrooms')) updateData.bathrooms = parseFloat(formData.get('bathrooms'));
+    if (formData.get('urgency')) updateData.urgency = formData.get('urgency').trim();
+    if (formData.get('tenant')) {
+      const tenant = formData.get('tenant').trim();
+      updateData.tenant = tenant || null;
+    }
+
+    // Validate status if provided
+    if (updateData.status && updateData.status !== 'Vacant' && updateData.status !== 'Occupied') {
+      addNotification('Status must be either "Vacant" or "Occupied"', 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const propertyId = editingProperty.ID || editingProperty.id;
+      await salesManagerService.updateProperty(propertyId, updateData);
+      addNotification('Property updated successfully', 'success');
+      setShowEditPropertyModal(false);
+      setEditingProperty(null);
+      await loadData();
+    } catch (error) {
+      console.error('Error updating property:', error);
+      addNotification(error.message || 'Failed to update property', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderOverview = () => {
     if (loading) {
-      return <div className="loading">Loading overview data...</div>;
+      return <div className="sa-table-empty">Loading overview data...</div>;
     }
 
     const data = overviewData || {
-      occupancyRate: 0,
+      globalOccupancyRate: 0,
       totalProperties: 0,
       occupiedProperties: 0,
+      vacantProperties: 0,
+      totalActiveTenants: 0,
+      numberOfUnpaidAccounts: 0,
+      totalUnpaidRentAmount: 0,
+      // Legacy field names for backward compatibility
+      occupancyRate: 0,
       activeClients: 0,
       unpaidCount: 0,
       unpaidAmount: 0,
     };
 
+    // Use enhanced fields if available, fallback to legacy
+    const occupancyRate = data.globalOccupancyRate || data.occupancyRate || 0;
+    const activeTenants = data.totalActiveTenants || data.activeClients || 0;
+    const unpaidCount = data.numberOfUnpaidAccounts || data.unpaidCount || 0;
+    const unpaidAmount = data.totalUnpaidRentAmount || data.unpaidAmount || 0;
+
     return (
-      <div className="overview-section panel">
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon">
-              <Building size={24} />
+      <div className="sa-overview-page">
+        <div className="sa-overview-top">
+          <div className="sa-overview-chart-card">
+            <div className="sa-card-header">
+              <h2>Overview</h2>
+              <span className="sa-card-subtitle">Weekly Performance</span>
             </div>
-            <div className="stat-content">
-              <h3>Global Occupancy Rate</h3>
-              <p>Properties occupied</p>
-              <span className="stat-value">{data.occupancyRate?.toFixed(0) || 0}%</span>
+            <div className="sa-mini-legend">
+              <span className="sa-legend-item sa-legend-expected">Occupancy Rate</span>
+              <span className="sa-legend-item sa-legend-current">Active Tenants</span>
             </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon">
-              <Users size={24} />
+            <div className="sa-chart-placeholder">
+              <div className="sa-chart-line sa-chart-line-expected" />
+              <div className="sa-chart-line sa-chart-line-current" />
             </div>
-            <div className="stat-content">
-              <h3>Total Active Tenants</h3>
-              <p>Currently renting</p>
-              <span className="stat-value">{data.activeClients || 0}</span>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon">
-              <AlertTriangle size={24} />
-            </div>
-            <div className="stat-content">
-              <h3>Number of Unpaid Accounts</h3>
-              <p>Overdue payments</p>
-              <span className="stat-value">{data.unpaidCount || 0}</span>
+            <div className="sa-chart-footer">
+              <span>Jan</span>
+              <span>Feb</span>
+              <span>Mar</span>
+              <span>Apr</span>
+              <span>May</span>
+              <span>Jun</span>
+              <span>Jul</span>
+              <span>Aug</span>
+              <span>Sep</span>
+              <span>Oct</span>
+              <span>Nov</span>
+              <span>Dec</span>
             </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon">
-              <TrendingUp size={24} />
+
+          <div className="sa-overview-metrics">
+            <div className="sa-metric-card sa-metric-primary">
+              <p className="sa-metric-label">Total Unpaid Amount</p>
+              <p className="sa-metric-period">Outstanding Balance</p>
+              <p className="sa-metric-value">
+                {unpaidAmount.toLocaleString()} XOF
+              </p>
             </div>
-            <div className="stat-content">
-              <h3>Total Unpaid Rent Amount</h3>
-              <p>Outstanding balance</p>
-              <span className="stat-value">{data.unpaidAmount?.toFixed(0) || 0} XOF</span>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Active Tenants</p>
+              <p className="sa-metric-number">
+                {activeTenants}
+                <span className="sa-metric-trend positive">+1.5%</span>
+              </p>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Occupancy Rate</p>
+              <p className="sa-metric-value">
+                {occupancyRate.toFixed(0)}%
+              </p>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Unpaid Accounts</p>
+              <p className="sa-metric-number">
+                {unpaidCount}
+                <span className="sa-metric-trend negative">-1.5%</span>
+              </p>
+            </div>
+            <div className="sa-banner-card">
+              <div className="sa-banner-text">
+                <h3>Increase your sales</h3>
+                <p>
+                  Discover the proven methods to skyrocket your sales! Unleash the
+                  potential of your business and achieve remarkable growth.
+                </p>
+                <button className="sa-banner-button">Learn More</button>
+              </div>
             </div>
           </div>
         </div>
 
-      <div className="alert-summary">
-        <h3>Priority Alerts</h3>
-        <div className="alert-list">
-          {alerts.length > 0 ? (
-            alerts.filter(alert => alert.Urgency === 'urgent' || alert.Urgency === 'high').map(alert => (
-              <div key={alert.ID} className={`alert-item ${alert.Urgency}`}>
-                <AlertTriangle size={20} />
-                <div className="alert-content">
-                  <h4>{alert.Title}</h4>
-                  <p>{alert.Message}</p>
-                </div>
-                <button className="btn-primary">Contact</button>
-              </div>
-            ))
-          ) : (
-            <div className="no-alerts">No priority alerts at the moment.</div>
-          )}
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <h3>Priority Alerts</h3>
+            <p>Track urgent alerts and overdue payments.</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th />
+                  <th>Alert</th>
+                  <th>Property</th>
+                  <th>Urgency</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alerts.length > 0 ? (
+                  alerts.filter(alert => alert.Urgency === 'urgent' || alert.Urgency === 'high').map(alert => (
+                    <tr key={alert.ID}>
+                      <td>
+                        <input type="checkbox" />
+                      </td>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{alert.Title || 'N/A'}</span>
+                          <span className="sa-cell-sub">{alert.Message || 'N/A'}</span>
+                        </div>
+                      </td>
+                      <td>{alert.Property || 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${(alert.Urgency || 'normal').toLowerCase()}`}>
+                          {alert.Urgency || 'Normal'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`sa-status-pill ${(alert.Status || 'open').toLowerCase()}`}>
+                          {alert.Status || 'Open'}
+                        </span>
+                      </td>
+                      <td>
+                        {alert.Amount ? `${alert.Amount.toLocaleString()} XOF` : '—'}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="sa-table-empty">
+                      No priority alerts at the moment.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
   };
 
   const renderOccupancy = () => {
@@ -364,132 +803,165 @@ const SalesManagerDashboard = () => {
     const occupancyRate = totalProperties > 0 ? Math.round((occupiedCount / totalProperties) * 100) : 0;
 
     return (
-      <div className="occupancy-section panel">
-        <div className="section-header">
-          <h3>Property Occupancy Overview</h3>
-          <p>Monitor occupancy status and manage vacant properties</p>
-        </div>
-
-        <div className="occupancy-overview-cards">
-          <div className="stat-card">
-            <div className="stat-icon">
-              <Building size={24} />
-            </div>
-            <div className="stat-content">
-              <h3>Total Properties</h3>
-              <span className="stat-value">{totalProperties}</span>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon">
-              <Users size={24} />
-            </div>
-            <div className="stat-content">
-              <h3>Occupied</h3>
-              <span className="stat-value positive">{occupiedCount}</span>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon overdue">
-              <AlertTriangle size={24} />
-            </div>
-            <div className="stat-content">
-              <h3>Vacant</h3>
-              <span className="stat-value overdue">{vacantCount}</span>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon">
-              <TrendingUp size={24} />
-            </div>
-            <div className="stat-content">
-              <h3>Occupancy Rate</h3>
-              <span className="stat-value">{occupancyRate}%</span>
-            </div>
+      <div className="sa-occupancy-page">
+        <div className="sa-occupancy-header">
+          <div>
+            <h2>Property Occupancy Overview</h2>
+            <p>Monitor occupancy status and manage vacant properties</p>
           </div>
         </div>
 
-        <div className="filters-section">
-          <div className="filter-row">
-            <select className="filter-select">
-              <option value="">All Occupancy Status</option>
-              <option value="occupied">Occupied</option>
-              <option value="vacant">Vacant</option>
-              <option value="maintenance">Under Maintenance</option>
-            </select>
-            <select className="filter-select">
-              <option value="">All Property Types</option>
-              <option value="apartment">Apartment</option>
-              <option value="house">House</option>
-              <option value="condo">Condo</option>
-              <option value="studio">Studio</option>
-            </select>
-            <select className="filter-select">
-              <option value="">All Urgency Levels</option>
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="normal">Normal</option>
-            </select>
+        <div className="sa-occupancy-metrics">
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Properties</p>
+            <p className="sa-metric-value">{totalProperties}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Occupied</p>
+            <p className="sa-metric-value">{occupiedCount}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Vacant</p>
+            <p className="sa-metric-value">{vacantCount}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Occupancy Rate</p>
+            <p className="sa-metric-value">{occupancyRate}%</p>
           </div>
         </div>
 
-        <div className="clients-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Property Address</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Tenant</th>
-                <th>Rent</th>
-                <th>Urgency</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {properties.length > 0 ? (
-                properties.map(property => (
-                  <tr key={property.ID}>
-                    <td>{property.Address || 'N/A'}</td>
-                    <td>{property.Type || 'N/A'}</td>
-                    <td>
-                      <span className={`status-badge ${(property.Status || 'Unknown').toLowerCase()}`}>
-                        {property.Status || 'Unknown'}
-                      </span>
-                    </td>
-                    <td>{property.Tenant || 'No tenant'}</td>
-                    <td>{property.Rent ? `${property.Rent} XOF/month` : 'N/A'}</td>
-                    <td>
-                      {property.Urgency ? (
-                        <span className={`status-badge ${property.Urgency.toLowerCase()}`}>
-                          {property.Urgency}
-                        </span>
-                      ) : (
-                        'N/A'
-                      )}
-                    </td>
-                    <td>
-                      <button className="table-action-button view">
-                        <Eye size={14} />
-                      </button>
-                      {property.Status === 'Vacant' && (
-                        <button className="table-action-button edit">List for Rent</button>
-                      )}
-                      {property.Tenant && (
-                        <button className="table-action-button contact">
-                          <Phone size={14} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
+        <div className="sa-transactions-filters">
+          <button className="sa-filter-button" onClick={() => {
+            const filters = document.querySelector('.sa-property-filters');
+            if (filters) filters.style.display = filters.style.display === 'none' ? 'flex' : 'none';
+          }}>
+            <Filter size={16} />
+            Filter
+          </button>
+          <select 
+            className="sa-filter-button"
+            value={propertyStatusFilter}
+            onChange={(e) => setPropertyStatusFilter(e.target.value)}
+            style={{ padding: '8px 14px', cursor: 'pointer' }}
+          >
+            <option value="">All Status</option>
+            <option value="Vacant">Vacant</option>
+            <option value="Occupied">Occupied</option>
+          </select>
+          <select 
+            className="sa-filter-button"
+            value={propertyTypeFilter}
+            onChange={(e) => setPropertyTypeFilter(e.target.value)}
+            style={{ padding: '8px 14px', cursor: 'pointer' }}
+          >
+            <option value="">All Types</option>
+            <option value="Apartment">Apartment</option>
+            <option value="House">House</option>
+            <option value="Condo">Condo</option>
+            <option value="Studio">Studio</option>
+          </select>
+          <select 
+            className="sa-filter-button"
+            value={propertyUrgencyFilter}
+            onChange={(e) => setPropertyUrgencyFilter(e.target.value)}
+            style={{ padding: '8px 14px', cursor: 'pointer' }}
+          >
+            <option value="">All Urgency</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="normal">Normal</option>
+          </select>
+          <div className="sa-search-input">
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="Search by Address, Type or Status"
+            />
+          </div>
+        </div>
+
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <div>
+              <h3>Properties</h3>
+              <p>Manage all properties and their occupancy status.</p>
+            </div>
+            <button 
+              className="sa-primary-cta"
+              onClick={() => setShowCreatePropertyModal(true)}
+            >
+              <Plus size={16} />
+              Create Property
+            </button>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
                 <tr>
-                  <td colSpan="7" className="no-data">No properties found. Start the backend to see real data.</td>
+                  <th />
+                  <th>Property</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Tenant</th>
+                  <th>Rent</th>
+                  <th>Urgency</th>
+                  <th>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {properties.length > 0 ? (
+                  properties.map(property => {
+                    const propertyId = property.ID || property.id;
+                    return (
+                      <tr key={propertyId}>
+                        <td>
+                          <input type="checkbox" />
+                        </td>
+                        <td>
+                          <div className="sa-cell-main">
+                            <span className="sa-cell-title">{property.Address || property.address || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td>{property.Type || property.type || 'N/A'}</td>
+                        <td>
+                          <span className={`sa-status-pill ${(property.Status || property.status || 'unknown').toLowerCase()}`}>
+                            {property.Status || property.status || 'Unknown'}
+                          </span>
+                        </td>
+                        <td>{property.Tenant || property.tenant || 'No tenant'}</td>
+                        <td>{property.Rent || property.rent ? `${property.Rent || property.rent} XOF/month` : 'N/A'}</td>
+                        <td>
+                          {property.Urgency || property.urgency ? (
+                            <span className={`sa-status-pill ${(property.Urgency || property.urgency).toLowerCase()}`}>
+                              {property.Urgency || property.urgency}
+                            </span>
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
+                        <td>
+                          <button
+                            className="sa-action-button"
+                            onClick={() => {
+                              setEditingProperty(property);
+                              setShowEditPropertyModal(true);
+                            }}
+                            title="Edit Property"
+                          >
+                            ✏️
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="sa-table-empty">No properties found. Create your first property to get started.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
@@ -544,228 +1016,540 @@ const SalesManagerDashboard = () => {
   }, [clients, clientStatusFilter, clientPropertyFilter, clientSearchText]);
 
   const renderClients = () => (
-    <div className="clients-section panel">
-      <div className="section-header">
-        <h3>Centralized Client/Tenant Profile Management</h3>
-        <p>Manage all tenant profiles and track their status</p>
-      </div>
-
-      <div className="clients-overview-cards">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <Users size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Active Tenants</h3>
-            <span className="stat-value positive">{filteredClients.filter(client => client.Status === 'Active').length}</span>
-          </div>
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Client List</h2>
+          <p>{filteredClients.length} results found</p>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon overdue">
-            <AlertTriangle size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Overdue Accounts</h3>
-            <span className="stat-value overdue">{filteredClients.filter(client => client.Status === 'Overdue').length}</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <UserPlus size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Waiting List</h3>
-            <span className="stat-value">{filteredClients.filter(client => client.Status === 'Waiting List').length}</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <DollarSign size={24} />
-          </div>
-          <div className="stat-content">
-            <h3>Total Monthly Revenue</h3>
-            <span className="stat-value">
-              {filteredClients.reduce(
-                (sum, client) => sum + (client.Amount || client.amount || 0),
-                0
-              ).toLocaleString()} XOF
-            </span>
-          </div>
+        <div className="sa-clients-header-right">
+          <button className="sa-primary-cta" onClick={() => setShowTenantCreationModal(true)}>
+            <Plus size={16} />
+            Add Client
+          </button>
+          <button className="sa-sort-button">Sort: Creation Date</button>
+          <button className="sa-date-button">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</button>
         </div>
       </div>
 
-      <div className="client-actions">
-        <button className="action-button primary" onClick={() => setShowTenantCreationModal(true)}>
-          <UserPlus size={20} />
-          Create New Tenant
+      <div className="sa-overview-metrics">
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Active Tenants</p>
+          <p className="sa-metric-number">
+            {filteredClients.filter(client => client.Status === 'Active').length}
+            <span className="sa-metric-trend positive">+1.5%</span>
+          </p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Overdue Accounts</p>
+          <p className="sa-metric-number">
+            {filteredClients.filter(client => client.Status === 'Overdue').length}
+            <span className="sa-metric-trend negative">-1.5%</span>
+          </p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Waiting List</p>
+          <p className="sa-metric-value">
+            {filteredClients.filter(client => client.Status === 'Waiting List').length}
+          </p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Total Monthly Revenue</p>
+          <p className="sa-metric-value">
+            {filteredClients.reduce(
+              (sum, client) => sum + (client.Amount || client.amount || 0),
+              0
+            ).toLocaleString()} XOF
+          </p>
+        </div>
+      </div>
+
+      <div className="sa-transactions-filters">
+        <button className="sa-filter-button">
+          <Filter size={16} />
+          Filter
         </button>
+        <div className="sa-search-input">
+          <Search size={16} />
+          <input
+            type="text"
+            placeholder="Search by Name, Email or Phone"
+            value={clientSearchText}
+            onChange={(e) => setClientSearchText(e.target.value)}
+          />
+        </div>
       </div>
 
-      <div className="client-filters">
-        <select 
-          className="filter-select"
-          value={clientStatusFilter}
-          onChange={(e) => setClientStatusFilter(e.target.value)}
-        >
-          <option value="">All Client Status</option>
-          <option value="active">Active</option>
-          <option value="overdue">Overdue</option>
-          <option value="waiting-list">Waiting List</option>
-          <option value="waiting list">Waiting List</option>
-          <option value="inactive">Inactive</option>
-        </select>
-        <select 
-          className="filter-select"
-          value={clientPropertyFilter}
-          onChange={(e) => setClientPropertyFilter(e.target.value)}
-        >
-          <option value="">All Properties</option>
-          {uniqueProperties.map((property, idx) => (
-            <option key={`property-option-${idx}`} value={property}>{property}</option>
-          ))}
-        </select>
-        <input 
-          type="text" 
-          placeholder="Search by name..."
-          className="search-input"
-          value={clientSearchText}
-          onChange={(e) => setClientSearchText(e.target.value)}
-        />
-      </div>
-
-      <div className="clients-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Client Name</th>
-              <th>Property</th>
-              <th>Status</th>
-              <th>Last Payment</th>
-              <th>Amount</th>
-              <th>Contact</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredClients.length > 0 ? (
-              filteredClients.map(client => (
-              <tr key={client.ID}>
-                <td>{client.Name || 'N/A'}</td>
-                <td>{client.Property || 'N/A'}</td>
-                <td>
-                  <span className={`status-badge ${(client.Status || 'Unknown').toLowerCase().replace(' ', '-')}`}>
-                    {client.Status || 'Unknown'}
-                  </span>
-                </td>
-                <td>{client.LastPayment ? new Date(client.LastPayment).toLocaleDateString() : 'N/A'}</td>
-                <td>{client.Amount || 0} XOF</td>
-                <td>
-                  <div className="contact-info">
-                    <span className="phone">{client.Phone || 'N/A'}</span>
-                    <span className="email">{client.Email || 'N/A'}</span>
-                  </div>
-                </td>
-                <td>
-                  <button className="table-action-button view">View</button>
-                  <button className="table-action-button contact">
-                    <Phone size={14} />
-                  </button>
-                  <button className="table-action-button email">
-                    <Mail size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))
-            ) : (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <h3>Clients</h3>
+          <p>Manage all tenant profiles and track their status.</p>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
               <tr>
-                <td colSpan="7" className="no-data">No clients found. Start the backend to see real data.</td>
+                <th />
+                <th>Client</th>
+                <th>Property</th>
+                <th>Status</th>
+                <th>Last Payment</th>
+                <th>Amount</th>
+                <th>Contact</th>
+                <th />
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredClients.length > 0 ? (
+                filteredClients.map(client => (
+                  <tr key={client.ID}>
+                    <td>
+                      <input type="checkbox" />
+                    </td>
+                    <td>
+                      <div className="sa-cell-main">
+                        <span className="sa-cell-title">{client.Name || 'N/A'}</span>
+                        <span className="sa-cell-sub">{client.Email || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td>{client.Property || 'N/A'}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(client.Status || 'unknown').toLowerCase().replace(' ', '-')}`}>
+                        {client.Status || 'Unknown'}
+                      </span>
+                    </td>
+                    <td>{client.LastPayment ? new Date(client.LastPayment).toLocaleDateString() : 'N/A'}</td>
+                    <td>{(client.Amount || 0).toLocaleString()} XOF</td>
+                    <td>
+                      <div className="sa-cell-main">
+                        <span className="sa-cell-title">{client.Phone || 'N/A'}</span>
+                        <span className="sa-cell-sub">{client.Email || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="sa-row-actions">
+                      <button className="sa-icon-button" onClick={() => handleEditClient(client)} title="Edit">✏️</button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="sa-table-empty">No clients found. Start the backend to see real data.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
+      {/* Waiting List Section */}
+      {waitingListClients.length > 0 && (
+        <div className="sa-section-card" style={{ marginTop: '24px' }}>
+          <div className="sa-section-header">
+            <h3>Waiting List Clients</h3>
+            <p>Clients waiting for available properties.</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th />
+                  <th>Client</th>
+                  <th>Contact</th>
+                  <th>Preferred Property</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {waitingListClients.map(client => (
+                  <tr key={client.ID || client.id}>
+                    <td>
+                      <input type="checkbox" />
+                    </td>
+                    <td>
+                      <div className="sa-cell-main">
+                        <span className="sa-cell-title">{client.Name || 'N/A'}</span>
+                        <span className="sa-cell-sub">{client.Email || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td>{client.Phone || 'N/A'}</td>
+                    <td>{client.Property || 'Any'}</td>
+                    <td>
+                      <span className="sa-status-pill pending">
+                        Waiting List
+                      </span>
+                    </td>
+                    <td className="sa-row-actions">
+                      <button className="sa-icon-button" onClick={() => handleEditClient(client)} title="Edit">✏️</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Unpaid Rents Section */}
+      {unpaidRents.length > 0 && (
+        <div className="sa-section-card" style={{ marginTop: '24px' }}>
+          <div className="sa-section-header">
+            <h3>Unpaid Rents</h3>
+            <p>Manage overdue payments and update payment status.</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th />
+                  <th>Client</th>
+                  <th>Property</th>
+                  <th>Amount</th>
+                  <th>Due Date</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {unpaidRents.map(unpaid => (
+                  <tr key={unpaid.ID || unpaid.id}>
+                    <td>
+                      <input type="checkbox" />
+                    </td>
+                    <td>
+                      <div className="sa-cell-main">
+                        <span className="sa-cell-title">{unpaid.Name || unpaid.ClientName || 'N/A'}</span>
+                        <span className="sa-cell-sub">{unpaid.Email || unpaid.ClientEmail || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td>{unpaid.Property || 'N/A'}</td>
+                    <td>{(unpaid.Amount || 0).toLocaleString()} XOF</td>
+                    <td>{unpaid.DueDate ? new Date(unpaid.DueDate).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                      <span className="sa-status-pill overdue">
+                        {unpaid.Status || 'Overdue'}
+                      </span>
+                    </td>
+                    <td className="sa-row-actions">
+                      <button className="sa-icon-button" onClick={() => handleEditUnpaidRent(unpaid)} title="Update Payment">💰</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 
   const renderAlerts = () => (
-    <div className="alerts-section panel">
-      <div className="section-header">
-        <h3>Unpaid Rent Alerts</h3>
-        <p>Monitor and manage overdue payments</p>
+    <div className="sa-alerts-page">
+      <div className="sa-alerts-header">
+        <div>
+          <h2>Unpaid Rent Alerts</h2>
+          <p>Monitor and manage overdue payments</p>
+        </div>
       </div>
 
-      <div className="alert-filters">
-        <select className="filter-select">
+      <div className="sa-transactions-filters">
+        <button className="sa-filter-button">
+          <Filter size={16} />
+          Filter
+        </button>
+        <select 
+          className="sa-filter-button"
+          value={alertTypeFilter}
+          onChange={(e) => setAlertTypeFilter(e.target.value)}
+          style={{ padding: '8px 14px', cursor: 'pointer' }}
+        >
           <option value="">All Alert Types</option>
-          <option value="unpaid-rent">Unpaid Rent</option>
-          <option value="vacant-property">Vacant Property</option>
-          <option value="maintenance">Maintenance</option>
+          <option value="Payment Overdue">Payment Overdue</option>
+          <option value="Vacant Property">Vacant Property</option>
+          <option value="Maintenance">Maintenance</option>
         </select>
-        <select className="filter-select">
-          <option value="">All Urgency Levels</option>
-          <option value="urgent">Urgent</option>
-          <option value="high">High</option>
-          <option value="normal">Normal</option>
-        </select>
-        <input type="text" placeholder="Search alerts..." className="search-input" />
+        <div className="sa-search-input">
+          <Search size={16} />
+          <input
+            type="text"
+            placeholder="Search by Title, Property or Message"
+          />
+        </div>
       </div>
 
-      <div className="alerts-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Property</th>
-              <th>Urgency</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Amount</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {alerts.length > 0 ? (
-              alerts.map(alert => (
-                <tr key={alert.ID}>
-                  <td>
-                    <span className="row-primary">{alert.Title}</span>
-                    <span className="row-secondary">{alert.Message}</span>
-                  </td>
-                  <td>{alert.Property || 'N/A'}</td>
-                  <td>
-                    <span className={`status-badge ${alert.Urgency?.toLowerCase()}`}>
-                      {alert.Urgency || 'Normal'}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`status-badge ${alert.Status?.toLowerCase()}`}>
-                      {alert.Status || 'Open'}
-                    </span>
-                  </td>
-                  <td>{alert.CreatedAt ? new Date(alert.CreatedAt).toLocaleDateString() : 'N/A'}</td>
-                  <td>{alert.Amount ? `${alert.Amount} XOF` : '—'}</td>
-                  <td className="table-actions">
-                    <button className="table-action-button view">View</button>
-                    <button
-                      className="table-action-button edit"
-                      onClick={() => handleUpdateAlert(alert.ID, 'Resolved')}
-                    >
-                      Mark Resolved
-                    </button>
-                    <button className="table-action-button contact">
-                      <Phone size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <h3>Alerts</h3>
+          <p>Track all alerts and their current status.</p>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
               <tr>
-                <td colSpan="7" className="no-data">No alerts found. Start the backend to see real data.</td>
+                <th />
+                <th>Alert</th>
+                <th>Property</th>
+                <th>Urgency</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Amount</th>
               </tr>
+            </thead>
+            <tbody>
+              {alerts.length > 0 ? (
+                alerts.map(alert => (
+                  <tr key={alert.ID}>
+                    <td>
+                      <input type="checkbox" />
+                    </td>
+                    <td>
+                      <div className="sa-cell-main">
+                        <span className="sa-cell-title">{alert.Title || 'N/A'}</span>
+                        <span className="sa-cell-sub">{alert.Message || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td>{alert.Property || 'N/A'}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(alert.Urgency || 'normal').toLowerCase()}`}>
+                        {alert.Urgency || 'Normal'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`sa-status-pill ${(alert.Status || 'open').toLowerCase()}`}>
+                        {alert.Status || 'Open'}
+                      </span>
+                    </td>
+                    <td>{alert.CreatedAt ? new Date(alert.CreatedAt).toLocaleDateString() : 'N/A'}</td>
+                    <td>{alert.Amount ? `${alert.Amount.toLocaleString()} XOF` : '—'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="sa-table-empty">No alerts found. Start the backend to see real data.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Handle send message
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedUserId) return;
+    
+    // Get current user ID from localStorage
+    const storedUser = localStorage.getItem('user');
+    let currentUserId = null;
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        currentUserId = user.id || user.ID;
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+      }
+    }
+    
+    if (!currentUserId) {
+      addNotification('Unable to identify current user. Please log in again.', 'error');
+      return;
+    }
+    
+    const content = chatInput.trim();
+    const tempMessageId = `temp-${Date.now()}`;
+    
+    // Optimistically add message to UI immediately
+    const optimisticMessage = {
+      id: tempMessageId,
+      ID: tempMessageId,
+      fromUserId: currentUserId,
+      toUserId: selectedUserId,
+      content: content,
+      createdAt: new Date().toISOString(),
+      read: false,
+      type: 'message'
+    };
+    
+    setChatMessages(prev => [...prev, optimisticMessage]);
+    setChatInput('');
+    
+    try {
+      const payload = {
+        toUserId: selectedUserId,
+        content,
+      };
+      const sentMessage = await messagingService.sendMessage(payload);
+      
+      // Replace optimistic message with real message from server
+      if (sentMessage && sentMessage.id) {
+        setChatMessages(prev => 
+          prev.map(msg => 
+            msg.id === tempMessageId ? sentMessage : msg
+          )
+        );
+      } else {
+        // If server response doesn't have expected format, reload chat
+        await loadChatForUser(selectedUserId);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      addNotification(error.message || 'Failed to send message', 'error');
+      // Remove optimistic message on error
+      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      setChatInput(content); // Restore input on error
+    }
+  };
+
+  // Render messaging page
+  const renderMessages = () => (
+    <div className="sa-chat-page">
+      <div className="sa-chat-layout">
+        <div className="sa-chat-list">
+          <h3>Users</h3>
+          <ul>
+            {chatUsers.map((user) => {
+              const active = user.userId === selectedUserId;
+              return (
+                <li
+                  key={`chat-user-${user.userId}`}
+                  className={active ? 'active' : ''}
+                  onClick={() => loadChatForUser(user.userId)}
+                >
+                  <div className="sa-cell-main">
+                    <span className="sa-cell-title">{user.name || 'User'}</span>
+                    <span className="sa-cell-sub">{user.email || ''}</span>
+                    {user.role && (
+                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {user.role}
+                      </span>
+                    )}
+                    {user.unreadCount > 0 && (
+                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                        {user.unreadCount} unread
+                      </span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+            {chatUsers.length === 0 && (
+              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                No users available
+              </li>
             )}
-          </tbody>
-        </table>
+          </ul>
+        </div>
+        
+        <div className="sa-chat-conversation">
+          <div className="sa-chat-header">
+            <h3>Messages</h3>
+            {selectedUserId && (
+              <span className="sa-chat-subtitle">
+                Chat with{' '}
+                {
+                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
+                    .name || 'User'
+                }
+              </span>
+            )}
+          </div>
+          <div className="sa-chat-messages">
+            {chatMessages.map((msg, index) => {
+              const messageContent = msg.content || msg.Content || '';
+              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+              const messageFromUserId = msg.fromUserId || msg.FromUserId;
+              const messageId = msg.id || msg.ID || index;
+              
+              // Determine if message is outgoing or incoming
+              const storedUser = localStorage.getItem('user');
+              let isOutgoing = false;
+              if (storedUser) {
+                try {
+                  const user = JSON.parse(storedUser);
+                  const currentUserId = user.id || user.ID;
+                  isOutgoing = String(messageFromUserId) === String(currentUserId);
+                } catch (e) {
+                  // Default to incoming if we can't parse user
+                }
+              }
+              
+              return (
+                <div
+                  key={`msg-${messageId}`}
+                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
+                >
+                  <p>{messageContent}</p>
+                  <span className="sa-chat-meta">
+                    {messageCreatedAt
+                      ? new Date(messageCreatedAt).toLocaleString()
+                      : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {chatMessages.length === 0 && (
+              <div className="sa-table-empty">
+                {selectedUserId 
+                  ? 'No messages yet. Start the conversation!'
+                  : 'Select a conversation on the left to start messaging.'}
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="sa-chat-input-row">
+            <input
+              type="text"
+              placeholder="Reply..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={!selectedUserId}
+            />
+            <button 
+              className="sa-primary-cta" 
+              onClick={handleSendMessage}
+              disabled={!selectedUserId || !chatInput.trim()}
+            >
+              <MessageCircle size={16} />
+              Send
+            </button>
+          </div>
+        </div>
+        
+        <div className="sa-chat-details">
+          <h4>Contact Details</h4>
+          {selectedUserId ? (
+            (() => {
+              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
+              return (
+                <>
+                  <p>
+                    <strong>Name:</strong> {user.name || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {user.email || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Role:</strong> {user.role || 'N/A'}
+                  </p>
+                  {user.company && (
+                    <p>
+                      <strong>Company:</strong> {user.company}
+                    </p>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <p>Select a conversation to view details.</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -780,6 +1564,14 @@ const SalesManagerDashboard = () => {
         return renderClients();
       case 'alerts':
         return renderAlerts();
+      case 'chat':
+        return renderMessages();
+      case 'settings':
+        return (
+          <div className="embedded-settings">
+            <SettingsPage />
+          </div>
+        );
       default:
         return renderOverview();
     }
@@ -811,11 +1603,8 @@ const SalesManagerDashboard = () => {
         onLogout={handleLogout}
       >
         {({ activeId }) => (
-          <div className="sales-manager-dashboard">
-            {loading && <div className="loading-indicator">Loading data...</div>}
-            <div className="sales-manager-content">
-              {renderContent(activeId || activeTab)}
-            </div>
+          <div className="content-body sales-manager-content">
+            {renderContent(activeId || activeTab)}
           </div>
         )}
       </RoleLayout>
@@ -1000,6 +1789,450 @@ const SalesManagerDashboard = () => {
       <Modal isOpen={showContractModal} onClose={() => setShowContractModal(false)}>
         <ContractUpload onContractUpload={handleContractUpload} />
       </Modal>
+
+      {/* Edit Client Modal */}
+      {showEditClientModal && editingClient && (
+        <div className="modal-overlay" onClick={() => {
+          setShowEditClientModal(false);
+          setEditingClient(null);
+        }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Client/Tenant Profile</h3>
+              <button className="modal-close" onClick={() => {
+                setShowEditClientModal(false);
+                setEditingClient(null);
+              }}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleUpdateClient}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-name">Name</label>
+                    <input 
+                      type="text" 
+                      name="name" 
+                      id="edit-name"
+                      defaultValue={editingClient.Name || editingClient.name || ''}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-email">Email</label>
+                    <input 
+                      type="email" 
+                      name="email" 
+                      id="edit-email"
+                      defaultValue={editingClient.Email || editingClient.email || ''}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-phone">Phone</label>
+                    <input 
+                      type="tel" 
+                      name="phone" 
+                      id="edit-phone"
+                      defaultValue={editingClient.Phone || editingClient.phone || ''}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-property">Property</label>
+                    <input 
+                      type="text" 
+                      name="property" 
+                      id="edit-property"
+                      defaultValue={editingClient.Property || editingClient.property || ''}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-amount">Monthly Rent (XOF)</label>
+                    <input 
+                      type="number" 
+                      name="amount" 
+                      id="edit-amount"
+                      step="0.01"
+                      defaultValue={editingClient.Amount || editingClient.amount || 0}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-status">Status</label>
+                    <select name="status" id="edit-status" defaultValue={editingClient.Status || editingClient.status || 'Active'}>
+                      <option value="Active">Active</option>
+                      <option value="Overdue">Overdue</option>
+                      <option value="Waiting List">Waiting List</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button 
+                    type="button" 
+                    className="action-button secondary" 
+                    onClick={() => {
+                      setShowEditClientModal(false);
+                      setEditingClient(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Updating...' : 'Update Client'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Unpaid Rent Modal */}
+      {showUnpaidRentModal && editingUnpaidRent && (
+        <div className="modal-overlay" onClick={() => {
+          setShowUnpaidRentModal(false);
+          setEditingUnpaidRent(null);
+        }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Update Unpaid Rent</h3>
+              <button className="modal-close" onClick={() => {
+                setShowUnpaidRentModal(false);
+                setEditingUnpaidRent(null);
+              }}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleUpdateUnpaidRent}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="unpaid-status">Payment Status</label>
+                    <select name="status" id="unpaid-status" defaultValue={editingUnpaidRent.Status || 'Overdue'}>
+                      <option value="Paid">Paid</option>
+                      <option value="Overdue">Overdue</option>
+                      <option value="Partial">Partial</option>
+                      <option value="Pending">Pending</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="unpaid-amount">Total Amount (XOF)</label>
+                    <input 
+                      type="number" 
+                      name="amount" 
+                      id="unpaid-amount"
+                      step="0.01"
+                      defaultValue={editingUnpaidRent.Amount || 0}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="unpaid-paid-amount">Paid Amount (XOF)</label>
+                    <input 
+                      type="number" 
+                      name="paidAmount" 
+                      id="unpaid-paid-amount"
+                      step="0.01"
+                      defaultValue={editingUnpaidRent.PaidAmount || editingUnpaidRent.paidAmount || 0}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="unpaid-payment-date">Payment Date</label>
+                    <input 
+                      type="date" 
+                      name="paymentDate" 
+                      id="unpaid-payment-date"
+                      defaultValue={editingUnpaidRent.PaymentDate ? new Date(editingUnpaidRent.PaymentDate).toISOString().split('T')[0] : ''}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="unpaid-notes">Notes</label>
+                  <textarea 
+                    name="notes" 
+                    id="unpaid-notes"
+                    rows="3"
+                    defaultValue={editingUnpaidRent.Notes || editingUnpaidRent.notes || ''}
+                    placeholder="Add any notes about this payment..."
+                  />
+                </div>
+
+                <div className="modal-footer">
+                  <button 
+                    type="button" 
+                    className="action-button secondary" 
+                    onClick={() => {
+                      setShowUnpaidRentModal(false);
+                      setEditingUnpaidRent(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Updating...' : 'Update Payment'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Property Modal */}
+      {showCreatePropertyModal && (
+        <div className="modal-overlay" onClick={() => setShowCreatePropertyModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Create Property</h3>
+              <button className="modal-close" onClick={() => setShowCreatePropertyModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleCreateProperty}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="create-address">Address *</label>
+                    <input
+                      type="text"
+                      name="address"
+                      id="create-address"
+                      required
+                      placeholder="123 Main St, Apt 4B"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="create-type">Type *</label>
+                    <select name="type" id="create-type" required>
+                      <option value="">Select Type</option>
+                      <option value="Apartment">Apartment</option>
+                      <option value="House">House</option>
+                      <option value="Condo">Condo</option>
+                      <option value="Studio">Studio</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="create-status">Status *</label>
+                    <select name="status" id="create-status" required>
+                      <option value="">Select Status</option>
+                      <option value="Vacant">Vacant</option>
+                      <option value="Occupied">Occupied</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="create-rent">Monthly Rent (XOF) *</label>
+                    <input
+                      type="number"
+                      name="rent"
+                      id="create-rent"
+                      step="0.01"
+                      min="0"
+                      required
+                      placeholder="1500.00"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="create-bedrooms">Bedrooms</label>
+                    <input
+                      type="number"
+                      name="bedrooms"
+                      id="create-bedrooms"
+                      min="0"
+                      placeholder="2"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="create-bathrooms">Bathrooms</label>
+                    <input
+                      type="number"
+                      name="bathrooms"
+                      id="create-bathrooms"
+                      step="0.5"
+                      min="0"
+                      placeholder="1.5"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="create-urgency">Urgency</label>
+                    <select name="urgency" id="create-urgency" defaultValue="normal">
+                      <option value="normal">Normal</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="create-tenant">Tenant (if Occupied)</label>
+                    <input
+                      type="text"
+                      name="tenant"
+                      id="create-tenant"
+                      placeholder="John Doe"
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="action-button secondary"
+                    onClick={() => setShowCreatePropertyModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Creating...' : 'Create Property'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Property Modal */}
+      {showEditPropertyModal && editingProperty && (
+        <div className="modal-overlay" onClick={() => {
+          setShowEditPropertyModal(false);
+          setEditingProperty(null);
+        }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Property</h3>
+              <button className="modal-close" onClick={() => {
+                setShowEditPropertyModal(false);
+                setEditingProperty(null);
+              }}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleUpdateProperty}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-address">Address</label>
+                    <input
+                      type="text"
+                      name="address"
+                      id="edit-address"
+                      defaultValue={editingProperty.Address || editingProperty.address || ''}
+                      placeholder="123 Main St, Apt 4B"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-type">Type</label>
+                    <select name="type" id="edit-type" defaultValue={editingProperty.Type || editingProperty.type || ''}>
+                      <option value="">Select Type</option>
+                      <option value="Apartment">Apartment</option>
+                      <option value="House">House</option>
+                      <option value="Condo">Condo</option>
+                      <option value="Studio">Studio</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-status">Status</label>
+                    <select name="status" id="edit-status" defaultValue={editingProperty.Status || editingProperty.status || ''}>
+                      <option value="">Select Status</option>
+                      <option value="Vacant">Vacant</option>
+                      <option value="Occupied">Occupied</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-rent">Monthly Rent (XOF)</label>
+                    <input
+                      type="number"
+                      name="rent"
+                      id="edit-rent"
+                      step="0.01"
+                      min="0"
+                      defaultValue={editingProperty.Rent || editingProperty.rent || ''}
+                      placeholder="1500.00"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-bedrooms">Bedrooms</label>
+                    <input
+                      type="number"
+                      name="bedrooms"
+                      id="edit-bedrooms"
+                      min="0"
+                      defaultValue={editingProperty.Bedrooms || editingProperty.bedrooms || ''}
+                      placeholder="2"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-bathrooms">Bathrooms</label>
+                    <input
+                      type="number"
+                      name="bathrooms"
+                      id="edit-bathrooms"
+                      step="0.5"
+                      min="0"
+                      defaultValue={editingProperty.Bathrooms || editingProperty.bathrooms || ''}
+                      placeholder="1.5"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-urgency">Urgency</label>
+                    <select name="urgency" id="edit-urgency" defaultValue={editingProperty.Urgency || editingProperty.urgency || 'normal'}>
+                      <option value="normal">Normal</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-tenant">Tenant</label>
+                    <input
+                      type="text"
+                      name="tenant"
+                      id="edit-tenant"
+                      defaultValue={editingProperty.Tenant || editingProperty.tenant || ''}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="action-button secondary"
+                    onClick={() => {
+                      setShowEditPropertyModal(false);
+                      setEditingProperty(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Updating...' : 'Update Property'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -1,28 +1,20 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Building2,
   Users,
   Settings,
   BarChart3,
-  Database,
-  Shield,
   DollarSign,
-  Home,
-  Wrench,
-  FileText,
-  UserPlus,
-  Plus,
-  Save,
-  Download,
-  Upload,
-  Lock,
-  Activity,
-  Receipt,
-  CreditCard,
-  TrendingUp
+  MessageSquarePlus,
+  Megaphone,
+  MessageCircle,
+  Filter,
+  Search,
+  Plus
 } from 'lucide-react';
 import { superAdminService } from '../services/superAdminService';
+import { API_CONFIG } from '../config/api';
 import RoleLayout from '../components/RoleLayout';
+import Modal from '../components/Modal';
 import '../components/RoleLayout.css';
 import './SuperAdminDashboard.css';
 import '../pages/TechnicianDashboard.css';
@@ -32,66 +24,37 @@ const SuperAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
   
-  // Data states
-  const [overviewData, setOverviewData] = useState(null);
-  const [companies, setCompanies] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [properties, setProperties] = useState([]);
+  // Core data for global Super Admin
+  const [overviewStats, setOverviewStats] = useState(null); // agency subscription stats
+  const [companies, setCompanies] = useState([]); // agencies
+  const [agencyAdmins, setAgencyAdmins] = useState([]);
   const [financialData, setFinancialData] = useState(null);
-  const [worksData, setWorksData] = useState([]);
-  const [accountingOverview, setAccountingOverview] = useState(null);
-  const [accountingTenantPayments, setAccountingTenantPayments] = useState([]);
-  const [accountingLandlordPayments, setAccountingLandlordPayments] = useState([]);
-  const [accountingCollections, setAccountingCollections] = useState([]);
-  const [accountingExpenses, setAccountingExpenses] = useState([]);
-  const [accountingTab, setAccountingTab] = useState('tenant-payments');
-  
-  // Filter states
-  const [userCompanyFilter, setUserCompanyFilter] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState('');
-  const [userSearchText, setUserSearchText] = useState('');
-  const [propertyCompanyFilter, setPropertyCompanyFilter] = useState('');
-  const [propertyStatusFilter, setPropertyStatusFilter] = useState('');
-  
-  // Modal states
-  const [showDeactivationModal, setShowDeactivationModal] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState(null);
-  const [deactivationReason, setDeactivationReason] = useState('');
-  const [showCompanyModal, setShowCompanyModal] = useState(false);
-  const [editingCompany, setEditingCompany] = useState(null);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [showPropertyModal, setShowPropertyModal] = useState(false);
-  const [editingProperty, setEditingProperty] = useState(null);
-  const [showDatabaseModal, setShowDatabaseModal] = useState(false);
-  const [showSecurityModal, setShowSecurityModal] = useState(false);
-  const [showSystemConfigModal, setShowSystemConfigModal] = useState(false);
-  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+  const [ads, setAds] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]); // subscription/transaction history
+  const [selectedAdminId, setSelectedAdminId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+
+  // UI / filters
+  const [transactionsTab, setTransactionsTab] = useState('all');
+  const [transactionSearch, setTransactionSearch] = useState('');
+  const [clientsSearch, setClientsSearch] = useState('');
+  const [adFilter, setAdFilter] = useState('all');
+  const [newAd, setNewAd] = useState({ title: '', text: '', image: null });
+  const [chatInput, setChatInput] = useState('');
+
+  // Agency Admin Modal
+  const [showAgencyAdminModal, setShowAgencyAdminModal] = useState(false);
+  const [editingAgencyAdmin, setEditingAgencyAdmin] = useState(null);
+  const [agencyAdminForm, setAgencyAdminForm] = useState({
+    name: '',
+    email: '',
+    company: '',
+    role: 'agency_director',
+    password: ''
+  });
+
+  // Notifications
   const [notifications, setNotifications] = useState([]);
-
-  const resolveCompanyName = useCallback(
-    (value) => {
-      if (!value) return '';
-      const valueString = String(value);
-      const byId = companies.find(company => String(company.ID || company.id) === valueString);
-      if (byId) return byId.Name || byId.name;
-      const byName = companies.find(company => (company.Name || company.name) === value);
-      return byName ? byName.Name || byName.name : value;
-    },
-    [companies]
-  );
-
-  const resolveCompanyId = useCallback(
-    (value) => {
-      if (!value) return '';
-      const valueString = String(value);
-      const byId = companies.find(company => String(company.ID || company.id) === valueString);
-      if (byId) return String(byId.ID || byId.id);
-      const byName = companies.find(company => (company.Name || company.name) === value);
-      return byName ? String(byName.ID || byName.id) : '';
-    },
-    [companies]
-  );
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = Date.now();
@@ -111,31 +74,43 @@ const SuperAdminDashboard = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [overview, companiesData, usersData, propertiesData, financial, works, accountingOverviewData, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData] = await Promise.all([
+      const [
+        overview,
+        companiesData,
+        adminsData,
+        financial,
+        adsData,
+        subscriptionsData,
+      ] = await Promise.all([
         superAdminService.getOverview(),
         superAdminService.getCompanies(),
-        superAdminService.getUsers(),
-        superAdminService.getProperties(),
+        superAdminService.getAgencyAdmins(),
         superAdminService.getFinancialOverview(),
-        superAdminService.getWorks(),
-        superAdminService.getAccountingOverview(),
-        superAdminService.getTenantPayments(),
-        superAdminService.getLandlordPayments(),
-        superAdminService.getCollections(),
-        superAdminService.getExpenses()
+        superAdminService.getAdvertisements(),
+        superAdminService.getSubscriptions().catch(() => []), // Optional API
       ]);
 
-      setOverviewData(overview);
+      setOverviewStats(overview);
       setCompanies(Array.isArray(companiesData) ? companiesData : []);
-      setUsers(Array.isArray(usersData) ? usersData : []);
-      setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      setAgencyAdmins(Array.isArray(adminsData) ? adminsData : []);
       setFinancialData(financial);
-      setWorksData(Array.isArray(works) ? works : []);
-      setAccountingOverview(accountingOverviewData);
-      setAccountingTenantPayments(Array.isArray(tenantPaymentsData) ? tenantPaymentsData : []);
-      setAccountingLandlordPayments(Array.isArray(landlordPaymentsData) ? landlordPaymentsData : []);
-      setAccountingCollections(Array.isArray(collectionsData) ? collectionsData : []);
-      setAccountingExpenses(Array.isArray(expensesData) ? expensesData : []);
+      setAds(Array.isArray(adsData) ? adsData : []);
+      setSubscriptions(Array.isArray(subscriptionsData) ? subscriptionsData : []);
+
+      // Default chat: first agency admin if any
+      if (Array.isArray(adminsData) && adminsData.length > 0) {
+        const firstAdminId = adminsData[0].ID || adminsData[0].id;
+        setSelectedAdminId(firstAdminId);
+        try {
+          const chat = await superAdminService.getChatWithAdmin(firstAdminId);
+          setChatMessages(Array.isArray(chat) ? chat : []);
+        } catch (chatError) {
+          console.error('Error loading initial chat messages:', chatError);
+        }
+      } else {
+        setSelectedAdminId(null);
+        setChatMessages([]);
+      }
     } catch (error) {
       console.error('Error loading super admin data:', error);
       addNotification('Failed to load data from server', 'error');
@@ -148,26 +123,13 @@ const SuperAdminDashboard = () => {
     loadData();
   }, [loadData]);
 
-  // Helper function to get CSS class for source badges
-  const getSourceClass = (source) => {
-    if (!source) return 'super-admin';
-    const sourceLower = source.toLowerCase();
-    if (sourceLower.includes('commercial')) return 'commercial';
-    if (sourceLower.includes('landlord')) return 'landlord';
-    if (sourceLower.includes('technical')) return 'technical';
-    if (sourceLower.includes('accounting')) return 'accounting';
-    return 'super-admin';
-  };
-
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: 'System Overview', icon: BarChart3 },
-      { id: 'companies', label: 'Company Management', icon: Building2 },
-      { id: 'users', label: 'All Users', icon: Users },
-      { id: 'properties', label: 'All Properties', icon: Home },
-      { id: 'financial', label: 'Financial Overview', icon: DollarSign },
-      { id: 'accounting', label: 'Accounting', icon: Receipt },
-      { id: 'works', label: 'All Works & Claims', icon: Wrench },
+      { id: 'overview', label: 'Overview', icon: BarChart3 },
+      { id: 'transactions', label: 'Transaction History', icon: DollarSign },
+      { id: 'clients', label: 'Client List', icon: Users },
+      { id: 'ads', label: 'Advertisements', icon: Megaphone },
+      { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
     []
@@ -183,1136 +145,828 @@ const SuperAdminDashboard = () => {
     [tabs, activeTab]
   );
 
-  const handleDeleteCompany = async (companyId, companyName) => {
-    if (window.confirm(`Are you sure you want to delete "${companyName}"? This action cannot be undone and will remove all associated data.`)) {
+  const renderOverview = () => {
+    return (
+      <div className="sa-overview-page">
+        <div className="sa-overview-top">
+          <div className="sa-overview-chart-card">
+            <div className="sa-card-header">
+              <h2>Overview</h2>
+              <span className="sa-card-subtitle">Weekly Subscriptions</span>
+          </div>
+            <div className="sa-mini-legend">
+              <span className="sa-legend-item sa-legend-expected">Expected Cost (January)</span>
+              <span className="sa-legend-item sa-legend-current">Current Subscription Amount</span>
+          </div>
+            <div className="sa-chart-placeholder">
+              {/* Decorative lines only – no heavy chart library */}
+              <div className="sa-chart-line sa-chart-line-expected" />
+              <div className="sa-chart-line sa-chart-line-current" />
+        </div>
+            <div className="sa-chart-footer">
+              <span>Jan</span>
+              <span>Feb</span>
+              <span>Mar</span>
+              <span>Apr</span>
+              <span>Jun</span>
+              <span>Jul</span>
+              <span>Aug</span>
+              <span>Sep</span>
+              <span>Oct</span>
+              <span>Nov</span>
+              <span>Dec</span>
+          </div>
+          </div>
+
+          <div className="sa-overview-metrics">
+            <div className="sa-metric-card sa-metric-primary">
+              <p className="sa-metric-label">Total Received</p>
+              <p className="sa-metric-period">This Week</p>
+              <p className="sa-metric-value">
+                CFA {overviewStats?.totalReceived?.toLocaleString() || overviewStats?.totalRevenue?.toLocaleString() || '0'}
+              </p>
+        </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Total Clients</p>
+              <p className="sa-metric-number">
+                {overviewStats?.totalClients || overviewStats?.totalAgencies || companies.length || 0}
+                <span className="sa-metric-trend positive">+1.5%</span>
+              </p>
+          </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Total Cash</p>
+              <p className="sa-metric-value">
+                {overviewStats?.cashInHand
+                  ? `${overviewStats.cashInHand.toLocaleString()} FCFA`
+                  : financialData?.netProfit
+                  ? `${financialData.netProfit.toLocaleString()} FCFA`
+                  : '0 FCFA'}
+              </p>
+          </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Total Ads</p>
+              <p className="sa-metric-number">
+                {ads.length || overviewStats?.totalAds || 0}
+                <span className="sa-metric-trend negative">-1.5%</span>
+              </p>
+        </div>
+            <div className="sa-banner-card">
+              <div className="sa-banner-text">
+                <h3>Increase your sales</h3>
+                <p>
+                  Discover the proven methods to skyrocket your sales! Unleash the
+                  potential of your business and achieve remarkable growth.
+                </p>
+                <button className="sa-banner-button">Learn More</button>
+          </div>
+          </div>
+        </div>
+          </div>
+
+        {/* Bottom table similar to subscriptions list in screenshot */}
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <h3>Agency Subscriptions</h3>
+            <p>Track license payments from your client agencies.</p>
+        </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+            <thead>
+              <tr>
+                  <th />
+                  <th>Client</th>
+                  <th>Account Status</th>
+                  <th>Payment Status</th>
+                  <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+                {(subscriptions.length > 0 ? subscriptions : companies || []).map((item, index) => {
+                  const agency = item.agencyId ? companies.find(c => (c.ID || c.id) === item.agencyId) : item;
+                  const subscription = subscriptions.find(s => (s.agencyId || s.companyId) === (agency?.ID || agency?.id));
+                  return (
+                    <tr key={`overview-agency-${agency?.ID || agency?.id || item.id || index}`}>
+                      <td>
+                      <input type="checkbox" />
+                  </td>
+                  <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{agency?.Name || agency?.name || item.agencyName || 'N/A'}</span>
+                          <span className="sa-cell-sub">
+                            {agency?.Email || agency?.email || item.email || 'example@email.com'}
+                          </span>
+                        </div>
+                  </td>
+                  <td>
+                        <span className={`sa-status-pill ${(item.accountStatus || agency?.Status || agency?.status || 'active').toLowerCase()}`}>
+                          {item.accountStatus || agency?.Status || agency?.status || 'Active'}
+                    </span>
+                  </td>
+                      <td>
+                        <span className={`sa-status-pill ${(item.paymentStatus || item.status || 'paid').toLowerCase()}`}>
+                          {item.paymentStatus || item.status || 'Paid'}
+                        </span>
+                      </td>
+                      <td>
+                        {(item.amount || item.subscriptionAmount || agency?.SubscriptionAmount || 0).toLocaleString()} CFA
+                  </td>
+                </tr>
+                  );
+                })}
+                {((!subscriptions || subscriptions.length === 0) && (!companies || companies.length === 0)) && (
+                  <tr>
+                    <td colSpan={5} className="sa-table-empty">
+                      No subscription data available. Start the backend to see real data.
+                    </td>
+                  </tr>
+                )}
+            </tbody>
+          </table>
+        </div>
+        </div>
+    </div>
+  );
+  };
+
+  // Transactions page – subscription history style
+  const filteredTransactions = useMemo(() => {
+    const base = subscriptions.length > 0 ? subscriptions : companies || [];
+    return base.filter((item) => {
+      if (transactionSearch) {
+        const q = transactionSearch.toLowerCase();
+        const agency = item.agencyId ? companies.find(c => (c.ID || c.id) === item.agencyId) : item;
+        const name = (agency?.Name || agency?.name || item.agencyName || item.Name || item.name || '').toLowerCase();
+        const email = (agency?.Email || agency?.email || item.email || item.Email || '').toLowerCase();
+        const date = item.paymentDate || item.dueDate || item.createdAt || '';
+        if (!name.includes(q) && !email.includes(q) && !date.includes(q)) return false;
+      }
+      if (transactionsTab === 'all') return true;
+      const status = (item.paymentStatus || item.status || item.accountStatus || 'paid').toLowerCase();
+      if (transactionsTab === 'paid') return status === 'paid' || status === 'approved';
+      if (transactionsTab === 'pending') return status === 'pending' || status === 'en attente';
+      if (transactionsTab === 'deactivated') return status === 'deactivated' || status === 'désactiver' || status === 'inactive';
+      return true;
+    });
+  }, [subscriptions, companies, transactionSearch, transactionsTab]);
+
+  const renderTransactions = () => (
+    <div className="sa-transactions-page">
+      <div className="sa-transactions-header">
+        <h2>Transaction History</h2>
+        <div className="sa-transactions-tabs">
+          {['all', 'paid', 'pending', 'deactivated'].map((id) => (
+            <button
+              key={id}
+              className={`sa-subtab-button ${transactionsTab === id ? 'active' : ''}`}
+              onClick={() => setTransactionsTab(id)}
+            >
+              {id === 'all' && 'All'}
+              {id === 'paid' && 'Paid'}
+              {id === 'pending' && 'Pending'}
+              {id === 'deactivated' && 'Deactivated'}
+        </button>
+          ))}
+        </div>
+      </div>
+      
+      <div className="sa-transactions-filters">
+        <button className="sa-filter-button">
+          <Filter size={16} />
+          Filter
+        </button>
+        <div className="sa-search-input">
+          <Search size={16} />
+          <input
+            type="text"
+            placeholder="Search by Name, Email or Date"
+            value={transactionSearch}
+            onChange={(e) => setTransactionSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+            <thead>
+              <tr>
+              <th />
+              <th>Agency</th>
+              <th>Account Status</th>
+              <th>Subscription Status</th>
+              <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+            {filteredTransactions.map((item, index) => {
+              const agency = item.agencyId ? companies.find(c => (c.ID || c.id) === item.agencyId) : item;
+              return (
+                <tr key={`transaction-${item.id || agency?.ID || agency?.id || index}`}>
+                  <td>
+                      <input type="checkbox" />
+                  </td>
+                  <td>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{agency?.Name || agency?.name || item.agencyName || 'N/A'}</span>
+                      <span className="sa-cell-sub">
+                        {agency?.Email || agency?.email || item.email || 'example@email.com'}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`sa-status-pill ${(item.accountStatus || agency?.Status || agency?.status || 'active').toLowerCase()}`}>
+                      {item.accountStatus || agency?.Status || agency?.status || 'Active'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`sa-status-pill ${(item.paymentStatus || item.status || 'paid').toLowerCase()}`}>
+                      {item.paymentStatus || item.status || 'Paid'}
+                    </span>
+                    {item.dueDate && (
+                      <span className="sa-cell-sub">Due on {new Date(item.dueDate).toLocaleDateString()}</span>
+                    )}
+                  </td>
+                  <td>
+                    {(item.amount || item.subscriptionAmount || agency?.SubscriptionAmount || 0).toLocaleString()} CFA
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredTransactions.length === 0 && (
+              <tr>
+                <td colSpan={5} className="sa-table-empty">
+                  No transactions match your filters.
+                </td>
+              </tr>
+            )}
+            </tbody>
+          </table>
+        </div>
+    </div>
+  );
+
+  // Clients page – list of agency admins / directors
+  const filteredClients = useMemo(() => {
+    const base = agencyAdmins || [];
+    if (!clientsSearch) return base;
+    const q = clientsSearch.toLowerCase();
+    return base.filter((admin) => {
+      const name = (admin.Name || admin.name || '').toLowerCase();
+      const email = (admin.Email || admin.email || '').toLowerCase();
+      const role = (admin.Role || admin.role || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || role.includes(q);
+    });
+  }, [agencyAdmins, clientsSearch]);
+
+  const handleOpenAddAgencyAdmin = () => {
+    setEditingAgencyAdmin(null);
+    setAgencyAdminForm({
+      name: '',
+      email: '',
+      company: '',
+      role: 'agency_director',
+      password: ''
+    });
+    setShowAgencyAdminModal(true);
+  };
+
+  const handleOpenEditAgencyAdmin = (admin) => {
+    setEditingAgencyAdmin(admin);
+    const role = admin.Role || admin.role || 'agency_director';
+    // Convert hyphen to underscore if needed
+    const normalizedRole = role.replace('-', '_');
+    setAgencyAdminForm({
+      name: admin.Name || admin.name || '',
+      email: admin.Email || admin.email || '',
+      company: admin.Company || admin.company || '',
+      role: normalizedRole,
+      password: '' // Don't pre-fill password
+    });
+    setShowAgencyAdminModal(true);
+  };
+
+  const handleAgencyAdminFormChange = (field, value) => {
+    setAgencyAdminForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmitAgencyAdmin = async (e) => {
+    e.preventDefault();
+    try {
+      const userData = {
+        name: agencyAdminForm.name,
+        email: agencyAdminForm.email,
+        company: agencyAdminForm.company,
+        role: agencyAdminForm.role // Must be "superadmin" or "agency_director"
+      };
+
+      if (editingAgencyAdmin) {
+        // Update existing user
+        if (agencyAdminForm.password) {
+          userData.password = agencyAdminForm.password;
+        }
+        await superAdminService.updateUser(editingAgencyAdmin.ID || editingAgencyAdmin.id, userData);
+        addNotification('Agency admin updated successfully!', 'success');
+      } else {
+        // Create new user
+        if (!agencyAdminForm.password) {
+          addNotification('Password is required for new admin', 'warning');
+          return;
+        }
+        userData.password = agencyAdminForm.password;
+        await superAdminService.addUser(userData);
+        addNotification('Agency admin created successfully!', 'success');
+      }
+      setShowAgencyAdminModal(false);
+      await loadData();
+    } catch (error) {
+      console.error('Error saving agency admin:', error);
+      addNotification(editingAgencyAdmin ? 'Failed to update agency admin' : 'Failed to create agency admin', 'error');
+    }
+  };
+
+  const handleDeleteAgencyAdmin = async (admin) => {
+    if (window.confirm(`Are you sure you want to delete ${admin.Name || admin.name}?`)) {
       try {
-        await superAdminService.deleteCompany(companyId);
-        await loadData(); // Reload data
-        addNotification(`Company "${companyName}" has been deleted successfully.`, 'success');
+        await superAdminService.deleteUser(admin.ID || admin.id);
+        addNotification('Agency admin deleted successfully!', 'success');
+        await loadData();
       } catch (error) {
-        console.error('Error deleting company:', error);
-        addNotification('Failed to delete company', 'error');
+        console.error('Error deleting agency admin:', error);
+        addNotification('Failed to delete agency admin', 'error');
       }
     }
   };
 
-  const handleDeactivateCompany = (company) => {
-    setSelectedCompany(company);
-    setDeactivationReason('');
-    setShowDeactivationModal(true);
-  };
+  const renderClients = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Client List</h2>
+          <p>{filteredClients.length} results found</p>
+        </div>
+        <div className="sa-clients-header-right">
+          <button className="sa-primary-cta" onClick={handleOpenAddAgencyAdmin}>
+            <Plus size={16} />
+            Add Agency Admin
+        </button>
+          <button className="sa-sort-button">Sort: Creation Date</button>
+          <button className="sa-date-button">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</button>
+        </div>
+      </div>
 
-  const confirmDeactivation = async () => {
-    if (!deactivationReason.trim()) {
-      addNotification('Please provide a reason for deactivation.', 'warning');
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+            <thead>
+              <tr>
+              <th>No</th>
+              <th>Client</th>
+              <th>Email</th>
+                <th>Company</th>
+              <th>Registration Date</th>
+              <th>Role</th>
+              <th />
+              </tr>
+            </thead>
+            <tbody>
+            {filteredClients.map((admin, index) => {
+              const companyName = admin.companyDetails?.name || admin.CompanyDetails?.name || admin.Company || admin.company || 'N/A';
+              return (
+              <tr key={`client-${admin.ID || admin.id || index}`}>
+                <td>{index + 1}</td>
+                <td className="sa-cell-main">
+                  <span className="sa-cell-title">{admin.Name || admin.name}</span>
+                  </td>
+                <td>{admin.Email || admin.email}</td>
+                <td>{companyName}</td>
+                  <td>
+                  {admin.CreatedAt
+                    ? new Date(admin.CreatedAt).toLocaleDateString()
+                    : 'N/A'}
+                  </td>
+                <td>{admin.Role || admin.role || 'Director'}</td>
+                <td className="sa-row-actions">
+                  <button className="sa-icon-button" onClick={() => handleOpenEditAgencyAdmin(admin)} title="Edit">✏️</button>
+                  <button className="sa-icon-button" onClick={() => handleDeleteAgencyAdmin(admin)} title="Delete">🗑️</button>
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredClients.length === 0 && (
+              <tr>
+                <td colSpan={7} className="sa-table-empty">
+                  No clients match your search.
+                  </td>
+                </tr>
+            )}
+            </tbody>
+          </table>
+        </div>
+
+      {/* Agency Admin Modal */}
+      <Modal
+        isOpen={showAgencyAdminModal}
+        onClose={() => setShowAgencyAdminModal(false)}
+        title={editingAgencyAdmin ? 'Edit Agency Admin' : 'Add Agency Admin'}
+        size="md"
+      >
+        <form onSubmit={handleSubmitAgencyAdmin} className="sa-form">
+          <div className="sa-form-group">
+            <label>Name *</label>
+            <input
+              type="text"
+              value={agencyAdminForm.name}
+              onChange={(e) => handleAgencyAdminFormChange('name', e.target.value)}
+              required
+              placeholder="Enter admin name"
+            />
+          </div>
+          <div className="sa-form-group">
+            <label>Email *</label>
+            <input
+              type="email"
+              value={agencyAdminForm.email}
+              onChange={(e) => handleAgencyAdminFormChange('email', e.target.value)}
+              required
+              placeholder="Enter email address"
+            />
+          </div>
+          <div className="sa-form-group">
+            <label>Company *</label>
+            <input
+              type="text"
+              value={agencyAdminForm.company}
+              onChange={(e) => handleAgencyAdminFormChange('company', e.target.value)}
+              required
+              placeholder="Enter company name"
+            />
+          </div>
+          <div className="sa-form-group">
+            <label>Role *</label>
+            <select
+              value={agencyAdminForm.role}
+              onChange={(e) => handleAgencyAdminFormChange('role', e.target.value)}
+              required
+            >
+              <option value="agency_director">Agency Director</option>
+              <option value="superadmin">Super Admin</option>
+            </select>
+          </div>
+          <div className="sa-form-group">
+            <label>Password {editingAgencyAdmin ? '(leave blank to keep current)' : '*'}</label>
+            <input
+              type="password"
+              value={agencyAdminForm.password}
+              onChange={(e) => handleAgencyAdminFormChange('password', e.target.value)}
+              required={!editingAgencyAdmin}
+              placeholder={editingAgencyAdmin ? "Enter new password (optional)" : "Enter password"}
+            />
+          </div>
+          <div className="sa-form-actions">
+            <button type="button" className="sa-outline-button" onClick={() => setShowAgencyAdminModal(false)}>
+              Cancel
+            </button>
+            <button type="submit" className="sa-primary-cta">
+              {editingAgencyAdmin ? 'Update' : 'Create'} Agency Admin
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+
+  // Advertisements page
+  const filteredAds = useMemo(() => {
+    if (adFilter === 'all') return ads || [];
+    return (ads || []).filter((ad) =>
+      (ad.Status || ad.status || 'active').toLowerCase() === adFilter
+    );
+  }, [ads, adFilter]);
+
+  const handleCreateAd = async (e) => {
+    e.preventDefault();
+    if (!newAd.title || !newAd.text) {
+      addNotification('Please provide a title and description for the advertisement.', 'warning');
       return;
     }
-
+    if (!newAd.image) {
+      addNotification('Please upload an image file for the advertisement.', 'warning');
+      return;
+    }
     try {
-      await superAdminService.deactivateCompany(selectedCompany.ID || selectedCompany.id, deactivationReason);
-      await loadData(); // Reload data
-      setShowDeactivationModal(false);
-      setSelectedCompany(null);
-      setDeactivationReason('');
-      addNotification(`Company "${selectedCompany.Name || selectedCompany.name}" has been deactivated successfully.`, 'success');
+      await superAdminService.createAdvertisement(newAd);
+      addNotification('Advertisement created successfully!', 'success');
+      setNewAd({ title: '', text: '', image: null });
+      // Reset file input
+      const fileInput = document.querySelector('input[type="file"][name="ad-image"]');
+      if (fileInput) fileInput.value = '';
+      await loadData();
     } catch (error) {
-      console.error('Error deactivating company:', error);
-      addNotification('Failed to deactivate company', 'error');
+      console.error('Error creating advertisement:', error);
+      addNotification(error.message || 'Failed to create advertisement', 'error');
     }
   };
 
-  const handleReactivateCompany = async (companyId, companyName) => {
-    if (window.confirm(`Are you sure you want to reactivate "${companyName}"?`)) {
+  const renderAds = () => (
+    <div className="sa-ads-page">
+      <div className="sa-ads-header">
+        <h2>Advertisements Overview</h2>
+        <button className="sa-primary-cta" onClick={() => document.querySelector('.sa-create-ad-form')?.scrollIntoView({ behavior: 'smooth' })}>
+          <MessageSquarePlus size={16} />
+          Create Ad
+        </button>
+            </div>
+
+      <div className="sa-ads-list">
+        {filteredAds.map((ad, index) => {
+          const status = (ad.Status || ad.status || 'published').toLowerCase();
+          const statusLabels = {
+            published: 'Published',
+            pause: 'Paused',
+            scheduled: 'Scheduled',
+            finished: 'Finished'
+          };
+          // Build full image URL with base URL
+          const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+          const fullImageUrl = imageUrl 
+            ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+            : null;
+
+          return (
+            <div key={`ad-${ad.id || ad.ID || index}`} className="sa-ad-card">
+              <div className="sa-ad-status-column">
+                <span className={`sa-ad-status ${status}`}>ads | {statusLabels[status] || 'Published'}</span>
+            </div>
+              <div className="sa-ad-main">
+                {fullImageUrl && (
+                  <img 
+                    src={fullImageUrl} 
+                    alt={ad.title || ad.Title || 'Advertisement'} 
+                    className="sa-ad-image"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                )}
+                <h3>{ad.title || ad.Title || 'Untitled Advertisement'}</h3>
+                <span className="sa-ad-tag">
+                  {ad.commissionLabel || ad.commission || '50% COMMISSION'}
+                </span>
+                <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
+            </div>
+              <div className="sa-ad-right">
+                <button className="sa-outline-button" onClick={() => addNotification('View ad functionality coming soon', 'info')}>View Ad</button>
+            </div>
+          </div>
+          );
+        })}
+        {filteredAds.length === 0 && (
+          <div className="sa-table-empty">
+            No advertisements yet. Use the form below to create your first campaign.
+            </div>
+      )}
+      </div>
+
+      <div className="sa-section-card sa-create-ad-card">
+        <h3>Add Advertisement</h3>
+        <form className="sa-create-ad-form" onSubmit={handleCreateAd}>
+          <input
+            type="text"
+            placeholder="Advertisement Title"
+            value={newAd.title}
+            onChange={(e) => setNewAd((prev) => ({ ...prev, title: e.target.value }))}
+            required
+          />
+          <textarea
+            placeholder="Text / Description"
+            value={newAd.text}
+            onChange={(e) => setNewAd((prev) => ({ ...prev, text: e.target.value }))}
+            required
+          />
+          <input
+            type="file"
+            name="ad-image"
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                  addNotification('Invalid file type. Allowed types: jpg, jpeg, png, gif, webp', 'error');
+                  e.target.value = '';
+                  return;
+                }
+                setNewAd((prev) => ({ ...prev, image: file }));
+              } else {
+                setNewAd((prev) => ({ ...prev, image: null }));
+              }
+            }}
+            required
+          />
+          <button type="submit" className="sa-primary-cta">
+            <Megaphone size={16} />
+            Publish
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
+  // Chat page
+  const loadChatForAdmin = useCallback(
+    async (adminId) => {
       try {
-        await superAdminService.reactivateCompany(companyId);
-        await loadData(); // Reload data
-        addNotification(`Company "${companyName}" has been reactivated successfully.`, 'success');
+        setSelectedAdminId(adminId);
+        const chat = await superAdminService.getChatWithAdmin(adminId);
+        setChatMessages(Array.isArray(chat) ? chat : []);
       } catch (error) {
-        console.error('Error reactivating company:', error);
-        addNotification('Failed to reactivate company', 'error');
+        console.error('Error loading chat for admin:', error);
+        addNotification('Failed to load chat messages', 'error');
       }
-    }
-  };
+    },
+    [addNotification]
+  );
 
-  const openAddCompanyModal = () => {
-    setEditingCompany(null);
-    setShowCompanyModal(true);
-  };
-
-  const openEditCompanyModal = (company) => {
-    setEditingCompany(company);
-    setShowCompanyModal(true);
-  };
-
-  const handleCompanySubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const companyData = {
-      name: formData.get('companyName'),
-      description: formData.get('description'),
-      address: formData.get('address'),
-      phone: formData.get('phone'),
-      email: formData.get('email'),
-      status: 'Active'
-    };
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedAdminId) return;
     
-    try {
-      if (editingCompany) {
-        await superAdminService.updateCompany(editingCompany.ID || editingCompany.id, companyData);
-        addNotification(`Company "${companyData.name}" updated successfully!`, 'success');
-      } else {
-        await superAdminService.addCompany(companyData);
-        addNotification(`Company "${companyData.name}" added successfully!`, 'success');
+    // Get current user ID from localStorage
+    const storedUser = localStorage.getItem('user');
+    let currentUserId = null;
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        currentUserId = user.id || user.ID;
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
       }
-      await loadData();
-      setShowCompanyModal(false);
-      setEditingCompany(null);
-    } catch (error) {
-      console.error('Error adding company:', error);
-      addNotification('Failed to save company', 'error');
-    }
-  };
-
-  const openAddUserModal = () => {
-    setEditingUser(null);
-    setShowUserModal(true);
-  };
-
-  const openEditUserModal = (user) => {
-    setEditingUser(user);
-    setShowUserModal(true);
-  };
-
-  const handleUserSubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const companyId = formData.get('userCompany');
-    const companyName = resolveCompanyName(companyId);
-    const userData = {
-      name: formData.get('userName'),
-      email: formData.get('userEmail'),
-      companyId,
-      company: companyName,
-      role: formData.get('userRole'),
-      phone: formData.get('userPhone')
-    };
-    const password = formData.get('userPassword');
-    if (!editingUser && password) {
-      userData.password = password;
     }
     
+    if (!currentUserId) {
+      addNotification('Unable to identify current user. Please log in again.', 'error');
+      return;
+    }
+    
+    const content = chatInput.trim();
+    setChatInput('');
     try {
-      if (editingUser) {
-        await superAdminService.updateUser(editingUser.ID || editingUser.id, userData);
-        addNotification(`User "${userData.name}" updated successfully!`, 'success');
-      } else {
-        await superAdminService.addUser({ ...userData, password });
-        addNotification(`User "${userData.name}" created successfully! Login credentials have been set.`, 'success');
+      const payload = {
+        fromUserId: currentUserId,
+        toUserId: selectedAdminId,
+        content,
+      };
+      await superAdminService.sendChatMessage(payload);
+      
+      // Reload chat to get the latest messages from server (including the one we just sent)
+      if (selectedAdminId) {
+        await loadChatForAdmin(selectedAdminId);
       }
-      await loadData();
-      setShowUserModal(false);
-      setEditingUser(null);
     } catch (error) {
-      console.error('Error adding user:', error);
-      addNotification('Failed to save user: ' + (error.message || 'Unknown error'), 'error');
+      console.error('Error sending chat message:', error);
+      addNotification(error.message || 'Failed to send message', 'error');
     }
   };
 
-  const handleDeleteUser = async (user) => {
-    if (!user) return;
-    if (window.confirm(`Are you sure you want to delete "${user.Name || user.name}"? This action cannot be undone.`)) {
-      try {
-        await superAdminService.deleteUser(user.ID || user.id);
-        await loadData();
-        addNotification(`User "${user.Name || user.name}" deleted successfully.`, 'success');
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        addNotification('Failed to delete user', 'error');
-      }
-    }
-  };
-
-  const openAddPropertyModal = () => {
-    setEditingProperty(null);
-    setShowPropertyModal(true);
-  };
-
-  const openEditPropertyModal = (property) => {
-    setEditingProperty(property);
-    setShowPropertyModal(true);
-  };
-
-  const handlePropertySubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const companyId = formData.get('propertyCompany');
-    const companyName = resolveCompanyName(companyId);
-    const propertyData = {
-      address: formData.get('propertyAddress'),
-      companyId,
-      company: companyName,
-      type: formData.get('propertyType'),
-      rent: parseFloat(formData.get('propertyRent')),
-      bedrooms: parseInt(formData.get('bedrooms'), 10),
-      bathrooms: parseInt(formData.get('bathrooms'), 10),
-      status: formData.get('propertyStatus') || 'Vacant'
-    };
-
-    try {
-      if (editingProperty) {
-        await superAdminService.updateProperty(editingProperty.ID || editingProperty.id, propertyData);
-        addNotification(`Property "${propertyData.address}" updated successfully!`, 'success');
-      } else {
-        await superAdminService.addProperty(propertyData);
-        addNotification(`Property "${propertyData.address}" added successfully!`, 'success');
-      }
-      await loadData();
-      setShowPropertyModal(false);
-      setEditingProperty(null);
-    } catch (error) {
-      console.error('Error saving property:', error);
-      addNotification('Failed to save property', 'error');
-    }
-  };
-
-  const handleDeleteProperty = async (property) => {
-    if (!property) return;
-    const name = property.Address || property.address || 'this property';
-    if (window.confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
-      try {
-        await superAdminService.deleteProperty(property.ID || property.id);
-        await loadData();
-        addNotification(`Property "${name}" deleted successfully.`, 'success');
-      } catch (error) {
-        console.error('Error deleting property:', error);
-        addNotification('Failed to delete property', 'error');
-      }
-    }
-  };
-
-  const renderOverview = () => {
-    if (loading) {
-      return <div className="loading">Loading overview data...</div>;
-    }
-
-    return (
-      <div className="dashboard-overview">
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Total Companies</span>
-            <span className="card-trend positive">
-              <Shield size={16} />
-            </span>
+  const renderChat = () => (
+    <div className="sa-chat-page">
+      <div className="sa-chat-layout">
+        <div className="sa-chat-list">
+          <h3>Conversations</h3>
+          <ul>
+            {(agencyAdmins || []).map((admin) => {
+              const adminId = admin.ID || admin.id;
+              const active = adminId === selectedAdminId;
+              return (
+                <li
+                  key={`chat-admin-${adminId}`}
+                  className={active ? 'active' : ''}
+                  onClick={() => loadChatForAdmin(adminId)}
+                >
+                  <div className="sa-cell-main">
+                    <span className="sa-cell-title">{admin.Name || admin.name}</span>
+                    <span className="sa-cell-sub">{admin.Email || admin.email}</span>
           </div>
-          <div className="card-value">
-            <span>{overviewData?.totalCompanies || 0}</span>
-            <small>Active organizations</small>
+                </li>
+              );
+            })}
+          </ul>
           </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Total Users</span>
-            <span className="card-trend positive">
-              <Users size={16} />
-            </span>
+          
+        <div className="sa-chat-conversation">
+          <div className="sa-chat-header">
+            <h3>Messages</h3>
+            {selectedAdminId && (
+              <span className="sa-chat-subtitle">
+                Chat with{' '}
+                {
+                  (agencyAdmins.find((a) => (a.ID || a.id) === selectedAdminId) || {})
+                    .Name || 'Agency Admin'
+                }
+                        </span>
+            )}
           </div>
-          <div className="card-value">
-            <span>{overviewData?.totalUsers || 0}</span>
-            <small>Across all companies</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Total Properties</span>
-            <span className="card-trend positive">
-              <Home size={16} />
-            </span>
-          </div>
-          <div className="card-value">
-            <span>{overviewData?.totalProperties || 0}</span>
-            <small>Under management</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Total Revenue</span>
-            <span className="card-trend positive">
-              <DollarSign size={16} />
-            </span>
-          </div>
-          <div className="card-value">
-            <span>{overviewData?.totalRevenue?.toLocaleString() || 0} XOF</span>
-            <small>This month</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Active Works</span>
-            <span className="card-trend neutral">
-              <Wrench size={16} />
-            </span>
-          </div>
-          <div className="card-value">
-            <span>{overviewData?.activeWorks || 0}</span>
-            <small>Ongoing interventions</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Pending Claims</span>
-            <span className="card-trend neutral">
-              <FileText size={16} />
-            </span>
-          </div>
-          <div className="card-value">
-            <span>{overviewData?.pendingClaims || 0}</span>
-            <small>Awaiting resolution</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>System Health</span>
-            <span className="card-trend positive">
-              <BarChart3 size={16} />
-            </span>
-          </div>
-          <div className="card-value">
-            <span>{overviewData?.systemHealth || 98}%</span>
-            <small>Uptime</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Storage Used</span>
-            <span className="card-trend neutral">
-              <Database size={16} />
-            </span>
-          </div>
-          <div className="card-value">
-            <span>{overviewData?.storageUsed || '245 GB'}</span>
-            <small>Of 1 TB</small>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderCompanies = () => (
-    <div className="companies-section">
-      <div className="section-header">
-        <div>
-          <h2>Company Management</h2>
-          <p>Manage all companies in the system with full administrative control</p>
-        </div>
-        <button className="btn-primary" onClick={openAddCompanyModal} disabled={loading}>
-          <Building2 size={18} />
-          Add New Company
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="loading">Loading companies...</div>
-      ) : companies.length === 0 ? (
-        <div className="no-data">No companies found</div>
-      ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="table-select">
-                  <label className="checkbox">
-                    <input type="checkbox" />
-                    <span />
-                  </label>
-                </th>
-                <th>Company Name</th>
-                <th>Users</th>
-                <th>Properties</th>
-                <th>Status</th>
-                <th>Monthly Revenue</th>
-                <th className="table-menu"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {companies.map((company, index) => (
-                <tr key={`company-${company.ID || company.id || index}`}>
-                  <td className="table-select">
-                    <label className="checkbox">
-                      <input type="checkbox" />
-                      <span />
-                    </label>
-                  </td>
-                  <td>
-                    <span className="row-primary">{company.Name || company.name}</span>
-                    <span className="row-secondary">{company.Description || company.description || '—'}</span>
-                  </td>
-                  <td>{company.Users || company.users || 0}</td>
-                  <td>{company.Properties || company.properties || 0}</td>
-                  <td>
-                    <span className={`status-badge ${(company.Status || company.status || 'active').toLowerCase()}`}>
-                      {company.Status || company.status || 'Active'}
-                    </span>
-                  </td>
-                  <td>{company.Revenue || company.revenue || 0} XOF</td>
-                  <td className="table-menu">
-                    <div className="table-actions">
-                      <button
-                        className="table-action-button edit"
-                        onClick={() => openEditCompanyModal(company)}
-                      >
-                        Edit
-                      </button>
-                      {(company.Status || company.status || 'Active') === 'Active' ? (
-                        <button
-                          className="table-action-button edit"
-                          onClick={() => handleDeactivateCompany(company)}
-                        >
-                          Deactivate
-                        </button>
-                      ) : (
-                        <button
-                          className="table-action-button edit"
-                          onClick={() => handleReactivateCompany(company.ID || company.id, company.Name || company.name)}
-                        >
-                          Reactivate
-                        </button>
-                      )}
-                      <button
-                        className="table-action-button quote"
-                        onClick={() => handleDeleteCompany(company.ID || company.id, company.Name || company.name)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="sa-chat-messages">
+            {chatMessages.map((msg, index) => {
+              // Handle both lowercase and camelCase field names
+              const messageContent = msg.content || msg.Content || '';
+              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+              const messageFromUserId = msg.fromUserId || msg.FromUserId;
+              const messageId = msg.id || msg.ID || index;
+              
+              // Determine if message is outgoing or incoming
+              // Compare IDs as strings to handle type mismatches
+              const storedUser = localStorage.getItem('user');
+              let isOutgoing = false;
+              if (storedUser) {
+                try {
+                  const user = JSON.parse(storedUser);
+                  const currentUserId = user.id || user.ID;
+                  // Convert both to strings for reliable comparison
+                  isOutgoing = String(messageFromUserId) === String(currentUserId);
+                } catch (e) {
+                  // Default to incoming if we can't parse user
+                }
+              }
+              
+              return (
+                <div
+                  key={`msg-${messageId}`}
+                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
+                >
+                  <p>{messageContent}</p>
+                  <span className="sa-chat-meta">
+                    {messageCreatedAt
+                      ? new Date(messageCreatedAt).toLocaleString()
+                      : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {chatMessages.length === 0 && (
+              <div className="sa-table-empty">
+                Select an agency admin on the left to start a conversation.
         </div>
       )}
     </div>
-  );
-
-  // Filter users based on filters
-  const filteredUsers = useMemo(() => {
-    if (!users || !Array.isArray(users)) {
-      return [];
-    }
-    return users.filter(user => {
-      // Company filter - compare by company name since user.Company is a name string
-      if (userCompanyFilter) {
-        // Get the company name from the selected company ID
-        const selectedCompany = companies.find(c => String(c.ID || c.id) === String(userCompanyFilter));
-        const selectedCompanyName = selectedCompany ? (selectedCompany.Name || selectedCompany.name) : '';
-        
-        // Get the user's company name
-        const userCompanyName = (user.Company || user.company || '').trim();
-        
-        // Compare company names (case-insensitive)
-        if (selectedCompanyName && userCompanyName.toLowerCase() !== selectedCompanyName.toLowerCase()) {
-          return false;
-        }
-      }
-
-      // Role filter
-      if (userRoleFilter) {
-        const userRole = (user.Role || user.role || '').toLowerCase();
-        const filterRole = userRoleFilter.toLowerCase();
-        if (userRole !== filterRole && !userRole.includes(filterRole)) {
-          return false;
-        }
-      }
-
-      // Search text filter
-      if (userSearchText) {
-        const searchLower = userSearchText.toLowerCase();
-        const name = (user.Name || user.name || '').toLowerCase();
-        const email = (user.Email || user.email || '').toLowerCase();
-        const phone = (user.Phone || user.phone || '').toLowerCase();
-        
-        if (!name.includes(searchLower) && !email.includes(searchLower) && !phone.includes(searchLower)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [users, userCompanyFilter, userRoleFilter, userSearchText]);
-
-  const renderAllUsers = () => (
-    <div className="users-section">
-      <div className="section-header">
-        <div>
-          <h2>All System Users</h2>
-          <p>View and manage all users across all companies</p>
-        </div>
-        <button className="btn-primary" onClick={openAddUserModal} disabled={loading}>
-          <UserPlus size={18} />
-          Add New User
-        </button>
-      </div>
-      
-      <div className="users-filters">
-        <select 
-          className="filter-select"
-          value={userCompanyFilter}
-          onChange={(e) => setUserCompanyFilter(e.target.value)}
-        >
-          <option value="">All Companies</option>
-          {companies.map((c, idx) => (
-            <option key={`company-option-${c.ID || c.id || idx}`} value={c.ID || c.id}>{c.Name || c.name}</option>
-          ))}
-        </select>
-        <select 
-          className="filter-select"
-          value={userRoleFilter}
-          onChange={(e) => setUserRoleFilter(e.target.value)}
-        >
-          <option value="">All Roles</option>
-          <option value="tenant">Tenant</option>
-          <option value="commercial">Commercial</option>
-          <option value="admin">Administrative Agent</option>
-          <option value="accounting">Accounting</option>
-          <option value="salesmanager">Sales Manager</option>
-          <option value="technician">Technical Manager</option>
-          <option value="landlord">Landlord</option>
-        </select>
-        <input 
-          type="text" 
-          placeholder="Search users..." 
-          className="filter-select" 
-          value={userSearchText}
-          onChange={(e) => setUserSearchText(e.target.value)}
-        />
-      </div>
-
-      {loading ? (
-        <div className="loading">Loading users...</div>
-      ) : filteredUsers.length === 0 ? (
-        <div className="no-data">No users found</div>
-      ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="table-select">
-                  <label className="checkbox">
-                    <input type="checkbox" />
-                    <span />
-                  </label>
-                </th>
-                <th>User</th>
-                <th>Email</th>
-                <th>Company</th>
-                <th>Role</th>
-                <th>Last Login</th>
-                <th className="table-menu"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user, index) => (
-                <tr key={`user-${user.ID || user.id || index}`}>
-                  <td className="table-select">
-                    <label className="checkbox">
-                      <input type="checkbox" />
-                      <span />
-                    </label>
-                  </td>
-                  <td>
-                    <span className="row-primary">{user.Name || user.name}</span>
-                    <span className="row-secondary">{user.Phone || user.phone || 'No phone'}</span>
-                  </td>
-                  <td>{user.Email || user.email}</td>
-                  <td>{resolveCompanyName(user.companyId || user.CompanyID || user.Company || user.company)}</td>
-                  <td>{user.Role || user.role}</td>
-                  <td>{user.LastLogin || user.lastLogin || 'Never'}</td>
-                  <td className="table-menu">
-                    <div className="table-actions">
-                      <button className="table-action-button edit" onClick={() => openEditUserModal(user)}>Edit</button>
-                      <button className="table-action-button delete" onClick={() => handleDeleteUser(user)}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-
-  // Filter properties based on filters
-  const filteredProperties = useMemo(() => {
-    if (!properties || !Array.isArray(properties)) {
-      return [];
-    }
-    return properties.filter(property => {
-      // Company filter - compare by company name since property.Company might be a name string
-      if (propertyCompanyFilter) {
-        // Get the company name from the selected company ID
-        const selectedCompany = companies.find(c => String(c.ID || c.id) === String(propertyCompanyFilter));
-        const selectedCompanyName = selectedCompany ? (selectedCompany.Name || selectedCompany.name) : '';
-        
-        // Get the property's company (could be ID or name)
-        const propertyCompany = String(property.companyId || property.CompanyID || property.Company || property.company || '').trim();
-        
-        // Try to match by ID first, then by name
-        const propertyCompanyId = String(property.companyId || property.CompanyID || '');
-        const propertyCompanyName = (property.Company || property.company || '').trim();
-        
-        // Compare: either ID matches or name matches (case-insensitive)
-        const idMatches = propertyCompanyId && propertyCompanyId === String(propertyCompanyFilter);
-        const nameMatches = selectedCompanyName && propertyCompanyName && 
-          propertyCompanyName.toLowerCase() === selectedCompanyName.toLowerCase();
-        
-        if (!idMatches && !nameMatches) {
-          return false;
-        }
-      }
-
-      // Status filter
-      if (propertyStatusFilter) {
-        const propertyStatus = (property.Status || property.status || '').toLowerCase();
-        const filterStatus = propertyStatusFilter.toLowerCase();
-        if (propertyStatus !== filterStatus && !propertyStatus.includes(filterStatus)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [properties, propertyCompanyFilter, propertyStatusFilter]);
-
-  const renderAllProperties = () => (
-    <div className="properties-section">
-      <div className="section-header">
-        <div>
-          <h2>All Properties</h2>
-          <p>System-wide property overview across all companies</p>
-        </div>
-        <button className="btn-primary" onClick={openAddPropertyModal} disabled={loading}>
-          <Plus size={18} />
-          Add Property
-        </button>
-      </div>
-      
-      <div className="properties-filters" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <select 
-          className="filter-select"
-          value={propertyCompanyFilter}
-          onChange={(e) => setPropertyCompanyFilter(e.target.value)}
-        >
-          <option value="">All Companies</option>
-          {companies.map((c, idx) => (
-            <option key={`property-company-option-${c.ID || c.id || idx}`} value={c.ID || c.id}>{c.Name || c.name}</option>
-          ))}
-        </select>
-        <select 
-          className="filter-select"
-          value={propertyStatusFilter}
-          onChange={(e) => setPropertyStatusFilter(e.target.value)}
-        >
-          <option value="">All Status</option>
-          <option value="occupied">Occupied</option>
-          <option value="vacant">Vacant</option>
-          <option value="maintenance">Maintenance</option>
-        </select>
-      </div>
-      
-      <div className="dashboard-overview">
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Total Properties</span>
+          <div className="sa-chat-input-row">
+            <input
+              type="text"
+              placeholder="Reply..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <button className="sa-primary-cta" onClick={handleSendMessage}>
+              <MessageCircle size={16} />
+              Send
+            </button>
           </div>
-          <div className="card-value">
-            <span>{filteredProperties.length}</span>
-            <small>In the network</small>
           </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Occupied</span>
-          </div>
-          <div className="card-value">
-            <span>{filteredProperties.filter(p => (p.Status || p.status) === 'Occupied').length}</span>
-            <small>Currently rented</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Vacant</span>
-          </div>
-          <div className="card-value">
-            <span>{filteredProperties.filter(p => (p.Status || p.status) === 'Vacant').length}</span>
-            <small>Available units</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Avg Occupancy</span>
-          </div>
-          <div className="card-value">
-            <span>
-              {filteredProperties.length > 0
-                ? Math.round(
-                    (filteredProperties.filter(p => (p.Status || p.status) === 'Occupied').length / filteredProperties.length) * 100
-                  )
-                : 0}
-              %
-            </span>
-            <small>Portfolio-wide</small>
-          </div>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="loading">Loading properties...</div>
-      ) : filteredProperties.length === 0 ? (
-        <div className="no-data">No properties found</div>
-      ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="table-select">
-                  <label className="checkbox">
-                    <input type="checkbox" />
-                    <span />
-                  </label>
-                </th>
-                <th>Property</th>
-                <th>Company</th>
-                <th>Status</th>
-                <th>Rent</th>
-                <th>Tenant</th>
-                <th>Source</th>
-                <th className="table-menu"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProperties.map((property, index) => (
-                <tr key={`property-${property.ID || property.id || 'no-id'}-${index}`}>
-                  <td className="table-select">
-                    <label className="checkbox">
-                      <input type="checkbox" />
-                      <span />
-                    </label>
-                  </td>
-                  <td>
-                    <span className="row-primary">{property.Address || property.address}</span>
-                    <span className="row-secondary">{property.Type || property.type}</span>
-                  </td>
-                  <td>{resolveCompanyName(property.companyId || property.CompanyID || property.Company || property.company)}</td>
-                  <td>
-                    <span className={`status-badge ${(property.Status || property.status || 'vacant').toLowerCase()}`}>
-                      {property.Status || property.status || 'Vacant'}
-                    </span>
-                  </td>
-                  <td>{property.Rent || property.rent || 0} XOF/mo</td>
-                  <td>{property.Tenant || property.tenant || '-'}</td>
-                  <td>
-                    <span className={`source-badge ${getSourceClass(property.Source)}`}>
-                      {property.Source || 'Super Admin'}
-                    </span>
-                  </td>
-                  <td className="table-menu">
-                    <div className="table-actions">
-                      <button className="table-action-button edit" onClick={() => openEditPropertyModal(property)}>Edit</button>
-                      <button className="table-action-button delete" onClick={() => handleDeleteProperty(property)}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderFinancial = () => (
-    <div className="financial-section">
-      <h2>Financial Overview</h2>
-      <p>System-wide financial metrics and cash flow</p>
-      
-      {loading ? (
-        <div className="loading">Loading financial data...</div>
-      ) : (
-        <div className="financial-stats">
-          <div className="stat-card modern-card">
-            <h3>Total Revenue</h3>
-            <span className="stat-value">{financialData?.totalRevenue?.toLocaleString() || 0} XOF</span>
-            <p>From all payments</p>
-          </div>
-          <div className="stat-card modern-card">
-            <h3>Total Expenses</h3>
-            <span className="stat-value">{financialData?.totalExpenses?.toLocaleString() || 0} XOF</span>
-            <p>System-wide expenses</p>
-          </div>
-          <div className="stat-card modern-card">
-            <h3>Net Profit</h3>
-            <span className="stat-value">{financialData?.netProfit?.toLocaleString() || 0} XOF</span>
-            <p>Revenue - Expenses</p>
-          </div>
-          <div className="stat-card modern-card">
-            <h3>Collections</h3>
-            <span className="stat-value">{financialData?.totalCollections?.toLocaleString() || 0} XOF</span>
-            <p>Rent & deposits</p>
-          </div>
-          <div className="stat-card modern-card">
-            <h3>Commission</h3>
-            <span className="stat-value">{financialData?.commission?.toLocaleString() || 0} XOF</span>
-            <p>10% avg commission</p>
-          </div>
-          <div className="stat-card modern-card">
-            <h3>Pending Payments</h3>
-            <span className="stat-value">{financialData?.pendingPayments?.toLocaleString() || 0} XOF</span>
-            <p>Across all companies</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderWorks = () => (
-    <div className="works-section">
-      <h2>All Works & Claims</h2>
-      <p>System-wide maintenance and claims overview</p>
-      
-      {loading ? (
-        <div className="loading">Loading works data...</div>
-      ) : (
-        <>
-          <div className="works-stats">
-            <div className="stat-card modern-card">
-              <h3>Active Works</h3>
-              <span className="stat-value">{(worksData || []).filter(w => (w.Status || w.status) === 'Active').length}</span>
-            </div>
-            <div className="stat-card modern-card">
-              <h3>Pending Claims</h3>
-              <span className="stat-value">{(worksData || []).filter(w => (w.Status || w.status) === 'Pending').length}</span>
-            </div>
-            <div className="stat-card modern-card">
-              <h3>Completed This Month</h3>
-              <span className="stat-value">{(worksData || []).filter(w => (w.Status || w.status) === 'Completed').length}</span>
-            </div>
-            <div className="stat-card modern-card">
-              <h3>Avg Resolution Time</h3>
-              <span className="stat-value">3.2 days</span>
-            </div>
-          </div>
-
-          {(!worksData || worksData.length === 0) ? (
-            <div className="no-data">No works found</div>
+          
+        <div className="sa-chat-details">
+          <h4>Contact Details</h4>
+          {selectedAdminId ? (
+            (() => {
+              const admin =
+                agencyAdmins.find((a) => (a.ID || a.id) === selectedAdminId) || {};
+              return (
+                <>
+                  <p>
+                    <strong>Name:</strong> {admin.Name || admin.name}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {admin.Email || admin.email}
+                  </p>
+                  <p>
+                    <strong>Company:</strong> {admin.Company || admin.company}
+                  </p>
+                </>
+              );
+            })()
           ) : (
-            <div className="data-table-wrapper">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th className="table-select">
-                      <label className="checkbox">
-                        <input type="checkbox" />
-                        <span />
-                      </label>
-                    </th>
-                    <th>Work Order</th>
-                    <th>Company</th>
-                    <th>Property</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Created</th>
-                    <th>Source</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(worksData || []).map((work, workIndex) => (
-                    <tr key={`work-${work.ID || work.id || 'no-id'}-${workIndex}`}>
-                      <td className="table-select">
-                        <label className="checkbox">
-                          <input type="checkbox" />
-                          <span />
-                        </label>
-                      </td>
-                      <td>#{work.ID || work.id}</td>
-                      <td>{work.Company || work.company}</td>
-                      <td>{work.Property || work.property}</td>
-                      <td>{work.Type || work.type}</td>
-                      <td>
-                        <span className={`status-badge ${(work.Status || work.status || 'pending').toLowerCase().replace(' ', '-')}`}>
-                          {work.Status || work.status || 'Pending'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`severity-chip ${(work.Priority || work.priority || 'medium').toLowerCase()}`}>
-                          {work.Priority || work.priority || 'Medium'}
-                        </span>
-                      </td>
-                      <td>{work.CreatedAt ? new Date(work.CreatedAt).toLocaleDateString() : 'Unknown'}</td>
-                      <td>
-                        <span className={`source-badge ${getSourceClass(work.Source)}`}>{work.Source || 'Unknown'}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <p>Select a conversation to view details.</p>
           )}
-        </>
-      )}
+          </div>
+          </div>
     </div>
   );
-
-  const renderSystemSettings = () => (
-    <div className="system-section">
-      <h2>System Settings</h2>
-      <p>Configure system-wide settings and preferences</p>
-      
-      {loading ? (
-        <div className="loading">Loading system settings...</div>
-      ) : (
-        <div className="settings-grid">
-          <div className="setting-card modern-card">
-            <h3><Database size={20} /> Database Management</h3>
-            <p>Backup, restore, and optimize database</p>
-            <button className="action-button" onClick={() => setShowDatabaseModal(true)} disabled={loading}>Manage Database</button>
-          </div>
-          
-          <div className="setting-card modern-card">
-            <h3><Shield size={20} /> Security Settings</h3>
-            <p>Configure authentication and permissions</p>
-            <button className="action-button" onClick={() => setShowSecurityModal(true)} disabled={loading}>Security Settings</button>
-          </div>
-          
-          <div className="setting-card modern-card">
-            <h3><Settings size={20} /> System Configuration</h3>
-            <p>General system preferences</p>
-            <button className="action-button" onClick={() => setShowSystemConfigModal(true)} disabled={loading}>Configure System</button>
-          </div>
-          
-          <div className="setting-card modern-card">
-            <h3><BarChart3 size={20} /> Analytics & Reports</h3>
-            <p>System-wide analytics configuration</p>
-            <button className="action-button" onClick={() => setShowAnalyticsModal(true)} disabled={loading}>View Analytics</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderAccounting = () => {
-    return (
-      <div className="accounting-section system-content">
-        <div className="section-header">
-          <h2>Accounting Overview</h2>
-          <p>Monitor all accounting activities across the system</p>
-        </div>
-
-        <div className="accounting-tabs" style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid rgba(19, 42, 132, 0.1)' }}>
-          <button
-            className={`tab-button ${accountingTab === 'tenant-payments' ? 'active' : ''}`}
-            onClick={() => setAccountingTab('tenant-payments')}
-            style={{ padding: '12px 24px', border: 'none', background: accountingTab === 'tenant-payments' ? '#132a84' : 'transparent', color: accountingTab === 'tenant-payments' ? '#fff' : '#1e1b4b', cursor: 'pointer', borderRadius: '8px 8px 0 0' }}
-          >
-            Tenant Payments
-          </button>
-          <button
-            className={`tab-button ${accountingTab === 'landlord-payments' ? 'active' : ''}`}
-            onClick={() => setAccountingTab('landlord-payments')}
-            style={{ padding: '12px 24px', border: 'none', background: accountingTab === 'landlord-payments' ? '#132a84' : 'transparent', color: accountingTab === 'landlord-payments' ? '#fff' : '#1e1b4b', cursor: 'pointer', borderRadius: '8px 8px 0 0' }}
-          >
-            Landlord Payments
-          </button>
-          <button
-            className={`tab-button ${accountingTab === 'collections' ? 'active' : ''}`}
-            onClick={() => setAccountingTab('collections')}
-            style={{ padding: '12px 24px', border: 'none', background: accountingTab === 'collections' ? '#132a84' : 'transparent', color: accountingTab === 'collections' ? '#fff' : '#1e1b4b', cursor: 'pointer', borderRadius: '8px 8px 0 0' }}
-          >
-            Collections
-          </button>
-          <button
-            className={`tab-button ${accountingTab === 'expenses' ? 'active' : ''}`}
-            onClick={() => setAccountingTab('expenses')}
-            style={{ padding: '12px 24px', border: 'none', background: accountingTab === 'expenses' ? '#132a84' : 'transparent', color: accountingTab === 'expenses' ? '#fff' : '#1e1b4b', cursor: 'pointer', borderRadius: '8px 8px 0 0' }}
-          >
-            Expenses
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="loading">Loading accounting data...</div>
-        ) : (
-          <>
-            {accountingTab === 'tenant-payments' && (
-              <div className="panel">
-                <h3>All Tenant Payments</h3>
-                {accountingTenantPayments.length === 0 ? (
-                  <div className="no-data">No tenant payments found</div>
-                ) : (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Tenant</th>
-                        <th>Property</th>
-                        <th>Amount</th>
-                        <th>Method</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {accountingTenantPayments.map((payment, index) => (
-                        <tr key={payment.ID || payment.id || `tenant-payment-${index}`}>
-                          <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
-                          <td>{payment.Tenant || 'N/A'}</td>
-                          <td>{payment.Property || 'N/A'}</td>
-                          <td>{payment.Amount?.toFixed(2) || '0.00'} XOF</td>
-                          <td>{payment.Method || 'N/A'}</td>
-                          <td>
-                            <span className={`status-badge ${(payment.Status || 'pending').toLowerCase()}`}>
-                              {payment.Status || 'Pending'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-
-            {accountingTab === 'landlord-payments' && (
-              <div className="panel">
-                <h3>All Landlord Payments</h3>
-                {accountingLandlordPayments.length === 0 ? (
-                  <div className="no-data">No landlord payments found</div>
-                ) : (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Landlord</th>
-                        <th>Building</th>
-                        <th>Net Amount</th>
-                        <th>Commission</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {accountingLandlordPayments.map((payment, index) => (
-                        <tr key={payment.ID || payment.id || `landlord-payment-${index}`}>
-                          <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
-                          <td>{payment.Landlord || 'N/A'}</td>
-                          <td>{payment.Building || 'N/A'}</td>
-                          <td>{payment.NetAmount?.toFixed(2) || '0.00'} XOF</td>
-                          <td>{payment.Commission?.toFixed(2) || '0.00'} XOF</td>
-                          <td>
-                            <span className={`status-badge ${(payment.Status || 'pending').toLowerCase()}`}>
-                              {payment.Status || 'Pending'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-
-            {accountingTab === 'collections' && (
-              <div className="panel">
-                <h3>All Collections</h3>
-                {accountingCollections.length === 0 ? (
-                  <div className="no-data">No collections found</div>
-                ) : (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Building</th>
-                        <th>Landlord</th>
-                        <th>Amount</th>
-                        <th>Charge Type</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {accountingCollections.map((collection, index) => (
-                        <tr key={collection.ID || collection.id || `collection-${index}`}>
-                          <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
-                          <td>{collection.Building || 'N/A'}</td>
-                          <td>{collection.Landlord || 'N/A'}</td>
-                          <td>{collection.Amount?.toFixed(2) || '0.00'} XOF</td>
-                          <td>{collection.ChargeType || 'N/A'}</td>
-                          <td>
-                            <span className={`status-badge ${(collection.Status || 'pending').toLowerCase()}`}>
-                              {collection.Status || 'Pending'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-
-            {accountingTab === 'expenses' && (
-              <div className="panel">
-                <h3>All Expenses</h3>
-                {accountingExpenses.length === 0 ? (
-                  <div className="no-data">No expenses found</div>
-                ) : (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Scope</th>
-                        <th>Building</th>
-                        <th>Category</th>
-                        <th>Amount</th>
-                        <th>Notes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {accountingExpenses.map((expense, index) => (
-                        <tr key={expense.ID || expense.id || `expense-${index}`}>
-                          <td>{expense.Date ? new Date(expense.Date).toLocaleDateString() : 'N/A'}</td>
-                          <td>{expense.Scope || 'N/A'}</td>
-                          <td>{expense.Building || 'N/A'}</td>
-                          <td>{expense.Category || 'N/A'}</td>
-                          <td>{(expense.Amount || expense.amount || 0).toFixed(2)} XOF</td>
-                          <td>{expense.Notes || expense.notes || 'N/A'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    );
-  };
 
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
         return renderOverview();
-      case 'companies':
-        return renderCompanies();
-      case 'users':
-        return renderAllUsers();
-      case 'properties':
-        return renderAllProperties();
-      case 'financial':
-        return renderFinancial();
-      case 'accounting':
-        return renderAccounting();
-      case 'works':
-        return renderWorks();
+      case 'transactions':
+        return renderTransactions();
+      case 'clients':
+        return renderClients();
+      case 'ads':
+        return renderAds();
+      case 'chat':
+        return renderChat();
       case 'settings':
         return (
           <div className="embedded-settings">
@@ -1327,7 +981,7 @@ const SuperAdminDashboard = () => {
   return (
     <>
       <RoleLayout
-        brand={{ name: 'SAAF IMMO', caption: 'Supervision', logo: 'SAAF', logoImage: `${process.env.PUBLIC_URL}/download.jpeg` }}
+        brand={{ name: 'SAAF IMMO', caption: 'Super Admin', logo: 'SAAF', logoImage: `${process.env.PUBLIC_URL}/download.jpeg` }}
         menu={layoutMenu}
         activeId={activeTab}
         onActiveChange={setActiveTab}
@@ -1339,7 +993,6 @@ const SuperAdminDashboard = () => {
           </div>
         )}
       </RoleLayout>
-
       <div className="notifications-container">
         {notifications.map(notification => (
           <div key={`notification-${notification.id}`} className={`notification notification-${notification.type}`}>
@@ -1348,716 +1001,6 @@ const SuperAdminDashboard = () => {
           </div>
         ))}
       </div>
-
-      {showDeactivationModal && (
-        <div className="modal-overlay" onClick={() => setShowDeactivationModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Deactivate Company</h3>
-              <button className="modal-close" onClick={() => setShowDeactivationModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <p>You are about to deactivate <strong>{selectedCompany?.Name || selectedCompany?.name}</strong>.</p>
-              <p>Please provide a reason for deactivation:</p>
-              <textarea
-                value={deactivationReason}
-                onChange={(e) => setDeactivationReason(e.target.value)}
-                placeholder="Enter reason for deactivation..."
-                rows="4"
-                className="deactivation-reason"
-              />
-            </div>
-            <div className="modal-footer">
-              <button className="action-button secondary" onClick={() => setShowDeactivationModal(false)}>
-                Cancel
-              </button>
-              <button className="action-button primary" onClick={confirmDeactivation}>
-                Deactivate Company
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Company Modal */}
-      {showCompanyModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
-            setShowCompanyModal(false);
-            setEditingCompany(null);
-          }}
-        >
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingCompany ? 'Edit Company' : 'Add New Company'}</h3>
-              <button
-                className="modal-close"
-                onClick={() => {
-                  setShowCompanyModal(false);
-                  setEditingCompany(null);
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <form onSubmit={handleCompanySubmit}>
-                <div className="form-group">
-                  <label htmlFor="companyName">Company Name</label>
-                  <input
-                    type="text"
-                    name="companyName"
-                    required
-                    placeholder="Enter company name"
-                    defaultValue={editingCompany?.Name || editingCompany?.name || ''}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="description">Description</label>
-                  <textarea
-                    name="description"
-                    rows="3"
-                    placeholder="Brief description of the company"
-                    defaultValue={editingCompany?.Description || editingCompany?.description || ''}
-                  ></textarea>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="email">Contact Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      required
-                      placeholder="contact@company.com"
-                      defaultValue={editingCompany?.Email || editingCompany?.email || ''}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="phone">Contact Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      required
-                      placeholder="+1-555-0000"
-                      defaultValue={editingCompany?.Phone || editingCompany?.phone || ''}
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="address">Address</label>
-                  <input
-                    type="text"
-                    name="address"
-                    required
-                    placeholder="Company address"
-                    defaultValue={editingCompany?.Address || editingCompany?.address || ''}
-                  />
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="action-button secondary"
-                    onClick={() => {
-                      setShowCompanyModal(false);
-                      setEditingCompany(null);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="action-button primary">
-                    {editingCompany ? 'Save Changes' : 'Add Company'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
- 
-      {/* Add/Edit User Modal */}
-      {showUserModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
-            setShowUserModal(false);
-            setEditingUser(null);
-          }}
-        >
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingUser ? 'Edit User' : 'Add New User'}</h3>
-              <button
-                className="modal-close"
-                onClick={() => {
-                  setShowUserModal(false);
-                  setEditingUser(null);
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <form onSubmit={handleUserSubmit}>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="userName">Full Name</label>
-                    <input
-                      type="text"
-                      name="userName"
-                      required
-                      placeholder="Enter full name"
-                      defaultValue={editingUser?.Name || editingUser?.name || ''}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="userEmail">Email Address</label>
-                    <input
-                      type="email"
-                      name="userEmail"
-                      required
-                      placeholder="user@example.com"
-                      defaultValue={editingUser?.Email || editingUser?.email || ''}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="userCompany">Company</label>
-                    <select
-                      name="userCompany"
-                      required
-                      defaultValue={editingUser?.Company || editingUser?.company || ''}
-                    >
-                      <option value="">Select Company</option>
-                      {companies.map(company => (
-                        <option key={`new-user-company-${company.ID || company.id || company.name}`} value={company.ID || company.id}>
-                          {company.Name || company.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="userRole">Role</label>
-                    <select
-                      name="userRole"
-                      required
-                      defaultValue={editingUser?.Role || editingUser?.role || ''}
-                    >
-                      <option value="">Select Role</option>
-                      <option value="tenant">Tenant</option>
-                      <option value="commercial">Commercial Dashboard</option>
-                      <option value="admin">Administrative Agent</option>
-                      <option value="accounting">Accounting</option>
-                      <option value="salesmanager">Sales Manager</option>
-                      <option value="technician">Technical Manager</option>
-                      <option value="landlord">Landlord</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="userPhone">Phone Number</label>
-                    <input
-                      type="tel"
-                      name="userPhone"
-                      placeholder="+1-555-0000"
-                      defaultValue={editingUser?.Phone || editingUser?.phone || ''}
-                    />
-                  </div>
-                  {!editingUser && (
-                    <div className="form-group">
-                      <label htmlFor="userPassword">Initial Password</label>
-                      <input type="password" name="userPassword" required placeholder="Set initial password" />
-                    </div>
-                  )}
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="action-button secondary"
-                    onClick={() => {
-                      setShowUserModal(false);
-                      setEditingUser(null);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="action-button primary">
-                    {editingUser ? 'Save Changes' : 'Add User'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Property Modal */}
-      {showPropertyModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
-            setShowPropertyModal(false);
-            setEditingProperty(null);
-          }}
-        >
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingProperty ? 'Edit Property' : 'Add New Property'}</h3>
-              <button
-                className="modal-close"
-                onClick={() => {
-                  setShowPropertyModal(false);
-                  setEditingProperty(null);
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <form onSubmit={handlePropertySubmit}>
-                <div className="form-group">
-                  <label htmlFor="propertyAddress">Property Address</label>
-                  <input
-                    type="text"
-                    name="propertyAddress"
-                    required
-                    placeholder="Enter full address"
-                    defaultValue={editingProperty?.Address || editingProperty?.address || ''}
-                  />
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="propertyCompany">Company</label>
-                    <select
-                      name="propertyCompany"
-                      required
-                      defaultValue={
-                        editingProperty
-                          ? resolveCompanyId(
-                              editingProperty.companyId ||
-                                editingProperty.CompanyID ||
-                                editingProperty.Company ||
-                                editingProperty.company
-                            )
-                          : ''
-                      }
-                    >
-                      <option value="">Select Company</option>
-                      {companies.map(company => (
-                        <option key={`new-property-company-${company.ID || company.id || company.name}`} value={company.ID || company.id}>
-                          {company.Name || company.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="propertyType">Property Type</label>
-                    <select
-                      name="propertyType"
-                      required
-                      defaultValue={editingProperty?.Type || editingProperty?.type || ''}
-                    >
-                      <option value="">Select Type</option>
-                      <option value="Apartment">Apartment</option>
-                      <option value="House">House</option>
-                      <option value="Commercial">Commercial Unit</option>
-                      <option value="Industrial">Industrial</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="propertyStatus">Status</label>
-                    <select
-                      name="propertyStatus"
-                      defaultValue={editingProperty?.Status || editingProperty?.status || 'Vacant'}
-                    >
-                      <option value="Vacant">Vacant</option>
-                      <option value="Occupied">Occupied</option>
-                      <option value="Maintenance">Maintenance</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="propertyRent">Monthly Rent (XOF)</label>
-                    <input
-                      type="number"
-                      name="propertyRent"
-                      required
-                      min="0"
-                      step="0.01"
-                      placeholder="1200"
-                      defaultValue={editingProperty?.Rent || editingProperty?.rent || ''}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="bedrooms">Bedrooms</label>
-                    <input
-                      type="number"
-                      name="bedrooms"
-                      required
-                      min="0"
-                      placeholder="3"
-                      defaultValue={editingProperty?.Bedrooms || editingProperty?.bedrooms || 0}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="bathrooms">Bathrooms</label>
-                    <input
-                      type="number"
-                      name="bathrooms"
-                      required
-                      min="0"
-                      placeholder="2"
-                      defaultValue={editingProperty?.Bathrooms || editingProperty?.bathrooms || 0}
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="action-button secondary"
-                    onClick={() => {
-                      setShowPropertyModal(false);
-                      setEditingProperty(null);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="action-button primary">
-                    {editingProperty ? 'Save Changes' : 'Add Property'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Database Management Modal */}
-      {showDatabaseModal && (
-        <div className="modal-overlay" onClick={() => setShowDatabaseModal(false)}>
-          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3><Database size={20} /> Database Management</h3>
-              <button className="modal-close" onClick={() => setShowDatabaseModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="system-info-section">
-                <h4>Database Status</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <span className="info-label">Status:</span>
-                    <span className="info-value status active">Healthy</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Size:</span>
-                    <span className="info-value">245 GB / 1 TB</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Last Backup:</span>
-                    <span className="info-value">2 hours ago</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Connections:</span>
-                    <span className="info-value">124 active</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="system-actions">
-                <button className="action-button primary" onClick={() => addNotification('Creating database backup...', 'info')}>
-                  <Download size={18} />
-                  Create Backup
-                </button>
-                <button className="action-button secondary" onClick={() => addNotification('Restore feature opened', 'info')}>
-                  <Upload size={18} />
-                  Restore from Backup
-                </button>
-                <button className="action-button secondary" onClick={() => addNotification('Optimizing database...', 'info')}>
-                  <Settings size={18} />
-                  Optimize Database
-                </button>
-              </div>
-              
-              <div className="backup-history">
-                <h4>Recent Backups</h4>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Size</th>
-                      <th>Type</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>2024-11-20 14:30</td>
-                      <td>242 GB</td>
-                      <td>Automatic</td>
-                      <td>
-                        <button className="action-button small">Restore</button>
-                        <button className="action-button small">Download</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>2024-11-19 14:30</td>
-                      <td>240 GB</td>
-                      <td>Automatic</td>
-                      <td>
-                        <button className="action-button small">Restore</button>
-                        <button className="action-button small">Download</button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Security Settings Modal */}
-      {showSecurityModal && (
-        <div className="modal-overlay" onClick={() => setShowSecurityModal(false)}>
-          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3><Shield size={20} /> Security Settings</h3>
-              <button className="modal-close" onClick={() => setShowSecurityModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="security-section">
-                <h4><Lock size={18} /> Authentication Settings</h4>
-                <div className="setting-item">
-                  <label className="setting-label">
-                    <input type="checkbox" defaultChecked />
-                    <span>Require two-factor authentication for all users</span>
-                  </label>
-                </div>
-                <div className="setting-item">
-                  <label className="setting-label">
-                    <input type="checkbox" defaultChecked />
-                    <span>Enforce strong password policy</span>
-                  </label>
-                </div>
-                <div className="setting-item">
-                  <label className="setting-label">
-                    <input type="checkbox" />
-                    <span>Allow social login (Google, Facebook)</span>
-                  </label>
-                </div>
-                <div className="form-group">
-                  <label>Session Timeout (minutes)</label>
-                  <input type="number" defaultValue="30" min="5" max="1440" />
-                </div>
-              </div>
-              
-              <div className="security-section">
-                <h4><Activity size={18} /> Access Control</h4>
-                <div className="setting-item">
-                  <label className="setting-label">
-                    <input type="checkbox" defaultChecked />
-                    <span>Log all authentication attempts</span>
-                  </label>
-                </div>
-                <div className="setting-item">
-                  <label className="setting-label">
-                    <input type="checkbox" defaultChecked />
-                    <span>Enable IP whitelist</span>
-                  </label>
-                </div>
-                <div className="form-group">
-                  <label>Max Login Attempts</label>
-                  <input type="number" defaultValue="5" min="3" max="10" />
-                </div>
-              </div>
-              
-              <div className="modal-footer">
-                <button className="action-button secondary" onClick={() => setShowSecurityModal(false)}>
-                  Cancel
-                </button>
-                <button className="action-button primary" onClick={() => {
-                  addNotification('Security settings saved successfully!', 'success');
-                  setShowSecurityModal(false);
-                }}>
-                  <Save size={18} />
-                  Save Settings
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* System Configuration Modal */}
-      {showSystemConfigModal && (
-        <div className="modal-overlay" onClick={() => setShowSystemConfigModal(false)}>
-          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3><Settings size={20} /> System Configuration</h3>
-              <button className="modal-close" onClick={() => setShowSystemConfigModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="config-section">
-                <h4>General Settings</h4>
-                <div className="form-group">
-                  <label>System Name</label>
-                  <input type="text" defaultValue="Real Estate Management System" />
-                </div>
-                <div className="form-group">
-                  <label>Default Currency</label>
-                  <select defaultValue="XOF">
-                    <option value="XOF">XOF</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Date Format</label>
-                  <select defaultValue="DD/MM/YYYY">
-                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Default Language</label>
-                  <select defaultValue="en">
-                    <option value="en">English</option>
-                    <option value="fr">French</option>
-                    <option value="es">Spanish</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="config-section">
-                <h4>Email Configuration</h4>
-                <div className="form-group">
-                  <label>SMTP Server</label>
-                  <input type="text" placeholder="smtp.example.com" />
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Port</label>
-                    <input type="number" defaultValue="587" />
-                  </div>
-                  <div className="form-group">
-                    <label>Encryption</label>
-                    <select defaultValue="TLS">
-                      <option value="TLS">TLS</option>
-                      <option value="SSL">SSL</option>
-                      <option value="NONE">None</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="config-section">
-                <h4>Maintenance Mode</h4>
-                <div className="setting-item">
-                  <label className="setting-label">
-                    <input type="checkbox" />
-                    <span>Enable Maintenance Mode (System will be temporarily unavailable)</span>
-                  </label>
-                </div>
-              </div>
-              
-              <div className="modal-footer">
-                <button className="action-button secondary" onClick={() => setShowSystemConfigModal(false)}>
-                  Cancel
-                </button>
-                <button className="action-button primary" onClick={() => {
-                  addNotification('System configuration saved successfully!', 'success');
-                  setShowSystemConfigModal(false);
-                }}>
-                  <Save size={18} />
-                  Save Configuration
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Analytics Modal */}
-      {showAnalyticsModal && (
-        <div className="modal-overlay" onClick={() => setShowAnalyticsModal(false)}>
-          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3><BarChart3 size={20} /> System Analytics</h3>
-              <button className="modal-close" onClick={() => setShowAnalyticsModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="analytics-stats">
-                <div className="stat-card">
-                  <h4>Total Page Views</h4>
-                  <span className="stat-value">1,247,890</span>
-                  <p>+12.5% from last month</p>
-                </div>
-                <div className="stat-card">
-                  <h4>Active Users Today</h4>
-                  <span className="stat-value">842</span>
-                  <p>Peak: 1,024 users</p>
-                </div>
-                <div className="stat-card">
-                  <h4>Avg Session Duration</h4>
-                  <span className="stat-value">12m 34s</span>
-                  <p>+2.3% improvement</p>
-                </div>
-                <div className="stat-card">
-                  <h4>System Uptime</h4>
-                  <span className="stat-value">99.8%</span>
-                  <p>Last 30 days</p>
-                </div>
-              </div>
-              
-              <div className="analytics-section">
-                <h4>Top Activities</h4>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Activity</th>
-                      <th>Count</th>
-                      <th>Trend</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Property Views</td>
-                      <td>45,678</td>
-                      <td><span className="trend up">↑ 15%</span></td>
-                    </tr>
-                    <tr>
-                      <td>User Logins</td>
-                      <td>12,456</td>
-                      <td><span className="trend up">↑ 8%</span></td>
-                    </tr>
-                    <tr>
-                      <td>Payment Transactions</td>
-                      <td>8,234</td>
-                      <td><span className="trend up">↑ 22%</span></td>
-                    </tr>
-                    <tr>
-                      <td>Work Orders Created</td>
-                      <td>1,567</td>
-                      <td><span className="trend down">↓ 5%</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              
-              <div className="modal-footer">
-                <button className="action-button primary" onClick={() => addNotification('Exporting analytics report...', 'info')}>
-                  <Download size={18} />
-                  Export Report
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

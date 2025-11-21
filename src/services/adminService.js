@@ -1,131 +1,166 @@
-import { API_CONFIG } from '../config/api';
-
-const ADMIN_BASE_URL = `${API_CONFIG.BASE_URL}/api/admin`;
+import { buildApiUrl, apiRequest } from '../config/api';
 
 export const adminService = {
+  // Overview
+  getOverview: async () => {
+    const url = buildApiUrl('/api/admin/overview');
+    return await apiRequest(url);
+  },
+
   // Inbox
   getInbox: async () => {
-    const response = await fetch(`${ADMIN_BASE_URL}/inbox`);
-    if (!response.ok) throw new Error('Failed to fetch inbox');
-    return response.json();
+    const url = buildApiUrl('/api/admin/inbox');
+    return await apiRequest(url);
   },
 
   forwardInbox: async (id) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/inbox/${id}/forward`, {
+    const url = buildApiUrl(`/api/admin/inbox/${id}/forward`);
+    return await apiRequest(url, {
       method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to forward inbox item');
-    return response.json();
   },
 
   // Documents
-  getDocuments: async () => {
-    const response = await fetch(`${ADMIN_BASE_URL}/documents`);
-    if (!response.ok) throw new Error('Failed to fetch documents');
-    return response.json();
+  getDocuments: async (filters = {}) => {
+    let url = buildApiUrl('/api/admin/documents');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.tenant) queryParams.append('tenant', filters.tenant);
+    if (filters.type) queryParams.append('type', filters.type);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   approveDocument: async (id) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/documents/${id}/approve`, {
+    const url = buildApiUrl(`/api/admin/documents/${id}/approve`);
+    return await apiRequest(url, {
       method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to approve document');
-    return response.json();
   },
 
-  rejectDocument: async (id) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/documents/${id}/reject`, {
+  rejectDocument: async (id, reason) => {
+    const url = buildApiUrl(`/api/admin/documents/${id}/reject`);
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  followUpDocument: async (id) => {
+    const url = buildApiUrl(`/api/admin/documents/${id}/follow-up`);
+    return await apiRequest(url, {
       method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to reject document');
-    return response.json();
   },
 
   sendToUtility: async (id) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/documents/${id}/utility`, {
+    const url = buildApiUrl(`/api/admin/documents/${id}/utility`);
+    return await apiRequest(url, {
       method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to send to utility');
-    return response.json();
   },
 
   // Utilities
-  getUtilities: async () => {
-    const response = await fetch(`${ADMIN_BASE_URL}/utilities`);
-    if (!response.ok) throw new Error('Failed to fetch utilities');
-    return response.json();
+  getUtilities: async (filters = {}) => {
+    let url = buildApiUrl('/api/admin/utilities');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.provider) queryParams.append('provider', filters.provider);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   transferUtility: async (id) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/utilities/${id}/transfer`, {
+    const url = buildApiUrl(`/api/admin/utilities/${id}/transfer`);
+    return await apiRequest(url, {
       method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to transfer utility');
-    return response.json();
   },
 
   // Debts
   getDebts: async () => {
-    const response = await fetch(`${ADMIN_BASE_URL}/debts`);
-    if (!response.ok) throw new Error('Failed to fetch debts');
-    return response.json();
+    const url = buildApiUrl('/api/admin/debts');
+    return await apiRequest(url);
   },
 
   remindDebt: async (id) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/debts/${id}/remind`, {
+    const url = buildApiUrl(`/api/admin/debts/${id}/remind`);
+    return await apiRequest(url, {
       method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to remind debt');
-    return response.json();
   },
 
   markDebtPaid: async (id) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/debts/${id}/paid`, {
+    const url = buildApiUrl(`/api/admin/debts/${id}/paid`);
+    return await apiRequest(url, {
       method: 'POST',
     });
-    if (!response.ok) throw new Error('Failed to mark debt as paid');
-    return response.json();
+  },
+
+  // Payment Follow-ups
+  getPendingPaymentFollowUps: async () => {
+    const url = buildApiUrl('/api/admin/payments/follow-ups');
+    return await apiRequest(url);
   },
 
   // Reminders
   getReminders: async () => {
-    const response = await fetch(`${ADMIN_BASE_URL}/reminders`);
-    if (!response.ok) throw new Error('Failed to fetch reminders');
-    return response.json();
+    const url = buildApiUrl('/api/admin/reminders');
+    return await apiRequest(url);
   },
 
   createReminder: async (reminderData) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/reminders`, {
+    const url = buildApiUrl('/api/admin/reminders');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(reminderData)
+      body: JSON.stringify(reminderData),
     });
-    if (!response.ok) throw new Error('Failed to create reminder');
-    return response.json();
   },
 
   deleteReminder: async (id) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/reminders/${id}`, {
+    const url = buildApiUrl(`/api/admin/reminders/${id}`);
+    return await apiRequest(url, {
       method: 'DELETE',
     });
-    if (!response.ok) throw new Error('Failed to delete reminder');
-    return response.json();
   },
 
   // Leases
-  getLeases: async () => {
-    const response = await fetch(`${ADMIN_BASE_URL}/leases`);
-    if (!response.ok) throw new Error('Failed to fetch leases');
-    return response.json();
+  getLeases: async (filters = {}) => {
+    let url = buildApiUrl('/api/admin/leases');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.tenant) queryParams.append('tenant', filters.tenant);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   createLease: async (leaseData) => {
-    const response = await fetch(`${ADMIN_BASE_URL}/leases`, {
+    const url = buildApiUrl('/api/admin/leases');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(leaseData)
+      body: JSON.stringify(leaseData),
     });
-    if (!response.ok) throw new Error('Failed to create lease');
-    return response.json();
+  },
+
+  generateLeaseDocument: async (id) => {
+    const url = buildApiUrl(`/api/admin/leases/${id}/generate`);
+    return await apiRequest(url, {
+      method: 'POST',
+    });
   },
 };

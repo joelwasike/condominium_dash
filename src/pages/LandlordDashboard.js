@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Home,
   FileText,
@@ -23,9 +23,11 @@ import ReportSubmission from '../components/ReportSubmission';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
 import './LandlordDashboard.css';
+import './SalesManagerDashboard.css';
 import '../components/RoleLayout.css';
-import '../pages/TechnicianDashboard.css';
 import { landlordService } from '../services/landlordService';
+import { messagingService } from '../services/messagingService';
+import { MessageCircle } from 'lucide-react';
 
 const LandlordDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -43,10 +45,31 @@ const LandlordDashboard = () => {
   const [overviewData, setOverviewData] = useState(null);
   const [properties, setProperties] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [rents, setRents] = useState(null);
+  const [netPayments, setNetPayments] = useState(null);
+  const [paymentHistory, setPaymentHistory] = useState(null);
+  const [expenses, setExpenses] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [claims, setClaims] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [businessTracking, setBusinessTracking] = useState(null);
+  
+  // Messaging states
+  const [chatUsers, setChatUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const isLoadingUsersRef = useRef(false);
+  const messagesEndRef = useRef(null);
+  
+  // Filter states
+  const [netPaymentStatusFilter, setNetPaymentStatusFilter] = useState('');
+  const [netPaymentStartDate, setNetPaymentStartDate] = useState('');
+  const [netPaymentEndDate, setNetPaymentEndDate] = useState('');
+  const [expensePropertyFilter, setExpensePropertyFilter] = useState('');
+  const [expenseStartDate, setExpenseStartDate] = useState('');
+  const [expenseEndDate, setExpenseEndDate] = useState('');
+  const [paymentSubTab, setPaymentSubTab] = useState('all');
 
   const handleKycUpload = (files, userRole) => {
     console.log('KYC files uploaded:', files, 'for role:', userRole);
@@ -70,23 +93,31 @@ const LandlordDashboard = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [overview, propertiesData, paymentsData, workOrdersData, claimsData, inventoryData, trackingData] = await Promise.all([
+      const [overview, propertiesData, paymentsData, rentsData, workOrdersData, claimsData, inventoryData, trackingData, expensesData] = await Promise.all([
         landlordService.getOverview(),
         landlordService.getProperties(),
         landlordService.getPayments(),
+        landlordService.getRents().catch(() => null),
         landlordService.getWorkOrders(),
         landlordService.getClaims(),
         landlordService.getInventory(),
-        landlordService.getBusinessTracking()
+        landlordService.getBusinessTracking(),
+        landlordService.getExpenses({
+          property: expensePropertyFilter || undefined,
+          startDate: expenseStartDate || undefined,
+          endDate: expenseEndDate || undefined,
+        }).catch(() => [])
       ]);
       
       setOverviewData(overview);
-      setProperties(propertiesData);
-      setPayments(paymentsData);
-      setWorkOrders(workOrdersData);
-      setClaims(claimsData);
-      setInventory(inventoryData);
+      setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+      setRents(rentsData);
+      setWorkOrders(Array.isArray(workOrdersData) ? workOrdersData : []);
+      setClaims(Array.isArray(claimsData) ? claimsData : []);
+      setInventory(Array.isArray(inventoryData) ? inventoryData : []);
       setBusinessTracking(trackingData);
+      setExpenses(Array.isArray(expensesData) ? expensesData : []);
     } catch (error) {
       console.error('Error loading landlord data:', error);
       addNotification('Failed to load dashboard data', 'error');
@@ -94,11 +125,293 @@ const LandlordDashboard = () => {
       setLoading(false);
     }
   };
+  
+  // Load net payments
+  const loadNetPayments = async () => {
+    try {
+      const data = await landlordService.getNetPayments({
+        status: netPaymentStatusFilter || undefined,
+        startDate: netPaymentStartDate || undefined,
+        endDate: netPaymentEndDate || undefined,
+      });
+      setNetPayments(data);
+    } catch (error) {
+      console.error('Error loading net payments:', error);
+      addNotification('Failed to load net payments', 'error');
+    }
+  };
+  
+  // Load payment history
+  const loadPaymentHistory = async () => {
+    try {
+      const data = await landlordService.getPaymentHistory({
+        startDate: netPaymentStartDate || undefined,
+        endDate: netPaymentEndDate || undefined,
+      });
+      setPaymentHistory(data);
+    } catch (error) {
+      console.error('Error loading payment history:', error);
+      addNotification('Failed to load payment history', 'error');
+    }
+  };
+  
+  // Load expenses
+  const loadExpenses = async () => {
+    try {
+      const data = await landlordService.getExpenses({
+        property: expensePropertyFilter || undefined,
+        startDate: expenseStartDate || undefined,
+        endDate: expenseEndDate || undefined,
+      });
+      setExpenses(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading expenses:', error);
+      addNotification('Failed to load expenses', 'error');
+    }
+  };
 
   // Load data on component mount
   useEffect(() => {
     loadData();
   }, []);
+  
+  // Load net payments when filters change
+  useEffect(() => {
+    if (activeTab === 'payments') {
+      loadNetPayments();
+      loadPaymentHistory();
+    }
+  }, [netPaymentStatusFilter, netPaymentStartDate, netPaymentEndDate, activeTab]);
+  
+  // Load expenses when filters change
+  useEffect(() => {
+    if (activeTab === 'expenses') {
+      loadExpenses();
+    }
+  }, [expensePropertyFilter, expenseStartDate, expenseEndDate, activeTab]);
+  
+  // Load chat for a specific user
+  const loadChatForUser = useCallback(async (userId) => {
+    if (!userId) return;
+    
+    try {
+      setSelectedUserId(userId);
+      const messages = await messagingService.getConversation(userId);
+      
+      // Normalize messages array
+      const normalizedMessages = Array.isArray(messages) ? messages : [];
+      setChatMessages(normalizedMessages);
+      
+      // Mark messages as read
+      try {
+        await messagingService.markMessagesAsRead(userId);
+      } catch (readError) {
+        console.error('Error marking messages as read:', readError);
+      }
+    } catch (error) {
+      console.error('Error loading chat:', error);
+      addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
+      setChatMessages([]);
+    }
+  }, [addNotification]);
+
+  // Load users for messaging (from same company)
+  const loadUsers = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (isLoadingUsersRef.current) {
+      console.log('Users already loading, skipping...');
+      return;
+    }
+
+    try {
+      isLoadingUsersRef.current = true;
+      console.log('Loading users for messaging...');
+      // Use the new getUsers endpoint
+      const users = await messagingService.getUsers();
+      console.log('Users API response:', users);
+      
+      // Handle different response formats
+      let usersArray = [];
+      if (Array.isArray(users)) {
+        usersArray = users;
+      } else if (users && Array.isArray(users.users)) {
+        usersArray = users.users;
+      } else if (users && typeof users === 'object') {
+        // Try to find array in response
+        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+      }
+      
+      console.log('Processed users array:', usersArray);
+      
+      // Get current user ID to exclude from list
+      const storedUser = localStorage.getItem('user');
+      let currentUserId = null;
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          currentUserId = user.id || user.ID;
+          console.log('Current user ID:', currentUserId);
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+      
+      // Map users to chat format and exclude current user
+      const chatUsersList = usersArray
+        .filter(user => {
+          const userId = user.id || user.ID;
+          // Convert both to strings for comparison to handle type mismatches
+          const userIdStr = userId ? String(userId) : null;
+          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+          if (!shouldInclude && userIdStr) {
+            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+          }
+          return shouldInclude;
+        })
+        .map(user => {
+          const userId = user.id || user.ID;
+          return {
+            userId: userId,
+            name: user.name || user.Name || 'User',
+            email: user.email || user.Email || '',
+            role: user.role || user.Role || '',
+            company: user.company || user.Company || '',
+            status: user.status || user.Status || 'Active',
+            unreadCount: 0 // Will be updated from conversations if needed
+          };
+        })
+        .sort((a, b) => {
+          const nameA = (a.name || '').toLowerCase();
+          const nameB = (b.name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+      
+      console.log('Final chat users list:', chatUsersList);
+      
+      // Get conversations to update unread counts
+      try {
+        const conversations = await messagingService.getConversations();
+        if (Array.isArray(conversations)) {
+          conversations.forEach(conv => {
+            const chatUser = chatUsersList.find(u => {
+              const uId = String(u.userId);
+              const convId = String(conv.userId);
+              return uId === convId;
+            });
+            if (chatUser && conv.unreadCount) {
+              chatUser.unreadCount = conv.unreadCount;
+            }
+          });
+        }
+      } catch (convError) {
+        console.error('Error loading conversations for unread counts:', convError);
+      }
+      
+      setChatUsers(chatUsersList);
+      
+      // Auto-select first user if available and no user is selected
+      // Use functional update to avoid dependency on selectedUserId
+      setSelectedUserId(prevSelected => {
+        if (chatUsersList.length > 0 && !prevSelected) {
+          const firstUserId = chatUsersList[0].userId;
+          // Load chat for first user asynchronously
+          setTimeout(() => {
+            loadChatForUser(firstUserId);
+          }, 0);
+          return firstUserId;
+        }
+        return prevSelected;
+      });
+      
+      if (chatUsersList.length === 0) {
+        console.warn('No users found. This could mean:');
+        console.warn('1. No other users in the same company');
+        console.warn('2. API endpoint returned empty array');
+        console.warn('3. All users were filtered out');
+        addNotification('No users available for messaging', 'info');
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      console.error('Error details:', error.message, error.stack);
+      addNotification(`Failed to load users: ${error.message || 'Unknown error'}`, 'error');
+      setChatUsers([]);
+    } finally {
+      isLoadingUsersRef.current = false;
+    }
+  }, [loadChatForUser, addNotification]);
+
+  // Send message
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedUserId) return;
+    
+    const content = chatInput.trim();
+    const tempMessageId = `temp-${Date.now()}`;
+    
+    // Optimistic update
+    const storedUser = localStorage.getItem('user');
+    let currentUserId = null;
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        currentUserId = user.id || user.ID;
+      } catch (e) {
+        console.error('Error parsing user:', e);
+      }
+    }
+    
+    const tempMessage = {
+      id: tempMessageId,
+      fromUserId: currentUserId,
+      toUserId: selectedUserId,
+      content: content,
+      read: false,
+      createdAt: new Date().toISOString(),
+      type: 'message',
+    };
+    
+    setChatMessages(prev => [...prev, tempMessage]);
+    setChatInput('');
+    
+    // Scroll to bottom
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    
+    try {
+      const message = await messagingService.sendMessage({
+        toUserId: selectedUserId,
+        content: content,
+      });
+      
+      // Replace temp message with actual message
+      setChatMessages(prev => prev.map(msg => 
+        msg.id === tempMessageId ? message : msg
+      ));
+      
+      // Reload chat to get updated conversation
+      await loadChatForUser(selectedUserId);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      addNotification(error.message || 'Failed to send message', 'error');
+      // Remove optimistic message on error
+      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      setChatInput(content); // Restore input on error
+    }
+  };
+  
+  // Load users when chat tab is active (only once per tab switch)
+  useEffect(() => {
+    if (activeTab === 'chat' && !isLoadingUsersRef.current) {
+      loadUsers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]); // Only depend on activeTab, not loadUsers
+  
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   // Action handlers
   const handleAddProperty = async (propertyData) => {
@@ -319,479 +632,858 @@ const LandlordDashboard = () => {
       { id: 'overview', label: 'Overview', icon: Home },
       { id: 'properties', label: 'Property & Asset', icon: Home },
       { id: 'payments', label: 'Payments & Cash Flow', icon: DollarSign },
+      { id: 'rents', label: 'Rents Tracking', icon: DollarSign },
+      { id: 'expenses', label: 'Expenses', icon: FileText },
       { id: 'works', label: 'Works & Claims', icon: Wrench },
       { id: 'documents', label: 'Documents', icon: FileText },
       { id: 'inventory', label: 'Inventory', icon: Package },
       { id: 'tracking', label: 'Business Tracking', icon: BarChart3 },
+      { id: 'chat', label: 'Messaging', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
     []
   );
 
   const renderOverview = () => (
-    <div className="overview-section">
-      <div className="section-header">
-        <div>
-          <h2>Landlord Dashboard Overview</h2>
-      <p>Track your real estate business performance and key metrics</p>
+    <div className="sa-overview-page">
+      <div className="sa-overview-metrics" style={{ width: '100%' }}>
+        <div className="sa-metric-card sa-metric-primary">
+          <p className="sa-metric-label">Total Properties</p>
+          <p className="sa-metric-value">{overviewData?.totalProperties || 0}</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Total Rent Collected</p>
+          <p className="sa-metric-value">{overviewData?.totalRent?.toLocaleString() || 0} XOF</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Cash Flow</p>
+          <p className="sa-metric-value">{overviewData?.netCashFlow?.toLocaleString() || 0} XOF</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Payment Rate</p>
+          <p className="sa-metric-number">{overviewData?.paymentRate || 0}%</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Active Tenants</p>
+          <p className="sa-metric-number">{overviewData?.activeTenants || 0}</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Pending Claims</p>
+          <p className="sa-metric-number">{overviewData?.pendingClaims || 0}</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Works in Progress</p>
+          <p className="sa-metric-number">{overviewData?.worksInProgress || 0}</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Occupancy Rate</p>
+          <p className="sa-metric-number">{overviewData?.occupancyRate || 0}%</p>
         </div>
       </div>
-      
-      {loading ? (
-        <div className="loading">Loading overview data...</div>
-      ) : (
-        <div className="dashboard-overview">
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Total Properties</span>
-          </div>
-            <div className="card-value">
-              <span>{overviewData?.totalProperties || 0}</span>
-              <small>Active assets under management</small>
-          </div>
-          </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Total Rent Collected</span>
-          </div>
-            <div className="card-value">
-              <span>{overviewData?.totalRent?.toLocaleString() || 0} XOF</span>
-              <small>This month</small>
-          </div>
-          </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Cash Flow</span>
-          </div>
-            <div className="card-value">
-              <span>{overviewData?.netCashFlow?.toLocaleString() || 0} XOF</span>
-              <small>Net payout after commission</small>
-          </div>
-        </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Payment Rate</span>
-              </div>
-            <div className="card-value">
-              <span>{overviewData?.paymentRate || 0}%</span>
-              <small>On time vs late</small>
-            </div>
-          </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Active Tenants</span>
-            </div>
-            <div className="card-value">
-              <span>{overviewData?.activeTenants || 0}</span>
-              <small>Current occupants</small>
-            </div>
-          </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Pending Claims</span>
-            </div>
-            <div className="card-value">
-              <span>{overviewData?.pendingClaims || 0}</span>
-              <small>Awaiting resolution</small>
-            </div>
-          </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Works in Progress</span>
-            </div>
-            <div className="card-value">
-              <span>{overviewData?.worksInProgress || 0}</span>
-              <small>Ongoing interventions</small>
-            </div>
-          </div>
-          <div className="overview-card">
-            <div className="card-label">
-              <span>Occupancy Rate</span>
-            </div>
-            <div className="card-value">
-              <span>{overviewData?.occupancyRate || 0}%</span>
-              <small>Properties occupied</small>
-            </div>
-          </div>
-        </div>
-      )}
-          </div>
-        );
+    </div>
+  );
       
   const renderProperties = () => (
-    <div className="properties-section">
-      <div className="section-header">
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
         <div>
           <h2>Property Management</h2>
-        <p>Manage your rental properties and listings</p>
+          <p>{properties.length} properties found</p>
+        </div>
+        <div className="sa-clients-header-right">
+          <button className="sa-primary-cta" onClick={() => setShowPropertyModal(true)} disabled={loading}>
+            <Plus size={16} />
+            Add New Property
+          </button>
+        </div>
       </div>
-        <button className="btn-primary" onClick={() => setShowPropertyModal(true)} disabled={loading}>
-          <Plus size={18} />
-          Add New Property
-        </button>
-      </div>
-              
-      {loading ? (
-        <div className="loading">Loading properties...</div>
-      ) : properties.length === 0 ? (
-        <div className="no-data">No properties found</div>
-      ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
-            <thead>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Property Address</th>
+              <th>Type</th>
+              <th>Bedrooms</th>
+              <th>Bathrooms</th>
+              <th>Rent</th>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {properties.length === 0 ? (
               <tr>
-                <th>Property Address</th>
-                <th>Type</th>
-                <th>Bedrooms</th>
-                <th>Bathrooms</th>
-                <th>Rent</th>
-                <th>Status</th>
-                <th className="table-menu"></th>
+                <td colSpan={8} className="sa-table-empty">No properties found</td>
               </tr>
-            </thead>
-            <tbody>
-          {properties.map((property, index) => (
+            ) : (
+              properties.map((property, index) => (
                 <tr key={property.ID || `property-${index}`}>
-                  <td>
-                    <span className="row-primary">{property.Address || 'Unknown Address'}</span>
+                  <td>{index + 1}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{property.Address || 'Unknown Address'}</span>
                   </td>
                   <td>{property.Type || 'N/A'}</td>
                   <td>{property.Bedrooms || 0}</td>
                   <td>{property.Bathrooms || 0}</td>
                   <td>{property.Rent?.toLocaleString() || 0} XOF/month</td>
                   <td>
-                    <span className={`status-badge ${(property.Status || 'vacant').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(property.Status || 'vacant').toLowerCase()}`}>
                       {property.Status || 'Vacant'}
                     </span>
                   </td>
-                  <td className="table-menu">
-                    <div className="table-actions">
-                      <button className="table-action-button view">View</button>
-                      <button className="table-action-button edit">Edit</button>
-              </div>
+                  <td className="sa-row-actions">
+                    <button className="sa-icon-button" title="View">👁️</button>
+                    <button className="sa-icon-button" title="Edit">✏️</button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 
   const renderDocuments = () => (
-    <div className="documents-section">
-      <div className="section-header">
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
         <div>
           <h2>Document Management</h2>
-        <p>Upload and manage your property documents and contracts</p>
-                      </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-        <button 
-            className="btn-primary"
-          onClick={() => setShowKycModal(true)}
-            disabled={loading}
-        >
-            <Upload size={18} />
-          Upload KYC Documents
-        </button>
-        <button 
-            className="btn-primary"
-          onClick={() => setShowContractModal(true)}
-            disabled={loading}
-        >
-            <Plus size={18} />
-          Upload Essential Contract
-        </button>
+          <p>Upload and manage your property documents and contracts</p>
         </div>
-                    </div>
+        <div className="sa-clients-header-right">
+          <button 
+            className="sa-primary-cta"
+            onClick={() => setShowKycModal(true)}
+            disabled={loading}
+          >
+            <Upload size={16} />
+            Upload KYC Documents
+          </button>
+          <button 
+            className="sa-primary-cta"
+            onClick={() => setShowContractModal(true)}
+            disabled={loading}
+          >
+            <Plus size={16} />
+            Upload Essential Contract
+          </button>
+        </div>
+      </div>
 
-      <div className="data-table-wrapper">
-        <table className="data-table">
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
           <thead>
             <tr>
+              <th>No</th>
               <th>Document Name</th>
               <th>Type</th>
               <th>Status</th>
               <th>Upload Date</th>
-              <th className="table-menu"></th>
+              <th />
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>
-                <span className="row-primary">Property Deed</span>
+              <td>1</td>
+              <td className="sa-cell-main">
+                <span className="sa-cell-title">Property Deed</span>
               </td>
               <td>KYC Document</td>
               <td>
-                <span className="status-badge approved">Approved</span>
+                <span className="sa-status-pill active">Approved</span>
               </td>
               <td>Nov 15, 2024</td>
-              <td className="table-menu">
-                <div className="table-actions">
-                  <button className="table-action-button view">View</button>
-                  <button className="table-action-button edit">Download</button>
-                    </div>
+              <td className="sa-row-actions">
+                <button className="sa-icon-button" title="View">👁️</button>
+                <button className="sa-icon-button" title="Download">⬇️</button>
               </td>
             </tr>
             <tr>
-              <td>
-                <span className="row-primary">Lease Agreement</span>
+              <td>2</td>
+              <td className="sa-cell-main">
+                <span className="sa-cell-title">Lease Agreement</span>
               </td>
               <td>Contract</td>
               <td>
-                <span className="status-badge pending">Pending Review</span>
+                <span className="sa-status-pill pending">Pending Review</span>
               </td>
               <td>Nov 10, 2024</td>
-              <td className="table-menu">
-                <div className="table-actions">
-                  <button className="table-action-button view">View</button>
-                  <button className="table-action-button edit">Download</button>
-                  </div>
+              <td className="sa-row-actions">
+                <button className="sa-icon-button" title="View">👁️</button>
+                <button className="sa-icon-button" title="Download">⬇️</button>
               </td>
             </tr>
           </tbody>
         </table>
-                </div>
-              </div>
+      </div>
+    </div>
   );
 
-  const renderPayments = () => (
-    <div className="payments-section">
-      <div className="section-header">
-        <div>
-      <h2>Payments & Cash Flow Management</h2>
-      <p>Comprehensive payment tracking with multiple collection methods</p>
+  const renderPayments = () => {
+    return (
+      <div className="sa-transactions-page">
+        <div className="sa-transactions-header">
+          <h2>Payments & Cash Flow Management</h2>
         </div>
-        <button className="btn-primary" onClick={() => setShowReceiptModal(true)} disabled={loading}>
-          <Receipt size={18} />
-          Generate Receipt
-        </button>
+        
+        <div className="sa-transactions-tabs">
+          <button 
+            className={`sa-subtab-button ${paymentSubTab === 'all' ? 'active' : ''}`}
+            onClick={() => setPaymentSubTab('all')}
+          >
+            All Payments
+          </button>
+          <button 
+            className={`sa-subtab-button ${paymentSubTab === 'net' ? 'active' : ''}`}
+            onClick={() => {
+              setPaymentSubTab('net');
+              loadNetPayments();
+            }}
+          >
+            Net Payments
+          </button>
+          <button 
+            className={`sa-subtab-button ${paymentSubTab === 'history' ? 'active' : ''}`}
+            onClick={() => {
+              setPaymentSubTab('history');
+              loadPaymentHistory();
+            }}
+          >
+            Payment History
+          </button>
+        </div>
+
+        {paymentSubTab === 'all' && (
+          <div className="sa-clients-page">
+            <div className="sa-clients-header">
+              <div>
+                <h2>All Payments</h2>
+                <p>{payments.length} payment transactions found</p>
+              </div>
+              <div className="sa-clients-header-right">
+                <button className="sa-primary-cta" onClick={() => setShowReceiptModal(true)} disabled={loading}>
+                  <Receipt size={16} />
+                  Generate Receipt
+                </button>
+              </div>
+            </div>
+
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Date</th>
+                    <th>Property</th>
+                    <th>Tenant</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="sa-table-empty">No payment transactions found</td>
+                    </tr>
+                  ) : (
+                    payments.map((payment, index) => (
+                      <tr key={payment.ID || payment.id || `payment-${index}`}>
+                        <td>{index + 1}</td>
+                        <td>{new Date(payment.Date || payment.date || payment.CreatedAt || payment.createdAt).toLocaleDateString()}</td>
+                        <td className="sa-cell-main">
+                          <span className="sa-cell-title">{payment.Property || payment.property || 'Unknown'}</span>
+                        </td>
+                        <td>{payment.Tenant || payment.tenant || 'Unknown'}</td>
+                        <td>{payment.Amount || payment.amount ? (payment.Amount || payment.amount).toLocaleString() : 0} XOF</td>
+                        <td>{payment.Method || payment.method || 'Unknown'}</td>
+                        <td>
+                          <span className={`sa-status-pill ${(payment.Status || payment.status || 'pending').toLowerCase()}`}>
+                            {payment.Status || payment.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td className="sa-row-actions">
+                          <button className="sa-icon-button" onClick={() => setShowReceiptModal(true)} title="Receipt">🧾</button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {paymentSubTab === 'net' && (
+          <div className="sa-clients-page">
+            <div className="sa-clients-header">
+              <div>
+                <h2>Net Payments After Commission</h2>
+                <p>View net payments after commission deduction</p>
+              </div>
+              <div className="sa-clients-header-right">
+                <div className="sa-filters-section">
+                  <select 
+                    className="sa-filter-select"
+                    value={netPaymentStatusFilter}
+                    onChange={(e) => setNetPaymentStatusFilter(e.target.value)}
+                  >
+                    <option value="">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                  </select>
+                  <input
+                    type="date"
+                    className="sa-filter-select"
+                    value={netPaymentStartDate}
+                    onChange={(e) => setNetPaymentStartDate(e.target.value)}
+                    placeholder="Start Date"
+                  />
+                  <input
+                    type="date"
+                    className="sa-filter-select"
+                    value={netPaymentEndDate}
+                    onChange={(e) => setNetPaymentEndDate(e.target.value)}
+                    placeholder="End Date"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {netPayments && (
+              <>
+                <div className="sa-overview-metrics" style={{ marginBottom: '24px' }}>
+                  <div className="sa-metric-card">
+                    <p className="sa-metric-label">Total Net Amount</p>
+                    <p className="sa-metric-value">{netPayments.totalNetAmount?.toLocaleString() || 0} XOF</p>
+                  </div>
+                  <div className="sa-metric-card">
+                    <p className="sa-metric-label">Total Commission</p>
+                    <p className="sa-metric-value">{netPayments.totalCommission?.toLocaleString() || 0} XOF</p>
+                  </div>
+                </div>
+
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>No</th>
+                        <th>Date</th>
+                        <th>Landlord</th>
+                        <th>Building</th>
+                        <th>Net Amount</th>
+                        <th>Commission</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(!netPayments.payments || netPayments.payments.length === 0) ? (
+                        <tr>
+                          <td colSpan={7} className="sa-table-empty">No net payments found</td>
+                        </tr>
+                      ) : (
+                        netPayments.payments.map((payment, index) => (
+                          <tr key={payment.id || payment.ID || `net-payment-${index}`}>
+                            <td>{index + 1}</td>
+                            <td>{new Date(payment.date || payment.Date).toLocaleDateString()}</td>
+                            <td className="sa-cell-main">
+                              <span className="sa-cell-title">{payment.landlord || payment.Landlord || 'Unknown'}</span>
+                            </td>
+                            <td>{payment.building || payment.Building || 'Unknown'}</td>
+                            <td>{(payment.netAmount || payment.NetAmount || 0).toLocaleString()} XOF</td>
+                            <td>{(payment.commission || payment.Commission || 0).toLocaleString()} XOF</td>
+                            <td>
+                              <span className={`sa-status-pill ${(payment.status || payment.Status || 'pending').toLowerCase()}`}>
+                                {payment.status || payment.Status || 'Pending'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {paymentSubTab === 'history' && (
+          <div className="sa-clients-page">
+            <div className="sa-clients-header">
+              <div>
+                <h2>Payment & Payout History</h2>
+                <p>View payment and payout history</p>
+              </div>
+              <div className="sa-clients-header-right">
+                <div className="sa-filters-section">
+                  <input
+                    type="date"
+                    className="sa-filter-select"
+                    value={netPaymentStartDate}
+                    onChange={(e) => setNetPaymentStartDate(e.target.value)}
+                    placeholder="Start Date"
+                  />
+                  <input
+                    type="date"
+                    className="sa-filter-select"
+                    value={netPaymentEndDate}
+                    onChange={(e) => setNetPaymentEndDate(e.target.value)}
+                    placeholder="End Date"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {paymentHistory && (
+              <>
+                {paymentHistory.rentPayments && paymentHistory.rentPayments.length > 0 && (
+                  <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+                    <div className="sa-section-header">
+                      <div>
+                        <h3>Rent Payments</h3>
+                        <p>Collected rent payments</p>
+                      </div>
+                    </div>
+                    <div className="sa-table-wrapper">
+                      <table className="sa-table">
+                        <thead>
+                          <tr>
+                            <th>No</th>
+                            <th>Date</th>
+                            <th>Tenant</th>
+                            <th>Property</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paymentHistory.rentPayments.map((payment, index) => (
+                            <tr key={payment.id || payment.ID || `rent-${index}`}>
+                              <td>{index + 1}</td>
+                              <td>{new Date(payment.date || payment.Date).toLocaleDateString()}</td>
+                              <td className="sa-cell-main">
+                                <span className="sa-cell-title">{payment.tenant || payment.Tenant || 'Unknown'}</span>
+                              </td>
+                              <td>{payment.property || payment.Property || 'Unknown'}</td>
+                              <td>{(payment.amount || payment.Amount || 0).toLocaleString()} XOF</td>
+                              <td>
+                                <span className={`sa-status-pill ${(payment.status || payment.Status || 'pending').toLowerCase()}`}>
+                                  {payment.status || payment.Status || 'Pending'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {paymentHistory.payouts && paymentHistory.payouts.length > 0 && (
+                  <div className="sa-section-card">
+                    <div className="sa-section-header">
+                      <div>
+                        <h3>Payouts</h3>
+                        <p>Net payments after commission</p>
+                      </div>
+                    </div>
+                    <div className="sa-table-wrapper">
+                      <table className="sa-table">
+                        <thead>
+                          <tr>
+                            <th>No</th>
+                            <th>Date</th>
+                            <th>Landlord</th>
+                            <th>Building</th>
+                            <th>Net Amount</th>
+                            <th>Commission</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paymentHistory.payouts.map((payout, index) => (
+                            <tr key={payout.id || payout.ID || `payout-${index}`}>
+                              <td>{index + 1}</td>
+                              <td>{new Date(payout.date || payout.Date).toLocaleDateString()}</td>
+                              <td className="sa-cell-main">
+                                <span className="sa-cell-title">{payout.landlord || payout.Landlord || 'Unknown'}</span>
+                              </td>
+                              <td>{payout.building || payout.Building || 'Unknown'}</td>
+                              <td>{(payout.netAmount || payout.NetAmount || 0).toLocaleString()} XOF</td>
+                              <td>{(payout.commission || payout.Commission || 0).toLocaleString()} XOF</td>
+                              <td>
+                                <span className={`sa-status-pill ${(payout.status || payout.Status || 'pending').toLowerCase()}`}>
+                                  {payout.status || payout.Status || 'Pending'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
+    );
+  };
+
+  const renderTenants = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Tenant Management</h2>
+          <p>Manage your tenants and their information</p>
+        </div>
+      </div>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Tenant Name</th>
+              <th>Property</th>
+              <th>Rent</th>
+              <th>Status</th>
+              <th>Contact</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td className="sa-cell-main">
+                <span className="sa-cell-title">John Doe</span>
+              </td>
+              <td>123 Main Street, Apt 4B</td>
+              <td>1,200 XOF/month</td>
+              <td>
+                <span className="sa-status-pill active">Active</span>
+              </td>
+              <td>N/A</td>
+              <td className="sa-row-actions">
+                <button className="sa-icon-button" title="View">👁️</button>
+                <button className="sa-icon-button" title="Contact">📞</button>
+              </td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td className="sa-cell-main">
+                <span className="sa-cell-title">Jane Smith</span>
+              </td>
+              <td>456 Oak Avenue, Unit 2</td>
+              <td>900 XOF/month</td>
+              <td>
+                <span className="sa-status-pill active">Active</span>
+              </td>
+              <td>N/A</td>
+              <td className="sa-row-actions">
+                <button className="sa-icon-button" title="View">👁️</button>
+                <button className="sa-icon-button" title="Contact">📞</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
       
-      {loading ? (
-        <div className="loading">Loading payment data...</div>
-          ) : payments.length === 0 ? (
-            <div className="no-data">No payment transactions found</div>
-          ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+  const renderRentalManagement = () => (
+    <div className="sa-overview-page">
+      <div className="sa-overview-metrics" style={{ width: '100%' }}>
+        <div className="sa-metric-card sa-metric-primary">
+          <p className="sa-metric-label">Generation of Lease Agreements</p>
+          <p className="sa-metric-value">Active</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Rent Reviews</p>
+          <p className="sa-metric-number">Track</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Adjustment of Charges</p>
+          <p className="sa-metric-number">Available</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Tenant Interface</p>
+          <p className="sa-metric-number">Active</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWorksAndClaims = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Works & Interventions Management</h2>
+          <p>Track maintenance works, interventions, and automatic claims management</p>
+        </div>
+        <div className="sa-clients-header-right">
+          <button className="sa-primary-cta" onClick={() => setShowWorkOrderModal(true)} disabled={loading}>
+            <Plus size={16} />
+            Create Work Order
+          </button>
+        </div>
+      </div>
+
+      {workOrders.length > 0 && (
+        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+          <div className="sa-section-header">
+            <div>
+              <h3>Work Orders</h3>
+              <p>Maintenance and intervention requests</p>
+            </div>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
               <thead>
                 <tr>
-                  <th>Date</th>
+                  <th>No</th>
+                  <th>Title</th>
                   <th>Property</th>
-                  <th>Tenant</th>
-                  <th>Amount</th>
-                  <th>Method</th>
+                  <th>Description</th>
                   <th>Status</th>
-                <th className="table-menu"></th>
+                  <th>Date</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment, index) => (
-                  <tr key={payment.ID || `payment-${index}`}>
-                    <td>{new Date(payment.Date || payment.CreatedAt).toLocaleDateString()}</td>
-                  <td>
-                    <span className="row-primary">{payment.Property || 'Unknown'}</span>
-                  </td>
-                    <td>{payment.Tenant || 'Unknown'}</td>
-                  <td>{payment.Amount?.toLocaleString() || 0} XOF</td>
-                    <td>{payment.Method || 'Unknown'}</td>
-                  <td>
-                    <span className={`status-badge ${(payment.Status || 'pending').toLowerCase()}`}>
-                      {payment.Status || 'Pending'}
-                    </span>
-                  </td>
-                  <td className="table-menu">
-                    <div className="table-actions">
-                      <button className="table-action-button view" onClick={() => setShowReceiptModal(true)}>
-                        Receipt
-                      </button>
-                    </div>
-                  </td>
+                {workOrders.map((work, index) => (
+                  <tr key={work.ID || `work-${index}`}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{work.Title || work.title || 'N/A'}</span>
+                    </td>
+                    <td>{work.Property || work.property || 'N/A'}</td>
+                    <td>
+                      <span className="sa-cell-sub">{work.Description || work.description || 'N/A'}</span>
+                    </td>
+                    <td>
+                      <span className={`sa-status-pill ${(work.Status || work.status || 'pending').toLowerCase()}`}>
+                        {work.Status || work.status || 'Pending'}
+                      </span>
+                    </td>
+                    <td>{work.Date ? new Date(work.Date).toLocaleDateString() : (work.date ? new Date(work.date).toLocaleDateString() : 'N/A')}</td>
+                    <td className="sa-row-actions">
+                      <button className="sa-icon-button" title="View">👁️</button>
+                      <button className="sa-icon-button" title="Edit">✏️</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-      )}
-    </div>
-  );
-
-  const renderTenants = () => (
-    <div className="tenants-section">
-      <div className="section-header">
-        <div>
-          <h2>Tenant Management</h2>
-        <p>Manage your tenants and their information</p>
         </div>
-      </div>
-      
-      {loading ? (
-        <div className="loading">Loading tenants...</div>
-      ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+      )}
+
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>Claims</h3>
+            <p>Property claims and requests</p>
+          </div>
+          <button className="sa-primary-cta" onClick={() => setShowClaimModal(true)} disabled={loading}>
+            <Plus size={16} />
+            Create Claim
+          </button>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
-                <th>Tenant Name</th>
+                <th>No</th>
+                <th>Title</th>
                 <th>Property</th>
-                <th>Rent</th>
+                <th>Description</th>
                 <th>Status</th>
-                <th>Contact</th>
-                <th className="table-menu"></th>
+                <th>Date</th>
+                <th />
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <span className="row-primary">John Doe</span>
-                </td>
-                <td>123 Main Street, Apt 4B</td>
-                <td>1,200 XOF/month</td>
-                <td>
-                  <span className="status-badge active">Active</span>
-                </td>
-                <td>N/A</td>
-                <td className="table-menu">
-                  <div className="table-actions">
-                    <button className="table-action-button view">View</button>
-                    <button className="table-action-button edit">Contact</button>
-                      </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <span className="row-primary">Jane Smith</span>
-                </td>
-                <td>456 Oak Avenue, Unit 2</td>
-                <td>900 XOF/month</td>
-                <td>
-                  <span className="status-badge active">Active</span>
-                </td>
-                <td>N/A</td>
-                <td className="table-menu">
-                  <div className="table-actions">
-                    <button className="table-action-button view">View</button>
-                    <button className="table-action-button edit">Contact</button>
-                    </div>
-                </td>
-              </tr>
+              {claims.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="sa-table-empty">No claims found</td>
+                </tr>
+              ) : (
+                claims.map((claim, index) => (
+                  <tr key={claim.ID || `claim-${index}`}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{claim.Title || claim.title || 'N/A'}</span>
+                    </td>
+                    <td>{claim.Property || claim.property || 'N/A'}</td>
+                    <td>
+                      <span className="sa-cell-sub">{claim.Description || claim.description || 'N/A'}</span>
+                    </td>
+                    <td>
+                      <span className={`sa-status-pill ${(claim.Status || claim.status || 'pending').toLowerCase()}`}>
+                        {claim.Status || claim.status || 'Pending'}
+                      </span>
+                    </td>
+                    <td>{claim.Date ? new Date(claim.Date).toLocaleDateString() : (claim.date ? new Date(claim.date).toLocaleDateString() : 'N/A')}</td>
+                    <td className="sa-row-actions">
+                      <button className="sa-icon-button" title="View">👁️</button>
+                      <button className="sa-icon-button" title="Edit">✏️</button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-                  </div>
-      )}
-          </div>
-        );
-      
-  const renderRentalManagement = () => (
-    <div className="rental-section">
-      <div className="section-header">
-        <div>
-      <h2>Rental Management</h2>
-      <p>Manage your rental agreements, rent reviews, and charge adjustments</p>
-              </div>
-                </div>
-                
-      <div className="dashboard-overview">
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Generation of Lease Agreements</span>
-                </div>
-          <div className="card-value">
-            <span>Active</span>
-            <small>Create and manage lease contracts automatically</small>
-          </div>
         </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Rent Reviews</span>
-          </div>
-          <div className="card-value">
-            <span>Track</span>
-            <small>Track and manage rent adjustments and reviews</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Adjustment of Charges</span>
-          </div>
-          <div className="card-value">
-            <span>Available</span>
-            <small>Modify utility charges and other fees</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Tenant Interface</span>
-          </div>
-          <div className="card-value">
-            <span>Active</span>
-            <small>Manage tenant communications and requests</small>
-          </div>
-                </div>
       </div>
-                  </div>
+    </div>
+  );
+      
+  const renderInventory = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Inventory Management</h2>
+          <p>{inventory.length} inventory items found</p>
+        </div>
+        <div className="sa-clients-header-right">
+          <button className="sa-primary-cta" onClick={() => setShowInventoryModal(true)} disabled={loading}>
+            <Plus size={16} />
+            Add New Inventory
+          </button>
+        </div>
+      </div>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Property</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Quantity</th>
+              <th>Condition</th>
+              <th>Last Updated</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {inventory.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="sa-table-empty">No inventory found</td>
+              </tr>
+            ) : (
+              inventory.map((item, index) => (
+                <tr key={item.ID || item.id || `inventory-${index}`}>
+                  <td>{index + 1}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{item.Property || item.property || 'N/A'}</span>
+                  </td>
+                  <td>{item.ItemName || item.itemName || item.Name || item.name || 'N/A'}</td>
+                  <td>{item.Category || item.category || 'N/A'}</td>
+                  <td>{item.Quantity || item.quantity || 0}</td>
+                  <td>
+                    <span className={`sa-status-pill ${(item.Condition || item.condition || 'good').toLowerCase()}`}>
+                      {item.Condition || item.condition || 'Good'}
+                    </span>
+                  </td>
+                  <td>{item.UpdatedAt ? new Date(item.UpdatedAt).toLocaleDateString() : (item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A')}</td>
+                  <td className="sa-row-actions">
+                    <button className="sa-icon-button" title="View">👁️</button>
+                    <button className="sa-icon-button" title="Edit">✏️</button>
+                    <button className="sa-icon-button" title="Delete" style={{ color: '#dc2626', marginLeft: '8px' }}>🗑️</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 
-  const renderWorksAndClaims = () => (
-    <div className="works-section">
-      <div className="section-header">
+  const renderRents = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
         <div>
-      <h2>Works & Interventions Management</h2>
-      <p>Track maintenance works, interventions, and automatic claims management</p>
+          <h2>Rents Tracking</h2>
+          <p>Track collected and pending rents</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowWorkOrderModal(true)} disabled={loading}>
-          <Plus size={18} />
-          Create Work Order
-        </button>
-                </div>
-                
-      {loading ? (
-        <div className="loading">Loading works and claims...</div>
-      ) : workOrders.length === 0 && claims.length === 0 ? (
-        <div className="no-data">No works or claims found</div>
-      ) : (
+        <div className="sa-clients-header-right">
+          <button 
+            className="sa-primary-cta" 
+            onClick={async () => {
+              try {
+                await landlordService.downloadReport({ type: 'financial' });
+                addNotification('Report downloaded successfully', 'success');
+              } catch (error) {
+                addNotification('Failed to download report', 'error');
+              }
+            }}
+            disabled={loading}
+          >
+            <FileText size={16} />
+            Download Report
+          </button>
+        </div>
+      </div>
+
+      {rents && (
         <>
-          {workOrders.length > 0 && (
-            <div style={{ marginBottom: '32px' }}>
-              <div className="section-header" style={{ marginBottom: '20px' }}>
+          <div className="sa-overview-metrics" style={{ marginBottom: '24px' }}>
+            <div className="sa-metric-card sa-metric-primary">
+              <p className="sa-metric-label">Total Collected</p>
+              <p className="sa-metric-value">{rents.totalCollected?.toLocaleString() || 0} XOF</p>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Total Pending</p>
+              <p className="sa-metric-value">{rents.totalPending?.toLocaleString() || 0} XOF</p>
+            </div>
+          </div>
+
+          {rents.collectedRents && rents.collectedRents.length > 0 && (
+            <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+              <div className="sa-section-header">
                 <div>
-                  <h2>Work Orders</h2>
-                  <p>Maintenance and intervention requests</p>
+                  <h3>Collected Rents</h3>
+                  <p>{rents.collectedRents.length} collected rent payments</p>
                 </div>
               </div>
-              <div className="data-table-wrapper">
-                <table className="data-table">
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
                   <thead>
                     <tr>
-                      <th>Title</th>
-                      <th>Property</th>
-                      <th>Description</th>
-                      <th>Status</th>
+                      <th>No</th>
                       <th>Date</th>
-                      <th className="table-menu"></th>
+                      <th>Tenant</th>
+                      <th>Property</th>
+                      <th>Amount</th>
+                      <th>Method</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {workOrders.map((work, index) => (
-                      <tr key={work.ID || `work-${index}`}>
-                        <td>
-                          <span className="row-primary">{work.Title || work.title || 'N/A'}</span>
+                    {rents.collectedRents.map((rent, index) => (
+                      <tr key={rent.id || rent.ID || `collected-${index}`}>
+                        <td>{index + 1}</td>
+                        <td>{new Date(rent.date || rent.Date).toLocaleDateString()}</td>
+                        <td className="sa-cell-main">
+                          <span className="sa-cell-title">{rent.tenant || rent.Tenant || 'Unknown'}</span>
                         </td>
-                        <td>{work.Property || work.property || 'N/A'}</td>
-                        <td>{work.Description || work.description || 'N/A'}</td>
+                        <td>{rent.property || rent.Property || 'Unknown'}</td>
+                        <td>{(rent.amount || rent.Amount || 0).toLocaleString()} XOF</td>
+                        <td>{rent.method || rent.Method || 'Unknown'}</td>
                         <td>
-                          <span className={`status-badge ${(work.Status || work.status || 'pending').toLowerCase()}`}>
-                            {work.Status || work.status || 'Pending'}
+                          <span className={`sa-status-pill ${(rent.status || rent.Status || 'approved').toLowerCase()}`}>
+                            {rent.status || rent.Status || 'Approved'}
                           </span>
-                        </td>
-                        <td>{work.Date ? new Date(work.Date).toLocaleDateString() : (work.date ? new Date(work.date).toLocaleDateString() : 'N/A')}</td>
-                        <td className="table-menu">
-                          <div className="table-actions">
-                            <button className="table-action-button view">View</button>
-                            <button className="table-action-button edit">Edit</button>
-                          </div>
                         </td>
                       </tr>
                     ))}
@@ -801,49 +1493,38 @@ const LandlordDashboard = () => {
             </div>
           )}
 
-          {claims.length > 0 && (
-            <div>
-              <div className="section-header" style={{ marginBottom: '20px' }}>
+          {rents.pendingRents && rents.pendingRents.length > 0 && (
+            <div className="sa-section-card">
+              <div className="sa-section-header">
                 <div>
-                  <h2>Claims</h2>
-                  <p>Property claims and requests</p>
+                  <h3>Pending Rents</h3>
+                  <p>{rents.pendingRents.length} pending rent payments</p>
+                </div>
               </div>
-                <button className="btn-primary" onClick={() => setShowClaimModal(true)} disabled={loading}>
-                  <Plus size={18} />
-                  Create Claim
-                </button>
-              </div>
-              <div className="data-table-wrapper">
-                <table className="data-table">
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
                   <thead>
                     <tr>
-                      <th>Title</th>
+                      <th>No</th>
+                      <th>Tenant</th>
                       <th>Property</th>
-                      <th>Description</th>
+                      <th>Amount</th>
                       <th>Status</th>
-                      <th>Date</th>
-                      <th className="table-menu"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {claims.map((claim, index) => (
-                      <tr key={claim.ID || `claim-${index}`}>
-                        <td>
-                          <span className="row-primary">{claim.Title || claim.title || 'N/A'}</span>
+                    {rents.pendingRents.map((rent, index) => (
+                      <tr key={rent.id || rent.ID || `pending-${index}`}>
+                        <td>{index + 1}</td>
+                        <td className="sa-cell-main">
+                          <span className="sa-cell-title">{rent.tenant || rent.Tenant || 'Unknown'}</span>
                         </td>
-                        <td>{claim.Property || claim.property || 'N/A'}</td>
-                        <td>{claim.Description || claim.description || 'N/A'}</td>
+                        <td>{rent.property || rent.Property || 'Unknown'}</td>
+                        <td>{(rent.amount || rent.Amount || 0).toLocaleString()} XOF</td>
                         <td>
-                          <span className={`status-badge ${(claim.Status || claim.status || 'pending').toLowerCase()}`}>
-                            {claim.Status || claim.status || 'Pending'}
+                          <span className={`sa-status-pill ${(rent.status || rent.Status || 'pending').toLowerCase()}`}>
+                            {rent.status || rent.Status || 'Pending'}
                           </span>
-                        </td>
-                        <td>{claim.Date ? new Date(claim.Date).toLocaleDateString() : (claim.date ? new Date(claim.date).toLocaleDateString() : 'N/A')}</td>
-                        <td className="table-menu">
-                          <div className="table-actions">
-                            <button className="table-action-button view">View</button>
-                            <button className="table-action-button edit">Edit</button>
-                          </div>
                         </td>
                       </tr>
                     ))}
@@ -854,120 +1535,319 @@ const LandlordDashboard = () => {
           )}
         </>
       )}
-          </div>
-        );
-      
-  const renderInventory = () => (
-    <div className="inventory-section">
-      <div className="section-header">
+    </div>
+  );
+
+  const renderExpenses = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
         <div>
-      <h2>Inventory Management</h2>
-      <p>Track property inventories, equipment, and assets</p>
+          <h2>Expenses Management</h2>
+          <p>Review expenses per property</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowInventoryModal(true)} disabled={loading}>
-          <Plus size={18} />
-          Add New Inventory
-        </button>
-                </div>
-        
-      {loading ? (
-        <div className="loading">Loading inventory...</div>
-      ) : inventory.length === 0 ? (
-        <div className="no-data">No inventory found</div>
+        <div className="sa-clients-header-right">
+          <div className="sa-filters-section">
+            <select 
+              className="sa-filter-select"
+              value={expensePropertyFilter}
+              onChange={(e) => setExpensePropertyFilter(e.target.value)}
+            >
+              <option value="">All Properties</option>
+              {properties.map(prop => (
+                <option key={prop.id || prop.ID} value={prop.Address || prop.address}>
+                  {prop.Address || prop.address}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              className="sa-filter-select"
+              value={expenseStartDate}
+              onChange={(e) => setExpenseStartDate(e.target.value)}
+              placeholder="Start Date"
+            />
+            <input
+              type="date"
+              className="sa-filter-select"
+              value={expenseEndDate}
+              onChange={(e) => setExpenseEndDate(e.target.value)}
+              placeholder="End Date"
+            />
+          </div>
+        </div>
+      </div>
+
+      {expenses.length > 0 && expenses[0].property ? (
+        expenses.map((propertyGroup, groupIndex) => (
+          <div key={propertyGroup.property || `property-${groupIndex}`} className="sa-section-card" style={{ marginBottom: '24px' }}>
+            <div className="sa-section-header">
+              <div>
+                <h3>{propertyGroup.property || 'Unknown Property'}</h3>
+                <p>Total: {propertyGroup.total?.toLocaleString() || 0} XOF</p>
+              </div>
+            </div>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {propertyGroup.expenses && propertyGroup.expenses.length > 0 ? (
+                    propertyGroup.expenses.map((expense, index) => (
+                      <tr key={expense.id || expense.ID || `expense-${index}`}>
+                        <td>{index + 1}</td>
+                        <td>{new Date(expense.date || expense.Date).toLocaleDateString()}</td>
+                        <td>{expense.category || expense.Category || 'N/A'}</td>
+                        <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
+                        <td className="sa-cell-main">
+                          <span className="sa-cell-sub">{expense.notes || expense.Notes || 'N/A'}</span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="sa-table-empty">No expenses for this property</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
+                <th>No</th>
+                <th>Date</th>
                 <th>Property</th>
-                <th>Item Name</th>
                 <th>Category</th>
-                <th>Quantity</th>
-                <th>Condition</th>
-                <th>Last Updated</th>
-                <th className="table-menu"></th>
+                <th>Amount</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
-              {inventory.map((item, index) => (
-                <tr key={item.ID || item.id || `inventory-${index}`}>
-                  <td>
-                    <span className="row-primary">{item.Property || item.property || 'N/A'}</span>
-                  </td>
-                  <td>{item.ItemName || item.itemName || item.Name || item.name || 'N/A'}</td>
-                  <td>{item.Category || item.category || 'N/A'}</td>
-                  <td>{item.Quantity || item.quantity || 0}</td>
-                  <td>
-                    <span className={`status-badge ${(item.Condition || item.condition || 'good').toLowerCase()}`}>
-                      {item.Condition || item.condition || 'Good'}
-                    </span>
-                  </td>
-                  <td>{item.UpdatedAt ? new Date(item.UpdatedAt).toLocaleDateString() : (item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A')}</td>
-                  <td className="table-menu">
-                    <div className="table-actions">
-                      <button className="table-action-button view">View</button>
-                      <button className="table-action-button edit">Edit</button>
-                      <button className="table-action-button delete">Delete</button>
-                </div>
-                  </td>
+              {expenses.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="sa-table-empty">No expenses found</td>
                 </tr>
-              ))}
+              ) : (
+                expenses.map((expense, index) => (
+                  <tr key={expense.id || expense.ID || `expense-${index}`}>
+                    <td>{index + 1}</td>
+                    <td>{new Date(expense.date || expense.Date).toLocaleDateString()}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{expense.building || expense.Building || expense.property || expense.Property || 'Unknown'}</span>
+                    </td>
+                    <td>{expense.category || expense.Category || 'N/A'}</td>
+                    <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-sub">{expense.notes || expense.Notes || 'N/A'}</span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-              </div>
+        </div>
       )}
+    </div>
+  );
+
+  // Render messaging page
+  const renderChat = () => (
+    <div className="sa-chat-page">
+      <div className="sa-chat-layout">
+        <div className="sa-chat-list">
+          <h3>Users</h3>
+          <ul>
+            {chatUsers.map((user) => {
+              const active = user.userId === selectedUserId;
+              return (
+                <li
+                  key={`chat-user-${user.userId}`}
+                  className={active ? 'active' : ''}
+                  onClick={() => loadChatForUser(user.userId)}
+                >
+                  <div className="sa-cell-main">
+                    <span className="sa-cell-title">{user.name || 'User'}</span>
+                    <span className="sa-cell-sub">{user.email || ''}</span>
+                    {user.role && (
+                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {user.role}
+                      </span>
+                    )}
+                    {user.unreadCount > 0 && (
+                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                        {user.unreadCount} unread
+                      </span>
+                    )}
                   </div>
+                </li>
+              );
+            })}
+            {chatUsers.length === 0 && (
+              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                No users available
+              </li>
+            )}
+          </ul>
+        </div>
+        
+        <div className="sa-chat-conversation">
+          <div className="sa-chat-header">
+            <h3>Messages</h3>
+            {selectedUserId && (
+              <span className="sa-chat-subtitle">
+                Chat with{' '}
+                {
+                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
+                    .name || 'User'
+                }
+              </span>
+            )}
+          </div>
+          <div className="sa-chat-messages">
+            {chatMessages.map((msg, index) => {
+              const messageContent = msg.content || msg.Content || '';
+              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+              const messageFromUserId = msg.fromUserId || msg.FromUserId;
+              const messageId = msg.id || msg.ID || index;
+              
+              // Determine if message is outgoing or incoming
+              const storedUser = localStorage.getItem('user');
+              let isOutgoing = false;
+              if (storedUser) {
+                try {
+                  const user = JSON.parse(storedUser);
+                  const currentUserId = user.id || user.ID;
+                  isOutgoing = String(messageFromUserId) === String(currentUserId);
+                } catch (e) {
+                  // Default to incoming if we can't parse user
+                }
+              }
+              
+              return (
+                <div
+                  key={`msg-${messageId}`}
+                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
+                >
+                  <p>{messageContent}</p>
+                  <span className="sa-chat-meta">
+                    {messageCreatedAt
+                      ? new Date(messageCreatedAt).toLocaleString()
+                      : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {chatMessages.length === 0 && (
+              <div className="sa-table-empty">
+                {selectedUserId 
+                  ? 'No messages yet. Start the conversation!'
+                  : 'Select a conversation on the left to start messaging.'}
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="sa-chat-input-row">
+            <input
+              type="text"
+              placeholder="Reply..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={!selectedUserId}
+            />
+            <button 
+              className="sa-primary-cta" 
+              onClick={handleSendMessage}
+              disabled={!selectedUserId || !chatInput.trim()}
+            >
+              <MessageCircle size={16} />
+              Send
+            </button>
+          </div>
+        </div>
+        
+        <div className="sa-chat-details">
+          <h4>Contact Details</h4>
+          {selectedUserId ? (
+            (() => {
+              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
+              return (
+                <>
+                  <p>
+                    <strong>Name:</strong> {user.name || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {user.email || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Role:</strong> {user.role || 'N/A'}
+                  </p>
+                  {user.company && (
+                    <p>
+                      <strong>Company:</strong> {user.company}
+                    </p>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <p>Select a conversation to view details.</p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 
   const renderBusinessTracking = () => (
-    <div className="tracking-section">
-      <div className="section-header">
-        <div>
-      <h2>Track Your Business</h2>
-      <p>Comprehensive analytics and business performance tracking</p>
-                  </div>
-                </div>
-                
-      <div className="dashboard-overview">
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Revenue Trends</span>
-                </div>
-          <div className="card-value">
-            <span>+12%</span>
-            <small>Monthly income analysis</small>
-                </div>
-              </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Occupancy Rate</span>
-          </div>
-          <div className="card-value">
-            <span>80%</span>
-            <small>Average across properties</small>
-          </div>
+    <div className="sa-overview-page">
+      <div className="sa-overview-metrics" style={{ width: '100%' }}>
+        <div className="sa-metric-card sa-metric-primary">
+          <p className="sa-metric-label">Revenue Trends</p>
+          <p className="sa-metric-value">{businessTracking?.revenueTrends || '+12%'}</p>
         </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Maintenance Costs</span>
-          </div>
-          <div className="card-value">
-            <span>{businessTracking?.maintenanceCosts?.toLocaleString() || '2,400'} XOF</span>
-            <small>This quarter</small>
-          </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Occupancy Rate</p>
+          <p className="sa-metric-number">{businessTracking?.occupancyRate || 80}%</p>
         </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>ROI</span>
-          </div>
-          <div className="card-value">
-            <span>{businessTracking?.roi || '8.5'}%</span>
-            <small>Return on investment</small>
-          </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Maintenance Costs</p>
+          <p className="sa-metric-number">{businessTracking?.maintenanceCosts?.toLocaleString() || '2,400'} XOF</p>
         </div>
-              </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">ROI</p>
+          <p className="sa-metric-number">{businessTracking?.roi || '8.5'}%</p>
+        </div>
+        {businessTracking?.totalRevenue && (
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Revenue</p>
+            <p className="sa-metric-number">{businessTracking.totalRevenue.toLocaleString()} XOF</p>
           </div>
-        );
+        )}
+        {businessTracking?.netProfit && (
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Net Profit</p>
+            <p className="sa-metric-number">{businessTracking.netProfit.toLocaleString()} XOF</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
       
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
@@ -977,6 +1857,10 @@ const LandlordDashboard = () => {
         return renderProperties();
       case 'payments':
         return renderPayments();
+      case 'rents':
+        return renderRents();
+      case 'expenses':
+        return renderExpenses();
       case 'works':
         return renderWorksAndClaims();
       case 'documents':
@@ -985,6 +1869,8 @@ const LandlordDashboard = () => {
         return renderInventory();
       case 'tracking':
         return renderBusinessTracking();
+      case 'chat':
+        return renderChat();
       case 'settings':
         return (
           <div className="embedded-settings">
@@ -1022,7 +1908,7 @@ const LandlordDashboard = () => {
         onLogout={handleLogout}
       >
         {({ activeId }) => (
-          <div className="content-body landlord-content">
+          <div className="content-body">
             {renderContent(activeId)}
           </div>
         )}

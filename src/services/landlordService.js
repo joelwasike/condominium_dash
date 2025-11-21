@@ -1,104 +1,161 @@
 import { API_CONFIG } from '../config/api';
+import { buildApiUrl, apiRequest } from '../config/api';
 
 const LANDLORD_BASE_URL = `${API_CONFIG.BASE_URL}/api/landlord`;
 
 export const landlordService = {
   // Overview
   getOverview: async () => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/overview`);
-    if (!response.ok) throw new Error('Failed to fetch landlord overview');
-    return response.json();
+    return await apiRequest(buildApiUrl('/api/landlord/overview'));
   },
 
   // Properties
   getProperties: async () => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/properties`);
-    if (!response.ok) throw new Error('Failed to fetch properties');
-    return response.json();
+    return await apiRequest(buildApiUrl('/api/landlord/properties'));
   },
 
   addProperty: async (propertyData) => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/properties`, {
+    return await apiRequest(buildApiUrl('/api/landlord/properties'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(propertyData)
+      body: JSON.stringify(propertyData),
     });
-    if (!response.ok) throw new Error('Failed to add property');
-    return response.json();
+  },
+
+  // Rents
+  getRents: async () => {
+    return await apiRequest(buildApiUrl('/api/landlord/rents'));
   },
 
   // Payments
   getPayments: async () => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/payments`);
-    if (!response.ok) throw new Error('Failed to fetch payments');
-    return response.json();
+    return await apiRequest(buildApiUrl('/api/landlord/payments'));
+  },
+
+  getNetPayments: async (filters = {}) => {
+    let url = buildApiUrl('/api/landlord/payments/net');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
+  },
+
+  getPaymentHistory: async (filters = {}) => {
+    let url = buildApiUrl('/api/landlord/payments/history');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
   },
 
   generateReceipt: async (receiptData) => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/payments/receipt`, {
+    return await apiRequest(buildApiUrl('/api/landlord/payments/receipt'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(receiptData)
+      body: JSON.stringify(receiptData),
     });
-    if (!response.ok) throw new Error('Failed to generate receipt');
-    return response.json();
+  },
+
+  // Expenses
+  getExpenses: async (filters = {}) => {
+    let url = buildApiUrl('/api/landlord/expenses');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.property) queryParams.append('property', filters.property);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
+  },
+
+  // Reports
+  downloadReport: async (filters = {}) => {
+    let url = buildApiUrl('/api/landlord/reports/download');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.type) queryParams.append('type', filters.type);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': localStorage.getItem('token') || '',
+      },
+    });
+    
+    if (!response.ok) throw new Error('Failed to download report');
+    
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = `landlord-report-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(downloadUrl);
+    
+    return { message: 'Report downloaded successfully' };
   },
 
   // Work Orders
   getWorkOrders: async () => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/works`);
-    if (!response.ok) throw new Error('Failed to fetch work orders');
-    return response.json();
+    return await apiRequest(buildApiUrl('/api/landlord/works'));
   },
 
   createWorkOrder: async (workOrderData) => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/works`, {
+    return await apiRequest(buildApiUrl('/api/landlord/works'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(workOrderData)
+      body: JSON.stringify(workOrderData),
     });
-    if (!response.ok) throw new Error('Failed to create work order');
-    return response.json();
   },
 
   // Claims
   getClaims: async () => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/claims`);
-    if (!response.ok) throw new Error('Failed to fetch claims');
-    return response.json();
+    return await apiRequest(buildApiUrl('/api/landlord/claims'));
   },
 
   createClaim: async (claimData) => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/claims`, {
+    return await apiRequest(buildApiUrl('/api/landlord/claims'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(claimData)
+      body: JSON.stringify(claimData),
     });
-    if (!response.ok) throw new Error('Failed to create claim');
-    return response.json();
   },
 
   // Inventory
   getInventory: async () => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/inventory`);
-    if (!response.ok) throw new Error('Failed to fetch inventory');
-    return response.json();
+    return await apiRequest(buildApiUrl('/api/landlord/inventory'));
   },
 
   addInventory: async (inventoryData) => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/inventory`, {
+    return await apiRequest(buildApiUrl('/api/landlord/inventory'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(inventoryData)
+      body: JSON.stringify(inventoryData),
     });
-    if (!response.ok) throw new Error('Failed to add inventory');
-    return response.json();
   },
 
   // Business Tracking
   getBusinessTracking: async () => {
-    const response = await fetch(`${LANDLORD_BASE_URL}/tracking`);
-    if (!response.ok) throw new Error('Failed to fetch business tracking');
-    return response.json();
+    return await apiRequest(buildApiUrl('/api/landlord/tracking'));
   },
 };

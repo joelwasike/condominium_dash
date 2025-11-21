@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Wrench,
   CheckCircle,
@@ -10,12 +10,19 @@ import {
   FileText,
   BarChart2,
   MoreHorizontal,
-  Settings
+  Settings,
+  MessageCircle,
+  Plus,
+  Filter,
+  Search
 } from 'lucide-react';
 import { technicianService } from '../services/technicianService';
+import { messagingService } from '../services/messagingService';
 import './TechnicianDashboard.css';
+import './SuperAdminDashboard.css';
 import SettingsPage from './SettingsPage';
 import RoleLayout from '../components/RoleLayout';
+import '../components/RoleLayout.css';
 
 const TechnicianDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -40,28 +47,74 @@ const TechnicianDashboard = () => {
     estimatedHours: 0,
     estimatedCost: 0
   });
+  const [showPhotoUploadModal, setShowPhotoUploadModal] = useState(false);
+  const [selectedInspectionForPhoto, setSelectedInspectionForPhoto] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  
+  // Filter states
+  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState('');
+  const [maintenancePriorityFilter, setMaintenancePriorityFilter] = useState('');
+  const [quoteStatusFilter, setQuoteStatusFilter] = useState('');
+  const [progressStatusFilter, setProgressStatusFilter] = useState('');
+  const [progressPriorityFilter, setProgressPriorityFilter] = useState('');
+  
+  // Progress report state
+  const [progressReport, setProgressReport] = useState(null);
+  
+  // Messaging states
+  const [chatUsers, setChatUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const isLoadingUsersRef = useRef(false);
+  const messagesEndRef = useRef(null);
+  
+  // Notifications
+  const [notifications, setNotifications] = useState([]);
+  
+  const addNotification = (message, type = 'info') => {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 3000);
+  };
 
   // Load data from backend
   useEffect(() => {
     loadData();
-  }, []);
+  }, [maintenanceStatusFilter, maintenancePriorityFilter, quoteStatusFilter, progressStatusFilter, progressPriorityFilter]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [overview, maintenance, inspection, task] = await Promise.all([
+      const [overview, maintenance, inspection, task, quotesData, progressData, progressReportData] = await Promise.all([
         technicianService.getOverview(),
-        technicianService.listMaintenanceRequests(),
+        technicianService.listMaintenanceRequests({
+          status: maintenanceStatusFilter || undefined,
+          priority: maintenancePriorityFilter || undefined,
+        }),
         technicianService.listInspections(),
-        technicianService.listTasks()
+        technicianService.listTasks(),
+        technicianService.listQuotes({
+          status: quoteStatusFilter || undefined,
+        }),
+        technicianService.getWorkProgress({
+          status: progressStatusFilter || undefined,
+          priority: progressPriorityFilter || undefined,
+        }),
+        technicianService.getRepairProgressReport().catch(() => null),
       ]);
       
       setOverviewData(overview);
-      setMaintenanceRequests(maintenance);
-      setInspections(inspection);
-      setTasks(task);
+      setMaintenanceRequests(Array.isArray(maintenance) ? maintenance : []);
+      setInspections(Array.isArray(inspection) ? inspection : []);
+      setTasks(Array.isArray(task) ? task : []);
+      setQuotes(Array.isArray(quotesData) ? quotesData : []);
+      setProgressReport(progressReportData);
     } catch (error) {
       console.error('Error loading technician data:', error);
+      addNotification('Failed to load dashboard data', 'error');
     } finally {
       setLoading(false);
     }
@@ -71,39 +124,97 @@ const TechnicianDashboard = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await technicianService.createInspection(inspectionForm);
+      // Ensure type is 'Move-in' or 'Move-out' for API
+      const inspectionData = {
+        ...inspectionForm,
+        type: inspectionForm.type === 'move-in' ? 'Move-in' : 
+              inspectionForm.type === 'move-out' ? 'Move-out' : 
+              inspectionForm.type,
+      };
+      await technicianService.createInspection(inspectionData);
+      addNotification('Inspection created successfully', 'success');
       setShowInspectionModal(false);
-      setInspectionForm({ property: '', type: 'routine', inspector: '', notes: '' });
+      setInspectionForm({ property: '', type: 'Move-in', inspector: '', notes: '' });
       loadData(); // Reload data to show new inspection
     } catch (error) {
       console.error('Error creating inspection:', error);
+      addNotification(error.message || 'Failed to create inspection', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  const handlePhotoUpload = async (e) => {
+    e.preventDefault();
+    if (!photoFile || !selectedInspectionForPhoto) return;
+    
+    setLoading(true);
+    try {
+      const inspectionId = selectedInspectionForPhoto.id || selectedInspectionForPhoto.ID;
+      await technicianService.uploadInspectionPhoto(inspectionId, photoFile);
+      addNotification('Photo uploaded successfully', 'success');
+      setShowPhotoUploadModal(false);
+      setSelectedInspectionForPhoto(null);
+      setPhotoFile(null);
+      loadData(); // Reload data to show updated inspection with photo
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      addNotification(error.message || 'Failed to upload photo', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUploadPhotoClick = (inspection) => {
+    setSelectedInspectionForPhoto(inspection);
+    setPhotoFile(null);
+    setShowPhotoUploadModal(true);
+  };
+
   const handleTaskView = (task) => {
     setSelectedTask(task);
     setTaskForm({
-      status: task.Status || 'Pending',
-      estimatedHours: task.EstimatedHours || 0,
-      estimatedCost: task.EstimatedCost || 0
+      status: task.Status || task.status || 'Pending',
+      estimatedHours: task.EstimatedHours || task.estimatedHours || 0,
+      estimatedCost: task.EstimatedCost || task.estimatedCost || 0,
+      property: task.Property || task.property || '',
+      issue: task.Issue || task.issue || '',
+      priority: task.Priority || task.priority || 'normal',
+      assigned: task.Assigned || task.assigned || ''
     });
     setShowTaskModal(true);
   };
 
   const handleTaskUpdate = async (e) => {
     e.preventDefault();
-    if (!selectedTask) return;
     
     setLoading(true);
     try {
-      await technicianService.updateTask(selectedTask.ID, taskForm);
+      const taskId = selectedTask?.id || selectedTask?.ID;
+      if (taskId) {
+        // Update existing task
+        await technicianService.updateTask(taskId, taskForm);
+        addNotification('Task updated successfully', 'success');
+      } else {
+        // Create new task
+        const taskData = {
+          property: taskForm.property || '',
+          issue: taskForm.issue || 'Maintenance Task',
+          priority: taskForm.priority || 'normal',
+          estimatedHours: taskForm.estimatedHours || 0,
+          estimatedCost: taskForm.estimatedCost || 0,
+          assigned: taskForm.assigned || '',
+        };
+        await technicianService.createTask(taskData);
+        addNotification('Task created successfully', 'success');
+      }
       setShowTaskModal(false);
       setSelectedTask(null);
-      loadData(); // Reload data to show updated task
+      setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0 });
+      loadData(); // Reload data to show updated/created task
     } catch (error) {
-      console.error('Error updating task:', error);
+      console.error('Error updating/creating task:', error);
+      addNotification(error.message || 'Failed to save task', 'error');
     } finally {
       setLoading(false);
     }
@@ -112,10 +223,13 @@ const TechnicianDashboard = () => {
   const handleTaskComplete = async (task) => {
     setLoading(true);
     try {
-      await technicianService.updateTask(task.ID, { status: 'Completed' });
+      const taskId = task.id || task.ID;
+      await technicianService.updateTask(taskId, { status: 'Completed' });
+      addNotification('Task marked as completed', 'success');
       loadData(); // Reload data to show updated task
     } catch (error) {
       console.error('Error completing task:', error);
+      addNotification('Failed to complete task', 'error');
     } finally {
       setLoading(false);
     }
@@ -127,247 +241,427 @@ const TechnicianDashboard = () => {
     window.location.href = '/';
   };
 
+  // Scroll to bottom of messages
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [chatMessages, scrollToBottom]);
+
+  // Load chat for a specific user
+  const loadChatForUser = useCallback(async (userId) => {
+    if (!userId) return;
+    
+    try {
+      setSelectedUserId(userId);
+      const messages = await messagingService.getConversation(userId);
+      
+      // Normalize messages array
+      const normalizedMessages = Array.isArray(messages) ? messages : [];
+      setChatMessages(normalizedMessages);
+      
+      // Mark messages as read
+      try {
+        await messagingService.markMessagesAsRead(userId);
+      } catch (readError) {
+        console.error('Error marking messages as read:', readError);
+      }
+    } catch (error) {
+      console.error('Error loading chat:', error);
+      addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
+      setChatMessages([]);
+    }
+  }, [addNotification]);
+
+  // Load users for messaging
+  const loadUsers = useCallback(async () => {
+    if (isLoadingUsersRef.current) {
+      console.log('Users already loading, skipping...');
+      return;
+    }
+    
+    isLoadingUsersRef.current = true;
+    try {
+      const users = await messagingService.getUsers();
+      console.log('Fetched users:', users);
+      
+      // Get current user ID
+      const storedUser = localStorage.getItem('user');
+      let currentUserId = null;
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          currentUserId = user.id || user.ID;
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+      
+      // Filter out current user and normalize
+      let normalizedUsers = Array.isArray(users) ? users : [];
+      if (Array.isArray(normalizedUsers[0])) {
+        normalizedUsers = normalizedUsers[0];
+      }
+      
+      const filteredUsers = normalizedUsers.filter(user => {
+        const userId = user.id || user.ID || user.userId;
+        return userId && String(userId) !== String(currentUserId);
+      });
+      
+      // Sort by name
+      filteredUsers.sort((a, b) => {
+        const nameA = (a.name || a.Name || '').toLowerCase();
+        const nameB = (b.name || b.Name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+      
+      // Get conversations to update unread counts
+      try {
+        const conversations = await messagingService.getConversations();
+        const conversationsMap = new Map();
+        conversations.forEach(conv => {
+          const userId = conv.userId || conv.userID;
+          if (userId) {
+            conversationsMap.set(String(userId), conv);
+          }
+        });
+        
+        // Update users with conversation data
+        const usersWithUnread = filteredUsers.map(user => {
+          const userId = String(user.id || user.ID || user.userId);
+          const conv = conversationsMap.get(userId);
+          return {
+            ...user,
+            userId: user.id || user.ID || user.userId,
+            name: user.name || user.Name,
+            email: user.email || user.Email,
+            role: user.role || user.Role,
+            unreadCount: conv?.unreadCount || 0,
+          };
+        });
+        
+        setChatUsers(usersWithUnread);
+        
+        // Auto-select first user if none selected
+        if (!selectedUserId && usersWithUnread.length > 0) {
+          setSelectedUserId(prev => prev || usersWithUnread[0].userId);
+        }
+      } catch (convError) {
+        console.error('Error loading conversations:', convError);
+        // Still set users even if conversations fail
+        setChatUsers(filteredUsers.map(user => ({
+          ...user,
+          userId: user.id || user.ID || user.userId,
+          name: user.name || user.Name,
+          email: user.email || user.Email,
+          role: user.role || user.Role,
+          unreadCount: 0,
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      addNotification('Failed to load users for messaging', 'error');
+      setChatUsers([]);
+    } finally {
+      isLoadingUsersRef.current = false;
+    }
+  }, [selectedUserId, addNotification]);
+
+  // Load users when chat tab is active
+  useEffect(() => {
+    if (activeTab === 'chat' && !isLoadingUsersRef.current) {
+      loadUsers();
+    }
+  }, [activeTab, loadUsers]);
+
+  // Load chat when user is selected
+  useEffect(() => {
+    if (selectedUserId && activeTab === 'chat') {
+      loadChatForUser(selectedUserId);
+    }
+  }, [selectedUserId, activeTab, loadChatForUser]);
+
+  // Handle send message
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedUserId) return;
+    
+    // Get current user ID from localStorage
+    const storedUser = localStorage.getItem('user');
+    let currentUserId = null;
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        currentUserId = user.id || user.ID;
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+      }
+    }
+    
+    if (!currentUserId) {
+      addNotification('Unable to identify current user. Please log in again.', 'error');
+      return;
+    }
+    
+    const content = chatInput.trim();
+    const tempMessageId = `temp-${Date.now()}`;
+    
+    // Optimistically add message to UI immediately
+    const optimisticMessage = {
+      id: tempMessageId,
+      ID: tempMessageId,
+      fromUserId: currentUserId,
+      toUserId: selectedUserId,
+      content: content,
+      createdAt: new Date().toISOString(),
+      read: false,
+      type: 'message'
+    };
+    
+    setChatMessages(prev => [...prev, optimisticMessage]);
+    setChatInput('');
+    
+    try {
+      const payload = {
+        toUserId: selectedUserId,
+        content,
+      };
+      const sentMessage = await messagingService.sendMessage(payload);
+      
+      // Replace optimistic message with real message from server
+      if (sentMessage && sentMessage.id) {
+        setChatMessages(prev => 
+          prev.map(msg => 
+            msg.id === tempMessageId ? sentMessage : msg
+          )
+        );
+      } else {
+        // If server response doesn't have expected format, reload chat
+        await loadChatForUser(selectedUserId);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      addNotification(error.message || 'Failed to send message', 'error');
+      // Remove optimistic message on error
+      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      setChatInput(content); // Restore input on error
+    }
+  };
+
   const tabs = useMemo(
     () => [
       { id: 'overview', label: 'Overview', icon: Building },
       { id: 'inspections', label: 'Inspections', icon: CheckCircle },
       { id: 'inventories', label: 'Inventories', icon: FileText },
       { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-      { id: 'requests', label: 'Requests', icon: Mail },
       { id: 'quotes', label: 'Quotes', icon: Send },
       { id: 'progress', label: 'Progress', icon: BarChart2 },
       { id: 'tasks', label: 'Tasks', icon: Calendar },
+      { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Settings', icon: Settings }
     ],
     []
   );
 
   const renderOverview = () => (
-    <div className="overview-section">
-      <div className="data-table-wrapper">
-        <table className="data-table">
-        <thead>
-          <tr>
-            <th className="table-select">
-              <label className="checkbox">
-                <input type="checkbox" />
-                <span />
-              </label>
-            </th>
-            <th>Date</th>
-            <th>Tenant</th>
-            <th>Property</th>
-            <th>Work Type</th>
-            <th>Severity</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <tr>
-              <td colSpan={8} className="loading">Loading overview data...</td>
-            </tr>
-          ) : maintenanceRequests.length === 0 ? (
-            <tr>
-              <td colSpan={8} className="loading">No maintenance requests found</td>
-            </tr>
-          ) : (
-            maintenanceRequests.slice(0, 6).map(request => (
-              <tr key={request.ID}>
-                <td className="table-select">
-                  <label className="checkbox">
-                    <input type="checkbox" />
-                    <span />
-                  </label>
-                </td>
-                <td>{new Date(request.Date).toLocaleDateString()}</td>
-                <td>
-                  <span className="row-primary">{request.Tenant || 'Tenant'}</span>
-                  <span className="row-secondary">{request.Email || 'tenant@example.com'}</span>
-                </td>
-                <td>
-                  <span className="row-primary">{request.Property}</span>
-                  <span className="row-secondary">Unit #{request.Unit || '1A'}</span>
-                </td>
-                <td>{request.Category || 'Plumbing'}</td>
-                <td>
-                  <span className={`severity-chip ${(request.Priority || 'Medium').toLowerCase()}`}>
-                    {request.Priority || 'Medium'}
-                  </span>
-                </td>
-                <td>
-                  <button type="button" className="status-pill">
-                    View
-                  </button>
-                </td>
-                <td className="table-menu">
-                  <button type="button" className="dots-button" aria-label="More options">
-                    <MoreHorizontal size={20} />
-                  </button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-        </table>
+    <div className="sa-overview-page">
+      <div className="sa-overview-metrics" style={{ width: '100%' }}>
+        <div className="sa-metric-card sa-metric-primary">
+          <p className="sa-metric-label">Total Open Tickets</p>
+          <p className="sa-metric-value">{overviewData?.totalOpenTickets || 0}</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Urgent Tickets Pending</p>
+          <p className="sa-metric-number">{overviewData?.urgentTicketsPending || 0}</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Average Resolution Time</p>
+          <p className="sa-metric-number">{overviewData?.averageResolutionTime ? `${overviewData.averageResolutionTime} days` : 'N/A'}</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Total Cost of Ongoing Repairs</p>
+          <p className="sa-metric-value">${(overviewData?.totalCostOfOngoingRepairs || 0).toLocaleString()}</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Total Inspections</p>
+          <p className="sa-metric-number">{overviewData?.totalInspections || 0}</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Total Quotes</p>
+          <p className="sa-metric-number">{overviewData?.totalQuotes || 0}</p>
+        </div>
       </div>
     </div>
   );
 
   const renderInspections = () => (
-    <div className="inspections-section panel">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
+        <div>
         <h3>Property Inspections</h3>
         <p>Manage move-in, move-out, and routine inspections</p>
+        </div>
         <button 
-          className="btn-primary"
+          className="sa-primary-cta"
           onClick={() => setShowInspectionModal(true)}
         >
-          <CheckCircle size={16} />
+          <Plus size={16} />
           Add Inspection
         </button>
       </div>
 
-      <div className="filters-section">
-        <div className="filter-row">
-          <select className="filter-select">
+      <div className="sa-filters-section">
+        <select className="sa-filter-select">
             <option value="">All Inspection Types</option>
-            <option value="move-in">Move-in</option>
-            <option value="move-out">Move-out</option>
+          <option value="Move-in">Move-in</option>
+          <option value="Move-out">Move-out</option>
             <option value="routine">Routine</option>
             <option value="emergency">Emergency</option>
           </select>
-          <select className="filter-select">
+        <select className="sa-filter-select">
             <option value="">All Status</option>
             <option value="completed">Completed</option>
             <option value="in-progress">In Progress</option>
             <option value="scheduled">Scheduled</option>
             <option value="pending">Pending</option>
           </select>
-          <select className="filter-select">
-            <option value="">All Properties</option>
-            <option value="123-main">123 Main St</option>
-            <option value="456-oak">456 Oak Ave</option>
-            <option value="789-pine">789 Pine Ln</option>
-            <option value="321-elm">321 Elm St</option>
-          </select>
-          <select className="filter-select">
-            <option value="">All Inspectors</option>
-            <option value="john-tech">John Tech</option>
-            <option value="jane-tech">Jane Tech</option>
-            <option value="mike-tech">Mike Tech</option>
-          </select>
-        </div>
       </div>
 
-      <div className="data-table-wrapper">
-        <table className="data-table">
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
           <thead>
             <tr>
+              <th>No</th>
               <th>Property</th>
               <th>Inspection Type</th>
-              <th>Status</th>
               <th>Date</th>
               <th>Inspector</th>
               <th>Notes</th>
-              <th>Actions</th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {inspections.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
+                <td colSpan="7" className="sa-table-empty">
                   No inspections found
                 </td>
               </tr>
             ) : (
-              inspections.map(inspection => (
-                <tr key={inspection.ID}>
-                  <td>{inspection.Property}</td>
-                  <td>
-                    <span className={`type-badge ${inspection.Type?.toLowerCase().replace('-', '-') || 'routine'}`}>
-                      {inspection.Type || 'Routine'}
-                    </span>
+              inspections.map((inspection, index) => {
+                const inspectionId = inspection.id || inspection.ID;
+                const property = inspection.property || inspection.Property;
+                const type = inspection.type || inspection.Type;
+                const date = inspection.date || inspection.Date;
+                const inspector = inspection.inspector || inspection.Inspector;
+                const notes = inspection.notes || inspection.Notes;
+                const photos = inspection.photos || inspection.Photos;
+                
+                return (
+                  <tr key={inspectionId}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{property}</span>
                   </td>
                   <td>
-                    <span className={`status-badge ${inspection.Status?.toLowerCase().replace(' ', '-') || 'pending'}`}>
-                      {inspection.Status || 'Pending'}
+                      <span className={`sa-status-pill ${(type || 'routine').toLowerCase().replace('-', '-')}`}>
+                        {type || 'Routine'}
                     </span>
                   </td>
-                  <td>{new Date(inspection.Date).toLocaleDateString()}</td>
-                  <td>{inspection.Inspector || 'Unassigned'}</td>
-                  <td>{inspection.Notes || 'No notes'}</td>
-                  <td>
-                    <button className="table-action-button view">View</button>
-                    <button className="table-action-button edit">Edit</button>
-                    {inspection.Status === 'Scheduled' && (
-                      <button className="table-action-button complete">Start</button>
+                    <td>{date ? new Date(date).toLocaleDateString() : 'N/A'}</td>
+                    <td>{inspector || 'Unassigned'}</td>
+                    <td>
+                      <span className="sa-cell-sub">{notes || 'No notes'}</span>
+                    </td>
+                    <td className="sa-row-actions">
+                      <button className="sa-icon-button" onClick={() => handleUploadPhotoClick(inspection)} title="Upload Photo">📷</button>
+                      {photos && Array.isArray(photos) && photos.length > 0 && (
+                        <span className="sa-cell-sub" style={{ marginLeft: '8px', fontSize: '0.75rem' }}>
+                          ({photos.length})
+                        </span>
                     )}
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
-
-      <div className="inspection-stats">
-        <div className="stat-item">
-          <span className="stat-label">Completed This Month</span>
-          <span className="stat-value">18</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">Pending Inspections</span>
-          <span className="stat-value">5</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">Average Inspection Time</span>
-          <span className="stat-value">2.5 hrs</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">Issues Found</span>
-          <span className="stat-value">12</span>
-        </div>
-      </div>
     </div>
   );
 
-  const renderMaintenance = () => (
-    <div className="maintenance-section panel">
-      <div className="section-header">
+  const renderMaintenance = () => {
+    const handleUpdateMaintenance = async (maintenance) => {
+      setShowTaskModal(true);
+      setSelectedTask(maintenance);
+      setTaskForm({
+        status: maintenance.status || maintenance.Status || 'Pending',
+        estimatedHours: maintenance.estimatedHours || maintenance.EstimatedHours || 0,
+        estimatedCost: maintenance.estimatedCost || maintenance.EstimatedCost || 0,
+      });
+    };
+
+    const handleSubmitQuote = async (maintenance) => {
+      try {
+        const quoteData = {
+          maintenanceId: maintenance.id || maintenance.ID,
+          property: maintenance.property || maintenance.Property,
+          issue: maintenance.issue || maintenance.Issue,
+          amount: maintenance.estimatedCost || maintenance.EstimatedCost || 0,
+          recipient: 'management@example.com',
+        };
+        await technicianService.submitQuote(quoteData);
+        addNotification('Quote submitted successfully', 'success');
+        loadData();
+      } catch (error) {
+        console.error('Error submitting quote:', error);
+        addNotification('Failed to submit quote', 'error');
+      }
+    };
+
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
         <h3>Maintenance & Repairs</h3>
         <p>Track maintenance tasks and repair work</p>
+          </div>
       </div>
 
-      <div className="maintenance-filters">
-        <select className="filter-select">
+        <div className="sa-filters-section">
+          <select 
+            className="sa-filter-select"
+            value={maintenancePriorityFilter}
+            onChange={(e) => setMaintenancePriorityFilter(e.target.value)}
+          >
           <option value="">All Priority Levels</option>
           <option value="urgent">Urgent</option>
           <option value="high">High</option>
-          <option value="medium">Medium</option>
+            <option value="normal">Normal</option>
           <option value="low">Low</option>
         </select>
-        <select className="filter-select">
+          <select 
+            className="sa-filter-select"
+            value={maintenanceStatusFilter}
+            onChange={(e) => setMaintenanceStatusFilter(e.target.value)}
+          >
           <option value="">All Status</option>
-          <option value="completed">Completed</option>
-          <option value="in-progress">In Progress</option>
-          <option value="pending">Pending</option>
-          <option value="scheduled">Scheduled</option>
-        </select>
-        <select className="filter-select">
-          <option value="">All Properties</option>
-          <option value="123-main">123 Main St</option>
-          <option value="456-oak">456 Oak Ave</option>
-          <option value="789-pine">789 Pine Ln</option>
-          <option value="321-elm">321 Elm St</option>
+            <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
         </select>
       </div>
 
-      <div className="data-table-wrapper">
-        <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
           <thead>
             <tr>
+              <th>No</th>
               <th>Property</th>
               <th>Issue</th>
               <th>Priority</th>
@@ -377,194 +671,326 @@ const TechnicianDashboard = () => {
               <th>Est. Hours</th>
               <th>Est. Cost</th>
               <th>Quote</th>
-              <th>Actions</th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {maintenanceRequests.length === 0 ? (
               <tr>
-                <td colSpan="10" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan={11} className="sa-table-empty">
                   No maintenance requests found
                 </td>
               </tr>
             ) : (
-              maintenanceRequests.map(maintenance => (
-                <tr key={maintenance.ID}>
-                  <td>{maintenance.Property}</td>
-                  <td>{maintenance.Issue}</td>
+                maintenanceRequests.map((maintenance, index) => {
+                  const maintenanceId = maintenance.id || maintenance.ID;
+                  const property = maintenance.property || maintenance.Property;
+                  const issue = maintenance.issue || maintenance.Issue;
+                  const priority = (maintenance.priority || maintenance.Priority || 'normal').toLowerCase();
+                  const status = maintenance.status || maintenance.Status || 'Pending';
+                  const assigned = maintenance.assigned || maintenance.Assigned || 'Unassigned';
+                  const date = maintenance.date || maintenance.Date || maintenance.createdAt || maintenance.CreatedAt;
+                  const estimatedHours = maintenance.estimatedHours || maintenance.EstimatedHours || 0;
+                  const estimatedCost = maintenance.estimatedCost || maintenance.EstimatedCost || 0;
+                  const quoteGenerated = maintenance.quoteGenerated || maintenance.QuoteGenerated || false;
+                  
+                  return (
+                    <tr key={maintenanceId}>
+                      <td>{index + 1}</td>
+                      <td className="sa-cell-main">
+                        <span className="sa-cell-title">{property}</span>
+                      </td>
+                      <td>
+                        <span className="sa-cell-title">{issue}</span>
+                  </td>
                   <td>
-                    <span className={`priority-badge ${maintenance.Priority?.toLowerCase() || 'medium'}`}>
-                      {maintenance.Priority || 'Medium'}
+                        <span className={`sa-status-pill ${priority}`}>
+                          {priority}
                     </span>
                   </td>
                   <td>
-                    <span className={`status-badge ${maintenance.Status?.toLowerCase().replace(' ', '-') || 'pending'}`}>
-                      {maintenance.Status || 'Pending'}
+                        <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
+                          {status}
                     </span>
                   </td>
-                  <td>{maintenance.Assigned || 'Unassigned'}</td>
-                  <td>{new Date(maintenance.Date).toLocaleDateString()}</td>
-                  <td>{maintenance.EstimatedHours || 0}h</td>
-                  <td>${maintenance.EstimatedCost || 0}</td>
-                  <td>
-                    <span className={`quote-badge ${maintenance.QuoteGenerated ? 'generated' : 'pending'}`}>
-                      {maintenance.QuoteGenerated ? 'Generated' : 'Pending'}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="table-action-button view">View</button>
-                    <button className="table-action-button edit">Edit</button>
-                    {!maintenance.QuoteGenerated && (
-                      <button className="table-action-button quote">Generate Quote</button>
-                    )}
-                    {maintenance.Status === 'Pending' && (
-                      <button className="table-action-button start">Start</button>
-                    )}
-                    {maintenance.QuoteGenerated && (
-                      <>
-                        <button className="table-action-button edit" title="Submit to Management" onClick={() => {
-                          const q = { id: Date.now(), maintenanceId: maintenance.ID, property: maintenance.Property, issue: maintenance.Issue, amount: maintenance.EstimatedCost, recipient: 'Management', date: new Date().toLocaleDateString(), status: 'Sent' };
-                          setQuotes(prev => [q, ...prev]);
-                        }}>To Mgmt</button>
-                        <button className="table-action-button edit" title="Submit to Owner" onClick={() => {
-                          const q = { id: Date.now()+1, maintenanceId: maintenance.ID, property: maintenance.Property, issue: maintenance.Issue, amount: maintenance.EstimatedCost, recipient: 'Owner', date: new Date().toLocaleDateString(), status: 'Sent' };
-                          setQuotes(prev => [q, ...prev]);
-                        }}>To Owner</button>
-                      </>
+                      <td>{assigned}</td>
+                      <td>{date ? new Date(date).toLocaleDateString() : 'N/A'}</td>
+                      <td>{estimatedHours}h</td>
+                      <td>${estimatedCost.toLocaleString()}</td>
+                      <td>
+                        <span className={`sa-status-pill ${quoteGenerated ? 'sent' : 'pending'}`}>
+                          {quoteGenerated ? 'Generated' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="sa-row-actions">
+                        <button className="sa-icon-button" onClick={() => handleUpdateMaintenance(maintenance)} title="Edit">✏️</button>
+                        {!quoteGenerated && (
+                          <button className="sa-icon-button" onClick={() => handleSubmitQuote(maintenance)} title="Generate Quote" style={{ color: '#16a34a', marginLeft: '8px' }}>💰</button>
                     )}
                   </td>
                 </tr>
-              ))
+                  );
+                })
             )}
           </tbody>
         </table>
       </div>
-
-      <div className="maintenance-summary">
-        <div className="summary-card">
-          <h4>Total Hours This Month</h4>
-          <span className="amount">45.5h</span>
-        </div>
-        <div className="summary-card">
-          <h4>Completed Tasks</h4>
-          <span className="amount">28</span>
-        </div>
-        <div className="summary-card">
-          <h4>Average Completion Time</h4>
-          <span className="amount">2.1 days</span>
-        </div>
-        <div className="summary-card">
-          <h4>Total Cost of Ongoing Repairs</h4>
-          <span className="amount">$1,200</span>
-        </div>
-      </div>
     </div>
   );
+  };
 
-  const renderInventories = () => (
-    <div className="inspections-section panel">
-      <div className="section-header">
+  const renderInventories = () => {
+    const inventoryInspections = inspections.filter(i => {
+      const type = i.type || i.Type;
+      return type === 'Move-in' || type === 'Move-out';
+    });
+
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
         <h3>Move-in and Move-out Inventories</h3>
         <p>Create and manage detailed inventory reports</p>
+          </div>
       </div>
 
-      <div className="data-table-wrapper">
-        <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
           <thead>
             <tr>
+              <th>No</th>
               <th>Property</th>
               <th>Type</th>
               <th>Date</th>
               <th>Inspector</th>
-              <th>Report</th>
-              <th>Actions</th>
+              <th>Notes</th>
+              <th />
             </tr>
           </thead>
           <tbody>
-            {inspections.filter(i => i.Type === 'Move-in' || i.Type === 'Move-out').length === 0 ? (
+              {inventoryInspections.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan={7} className="sa-table-empty">
                   No inventory inspections found
                 </td>
               </tr>
             ) : (
-              inspections.filter(i => i.Type === 'Move-in' || i.Type === 'Move-out').map(inv => (
-                <tr key={`inv-${inv.ID}`}>
-                  <td>{inv.Property}</td>
-                  <td>
-                    <span className={`type-badge ${inv.Type?.toLowerCase().replace(' ', '-') || 'move-in'}`}>{inv.Type || 'Move-in'}</span>
+                inventoryInspections.map((inv, index) => {
+                  const invId = inv.id || inv.ID;
+                  const property = inv.property || inv.Property;
+                  const type = inv.type || inv.Type;
+                  const date = inv.date || inv.Date;
+                  const inspector = inv.inspector || inv.Inspector;
+                  const notes = inv.notes || inv.Notes;
+                  
+                  return (
+                    <tr key={`inv-${invId}`}>
+                      <td>{index + 1}</td>
+                      <td className="sa-cell-main">
+                        <span className="sa-cell-title">{property}</span>
                   </td>
-                  <td>{new Date(inv.Date).toLocaleDateString()}</td>
-                  <td>{inv.Inspector || 'Unassigned'}</td>
                   <td>
-                    <button className="table-action-button view">View</button>
+                        <span className={`sa-status-pill ${(type || 'move-in').toLowerCase().replace(' ', '-')}`}>
+                          {type || 'Move-in'}
+                        </span>
                   </td>
+                      <td>{date ? new Date(date).toLocaleDateString() : 'N/A'}</td>
+                      <td>{inspector || 'Unassigned'}</td>
                   <td>
-                    <button className="table-action-button edit">Edit</button>
-                    <button className="table-action-button quote">Generate Report</button>
+                        <span className="sa-cell-sub">{notes || 'No notes'}</span>
+                      </td>
+                      <td className="sa-row-actions">
+                        <button className="sa-icon-button" title="View">👁️</button>
+                        <button className="sa-icon-button" title="Edit">✏️</button>
                   </td>
                 </tr>
-              ))
+                  );
+                })
             )}
           </tbody>
         </table>
       </div>
     </div>
   );
+  };
 
-  const renderRequests = () => (
-    <div className="inspections-section panel">
-      <div className="section-header">
-        <h3>Tenant Requests (Mail Inbox)</h3>
-        <p>Receive and triage tenant maintenance requests</p>
+  const renderMessages = () => (
+    <div className="sa-chat-page">
+      <div className="sa-chat-layout">
+        <div className="sa-chat-list">
+          <h3>Users</h3>
+          <ul>
+            {chatUsers.map((user) => {
+              const active = user.userId === selectedUserId;
+              return (
+                <li
+                  key={user.userId}
+                  className={active ? 'active' : ''}
+                  onClick={() => loadChatForUser(user.userId)}
+                >
+                  <div className="sa-cell-main">
+                    <span className="sa-cell-title">{user.name || 'User'}</span>
+                    <span className="sa-cell-sub">{user.email || ''}</span>
+                    {user.role && (
+                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {user.role}
+                      </span>
+                    )}
+                    {user.unreadCount > 0 && (
+                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                        {user.unreadCount} unread
+                      </span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+            {chatUsers.length === 0 && (
+              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                No users available
+              </li>
+            )}
+          </ul>
       </div>
 
-      <div className="data-table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Tenant</th>
-              <th>Email</th>
-              <th>Property</th>
-              <th>Subject</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {requests.map(req => (
-              <tr key={req.id}>
-                <td>{req.date}</td>
-                <td>{req.tenant}</td>
-                <td><Mail size={14} /> {req.email}</td>
-                <td>{req.property}</td>
-                <td>{req.subject}</td>
-                <td>
-                  <span className={`status-badge ${req.status.toLowerCase()}`}>{req.status}</span>
-                </td>
-                <td>
-                  <button className="table-action-button view" onClick={() => setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'Read' } : r))}>Mark Read</button>
-                  <button className="table-action-button edit">Assign</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="sa-chat-conversation">
+          <div className="sa-chat-header">
+            <h3>Messages</h3>
+            {selectedUserId && (
+              <span className="sa-chat-subtitle">
+                Chat with{' '}
+                {
+                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
+                    .name || 'User'
+                }
+              </span>
+            )}
+      </div>
+          <div className="sa-chat-messages">
+            {chatMessages.map((msg, index) => {
+              const messageContent = msg.content || msg.Content || '';
+              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+              const messageFromUserId = msg.fromUserId || msg.FromUserId;
+              const messageId = msg.id || msg.ID || index;
+              
+              // Determine if message is outgoing or incoming
+              const storedUser = localStorage.getItem('user');
+              let isOutgoing = false;
+              if (storedUser) {
+                try {
+                  const user = JSON.parse(storedUser);
+                  const currentUserId = user.id || user.ID;
+                  isOutgoing = String(messageFromUserId) === String(currentUserId);
+                } catch (e) {
+                  // Default to incoming if we can't parse user
+                }
+              }
+              
+              return (
+                <div
+                  key={`msg-${messageId}`}
+                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
+                >
+                  <p>{messageContent}</p>
+                  <span className="sa-chat-meta">
+                    {messageCreatedAt
+                      ? new Date(messageCreatedAt).toLocaleString()
+                      : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {chatMessages.length === 0 && (
+              <div className="sa-table-empty">
+                Select a conversation on the left to start chatting.
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="sa-chat-input-row">
+            <input
+              type="text"
+              placeholder="Type a message..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={!selectedUserId}
+            />
+            <button 
+              className="sa-primary-cta" 
+              onClick={handleSendMessage}
+              disabled={!selectedUserId || !chatInput.trim()}
+            >
+              <MessageCircle size={16} />
+              Send
+            </button>
+          </div>
+        </div>
+        
+        <div className="sa-chat-details">
+          <h4>Contact Details</h4>
+          {selectedUserId ? (
+            (() => {
+              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
+              return (
+                <>
+                  <p>
+                    <strong>Name:</strong> {user.name || 'User'}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {user.email || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Role:</strong> {user.role || 'N/A'}
+                  </p>
+                  {user.company && (
+                    <p>
+                      <strong>Company:</strong> {user.company}
+                    </p>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <p>Select a user to view details.</p>
+          )}
+        </div>
       </div>
     </div>
   );
 
   const renderQuotes = () => (
-    <div className="inspections-section panel">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
+        <div>
         <h3>Submitted Quotes</h3>
         <p>Track quotes sent to management and owners</p>
       </div>
-      <div className="data-table-wrapper">
-        <table className="data-table">
+      </div>
+
+      <div className="sa-filters-section">
+        <select 
+          className="sa-filter-select"
+          value={quoteStatusFilter}
+          onChange={(e) => setQuoteStatusFilter(e.target.value)}
+        >
+          <option value="">All Status</option>
+          <option value="Sent">Sent</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+      </div>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
           <thead>
             <tr>
+              <th>No</th>
               <th>Date</th>
               <th>Recipient</th>
               <th>Property</th>
@@ -574,16 +1000,41 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {quotes.map(q => (
-              <tr key={q.id}>
-                <td>{q.date}</td>
-                <td>{q.recipient}</td>
-                <td>{q.property}</td>
-                <td>{q.issue}</td>
-                <td>{q.amount} XOF</td>
-                <td><span className="status-badge completed">{q.status}</span></td>
+            {quotes.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="sa-table-empty">
+                  No quotes found
+                </td>
               </tr>
-            ))}
+            ) : (
+              quotes.map((q, index) => {
+                const quoteId = q.id || q.ID;
+                const date = q.date || q.Date || q.createdAt || q.CreatedAt;
+                const recipient = q.recipient || q.Recipient;
+                const property = q.property || q.Property;
+                const issue = q.issue || q.Issue;
+                const amount = q.amount || q.Amount || 0;
+                const status = (q.status || q.Status || 'Sent').toLowerCase();
+                
+                return (
+                  <tr key={quoteId}>
+                    <td>{index + 1}</td>
+                    <td>{date ? new Date(date).toLocaleDateString() : 'N/A'}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{recipient}</span>
+                    </td>
+                    <td>{property}</td>
+                    <td>{issue}</td>
+                    <td>${amount.toLocaleString()}</td>
+                    <td>
+                      <span className={`sa-status-pill ${status}`}>
+                        {status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -591,41 +1042,115 @@ const TechnicianDashboard = () => {
   );
 
   const renderProgress = () => (
-    <div className="inspections-section panel">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
+        <div>
         <h3>Work Progress Report</h3>
         <p>Monitor progress of ongoing maintenance tasks</p>
       </div>
-      <div className="data-table-wrapper">
-        <table className="data-table">
+      </div>
+
+      <div className="sa-filters-section">
+        <select 
+          className="sa-filter-select"
+          value={progressStatusFilter}
+          onChange={(e) => setProgressStatusFilter(e.target.value)}
+        >
+          <option value="">All Status</option>
+          <option value="Pending">Pending</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Completed">Completed</option>
+        </select>
+        <select 
+          className="sa-filter-select"
+          value={progressPriorityFilter}
+          onChange={(e) => setProgressPriorityFilter(e.target.value)}
+        >
+          <option value="">All Priority</option>
+          <option value="urgent">Urgent</option>
+          <option value="high">High</option>
+          <option value="normal">Normal</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+
+      {progressReport && (
+        <div style={{ marginBottom: '20px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Total Ongoing</p>
+              <p style={{ margin: '4px 0 0', fontSize: '1.2rem', fontWeight: 600, color: '#111827' }}>
+                {progressReport.totalOngoing || 0}
+              </p>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Total Completed</p>
+              <p style={{ margin: '4px 0 0', fontSize: '1.2rem', fontWeight: 600, color: '#111827' }}>
+                {progressReport.totalCompleted || 0}
+              </p>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Total Ongoing Cost</p>
+              <p style={{ margin: '4px 0 0', fontSize: '1.2rem', fontWeight: 600, color: '#111827' }}>
+                ${(progressReport.totalOngoingCost || 0).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
           <thead>
             <tr>
+              <th>No</th>
               <th>Property</th>
               <th>Issue</th>
+              <th>Priority</th>
               <th>Status</th>
-              <th>Progress</th>
+              <th>Assigned To</th>
+              <th>Est. Cost</th>
             </tr>
           </thead>
           <tbody>
             {maintenanceRequests.length === 0 ? (
               <tr>
-                <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
+                <td colSpan={7} className="sa-table-empty">
                   No maintenance requests found
                 </td>
               </tr>
             ) : (
-              maintenanceRequests.map(m => (
-                <tr key={`prog-${m.ID}`}>
-                  <td>{m.Property}</td>
-                  <td>{m.Issue}</td>
-                  <td><span className={`status-badge ${m.Status?.toLowerCase().replace(' ', '-') || 'pending'}`}>{m.Status || 'Pending'}</span></td>
-                  <td>
-                    <div className="progress-bar">
-                      <div className="progress-fill" style={{ width: m.Status === 'Completed' ? '100%' : m.Status === 'In Progress' ? '60%' : m.Status === 'Scheduled' ? '20%' : '10%' }} />
-                    </div>
+              maintenanceRequests.map((m, index) => {
+                const maintenanceId = m.id || m.ID;
+                const property = m.property || m.Property;
+                const issue = m.issue || m.Issue;
+                const priority = (m.priority || m.Priority || 'normal').toLowerCase();
+                const status = m.status || m.Status || 'Pending';
+                const assigned = m.assigned || m.Assigned || 'Unassigned';
+                const estimatedCost = m.estimatedCost || m.EstimatedCost || 0;
+                
+                return (
+                  <tr key={`prog-${maintenanceId}`}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{property}</span>
+                    </td>
+                    <td>{issue}</td>
+                    <td>
+                      <span className={`sa-status-pill ${priority}`}>
+                        {priority}
+                      </span>
                   </td>
+                    <td>
+                      <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
+                        {status}
+                      </span>
+                    </td>
+                    <td>{assigned}</td>
+                    <td>${estimatedCost.toLocaleString()}</td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
@@ -634,138 +1159,114 @@ const TechnicianDashboard = () => {
   );
 
   const renderTasks = () => (
-    <div className="tasks-section panel">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
+        <div>
         <h3>Task Management</h3>
         <p>Manage scheduled tasks and maintenance calendar</p>
+        </div>
+        <button 
+          className="sa-primary-cta"
+          onClick={() => {
+            setSelectedTask(null);
+            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0 });
+            setShowTaskModal(true);
+          }}
+        >
+          <Plus size={16} />
+          Create Task
+        </button>
       </div>
 
-      <div className="task-filters">
-        <select className="filter-select">
+      <div className="sa-filters-section">
+        <select className="sa-filter-select">
           <option value="">All Priority Levels</option>
           <option value="urgent">Urgent</option>
           <option value="high">High</option>
-          <option value="medium">Medium</option>
+          <option value="normal">Normal</option>
           <option value="low">Low</option>
         </select>
-        <select className="filter-select">
+        <select className="sa-filter-select">
           <option value="">All Status</option>
-          <option value="completed">Completed</option>
-          <option value="in-progress">In Progress</option>
-          <option value="pending">Pending</option>
-          <option value="scheduled">Scheduled</option>
+          <option value="Pending">Pending</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Completed">Completed</option>
         </select>
-        <input 
-          type="date" 
-          className="filter-select"
-          placeholder="Due Date"
-        />
       </div>
 
-      <div className="data-table-wrapper">
-        <table className="data-table">
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
           <thead>
             <tr>
+              <th>No</th>
               <th>Task Title</th>
               <th>Property</th>
               <th>Priority</th>
-              <th>Due Date</th>
+              <th>Date</th>
               <th>Status</th>
               <th>Est. Hours</th>
-              <th>Actions</th>
+              <th>Est. Cost</th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {tasks.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
+                <td colSpan={9} className="sa-table-empty">
                   No tasks found
                 </td>
               </tr>
             ) : (
-              tasks.map(task => (
-                <tr key={task.ID}>
-                  <td>{task.Issue || 'Maintenance Task'}</td>
-                  <td>{task.Property}</td>
+              tasks.map((task, index) => {
+                const taskId = task.id || task.ID;
+                const issue = task.issue || task.Issue || 'Maintenance Task';
+                const property = task.property || task.Property;
+                const priority = (task.priority || task.Priority || 'normal').toLowerCase();
+                const date = task.date || task.Date || task.createdAt || task.CreatedAt;
+                const status = task.status || task.Status || 'Pending';
+                const estimatedHours = task.estimatedHours || task.EstimatedHours || 0;
+                const estimatedCost = task.estimatedCost || task.EstimatedCost || 0;
+                
+                return (
+                  <tr key={taskId}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{issue}</span>
+                    </td>
+                    <td>{property}</td>
                   <td>
-                    <span className={`priority-badge ${task.Priority?.toLowerCase() || 'medium'}`}>
-                      {task.Priority || 'Medium'}
+                      <span className={`sa-status-pill ${priority}`}>
+                        {priority}
                     </span>
                   </td>
-                  <td>{new Date(task.Date).toLocaleDateString()}</td>
+                    <td>{date ? new Date(date).toLocaleDateString() : 'N/A'}</td>
                   <td>
-                    <span className={`status-badge ${task.Status?.toLowerCase().replace(' ', '-') || 'pending'}`}>
-                      {task.Status || 'Pending'}
+                      <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
+                        {status}
                     </span>
                   </td>
-                  <td>{task.EstimatedHours || 0}h</td>
-                  <td>
+                    <td>{estimatedHours}h</td>
+                    <td>${estimatedCost.toLocaleString()}</td>
+                    <td className="sa-row-actions">
+                      <button className="sa-icon-button" onClick={() => handleTaskView(task)} title="View/Edit">✏️</button>
+                      {status !== 'Completed' && (
                     <button 
-                      className="table-action-button view"
-                      onClick={() => handleTaskView(task)}
-                    >
-                      View
-                    </button>
-                    <button 
-                      className="table-action-button edit"
-                      onClick={() => handleTaskView(task)}
-                    >
-                      Edit
-                    </button>
-                    {task.Status !== 'Completed' && (
-                      <button 
-                        className="table-action-button complete"
+                          className="sa-icon-button" 
                         onClick={() => handleTaskComplete(task)}
                         disabled={loading}
+                          title="Complete"
+                          style={{ color: '#16a34a', marginLeft: '8px' }}
                       >
-                        Complete
+                          ✓
                       </button>
                     )}
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
-      </div>
-
-      <div className="task-calendar">
-        <h4>Upcoming Tasks</h4>
-        <div className="calendar-items">
-          <div className="calendar-item">
-            <div className="calendar-date">
-              <span className="day">21</span>
-              <span className="month">Nov</span>
-            </div>
-            <div className="calendar-content">
-              <h5>Fire Safety Check - 789 Pine Ln</h5>
-              <p>Urgent • 3 hours estimated</p>
-            </div>
-            <button className="btn-primary">Start</button>
-          </div>
-          <div className="calendar-item">
-            <div className="calendar-date">
-              <span className="day">22</span>
-              <span className="month">Nov</span>
-            </div>
-            <div className="calendar-content">
-              <h5>Safety Equipment Inspection - 456 Oak Ave</h5>
-              <p>High • 1 hour estimated</p>
-            </div>
-            <button className="btn-secondary">Schedule</button>
-          </div>
-          <div className="calendar-item">
-            <div className="calendar-date">
-              <span className="day">25</span>
-              <span className="month">Nov</span>
-            </div>
-            <div className="calendar-content">
-              <h5>Monthly HVAC Check - 123 Main St</h5>
-              <p>Medium • 2 hours estimated</p>
-            </div>
-            <button className="btn-secondary">Schedule</button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -780,14 +1281,14 @@ const TechnicianDashboard = () => {
         return renderInventories();
       case 'maintenance':
         return renderMaintenance();
-      case 'requests':
-        return renderRequests();
       case 'quotes':
         return renderQuotes();
       case 'progress':
         return renderProgress();
       case 'tasks':
         return renderTasks();
+      case 'chat':
+        return renderMessages();
       case 'settings':
         return (
           <div className="embedded-settings">
@@ -818,79 +1319,25 @@ const TechnicianDashboard = () => {
         onActiveChange={setActiveTab}
         onLogout={handleLogout}
       >
-        {({ activeId }) => {
-          const currentTab = activeId || activeTab;
-          return (
-            <>
-              {currentTab === 'overview' && (
-                <div className="dashboard-overview">
-                  <div className="overview-card">
-                    <div className="card-label">
-                      <span>Quotes Created</span>
-                      <span className="card-trend positive">
-                        <CheckCircle size={16} />
-                        {overviewData?.trendQuotes || '+10.6%'}
-                      </span>
+        {({ activeId }) => (
+          <div className="content-body">
+            {renderContent(activeId)}
                     </div>
-                    <div className="card-value">
-                      <span>{overviewData?.quotes || 23}</span>
-                      <small>This month</small>
-                    </div>
-                  </div>
-                  <div className="overview-card">
-                    <div className="card-label">
-                      <span>Jobs In Progress</span>
-                      <span className="card-trend positive">
-                        <Wrench size={16} />
-                        {overviewData?.trendJobs || '+14.2%'}
-                      </span>
-                    </div>
-                    <div className="card-value">
-                      <span>{overviewData?.activeMaintenance || 8}</span>
-                      <small>Current workload</small>
-                    </div>
-                  </div>
-                  <div className="overview-card">
-                    <div className="card-label">
-                      <span>Repair Requests</span>
-                      <span className="card-trend neutral">
-                        <AlertTriangle size={16} />
-                        {overviewData?.trendRepairs || 'This week'}
-                      </span>
-                    </div>
-                    <div className="card-value">
-                      <span>{overviewData?.repairRequests || 72}</span>
-                      <small>Awaiting review</small>
-                    </div>
-                  </div>
-                  <div className="overview-card">
-                    <div className="card-label">
-                      <span>Portfolio Assets</span>
-                      <span className="card-trend positive">
-                        <Building size={16} />
-                        {overviewData?.trendPortfolio || '+14.2%'}
-                      </span>
-                    </div>
-                    <div className="card-value">
-                      <span>{overviewData?.portfolio || 100}</span>
-                      <small>Managed units</small>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="content-body">
-                {renderContent(currentTab)}
-              </div>
-            </>
-          );
-        }}
+        )}
       </RoleLayout>
+      <div className="notifications-container">
+        {notifications.map(notification => (
+          <div key={`notification-${notification.id}`} className={`notification notification-${notification.type}`}>
+            <span>{notification.message}</span>
+            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
+                    </div>
+        ))}
+                  </div>
 
       {/* Add Inspection Modal */}
       {showInspectionModal && (
-        <div className="modal-overlay">
-          <div className="modal">
+        <div className="modal-overlay" onClick={() => setShowInspectionModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add New Inspection</h3>
               <button 
@@ -900,11 +1347,14 @@ const TechnicianDashboard = () => {
                 ×
               </button>
             </div>
+            <div className="modal-body">
             <form onSubmit={handleInspectionSubmit} className="modal-form">
+                <div className="form-row">
               <div className="form-group">
-                <label>Property</label>
+                    <label htmlFor="inspection-property">Property *</label>
                 <input
                   type="text"
+                      id="inspection-property"
                   value={inspectionForm.property}
                   onChange={(e) => setInspectionForm({...inspectionForm, property: e.target.value})}
                   placeholder="Enter property address"
@@ -912,8 +1362,9 @@ const TechnicianDashboard = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Inspection Type</label>
+                    <label htmlFor="inspection-type">Inspection Type *</label>
                 <select
+                      id="inspection-type"
                   value={inspectionForm.type}
                   onChange={(e) => setInspectionForm({...inspectionForm, type: e.target.value})}
                   required
@@ -924,94 +1375,139 @@ const TechnicianDashboard = () => {
                   <option value="emergency">Emergency</option>
                 </select>
               </div>
+                </div>
+                <div className="form-row">
               <div className="form-group">
-                <label>Inspector</label>
+                    <label htmlFor="inspection-inspector">Inspector *</label>
                 <input
                   type="text"
+                      id="inspection-inspector"
                   value={inspectionForm.inspector}
                   onChange={(e) => setInspectionForm({...inspectionForm, inspector: e.target.value})}
                   placeholder="Enter inspector name"
                   required
                 />
+                  </div>
               </div>
               <div className="form-group">
-                <label>Notes</label>
+                  <label htmlFor="inspection-notes">Notes</label>
                 <textarea
+                    id="inspection-notes"
                   value={inspectionForm.notes}
                   onChange={(e) => setInspectionForm({...inspectionForm, notes: e.target.value})}
                   placeholder="Enter inspection notes"
                   rows="3"
                 />
               </div>
-              <div className="modal-actions">
+                <div className="modal-footer">
                 <button 
                   type="button" 
-                  className="btn-secondary"
+                    className="action-button secondary"
                   onClick={() => setShowInspectionModal(false)}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="btn-primary"
+                    className="action-button primary"
                   disabled={loading}
                 >
                   {loading ? 'Adding...' : 'Add Inspection'}
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* Task Management Modal */}
-      {showTaskModal && selectedTask && (
-        <div className="modal-overlay">
-          <div className="modal">
+      {showTaskModal && (
+        <div className="modal-overlay" onClick={() => {
+          setShowTaskModal(false);
+          setSelectedTask(null);
+          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0 });
+        }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Task Details - {selectedTask.Issue || 'Maintenance Task'}</h3>
+              <h3>{selectedTask ? `Task Details - ${selectedTask.Issue || selectedTask.issue || 'Maintenance Task'}` : 'Create New Task'}</h3>
               <button 
                 className="modal-close"
                 onClick={() => {
                   setShowTaskModal(false);
                   setSelectedTask(null);
+                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0 });
                 }}
               >
                 ×
               </button>
             </div>
+            <div className="modal-body">
             <form onSubmit={handleTaskUpdate} className="modal-form">
+                <div className="form-row">
               <div className="form-group">
-                <label>Property</label>
+                    <label htmlFor="task-property">Property {!selectedTask && '*'}</label>
                 <input
                   type="text"
-                  value={selectedTask.Property}
-                  disabled
-                  className="disabled-input"
+                      id="task-property"
+                      value={selectedTask ? (selectedTask.Property || selectedTask.property || '') : (taskForm.property || '')}
+                      onChange={(e) => {
+                        if (selectedTask) return; // Disabled for existing tasks
+                        setTaskForm({...taskForm, property: e.target.value});
+                      }}
+                      disabled={!!selectedTask}
+                      className={selectedTask ? "disabled-input" : ""}
+                      required={!selectedTask}
+                      placeholder="Enter property address"
                 />
               </div>
               <div className="form-group">
-                <label>Issue</label>
-                <textarea
-                  value={selectedTask.Issue || 'Maintenance Task'}
+                    <label htmlFor="task-priority">Priority {!selectedTask && '*'}</label>
+                    {selectedTask ? (
+                      <input
+                        type="text"
+                        id="task-priority"
+                        value={selectedTask.Priority || selectedTask.priority || 'Medium'}
                   disabled
                   className="disabled-input"
-                  rows="2"
-                />
+                      />
+                    ) : (
+                      <select
+                        id="task-priority"
+                        value={taskForm.priority || 'normal'}
+                        onChange={(e) => setTaskForm({...taskForm, priority: e.target.value})}
+                        required
+                      >
+                        <option value="urgent">Urgent</option>
+                        <option value="high">High</option>
+                        <option value="normal">Normal</option>
+                        <option value="low">Low</option>
+                      </select>
+                    )}
+                  </div>
               </div>
               <div className="form-group">
-                <label>Priority</label>
-                <input
-                  type="text"
-                  value={selectedTask.Priority || 'Medium'}
-                  disabled
-                  className="disabled-input"
+                  <label htmlFor="task-issue">Issue {!selectedTask && '*'}</label>
+                  <textarea
+                    id="task-issue"
+                    value={selectedTask ? (selectedTask.Issue || selectedTask.issue || 'Maintenance Task') : (taskForm.issue || '')}
+                    onChange={(e) => {
+                      if (selectedTask) return; // Disabled for existing tasks
+                      setTaskForm({...taskForm, issue: e.target.value});
+                    }}
+                    disabled={!!selectedTask}
+                    className={selectedTask ? "disabled-input" : ""}
+                    rows="2"
+                    required={!selectedTask}
+                    placeholder="Describe the maintenance issue"
                 />
               </div>
+                <div className="form-row">
               <div className="form-group">
-                <label>Status</label>
+                    <label htmlFor="task-status">Status *</label>
                 <select
-                  value={taskForm.status}
+                      id="task-status"
+                      value={taskForm.status || 'Pending'}
                   onChange={(e) => setTaskForm({...taskForm, status: e.target.value})}
                   required
                 >
@@ -1021,46 +1517,141 @@ const TechnicianDashboard = () => {
                   <option value="Scheduled">Scheduled</option>
                 </select>
               </div>
+                  {!selectedTask && (
               <div className="form-group">
-                <label>Estimated Hours</label>
+                      <label htmlFor="task-assigned">Assigned To</label>
+                      <input
+                        type="text"
+                        id="task-assigned"
+                        value={taskForm.assigned || ''}
+                        onChange={(e) => setTaskForm({...taskForm, assigned: e.target.value})}
+                        placeholder="Enter technician name"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="task-hours">Estimated Hours</label>
                 <input
                   type="number"
-                  value={taskForm.estimatedHours}
+                      id="task-hours"
+                      value={taskForm.estimatedHours || 0}
                   onChange={(e) => setTaskForm({...taskForm, estimatedHours: parseFloat(e.target.value) || 0})}
                   min="0"
                   step="0.5"
+                      placeholder="0"
                 />
               </div>
               <div className="form-group">
-                <label>Estimated Cost ($)</label>
+                    <label htmlFor="task-cost">Estimated Cost ($)</label>
                 <input
                   type="number"
-                  value={taskForm.estimatedCost}
+                      id="task-cost"
+                      value={taskForm.estimatedCost || 0}
                   onChange={(e) => setTaskForm({...taskForm, estimatedCost: parseFloat(e.target.value) || 0})}
                   min="0"
                   step="0.01"
+                      placeholder="0.00"
                 />
               </div>
-              <div className="modal-actions">
+                </div>
+                <div className="modal-footer">
                 <button 
                   type="button" 
-                  className="btn-secondary"
+                    className="action-button secondary"
                   onClick={() => {
                     setShowTaskModal(false);
                     setSelectedTask(null);
+                      setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0 });
                   }}
                 >
-                  Close
+                    Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="btn-primary"
+                    className="action-button primary"
                   disabled={loading}
                 >
-                  {loading ? 'Updating...' : 'Update Task'}
+                    {loading ? (selectedTask ? 'Updating...' : 'Creating...') : (selectedTask ? 'Update Task' : 'Create Task')}
                 </button>
               </div>
             </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Upload Modal */}
+      {showPhotoUploadModal && selectedInspectionForPhoto && (
+        <div className="modal-overlay" onClick={() => {
+          setShowPhotoUploadModal(false);
+          setSelectedInspectionForPhoto(null);
+          setPhotoFile(null);
+        }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Upload Inspection Photo</h3>
+              <button 
+                className="modal-close"
+                onClick={() => {
+                  setShowPhotoUploadModal(false);
+                  setSelectedInspectionForPhoto(null);
+                  setPhotoFile(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handlePhotoUpload} className="modal-form">
+                <div className="form-group">
+                  <label htmlFor="photo-inspection">Inspection</label>
+                  <input
+                    type="text"
+                    id="photo-inspection"
+                    value={`${selectedInspectionForPhoto.property || selectedInspectionForPhoto.Property || ''} - ${selectedInspectionForPhoto.type || selectedInspectionForPhoto.Type || ''}`}
+                    disabled
+                    className="disabled-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="photo-file">Photo *</label>
+                  <input
+                    type="file"
+                    id="photo-file"
+                    accept="image/*"
+                    onChange={(e) => setPhotoFile(e.target.files[0])}
+                    required
+                  />
+                  {photoFile && (
+                    <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#6b7280' }}>
+                      Selected: {photoFile.name}
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button 
+                    type="button" 
+                    className="action-button secondary"
+                    onClick={() => {
+                      setShowPhotoUploadModal(false);
+                      setSelectedInspectionForPhoto(null);
+                      setPhotoFile(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="action-button primary"
+                    disabled={loading || !photoFile}
+                  >
+                    {loading ? 'Uploading...' : 'Upload Photo'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

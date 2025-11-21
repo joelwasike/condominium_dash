@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { DollarSign, TrendingUp, Building, Receipt, Download, Filter, Search, CreditCard, CheckCircle, XCircle, User, FileText, Mail, ArrowRightLeft, Plus } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { DollarSign, TrendingUp, Building, Receipt, Download, Filter, Search, CreditCard, CheckCircle, XCircle, User, FileText, Mail, ArrowRightLeft, Plus, MessageCircle, Settings } from 'lucide-react';
 import { accountingService } from '../services/accountingService';
+import { messagingService } from '../services/messagingService';
 import RoleLayout from '../components/RoleLayout';
+import SettingsPage from './SettingsPage';
 import '../components/RoleLayout.css';
-import '../pages/TechnicianDashboard.css';
+import './AccountingDashboard.css';
 
 const AccountingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -23,6 +25,14 @@ const AccountingDashboard = () => {
   const [collections, setCollections] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [monthlySummary, setMonthlySummary] = useState(null);
+  
+  // Messaging states
+  const [chatUsers, setChatUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const isLoadingUsersRef = useRef(false);
+  const messagesEndRef = useRef(null);
 
   const addNotification = (message, type = 'info') => {
     const id = Date.now();
@@ -39,7 +49,9 @@ const AccountingDashboard = () => {
       { id: 'payments', label: 'Landlord Payments', icon: Building },
       { id: 'tenant-payments', label: 'Tenant Payments', icon: CreditCard },
       { id: 'reports', label: 'Reports', icon: Receipt },
-      { id: 'expenses', label: 'Expenses', icon: FileText }
+      { id: 'expenses', label: 'Expenses', icon: FileText },
+      { id: 'chat', label: 'Messages', icon: MessageCircle },
+      { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
     []
   );
@@ -75,10 +87,170 @@ const AccountingDashboard = () => {
     }
   };
 
+  // Scroll to bottom of messages
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [chatMessages, scrollToBottom]);
+
+  // Load chat for a specific user
+  const loadChatForUser = useCallback(async (userId) => {
+    if (!userId) return;
+    
+    try {
+      setSelectedUserId(userId);
+      const messages = await messagingService.getConversation(userId);
+      
+      // Normalize messages array
+      const normalizedMessages = Array.isArray(messages) ? messages : [];
+      setChatMessages(normalizedMessages);
+      
+      // Mark messages as read
+      try {
+        await messagingService.markMessagesAsRead(userId);
+      } catch (readError) {
+        console.error('Error marking messages as read:', readError);
+      }
+    } catch (error) {
+      console.error('Error loading chat:', error);
+      addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
+      setChatMessages([]);
+    }
+  }, [addNotification]);
+
+  // Load users for messaging
+  const loadUsers = useCallback(async () => {
+    if (isLoadingUsersRef.current) {
+      console.log('Users already loading, skipping...');
+      return;
+    }
+
+    try {
+      isLoadingUsersRef.current = true;
+      console.log('Loading users for messaging...');
+      const users = await messagingService.getUsers();
+      console.log('Users API response:', users);
+
+      let usersArray = [];
+      if (Array.isArray(users)) {
+        usersArray = users;
+      } else if (users && Array.isArray(users.users)) {
+        usersArray = users.users;
+      } else if (users && typeof users === 'object') {
+        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+      }
+
+      console.log('Processed users array:', usersArray);
+
+      const storedUser = localStorage.getItem('user');
+      let currentUserId = null;
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          currentUserId = user.id || user.ID;
+          console.log('Current user ID:', currentUserId);
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+
+      const chatUsersList = usersArray
+        .filter(user => {
+          const userId = user.id || user.ID;
+          const userIdStr = userId ? String(userId) : null;
+          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+          if (!shouldInclude && userIdStr) {
+            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+          }
+          return shouldInclude;
+        })
+        .map(user => {
+          const userId = user.id || user.ID;
+          return {
+            userId: userId,
+            name: user.name || user.Name || 'User',
+            email: user.email || user.Email || '',
+            role: user.role || user.Role || '',
+            company: user.company || user.Company || '',
+            status: user.status || user.Status || 'Active',
+            unreadCount: 0
+          };
+        })
+        .sort((a, b) => {
+          const nameA = (a.name || '').toLowerCase();
+          const nameB = (b.name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+
+      console.log('Final chat users list:', chatUsersList);
+
+      try {
+        const conversations = await messagingService.getConversations();
+        if (Array.isArray(conversations)) {
+          conversations.forEach(conv => {
+            const chatUser = chatUsersList.find(u => {
+              const uId = String(u.userId);
+              const convId = String(conv.userId);
+              return uId === convId;
+            });
+            if (chatUser && conv.unreadCount) {
+              chatUser.unreadCount = conv.unreadCount;
+            }
+          });
+        }
+      } catch (convError) {
+        console.error('Error loading conversations for unread counts:', convError);
+      }
+      
+      setChatUsers(chatUsersList);
+      
+      setSelectedUserId(prevSelected => {
+        if (chatUsersList.length > 0 && !prevSelected) {
+          const firstUserId = chatUsersList[0].userId;
+          setTimeout(() => {
+            loadChatForUser(firstUserId);
+          }, 0);
+          return firstUserId;
+        }
+        return prevSelected;
+      });
+
+      if (chatUsersList.length === 0) {
+        console.warn('No users found. This could mean:');
+        console.warn('1. No other users in the same company');
+        console.warn('2. API endpoint returned empty array');
+        console.warn('3. All users were filtered out');
+        addNotification('No users available for messaging', 'info');
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      console.error('Error details:', error.message, error.stack);
+      addNotification(`Failed to load users: ${error.message || 'Unknown error'}`, 'error');
+      setChatUsers([]);
+    } finally {
+      isLoadingUsersRef.current = false;
+    }
+  }, [loadChatForUser, addNotification]);
+
   // Load data on component mount
   useEffect(() => {
     loadData();
   }, []);
+
+  // Load users when chat tab is active (only once per tab switch)
+  useEffect(() => {
+    if (activeTab === 'chat' && !isLoadingUsersRef.current) {
+      loadUsers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]); // Only depend on activeTab, not loadUsers
 
   const generateReceipt = async (payment) => {
     try {
@@ -216,100 +388,77 @@ const AccountingDashboard = () => {
   };
 
   const renderOverview = () => (
-    <div className="overview-section">
-      <div className="section-header">
-        <div>
-          <h2>Accounting Overview</h2>
-          <p>Financial summary and balance tracking</p>
+    <div className="sa-overview-page">
+      <div className="sa-overview-metrics">
+        <div className="sa-metric-card sa-metric-primary">
+          <p className="sa-metric-label">Total Available Balance</p>
+          <p className="sa-metric-period">Current balance</p>
+          <p className="sa-metric-value">
+            {overviewData ? `${overviewData.netRevenue?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
+          </p>
         </div>
-      </div>
-
-      <div className="dashboard-overview accounting-overview">
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Total Available Balance</span>
-          </div>
-          <div className="card-value">
-            <span>
-              {overviewData ? `${overviewData.netRevenue?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
-            </span>
-            <small>Current balance</small>
-          </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Total Collected This Month</p>
+          <p className="sa-metric-period">November 2024</p>
+          <p className="sa-metric-value">
+            {overviewData ? `${overviewData.totalTenantPayments?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
+          </p>
         </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Total Collected This Month</span>
-          </div>
-          <div className="card-value">
-            <span>
-              {overviewData ? `${overviewData.totalTenantPayments?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
-            </span>
-            <small>November 2024</small>
-          </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Total Transferred to Landlords</p>
+          <p className="sa-metric-period">This month</p>
+          <p className="sa-metric-value">
+            {overviewData ? `${overviewData.totalLandlordPayments?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
+          </p>
         </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Total Transferred to Landlords</span>
-          </div>
-          <div className="card-value">
-            <span>
-              {overviewData ? `${overviewData.totalLandlordPayments?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
-            </span>
-            <small>This month</small>
-          </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">
-            <span>Company Commission Earned</span>
-          </div>
-          <div className="card-value">
-            <span>
-              {overviewData ? `${overviewData.pendingPayments || 0} XOF` : 'Loading...'}
-            </span>
-            <small>This month</small>
-          </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Company Commission Earned</p>
+          <p className="sa-metric-period">This month</p>
+          <p className="sa-metric-value">
+            {overviewData ? `${overviewData.pendingPayments || 0} XOF` : 'Loading...'}
+          </p>
         </div>
       </div>
     </div>
   );
 
   const renderCollections = () => (
-    <div className="collections-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
           <h2>Real-time Collections Tracking</h2>
           <p>Track rent and deposit payments per building</p>
         </div>
       </div>
 
-      <div className="filters-section" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <select className="filter-select">
+      <div className="sa-filters-section">
+        <select className="sa-filter-select">
           <option value="">All Buildings/Properties</option>
           <option value="123-main">123 Main St</option>
           <option value="456-oak">456 Oak Ave</option>
           <option value="789-pine">789 Pine Ln</option>
           <option value="321-elm">321 Elm St</option>
         </select>
-        <select className="filter-select">
+        <select className="sa-filter-select">
           <option value="">All Landlords</option>
           <option value="john-smith">John Smith</option>
           <option value="jane-doe">Jane Doe</option>
           <option value="bob-johnson">Bob Johnson</option>
           <option value="alice-brown">Alice Brown</option>
         </select>
-        <select className="filter-select">
+        <select className="sa-filter-select">
           <option value="">All Periods</option>
           <option value="current-month">Current Month</option>
           <option value="last-month">Last Month</option>
           <option value="last-3-months">Last 3 Months</option>
         </select>
-        <select className="filter-select">
+        <select className="sa-filter-select">
           <option value="">All Payment Status</option>
           <option value="collected">Collected</option>
           <option value="pending">Pending</option>
           <option value="overdue">Overdue</option>
         </select>
-        <select className="filter-select">
+        <select className="sa-filter-select">
           <option value="">All Charge Types</option>
           <option value="rent">Rent</option>
           <option value="deposit">Deposit</option>
@@ -323,8 +472,8 @@ const AccountingDashboard = () => {
       ) : collections.length === 0 ? (
         <div className="no-data">No collections found</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Building/Property</th>
@@ -340,19 +489,19 @@ const AccountingDashboard = () => {
               {collections.map((collection, index) => (
                 <tr key={collection.ID || `collection-${index}`}>
                   <td>
-                    <span className="row-primary">{collection.Building || 'N/A'}</span>
+                    <span className="sa-cell-title">{collection.Building || 'N/A'}</span>
                   </td>
                   <td>{collection.Landlord || 'N/A'}</td>
                   <td>{collection.Amount?.toFixed(2) || '0.00'} XOF</td>
                   <td>
-                    <span className={`status-badge ${(collection.Status || 'unknown').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(collection.Status || 'unknown').toLowerCase()}`}>
                       {collection.Status || 'Unknown'}
                     </span>
                   </td>
                   <td>{collection.ChargeType || 'N/A'}</td>
                   <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
                   <td className="table-menu">
-                    <div className="table-actions">
+                    <div className="sa-row-actions">
                       <button className="table-action-button view">View</button>
                       <button className="table-action-button edit">Receipt</button>
                     </div>
@@ -367,14 +516,14 @@ const AccountingDashboard = () => {
   );
 
   const renderPayments = () => (
-    <div className="payments-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
           <h2>Landlord Payment Table</h2>
           <p>Net payments after commission deduction</p>
         </div>
         <button 
-          className="btn-primary" 
+          className="sa-primary-cta" 
           onClick={() => setShowLandlordPaymentModal(true)}
           disabled={loading}
         >
@@ -383,20 +532,20 @@ const AccountingDashboard = () => {
         </button>
       </div>
 
-      <div className="filters-section" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <select className="filter-select">
+      <div className="sa-filters-section">
+        <select className="sa-filter-select">
           <option value="">All Landlords</option>
           <option value="john-smith">John Smith</option>
           <option value="jane-doe">Jane Doe</option>
           <option value="bob-johnson">Bob Johnson</option>
         </select>
-        <select className="filter-select">
+        <select className="sa-filter-select">
           <option value="">All Buildings</option>
           <option value="123-main">123 Main St</option>
           <option value="456-oak">456 Oak Ave</option>
           <option value="789-pine">789 Pine Ln</option>
         </select>
-        <select className="filter-select">
+        <select className="sa-filter-select">
           <option value="">All Periods</option>
           <option value="current-month">Current Month</option>
           <option value="last-month">Last Month</option>
@@ -408,8 +557,8 @@ const AccountingDashboard = () => {
       ) : landlordPayments.length === 0 ? (
         <div className="no-data">No landlord payments found</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Landlord</th>
@@ -426,7 +575,7 @@ const AccountingDashboard = () => {
               {landlordPayments.map((payment, index) => (
                 <tr key={payment.ID || `landlord-payment-${index}`}>
                   <td>
-                    <span className="row-primary">{payment.Landlord || 'N/A'}</span>
+                    <span className="sa-cell-title">{payment.Landlord || 'N/A'}</span>
                   </td>
                   <td>{payment.Building || 'N/A'}</td>
                   <td>{payment.NetAmount?.toFixed(2) || '0.00'} XOF</td>
@@ -434,12 +583,12 @@ const AccountingDashboard = () => {
                   <td>Payout</td>
                   <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
                   <td>
-                    <span className={`status-badge ${(payment.Status || 'unknown').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>
                       {payment.Status || 'Unknown'}
                     </span>
                   </td>
                   <td className="table-menu">
-                    <div className="table-actions">
+                    <div className="sa-row-actions">
                       <button className="table-action-button view">View</button>
                       <button className="table-action-button edit" onClick={() => transferToLandlord(payment.ID)} title="Automatic Transfer">
                         Transfer
@@ -456,20 +605,20 @@ const AccountingDashboard = () => {
   );
 
   const renderReports = () => (
-    <div className="reports-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
           <h2>Monthly Financial Reports</h2>
           <p>Generate and download comprehensive financial reports</p>
         </div>
-        <button className="btn-primary">
+        <button className="sa-primary-cta">
           <Download size={18} />
           Generate Monthly Report
         </button>
       </div>
 
-      <div className="data-table-wrapper" style={{ marginBottom: '32px' }}>
-        <table className="data-table">
+      <div className="sa-table-wrapper" style={{ marginBottom: '32px' }}>
+        <table className="sa-table">
           <thead>
             <tr>
               <th>Building</th>
@@ -482,7 +631,7 @@ const AccountingDashboard = () => {
           <tbody>
             <tr>
               <td>
-                <span className="row-primary">123 Main St</span>
+                <span className="sa-cell-title">123 Main St</span>
               </td>
               <td>8,500 XOF</td>
               <td>1,200 XOF</td>
@@ -491,7 +640,7 @@ const AccountingDashboard = () => {
             </tr>
             <tr>
               <td>
-                <span className="row-primary">456 Oak Ave</span>
+                <span className="sa-cell-title">456 Oak Ave</span>
               </td>
               <td>6,200 XOF</td>
               <td>0 XOF</td>
@@ -500,7 +649,7 @@ const AccountingDashboard = () => {
             </tr>
             <tr>
               <td>
-                <span className="row-primary">789 Pine Ln</span>
+                <span className="sa-cell-title">789 Pine Ln</span>
               </td>
               <td>12,800 XOF</td>
               <td>500 XOF</td>
@@ -511,7 +660,7 @@ const AccountingDashboard = () => {
         </table>
       </div>
 
-      <div className="section-header" style={{ marginBottom: '20px' }}>
+      <div className="sa-section-header" style={{ marginBottom: '20px' }}>
         <div>
           <h2>Recent Reports</h2>
           <p>Download previously generated reports</p>
@@ -521,8 +670,8 @@ const AccountingDashboard = () => {
       {loading ? (
         <div className="loading">Loading reports...</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Report Name</th>
@@ -533,11 +682,11 @@ const AccountingDashboard = () => {
             <tbody>
               <tr>
                 <td>
-                  <span className="row-primary">November 2024 Financial Report</span>
+                  <span className="sa-cell-title">November 2024 Financial Report</span>
                 </td>
                 <td>Nov 1, 2024</td>
                 <td className="table-menu">
-                  <div className="table-actions">
+                  <div className="sa-row-actions">
                     <button className="table-action-button view">
                       <Download size={14} />
                       Download
@@ -547,11 +696,11 @@ const AccountingDashboard = () => {
               </tr>
               <tr>
                 <td>
-                  <span className="row-primary">October 2024 Building Performance</span>
+                  <span className="sa-cell-title">October 2024 Building Performance</span>
                 </td>
                 <td>Oct 31, 2024</td>
                 <td className="table-menu">
-                  <div className="table-actions">
+                  <div className="sa-row-actions">
                     <button className="table-action-button view">
                       <Download size={14} />
                       Download
@@ -561,11 +710,11 @@ const AccountingDashboard = () => {
               </tr>
               <tr>
                 <td>
-                  <span className="row-primary">Q3 2024 Commission Report</span>
+                  <span className="sa-cell-title">Q3 2024 Commission Report</span>
                 </td>
                 <td>Oct 1, 2024</td>
                 <td className="table-menu">
-                  <div className="table-actions">
+                  <div className="sa-row-actions">
                     <button className="table-action-button view">
                       <Download size={14} />
                       Download
@@ -581,14 +730,14 @@ const AccountingDashboard = () => {
   );
 
   const renderTenantPayments = () => (
-    <div className="tenant-payments-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
           <h2>Tenant Payment Management</h2>
           <p>Review, approve, and manage tenant payments</p>
         </div>
         <button 
-          className="btn-primary" 
+          className="sa-primary-cta" 
           onClick={() => setShowPaymentModal(true)}
           disabled={loading}
         >
@@ -597,20 +746,22 @@ const AccountingDashboard = () => {
         </button>
       </div>
 
-      <div className="filters-section" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <select className="filter-select">
+      <div className="sa-filters-section">
+        <select className="sa-filter-select">
           <option value="">All Payments</option>
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
-        <select className="filter-select">
+        <select className="sa-filter-select">
           <option value="">All Methods</option>
           <option value="cash">Cash</option>
           <option value="mobile">Mobile Money</option>
           <option value="bank">Bank Transfer</option>
         </select>
-        <input type="text" placeholder="Search by tenant..." className="search-input" style={{ padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(15, 31, 96, 0.12)', background: '#f7f8ff', minWidth: '200px' }} />
+        <div className="sa-search-input-wrapper">
+          <input type="text" placeholder="Search by tenant..." />
+        </div>
       </div>
 
       {loading ? (
@@ -618,8 +769,8 @@ const AccountingDashboard = () => {
       ) : tenantPayments.length === 0 ? (
         <div className="no-data">No tenant payments found</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Tenant</th>
@@ -636,26 +787,26 @@ const AccountingDashboard = () => {
               {tenantPayments.map((payment, index) => (
                 <tr key={payment.ID || `payment-${index}`}>
                   <td>
-                    <span className="row-primary">{payment.Tenant || 'N/A'}</span>
+                    <span className="sa-cell-title">{payment.Tenant || 'N/A'}</span>
                   </td>
                   <td>{payment.Property || 'N/A'}</td>
                   <td>{payment.Amount?.toFixed(2) || '0.00'} XOF</td>
                   <td>{payment.Method || 'N/A'}</td>
                   <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
                   <td>
-                    <span className={`status-badge ${(payment.Status || 'unknown').toLowerCase()}`}>
+                    <span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>
                       {payment.Status || 'Unknown'}
                     </span>
                   </td>
                   <td>
                     {payment.ReceiptNumber ? (
-                      <span className="row-primary">{payment.ReceiptNumber}</span>
+                      <span className="sa-cell-title">{payment.ReceiptNumber}</span>
                     ) : (
                       <span style={{ color: 'rgba(15, 31, 96, 0.5)' }}>No Receipt</span>
                     )}
                   </td>
                   <td className="table-menu">
-                    <div className="table-actions">
+                    <div className="sa-row-actions">
                       {payment.Status === 'Pending' && (
                         <>
                           <button 
@@ -693,14 +844,14 @@ const AccountingDashboard = () => {
   );
 
   const renderExpenses = () => (
-    <div className="expenses-section">
-      <div className="section-header">
+    <div className="sa-section-card">
+      <div className="sa-section-header">
         <div>
           <h2>Expense Management</h2>
           <p>Track expenses by building or for SAAF IMMO</p>
         </div>
         <button 
-          className="btn-primary" 
+          className="sa-primary-cta" 
           onClick={() => setShowExpenseModal(true)}
           disabled={loading}
         >
@@ -714,8 +865,8 @@ const AccountingDashboard = () => {
       ) : expenses.length === 0 ? (
         <div className="no-data">No expenses found</div>
       ) : (
-        <div className="data-table-wrapper">
-          <table className="data-table">
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -733,13 +884,13 @@ const AccountingDashboard = () => {
                   <td>{exp.Date ? new Date(exp.Date).toLocaleDateString() : (exp.date || 'N/A')}</td>
                   <td>{exp.Scope || exp.scope || 'N/A'}</td>
                   <td>
-                    <span className="row-primary">{exp.Building || exp.building || 'N/A'}</span>
+                    <span className="sa-cell-title">{exp.Building || exp.building || 'N/A'}</span>
                   </td>
                   <td>{exp.Category || exp.category || 'N/A'}</td>
                   <td>{(exp.Amount || exp.amount || 0).toFixed(2)} XOF</td>
                   <td>{exp.Notes || exp.notes || 'N/A'}</td>
                   <td className="table-menu">
-                    <div className="table-actions">
+                    <div className="sa-row-actions">
                       <button className="table-action-button view">View</button>
                       <button className="table-action-button edit">Edit</button>
                       <button className="table-action-button delete">Delete</button>
@@ -751,6 +902,225 @@ const AccountingDashboard = () => {
           </table>
         </div>
       )}
+    </div>
+  );
+
+  // Handle send message
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedUserId) return;
+    
+    // Get current user ID from localStorage
+    const storedUser = localStorage.getItem('user');
+    let currentUserId = null;
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        currentUserId = user.id || user.ID;
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+      }
+    }
+    
+    if (!currentUserId) {
+      addNotification('Unable to identify current user. Please log in again.', 'error');
+      return;
+    }
+    
+    const content = chatInput.trim();
+    const tempMessageId = `temp-${Date.now()}`;
+    
+    // Optimistically add message to UI immediately
+    const optimisticMessage = {
+      id: tempMessageId,
+      ID: tempMessageId,
+      fromUserId: currentUserId,
+      toUserId: selectedUserId,
+      content: content,
+      createdAt: new Date().toISOString(),
+      read: false,
+      type: 'message'
+    };
+    
+    setChatMessages(prev => [...prev, optimisticMessage]);
+    setChatInput('');
+    
+    try {
+      const payload = {
+        toUserId: selectedUserId,
+        content,
+      };
+      const sentMessage = await messagingService.sendMessage(payload);
+      
+      // Replace optimistic message with real message from server
+      if (sentMessage && sentMessage.id) {
+        setChatMessages(prev => 
+          prev.map(msg => 
+            msg.id === tempMessageId ? sentMessage : msg
+          )
+        );
+      } else {
+        // If server response doesn't have expected format, reload chat
+        await loadChatForUser(selectedUserId);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      addNotification(error.message || 'Failed to send message', 'error');
+      // Remove optimistic message on error
+      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      setChatInput(content); // Restore input on error
+    }
+  };
+
+  // Render messaging page
+  const renderMessages = () => (
+    <div className="sa-chat-page">
+      <div className="sa-chat-layout">
+        <div className="sa-chat-list">
+          <h3>Users</h3>
+          <ul>
+            {chatUsers.map((user) => {
+              const active = user.userId === selectedUserId;
+              return (
+                <li
+                  key={`chat-user-${user.userId}`}
+                  className={active ? 'active' : ''}
+                  onClick={() => loadChatForUser(user.userId)}
+                >
+                  <div className="sa-cell-main">
+                    <span className="sa-cell-title">{user.name || 'User'}</span>
+                    <span className="sa-cell-sub">{user.email || ''}</span>
+                    {user.role && (
+                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {user.role}
+                      </span>
+                    )}
+                    {user.unreadCount > 0 && (
+                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                        {user.unreadCount} unread
+                      </span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+            {chatUsers.length === 0 && (
+              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                No users available
+              </li>
+            )}
+          </ul>
+        </div>
+        
+        <div className="sa-chat-conversation">
+          <div className="sa-chat-header">
+            <h3>Messages</h3>
+            {selectedUserId && (
+              <span className="sa-chat-subtitle">
+                Chat with{' '}
+                {
+                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
+                    .name || 'User'
+                }
+              </span>
+            )}
+          </div>
+          <div className="sa-chat-messages">
+            {chatMessages.map((msg, index) => {
+              const messageContent = msg.content || msg.Content || '';
+              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+              const messageFromUserId = msg.fromUserId || msg.FromUserId;
+              const messageId = msg.id || msg.ID || index;
+              
+              // Determine if message is outgoing or incoming
+              const storedUser = localStorage.getItem('user');
+              let isOutgoing = false;
+              if (storedUser) {
+                try {
+                  const user = JSON.parse(storedUser);
+                  const currentUserId = user.id || user.ID;
+                  isOutgoing = String(messageFromUserId) === String(currentUserId);
+                } catch (e) {
+                  // Default to incoming if we can't parse user
+                }
+              }
+              
+              return (
+                <div
+                  key={`msg-${messageId}`}
+                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
+                >
+                  <p>{messageContent}</p>
+                  <span className="sa-chat-meta">
+                    {messageCreatedAt
+                      ? new Date(messageCreatedAt).toLocaleString()
+                      : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {chatMessages.length === 0 && (
+              <div className="sa-table-empty">
+                {selectedUserId 
+                  ? 'No messages yet. Start the conversation!'
+                  : 'Select a conversation on the left to start messaging.'}
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="sa-chat-input-row">
+            <input
+              type="text"
+              placeholder="Reply..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={!selectedUserId}
+            />
+            <button 
+              className="sa-primary-cta" 
+              onClick={handleSendMessage}
+              disabled={!selectedUserId || !chatInput.trim()}
+            >
+              <MessageCircle size={16} />
+              Send
+            </button>
+          </div>
+        </div>
+        
+        <div className="sa-chat-details">
+          <h4>Contact Details</h4>
+          {selectedUserId ? (
+            (() => {
+              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
+              return (
+                <>
+                  <p>
+                    <strong>Name:</strong> {user.name || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {user.email || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Role:</strong> {user.role || 'N/A'}
+                  </p>
+                  {user.company && (
+                    <p>
+                      <strong>Company:</strong> {user.company}
+                    </p>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <p>Select a conversation to view details.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 
@@ -768,6 +1138,14 @@ const AccountingDashboard = () => {
         return renderReports();
       case 'expenses':
         return renderExpenses();
+      case 'chat':
+        return renderMessages();
+      case 'settings':
+        return (
+          <div className="embedded-settings">
+            <SettingsPage />
+          </div>
+        );
       default:
         return renderOverview();
     }
@@ -799,7 +1177,7 @@ const AccountingDashboard = () => {
         onLogout={handleLogout}
       >
         {({ activeId }) => (
-          <div className="content-body accounting-content">
+          <div className="accounting-content">
             {loading && <div className="loading-indicator">Loading data...</div>}
             {renderContent(activeId || activeTab)}
           </div>
