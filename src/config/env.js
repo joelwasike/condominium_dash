@@ -1,10 +1,10 @@
 // Environment Configuration
 export const ENV_CONFIG = {
   // API Base URL - Change this when deploying to production
-  API_BASE_URL: 'http://localhost:8093',
+  API_BASE_URL: 'https://saafimmo-api.theliberec.com',
   
   // Environment
-  NODE_ENV: 'development',
+  NODE_ENV: 'production',
   
   // App Configuration
   APP_NAME: 'Real Estate Management System',
