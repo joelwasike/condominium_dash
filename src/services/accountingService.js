@@ -217,5 +217,11 @@ export const accountingService = {
       }
       return response.json();
     });
-  }
+  },
+
+  // Get advertisements
+  getAdvertisements: async () => {
+    const url = buildApiUrl('/api/accounting/advertisements');
+    return await apiRequest(url);
+  },
 };

@@ -163,4 +163,10 @@ export const adminService = {
       method: 'POST',
     });
   },
+
+  // Get advertisements
+  getAdvertisements: async () => {
+    const url = buildApiUrl('/api/admin/advertisements');
+    return await apiRequest(url);
+  },
 };

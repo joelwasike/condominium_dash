@@ -144,6 +144,20 @@ export const apiRequest = async (url, options = {}) => {
     console.error('API request failed:', error);
     console.error('URL:', url);
     console.error('Config:', config);
+    
+    // Check if it's a CORS error
+    if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+      const corsError = new Error(
+        'CORS Error: The API server is not allowing requests from this origin. ' +
+        'Please contact the backend administrator to configure CORS headers. ' +
+        `Frontend origin: ${window.location.origin}, ` +
+        `API URL: ${url}`
+      );
+      corsError.name = 'CORSError';
+      corsError.originalError = error;
+      throw corsError;
+    }
+    
     throw error;
   }
 };

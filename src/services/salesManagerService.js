@@ -126,4 +126,10 @@ export const salesManagerService = {
       body: JSON.stringify(propertyData),
     });
   },
+
+  // Get advertisements
+  getAdvertisements: async () => {
+    const url = buildApiUrl('/api/salesmanager/advertisements');
+    return await apiRequest(url);
+  },
 };

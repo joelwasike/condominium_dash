@@ -526,5 +526,16 @@ export const agencyDirectorService = {
     }
     return parseJson(response);
   },
+
+  // Get advertisements
+  getAdvertisements: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/advertisements`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch advertisements');
+    return parseJson(response);
+  },
 };
 

@@ -114,4 +114,10 @@ export const commercialService = {
       body: JSON.stringify({ message }),
     });
   },
+
+  // Get advertisements
+  getAdvertisements: async () => {
+    const url = buildApiUrl('/api/commercial/advertisements');
+    return await apiRequest(url);
+  },
 };

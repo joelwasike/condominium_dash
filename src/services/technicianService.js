@@ -133,4 +133,9 @@ export const technicianService = {
       body: JSON.stringify(updateData),
     });
   },
+
+  // Get advertisements
+  getAdvertisements: async () => {
+    return apiRequest(buildApiUrl('/api/technician/advertisements'));
+  },
 };

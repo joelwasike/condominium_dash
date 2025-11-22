@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign, Filter, Search, Plus, MessageCircle, Settings } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign, Filter, Search, Plus, MessageCircle, Settings, Megaphone } from 'lucide-react';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
 import ContractUpload from '../components/ContractUpload';
 import { salesManagerService } from '../services/salesManagerService';
 import { messagingService } from '../services/messagingService';
 import { cloudinaryService, validateFileType, validateFileSize } from '../services/cloudinaryService';
+import { API_CONFIG } from '../config/api';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
 import '../components/RoleLayout.css';
@@ -28,6 +29,7 @@ const SalesManagerDashboard = () => {
   const [waitingListClients, setWaitingListClients] = useState([]);
   const [unpaidRents, setUnpaidRents] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [advertisements, setAdvertisements] = useState([]);
   const [loading, setLoading] = useState(false);
   
   // Filter states
@@ -98,10 +100,29 @@ const SalesManagerDashboard = () => {
     }
   };
 
+  // Load advertisements
+  const loadAdvertisements = async () => {
+    try {
+      const ads = await salesManagerService.getAdvertisements();
+      setAdvertisements(Array.isArray(ads) ? ads : []);
+    } catch (error) {
+      console.error('Failed to load advertisements:', error);
+      addNotification('Failed to load advertisements', 'error');
+      setAdvertisements([]);
+    }
+  };
+
   // Reload data when filters change
   useEffect(() => {
     loadData();
   }, [propertyStatusFilter, propertyTypeFilter, propertyUrgencyFilter, alertTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load advertisements when advertisements tab is active
+  useEffect(() => {
+    if (activeTab === 'advertisements') {
+      loadAdvertisements();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
@@ -285,6 +306,7 @@ const SalesManagerDashboard = () => {
       { id: 'occupancy', label: 'Occupancy', icon: Building },
       { id: 'clients', label: 'Client Management', icon: Users },
       { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
+      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
@@ -1554,6 +1576,61 @@ const SalesManagerDashboard = () => {
     </div>
   );
 
+  const renderAdvertisements = () => {
+    return (
+      <div className="sa-ads-page">
+        <div className="sa-ads-header">
+          <div>
+            <h2>Advertisements</h2>
+            <p>View active advertisements posted by Super Admin</p>
+          </div>
+        </div>
+
+        <div className="sa-ads-list">
+          {advertisements.length > 0 ? (
+            advertisements.map((ad, index) => {
+              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+              const fullImageUrl = imageUrl 
+                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+                : null;
+
+              return (
+                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
+                  <div className="sa-ad-status-column">
+                    <span className="sa-ad-status published">Active</span>
+                  </div>
+                  <div className="sa-ad-main">
+                    {fullImageUrl && (
+                      <img 
+                        src={fullImageUrl} 
+                        alt={ad.Title || ad.title || 'Advertisement'} 
+                        className="sa-ad-image"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
+                    <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
+                    {ad.CreatedAt && (
+                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
+                        Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="sa-table-empty">
+              No active advertisements available at this time.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -1564,6 +1641,8 @@ const SalesManagerDashboard = () => {
         return renderClients();
       case 'alerts':
         return renderAlerts();
+      case 'advertisements':
+        return renderAdvertisements();
       case 'chat':
         return renderMessages();
       case 'settings':

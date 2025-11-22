@@ -272,24 +272,38 @@ export const superAdminService = {
     
     console.log('Creating advertisement with FormData:', { title: adData.title, text: adData.text, hasImage: !!adData.image });
     
-    const response = await fetch(`${SUPERADMIN_BASE_URL}/advertisements`, {
-      method: 'POST',
-      headers: headers,
-      body: formData,
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Advertisement creation failed:', response.status, errorText);
-      try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.error || errorJson.message || `Failed to create advertisement: ${response.status}`);
-      } catch (e) {
-        throw new Error(`Failed to create advertisement: ${response.status} ${response.statusText}. ${errorText}`);
+    try {
+      const response = await fetch(`${SUPERADMIN_BASE_URL}/advertisements`, {
+        method: 'POST',
+        headers: headers,
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Advertisement creation failed:', response.status, errorText);
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || `Failed to create advertisement: ${response.status}`);
+        } catch (e) {
+          throw new Error(`Failed to create advertisement: ${response.status} ${response.statusText}. ${errorText}`);
+        }
       }
+      
+      return parseJson(response);
+    } catch (error) {
+      // Check if it's a CORS error
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        const corsError = new Error(
+          'CORS Error: The API server is not allowing requests from this origin. ' +
+          'Please configure CORS on the backend to allow requests from: ' + window.location.origin
+        );
+        corsError.name = 'CORSError';
+        corsError.originalError = error;
+        throw corsError;
+      }
+      throw error;
     }
-    
-    return parseJson(response);
   },
 
   // Chat between global super admin and agency admins

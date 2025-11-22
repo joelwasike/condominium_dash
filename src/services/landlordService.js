@@ -158,4 +158,9 @@ export const landlordService = {
   getBusinessTracking: async () => {
     return await apiRequest(buildApiUrl('/api/landlord/tracking'));
   },
+
+  // Get advertisements
+  getAdvertisements: async () => {
+    return await apiRequest(buildApiUrl('/api/landlord/advertisements'));
+  },
 };
