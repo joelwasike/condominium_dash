@@ -1,83 +1,70 @@
-import { API_CONFIG } from '../config/api';
+import { buildApiUrl, apiRequest } from '../config/api';
 
-const TENANT_BASE_URL = `${API_CONFIG.BASE_URL}/api/tenant`;
-
+// Tenant API Service
 export const tenantService = {
   // Payment APIs
   recordPayment: async (paymentData) => {
-    const response = await fetch(`${TENANT_BASE_URL}/payments`, {
+    const url = buildApiUrl('/api/tenant/payments');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(paymentData)
     });
-    if (!response.ok) throw new Error('Failed to record payment');
-    return response.json();
   },
 
   listPayments: async () => {
-    const response = await fetch(`${TENANT_BASE_URL}/payments`);
-    if (!response.ok) throw new Error('Failed to fetch payments');
-    return response.json();
+    const url = buildApiUrl('/api/tenant/payments');
+    return await apiRequest(url);
   },
 
   approvePayment: async (paymentId) => {
-    const response = await fetch(`${TENANT_BASE_URL}/payments/${paymentId}/approve`, {
+    const url = buildApiUrl(`/api/tenant/payments/${paymentId}/approve`);
+    return await apiRequest(url, {
       method: 'POST'
     });
-    if (!response.ok) throw new Error('Failed to approve payment');
-    return response.json();
   },
 
   rejectPayment: async (paymentId) => {
-    const response = await fetch(`${TENANT_BASE_URL}/payments/${paymentId}/reject`, {
+    const url = buildApiUrl(`/api/tenant/payments/${paymentId}/reject`);
+    return await apiRequest(url, {
       method: 'POST'
     });
-    if (!response.ok) throw new Error('Failed to reject payment');
-    return response.json();
   },
 
   generateReceipt: async (paymentId) => {
-    const response = await fetch(`${TENANT_BASE_URL}/payments/${paymentId}/receipt`, {
+    const url = buildApiUrl(`/api/tenant/payments/${paymentId}/receipt`);
+    return await apiRequest(url, {
       method: 'POST'
     });
-    if (!response.ok) throw new Error('Failed to generate receipt');
-    return response.json();
   },
 
   // Maintenance APIs
   createMaintenance: async (maintenanceData) => {
-    const response = await fetch(`${TENANT_BASE_URL}/maintenance`, {
+    const url = buildApiUrl('/api/tenant/maintenance');
+    return await apiRequest(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(maintenanceData)
     });
-    if (!response.ok) throw new Error('Failed to create maintenance request');
-    return response.json();
   },
 
   listMaintenance: async () => {
-    const response = await fetch(`${TENANT_BASE_URL}/maintenance`);
-    if (!response.ok) throw new Error('Failed to fetch maintenance requests');
-    return response.json();
+    const url = buildApiUrl('/api/tenant/maintenance');
+    return await apiRequest(url);
   },
 
-  // Overview APIs (we'll need to add these to backend)
+  // Overview APIs
   getOverview: async () => {
-    const response = await fetch(`${TENANT_BASE_URL}/overview`);
-    if (!response.ok) throw new Error('Failed to fetch overview');
-    return response.json();
+    const url = buildApiUrl('/api/tenant/overview');
+    return await apiRequest(url);
   },
 
   getLeaseInfo: async () => {
-    const response = await fetch(`${TENANT_BASE_URL}/lease`);
-    if (!response.ok) throw new Error('Failed to fetch lease info');
-    return response.json();
+    const url = buildApiUrl('/api/tenant/lease');
+    return await apiRequest(url);
   },
 
   // Get advertisements
   getAdvertisements: async () => {
-    const response = await fetch(`${TENANT_BASE_URL}/advertisements`);
-    if (!response.ok) throw new Error('Failed to fetch advertisements');
-    return response.json();
+    const url = buildApiUrl('/api/tenant/advertisements');
+    return await apiRequest(url);
   }
 };
