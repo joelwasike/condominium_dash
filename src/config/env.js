@@ -2,6 +2,7 @@
 export const ENV_CONFIG = {
   // API Base URL - Change this when deploying to production
   API_BASE_URL: 'https://saafimmo-api.theliberec.com',
+
   
   // Environment
   NODE_ENV: 'production',
