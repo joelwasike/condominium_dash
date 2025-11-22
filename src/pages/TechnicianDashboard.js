@@ -30,10 +30,8 @@ const TechnicianDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
   const [overviewData, setOverviewData] = useState(null);
-  const [maintenanceRequests, setMaintenanceRequests] = useState([]);
   const [inspections, setInspections] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [quotes, setQuotes] = useState([]);
   const [requests, setRequests] = useState([]);
   const [showInspectionModal, setShowInspectionModal] = useState(false);
   const [inspectionForm, setInspectionForm] = useState({
@@ -54,14 +52,7 @@ const TechnicianDashboard = () => {
   const [photoFile, setPhotoFile] = useState(null);
   
   // Filter states
-  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState('');
-  const [maintenancePriorityFilter, setMaintenancePriorityFilter] = useState('');
-  const [quoteStatusFilter, setQuoteStatusFilter] = useState('');
-  const [progressStatusFilter, setProgressStatusFilter] = useState('');
-  const [progressPriorityFilter, setProgressPriorityFilter] = useState('');
   
-  // Progress report state
-  const [progressReport, setProgressReport] = useState(null);
   
   // Advertisements state
   const [advertisements, setAdvertisements] = useState([]);
@@ -88,35 +79,20 @@ const TechnicianDashboard = () => {
   // Load data from backend
   useEffect(() => {
     loadData();
-  }, [maintenanceStatusFilter, maintenancePriorityFilter, quoteStatusFilter, progressStatusFilter, progressPriorityFilter]);
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [overview, maintenance, inspection, task, quotesData, progressData, progressReportData] = await Promise.all([
+      const [overview, inspection, task] = await Promise.all([
         technicianService.getOverview(),
-        technicianService.listMaintenanceRequests({
-          status: maintenanceStatusFilter || undefined,
-          priority: maintenancePriorityFilter || undefined,
-        }),
         technicianService.listInspections(),
         technicianService.listTasks(),
-        technicianService.listQuotes({
-          status: quoteStatusFilter || undefined,
-        }),
-        technicianService.getWorkProgress({
-          status: progressStatusFilter || undefined,
-          priority: progressPriorityFilter || undefined,
-        }),
-        technicianService.getRepairProgressReport().catch(() => null),
       ]);
       
       setOverviewData(overview);
-      setMaintenanceRequests(Array.isArray(maintenance) ? maintenance : []);
       setInspections(Array.isArray(inspection) ? inspection : []);
       setTasks(Array.isArray(task) ? task : []);
-      setQuotes(Array.isArray(quotesData) ? quotesData : []);
-      setProgressReport(progressReportData);
     } catch (error) {
       console.error('Error loading technician data:', error);
       addNotification('Failed to load dashboard data', 'error');
@@ -263,7 +239,8 @@ const TechnicianDashboard = () => {
     if (!userId) return;
     
     try {
-      setSelectedUserId(userId);
+      // Use functional update to avoid dependency cycle
+      setSelectedUserId(prev => prev !== userId ? userId : prev);
       const messages = await messagingService.getConversation(userId);
       
       // Normalize messages array
@@ -278,7 +255,10 @@ const TechnicianDashboard = () => {
       }
     } catch (error) {
       console.error('Error loading chat:', error);
-      addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
+      // Don't show error notification for CORS errors - they're backend configuration issues
+      if (!error.message || !error.message.includes('CORS')) {
+        addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
+      }
       setChatMessages([]);
     }
   }, [addNotification]);
@@ -352,44 +332,61 @@ const TechnicianDashboard = () => {
         
         setChatUsers(usersWithUnread);
         
-        // Auto-select first user if none selected
-        if (!selectedUserId && usersWithUnread.length > 0) {
-          setSelectedUserId(prev => prev || usersWithUnread[0].userId);
-        }
+        // Auto-select first user if none selected (use functional update to avoid dependency)
+        setSelectedUserId(prev => {
+          if (!prev && usersWithUnread.length > 0) {
+            return usersWithUnread[0].userId;
+          }
+          return prev;
+        });
       } catch (convError) {
         console.error('Error loading conversations:', convError);
         // Still set users even if conversations fail
-        setChatUsers(filteredUsers.map(user => ({
+        const usersMapped = filteredUsers.map(user => ({
           ...user,
           userId: user.id || user.ID || user.userId,
           name: user.name || user.Name,
           email: user.email || user.Email,
           role: user.role || user.Role,
           unreadCount: 0,
-        })));
+        }));
+        setChatUsers(usersMapped);
+        
+        // Auto-select first user if none selected
+        setSelectedUserId(prev => {
+          if (!prev && usersMapped.length > 0) {
+            return usersMapped[0].userId;
+          }
+          return prev;
+        });
       }
     } catch (error) {
       console.error('Error loading users:', error);
-      addNotification('Failed to load users for messaging', 'error');
+      // Don't show error notification for CORS errors - they're backend configuration issues
+      if (!error.message || !error.message.includes('CORS')) {
+        addNotification('Failed to load users for messaging', 'error');
+      }
       setChatUsers([]);
     } finally {
       isLoadingUsersRef.current = false;
     }
-  }, [selectedUserId, addNotification]);
+  }, [addNotification]);
 
-  // Load users when chat tab is active
+  // Load users when chat tab is active (only once per tab switch)
   useEffect(() => {
     if (activeTab === 'chat' && !isLoadingUsersRef.current) {
       loadUsers();
     }
-  }, [activeTab, loadUsers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
-  // Load chat when user is selected
+  // Load chat when user is selected (only if user actually changed)
   useEffect(() => {
     if (selectedUserId && activeTab === 'chat') {
       loadChatForUser(selectedUserId);
     }
-  }, [selectedUserId, activeTab, loadChatForUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUserId, activeTab]);
 
   // Handle send message
   const handleSendMessage = async () => {
@@ -468,10 +465,6 @@ const TechnicianDashboard = () => {
     () => [
       { id: 'overview', label: 'Overview', icon: Building },
       { id: 'inspections', label: 'Inspections', icon: CheckCircle },
-      { id: 'inventories', label: 'Inventories', icon: FileText },
-      { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-      { id: 'quotes', label: 'Quotes', icon: Send },
-      { id: 'progress', label: 'Progress', icon: BarChart2 },
       { id: 'tasks', label: 'Tasks', icon: Calendar },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
@@ -502,10 +495,6 @@ const TechnicianDashboard = () => {
         <div className="sa-metric-card">
           <p className="sa-metric-label">Total Inspections</p>
           <p className="sa-metric-number">{overviewData?.totalInspections || 0}</p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Quotes</p>
-          <p className="sa-metric-number">{overviewData?.totalQuotes || 0}</p>
         </div>
       </div>
     </div>
@@ -649,8 +638,8 @@ const TechnicianDashboard = () => {
         <div className="sa-filters-section">
           <select 
             className="sa-filter-select"
-            value={maintenancePriorityFilter}
-            onChange={(e) => setMaintenancePriorityFilter(e.target.value)}
+            value=""
+            onChange={() => {}}
           >
           <option value="">All Priority Levels</option>
           <option value="urgent">Urgent</option>
@@ -660,8 +649,8 @@ const TechnicianDashboard = () => {
         </select>
           <select 
             className="sa-filter-select"
-            value={maintenanceStatusFilter}
-            onChange={(e) => setMaintenanceStatusFilter(e.target.value)}
+            value=""
+            onChange={() => {}}
           >
           <option value="">All Status</option>
             <option value="Pending">Pending</option>
@@ -688,14 +677,14 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {maintenanceRequests.length === 0 ? (
+            {[].length === 0 ? (
               <tr>
                   <td colSpan={11} className="sa-table-empty">
                   No maintenance requests found
                 </td>
               </tr>
             ) : (
-                maintenanceRequests.map((maintenance, index) => {
+                [].map((maintenance, index) => {
                   const maintenanceId = maintenance.id || maintenance.ID;
                   const property = maintenance.property || maintenance.Property;
                   const issue = maintenance.issue || maintenance.Issue;
@@ -989,8 +978,8 @@ const TechnicianDashboard = () => {
       <div className="sa-filters-section">
         <select 
           className="sa-filter-select"
-          value={quoteStatusFilter}
-          onChange={(e) => setQuoteStatusFilter(e.target.value)}
+          value=""
+          onChange={() => {}}
         >
           <option value="">All Status</option>
           <option value="Sent">Sent</option>
@@ -1013,14 +1002,14 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {quotes.length === 0 ? (
+            {[].length === 0 ? (
               <tr>
                 <td colSpan={7} className="sa-table-empty">
                   No quotes found
                 </td>
               </tr>
             ) : (
-              quotes.map((q, index) => {
+              [].map((q, index) => {
                 const quoteId = q.id || q.ID;
                 const date = q.date || q.Date || q.createdAt || q.CreatedAt;
                 const recipient = q.recipient || q.Recipient;
@@ -1066,8 +1055,8 @@ const TechnicianDashboard = () => {
       <div className="sa-filters-section">
         <select 
           className="sa-filter-select"
-          value={progressStatusFilter}
-          onChange={(e) => setProgressStatusFilter(e.target.value)}
+          value=""
+          onChange={() => {}}
         >
           <option value="">All Status</option>
           <option value="Pending">Pending</option>
@@ -1076,8 +1065,8 @@ const TechnicianDashboard = () => {
         </select>
         <select 
           className="sa-filter-select"
-          value={progressPriorityFilter}
-          onChange={(e) => setProgressPriorityFilter(e.target.value)}
+          value=""
+          onChange={() => {}}
         >
           <option value="">All Priority</option>
           <option value="urgent">Urgent</option>
@@ -1087,25 +1076,25 @@ const TechnicianDashboard = () => {
         </select>
       </div>
 
-      {progressReport && (
+      {null && (
         <div style={{ marginBottom: '20px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Total Ongoing</p>
               <p style={{ margin: '4px 0 0', fontSize: '1.2rem', fontWeight: 600, color: '#111827' }}>
-                {progressReport.totalOngoing || 0}
+                {0}
               </p>
             </div>
             <div>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Total Completed</p>
               <p style={{ margin: '4px 0 0', fontSize: '1.2rem', fontWeight: 600, color: '#111827' }}>
-                {progressReport.totalCompleted || 0}
+                {0}
               </p>
             </div>
             <div>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Total Ongoing Cost</p>
               <p style={{ margin: '4px 0 0', fontSize: '1.2rem', fontWeight: 600, color: '#111827' }}>
-                ${(progressReport.totalOngoingCost || 0).toLocaleString()}
+                ${(0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -1126,14 +1115,14 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {maintenanceRequests.length === 0 ? (
+            {[].length === 0 ? (
               <tr>
                 <td colSpan={7} className="sa-table-empty">
                   No maintenance requests found
                 </td>
               </tr>
             ) : (
-              maintenanceRequests.map((m, index) => {
+              [].map((m, index) => {
                 const maintenanceId = m.id || m.ID;
                 const property = m.property || m.Property;
                 const issue = m.issue || m.Issue;
@@ -1357,14 +1346,6 @@ const TechnicianDashboard = () => {
         return renderOverview();
       case 'inspections':
         return renderInspections();
-      case 'inventories':
-        return renderInventories();
-      case 'maintenance':
-        return renderMaintenance();
-      case 'quotes':
-        return renderQuotes();
-      case 'progress':
-        return renderProgress();
       case 'tasks':
         return renderTasks();
       case 'advertisements':

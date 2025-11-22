@@ -79,19 +79,38 @@ const TenantDashboard = () => {
     try {
       setLoading(true);
       const [overview, paymentsData, maintenanceData] = await Promise.all([
-        tenantService.getOverview(),
-        tenantService.listPayments(),
-        tenantService.listMaintenance()
+        tenantService.getOverview().catch(() => null),
+        tenantService.listPayments().catch(() => []),
+        tenantService.listMaintenance().catch(() => [])
       ]);
 
       setOverviewData(overview);
-      setPayments(paymentsData);
-      setMaintenanceRequests(maintenanceData);
+      // Ensure payments is an array
+      const paymentsArray = Array.isArray(paymentsData) ? paymentsData : [];
+      setPayments(paymentsArray);
+      // Ensure maintenance is an array
+      const maintenanceArray = Array.isArray(maintenanceData) ? maintenanceData : [];
+      setMaintenanceRequests(maintenanceArray);
     } catch (error) {
       console.error('Error loading data:', error);
       addNotification('Failed to load dashboard data', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load payments separately
+  const loadPayments = async () => {
+    try {
+      const paymentsData = await tenantService.listPayments();
+      // Ensure payments is an array
+      const paymentsArray = Array.isArray(paymentsData) ? paymentsData : [];
+      setPayments(paymentsArray);
+      console.log('Loaded payments:', paymentsArray);
+    } catch (error) {
+      console.error('Error loading payments:', error);
+      addNotification('Failed to load payments', 'error');
+      setPayments([]);
     }
   };
 
@@ -390,23 +409,24 @@ const TenantDashboard = () => {
     try {
       setLoading(true);
       const paymentData = {
-        tenant: 'Current Tenant',
-        property: 'Apartment 4B, 123 Main St',
         amount: parseFloat(paymentForm.amount),
         method: paymentForm.paymentMethod,
         chargeType: 'rent',
         reference: paymentForm.reference
       };
 
-      const newPayment = await tenantService.recordPayment(paymentData);
-      setPayments(prev => [newPayment, ...prev]);
+      await tenantService.recordPayment(paymentData);
       addNotification('Payment submitted successfully!', 'success');
 
+      // Reset form and close modal
       setPaymentForm({ amount: '', paymentMethod: '', reference: '' });
       setShowPaymentModal(false);
+
+      // Reload payments from server to ensure we have the latest data
+      await loadPayments();
     } catch (error) {
       console.error('Error submitting payment:', error);
-      addNotification('Failed to submit payment', 'error');
+      addNotification(error.message || 'Failed to submit payment', 'error');
     } finally {
       setLoading(false);
     }
@@ -567,36 +587,49 @@ Thank you for your payment!
               </tr>
             </thead>
             <tbody>
-              {payments.map((payment, index) => (
-                <tr key={payment.ID || `payment-${index}`}>
-                  <td>{index + 1}</td>
-                  <td>{new Date(payment.Date || payment.date).toLocaleDateString()}</td>
-                  <td>
-                    <div className="sa-cell-main">
-                      <span className="sa-cell-title">{payment.ChargeType || payment.chargeType || 'Rent'}</span>
-                    </div>
-                  </td>
-                  <td>{payment.Amount || payment.amount} XOF</td>
-                  <td>{payment.Method || payment.method || 'N/A'}</td>
-                  <td>
-                    <span className={`sa-status-pill ${(payment.Status || payment.status || 'pending').toLowerCase().replace(' ', '-')}`}>
-                      {payment.Status || payment.status || 'Pending'}
-                    </span>
-                  </td>
-                  <td className="table-menu">
-                    <div className="table-actions">
-                      <button
-                        className="table-action-button view"
-                        onClick={() => downloadReceipt(payment.ID || payment.id)}
-                        title="Download Receipt"
-                      >
-                        <Download size={14} />
-                        Download
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {payments.map((payment, index) => {
+                // Handle both uppercase and lowercase field names from API
+                const paymentId = payment.ID || payment.id;
+                const paymentDate = payment.Date || payment.date || payment.createdAt || payment.CreatedAt;
+                const chargeType = payment.ChargeType || payment.chargeType || 'Rent';
+                const amount = payment.Amount || payment.amount || 0;
+                const method = payment.Method || payment.method || 'N/A';
+                const status = payment.Status || payment.status || 'Pending';
+                
+                return (
+                  <tr key={paymentId || `payment-${index}`}>
+                    <td>{index + 1}</td>
+                    <td>{paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                      <div className="sa-cell-main">
+                        <span className="sa-cell-title">{chargeType}</span>
+                        {payment.reference && (
+                          <span className="sa-cell-sub">Ref: {payment.reference}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td>{typeof amount === 'number' ? amount.toLocaleString() : amount} XOF</td>
+                    <td>{method}</td>
+                    <td>
+                      <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
+                        {status}
+                      </span>
+                    </td>
+                    <td className="table-menu">
+                      <div className="table-actions">
+                        <button
+                          className="table-action-button view"
+                          onClick={() => downloadReceipt(paymentId)}
+                          title="Download Receipt"
+                        >
+                          <Download size={14} />
+                          Download
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
