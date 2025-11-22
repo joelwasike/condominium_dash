@@ -132,4 +132,32 @@ export const salesManagerService = {
     const url = buildApiUrl('/api/salesmanager/advertisements');
     return await apiRequest(url);
   },
+
+  // Import clients/tenants from Excel
+  importClientsFromExcel: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const url = buildApiUrl('/api/salesmanager/clients/import-excel');
+    const token = localStorage.getItem('token');
+    
+    return await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': token || '',
+      },
+      body: formData
+    }).then(async (response) => {
+      if (!response.ok) {
+        const errorText = await response.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || `Failed to import Excel file: ${response.status}`);
+        } catch (e) {
+          throw new Error(`Failed to import Excel file: ${response.status} ${response.statusText}. ${errorText}`);
+        }
+      }
+      return response.json();
+    });
+  },
 };

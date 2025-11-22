@@ -37,6 +37,8 @@ const SuperAdminDashboard = () => {
   // UI / filters
   const [transactionsTab, setTransactionsTab] = useState('all');
   const [transactionSearch, setTransactionSearch] = useState('');
+  const [transactionStartDate, setTransactionStartDate] = useState('');
+  const [transactionEndDate, setTransactionEndDate] = useState('');
   const [clientsSearch, setClientsSearch] = useState('');
   const [adFilter, setAdFilter] = useState('all');
   const [newAd, setNewAd] = useState({ title: '', text: '', image: null });
@@ -292,6 +294,7 @@ const SuperAdminDashboard = () => {
   const filteredTransactions = useMemo(() => {
     const base = subscriptions.length > 0 ? subscriptions : companies || [];
     return base.filter((item) => {
+      // Search filter
       if (transactionSearch) {
         const q = transactionSearch.toLowerCase();
         const agency = item.agencyId ? companies.find(c => (c.ID || c.id) === item.agencyId) : item;
@@ -300,6 +303,29 @@ const SuperAdminDashboard = () => {
         const date = item.paymentDate || item.dueDate || item.createdAt || '';
         if (!name.includes(q) && !email.includes(q) && !date.includes(q)) return false;
       }
+      
+      // Date range filter
+      if (transactionStartDate || transactionEndDate) {
+        const transactionDate = item.paymentDate || item.dueDate || item.createdAt || item.CreatedAt || item.PaymentDate || item.DueDate;
+        if (transactionDate) {
+          const itemDate = new Date(transactionDate);
+          if (transactionStartDate) {
+            const startDate = new Date(transactionStartDate);
+            startDate.setHours(0, 0, 0, 0);
+            if (itemDate < startDate) return false;
+          }
+          if (transactionEndDate) {
+            const endDate = new Date(transactionEndDate);
+            endDate.setHours(23, 59, 59, 999);
+            if (itemDate > endDate) return false;
+          }
+        } else {
+          // If no date field and date filter is set, exclude the item
+          if (transactionStartDate || transactionEndDate) return false;
+        }
+      }
+      
+      // Status filter
       if (transactionsTab === 'all') return true;
       const status = (item.paymentStatus || item.status || item.accountStatus || 'paid').toLowerCase();
       if (transactionsTab === 'paid') return status === 'paid' || status === 'approved';
@@ -307,7 +333,7 @@ const SuperAdminDashboard = () => {
       if (transactionsTab === 'deactivated') return status === 'deactivated' || status === 'désactiver' || status === 'inactive';
       return true;
     });
-  }, [subscriptions, companies, transactionSearch, transactionsTab]);
+  }, [subscriptions, companies, transactionSearch, transactionStartDate, transactionEndDate, transactionsTab]);
 
   const renderTransactions = () => (
     <div className="sa-transactions-page">
@@ -330,10 +356,6 @@ const SuperAdminDashboard = () => {
       </div>
       
       <div className="sa-transactions-filters">
-        <button className="sa-filter-button">
-          <Filter size={16} />
-          Filter
-        </button>
         <div className="sa-search-input">
           <Search size={16} />
           <input
@@ -343,6 +365,36 @@ const SuperAdminDashboard = () => {
             onChange={(e) => setTransactionSearch(e.target.value)}
           />
         </div>
+        <div className="sa-date-filters">
+          <input
+            type="date"
+            className="sa-filter-input"
+            placeholder="Start Date"
+            value={transactionStartDate}
+            onChange={(e) => setTransactionStartDate(e.target.value)}
+            title="Filter from date"
+          />
+          <input
+            type="date"
+            className="sa-filter-input"
+            placeholder="End Date"
+            value={transactionEndDate}
+            onChange={(e) => setTransactionEndDate(e.target.value)}
+            title="Filter to date"
+          />
+          {(transactionStartDate || transactionEndDate) && (
+            <button
+              className="sa-filter-clear"
+              onClick={() => {
+                setTransactionStartDate('');
+                setTransactionEndDate('');
+              }}
+              title="Clear date filters"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="sa-table-wrapper">
@@ -351,6 +403,7 @@ const SuperAdminDashboard = () => {
               <tr>
               <th />
               <th>Agency</th>
+              <th>Date</th>
               <th>Account Status</th>
               <th>Subscription Status</th>
               <th>Amount</th>
@@ -373,6 +426,19 @@ const SuperAdminDashboard = () => {
                     </div>
                   </td>
                   <td>
+                    {(() => {
+                      const transactionDate = item.paymentDate || item.dueDate || item.createdAt || item.CreatedAt || item.PaymentDate || item.DueDate || agency?.CreatedAt || agency?.createdAt;
+                      if (transactionDate) {
+                        return new Date(transactionDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        });
+                      }
+                      return 'N/A';
+                    })()}
+                  </td>
+                  <td>
                     <span className={`sa-status-pill ${(item.accountStatus || agency?.Status || agency?.status || 'active').toLowerCase()}`}>
                       {item.accountStatus || agency?.Status || agency?.status || 'Active'}
                     </span>
@@ -393,7 +459,7 @@ const SuperAdminDashboard = () => {
             })}
             {filteredTransactions.length === 0 && (
               <tr>
-                <td colSpan={5} className="sa-table-empty">
+                <td colSpan={6} className="sa-table-empty">
                   No transactions match your filters.
                 </td>
               </tr>

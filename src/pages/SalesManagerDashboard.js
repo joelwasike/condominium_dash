@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign, Filter, Search, Plus, MessageCircle, Settings, Megaphone } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet } from 'lucide-react';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
 import ContractUpload from '../components/ContractUpload';
@@ -21,6 +21,8 @@ const SalesManagerDashboard = () => {
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Documents
+  const [excelFile, setExcelFile] = useState(null);
+  const [importMode, setImportMode] = useState('manual'); // 'manual' or 'excel'
   
   // API Data States
   const [overviewData, setOverviewData] = useState(null);
@@ -304,7 +306,7 @@ const SalesManagerDashboard = () => {
     () => [
       { id: 'overview', label: 'Overview', icon: TrendingUp },
       { id: 'occupancy', label: 'Occupancy', icon: Building },
-      { id: 'clients', label: 'Client Management', icon: Users },
+      { id: 'clients', label: 'Tenant Management', icon: Users },
       { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
@@ -403,6 +405,76 @@ const SalesManagerDashboard = () => {
     }
   };
 
+  const handleExcelFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setExcelFile(file);
+    }
+  };
+
+  const handleExcelUpload = async () => {
+    if (!excelFile) {
+      addNotification('Please select a file first', 'error');
+      return;
+    }
+
+    // Validate file type (Excel and CSV)
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.ms-excel.sheet.macroEnabled.12', // .xlsm
+      'text/csv', // .csv
+      'application/csv', // .csv (alternative MIME type)
+      'text/plain', // .csv (some systems use this)
+    ];
+    
+    const validExtensions = /\.(xlsx|xls|csv)$/i;
+    
+    if (!validTypes.includes(excelFile.type) && !excelFile.name.match(validExtensions)) {
+      addNotification('Please upload a valid file (.xlsx, .xls, or .csv)', 'error');
+      setExcelFile(null);
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (excelFile.size > maxSize) {
+      addNotification('File size too large. Please upload files smaller than 10MB.', 'error');
+      setExcelFile(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      addNotification('Importing tenants from file...', 'info');
+      
+      const result = await salesManagerService.importClientsFromExcel(excelFile);
+      
+      console.log('Excel import result:', result);
+      
+      // Reload clients data
+      await loadData();
+      
+      addNotification(
+        result.message || `Successfully imported ${result.count || result.imported || 'tenants'} from file!`,
+        'success'
+      );
+      
+      // Close modal and reset
+      setShowTenantCreationModal(false);
+      setExcelFile(null);
+      setImportMode('manual');
+    } catch (error) {
+      console.error('Excel import error:', error);
+      addNotification(
+        error.message || 'Failed to import file. Please check the file format and try again.',
+        'error'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateTenant = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -432,15 +504,15 @@ const SalesManagerDashboard = () => {
     
         try {
           setLoading(true);
-          console.log('Creating client with data:', tenantData);
+          console.log('Creating tenant with data:', tenantData);
           const newClient = await salesManagerService.createClient(tenantData);
-          console.log('Created client response:', newClient);
+          console.log('Created tenant response:', newClient);
           setNewTenantData({ ...tenantData, id: newClient.id, documents: uploadedDocuments });
           setCurrentStep(2); // Move to document upload step
-          addNotification(`Client "${tenantData.name}" created successfully!`, 'success');
+          addNotification(`Tenant "${tenantData.name}" created successfully!`, 'success');
         } catch (error) {
-          console.error('Failed to create client:', error);
-          addNotification(`Failed to create client: ${error.message || 'Unknown error'}`, 'error');
+          console.error('Failed to create tenant:', error);
+          addNotification(`Failed to create tenant: ${error.message || 'Unknown error'}`, 'error');
         } finally {
           setLoading(false);
         }
@@ -469,7 +541,7 @@ const SalesManagerDashboard = () => {
         // };
 
             // Reload data to get updated client list
-            console.log('Reloading data after client creation...');
+            console.log('Reloading data after tenant creation...');
             await loadData();
         
         addNotification(`Tenant "${newTenantData.name}" created successfully with ${documentUrls.length} document(s)!`, 'success');
@@ -1041,13 +1113,17 @@ const SalesManagerDashboard = () => {
     <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
-          <h2>Client List</h2>
+          <h2>Tenant List</h2>
           <p>{filteredClients.length} results found</p>
         </div>
         <div className="sa-clients-header-right">
-          <button className="sa-primary-cta" onClick={() => setShowTenantCreationModal(true)}>
+          <button className="sa-primary-cta" onClick={() => {
+            setImportMode('manual');
+            setExcelFile(null);
+            setShowTenantCreationModal(true);
+          }}>
             <Plus size={16} />
-            Add Client
+            Add Tenant
           </button>
           <button className="sa-sort-button">Sort: Creation Date</button>
           <button className="sa-date-button">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</button>
@@ -1104,7 +1180,7 @@ const SalesManagerDashboard = () => {
 
       <div className="sa-section-card">
         <div className="sa-section-header">
-          <h3>Clients</h3>
+          <h3>Tenants</h3>
           <p>Manage all tenant profiles and track their status.</p>
         </div>
         <div className="sa-table-wrapper">
@@ -1155,7 +1231,7 @@ const SalesManagerDashboard = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="sa-table-empty">No clients found. Start the backend to see real data.</td>
+                  <td colSpan={8} className="sa-table-empty">No tenants found. Start the backend to see real data.</td>
                 </tr>
               )}
             </tbody>
@@ -1167,15 +1243,15 @@ const SalesManagerDashboard = () => {
       {waitingListClients.length > 0 && (
         <div className="sa-section-card" style={{ marginTop: '24px' }}>
           <div className="sa-section-header">
-            <h3>Waiting List Clients</h3>
-            <p>Clients waiting for available properties.</p>
+            <h3>Waiting List Tenants</h3>
+            <p>Tenants waiting for available properties.</p>
           </div>
           <div className="sa-table-wrapper">
             <table className="sa-table">
               <thead>
                 <tr>
                   <th />
-                  <th>Client</th>
+                  <th>Tenant</th>
                   <th>Contact</th>
                   <th>Preferred Property</th>
                   <th>Status</th>
@@ -1224,7 +1300,7 @@ const SalesManagerDashboard = () => {
               <thead>
                 <tr>
                   <th />
-                  <th>Client</th>
+                  <th>Tenant</th>
                   <th>Property</th>
                   <th>Amount</th>
                   <th>Due Date</th>
@@ -1704,20 +1780,126 @@ const SalesManagerDashboard = () => {
           setCurrentStep(1);
           setNewTenantData(null);
           setUploadedDocuments([]);
+          setExcelFile(null);
+          setImportMode('manual');
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{currentStep === 1 ? 'Create New Tenant - Basic Information' : 'Create New Tenant - Upload Documents'}</h3>
+              <h3>{currentStep === 1 ? (importMode === 'excel' ? 'Import Tenants from File' : 'Create New Tenant - Basic Information') : 'Create New Tenant - Upload Documents'}</h3>
               <button className="modal-close" onClick={() => {
                 setShowTenantCreationModal(false);
                 setCurrentStep(1);
                 setNewTenantData(null);
                 setUploadedDocuments([]);
+                setExcelFile(null);
+                setImportMode('manual');
               }}>×</button>
             </div>
             <div className="modal-body">
               {currentStep === 1 ? (
-                <form onSubmit={handleCreateTenant}>
+                <>
+                  {/* Import Mode Selection */}
+                  <div className="import-mode-selector" style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        className={`action-button ${importMode === 'manual' ? 'primary' : 'secondary'}`}
+                        onClick={() => setImportMode('manual')}
+                        style={{ flex: 1 }}
+                      >
+                        <UserPlus size={18} />
+                        Add Single Tenant
+                      </button>
+                      <button
+                        type="button"
+                        className={`action-button ${importMode === 'excel' ? 'primary' : 'secondary'}`}
+                        onClick={() => setImportMode('excel')}
+                        style={{ flex: 1 }}
+                      >
+                        <FileSpreadsheet size={18} />
+                        Import from File
+                      </button>
+                    </div>
+                  </div>
+
+                  {importMode === 'excel' ? (
+                    <div className="excel-upload-section">
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ marginBottom: '8px' }}>Upload File</h4>
+                        <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
+                          Upload an Excel file (.xlsx, .xls) or CSV file (.csv) with tenant details. Required columns: Name, Property, Email, Phone, Amount, MoveInDate. Optional: Status (defaults to 'Active'). Date format: YYYY-MM-DD or DD/MM/YYYY
+                        </p>
+                      </div>
+                      
+                      <div className="file-upload-area" style={{
+                        border: '2px dashed #d1d5db',
+                        borderRadius: '12px',
+                        padding: '32px',
+                        textAlign: 'center',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <input
+                          type="file"
+                          id="excel-file-input"
+                          accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/csv"
+                          onChange={handleExcelFileSelect}
+                          style={{ display: 'none' }}
+                          disabled={loading}
+                        />
+                        <label
+                          htmlFor="excel-file-input"
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '12px',
+                            cursor: loading ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          <FileSpreadsheet size={48} color={loading ? '#9ca3af' : '#2563eb'} />
+                          <div>
+                            <strong style={{ color: loading ? '#9ca3af' : '#1f2937' }}>
+                              {loading ? 'Uploading...' : 'Click to select Excel file'}
+                            </strong>
+                            <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>
+                              Supports .xlsx, .xls, and .csv files (max 10MB)
+                            </p>
+                          </div>
+                        </label>
+                        {excelFile && (
+                          <div style={{ marginTop: '12px', padding: '8px 12px', background: '#eff6ff', borderRadius: '8px', display: 'inline-block' }}>
+                            <FileSpreadsheet size={16} style={{ display: 'inline', marginRight: '8px' }} />
+                            <span style={{ fontSize: '0.9rem' }}>{excelFile.name}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="modal-footer" style={{ marginTop: '24px' }}>
+                        <button
+                          type="button"
+                          className="action-button secondary"
+                          onClick={() => {
+                            setShowTenantCreationModal(false);
+                            setImportMode('manual');
+                            setExcelFile(null);
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="action-button primary"
+                          onClick={handleExcelUpload}
+                          disabled={!excelFile || loading}
+                        >
+                          {loading ? 'Importing...' : 'Import Tenants'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleCreateTenant}>
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="firstName">First Name</label>
@@ -1775,10 +1957,12 @@ const SalesManagerDashboard = () => {
                       Cancel
                     </button>
                     <button type="submit" className="action-button primary" disabled={loading}>
-                      {loading ? 'Creating Client...' : 'Next: Upload Documents'}
+                      {loading ? 'Creating Tenant...' : 'Next: Upload Documents'}
                     </button>
                   </div>
                 </form>
+                  )}
+                </>
               ) : (
                 <div className="document-upload-step">
                   <div className="tenant-summary">
@@ -1877,7 +2061,7 @@ const SalesManagerDashboard = () => {
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Edit Client/Tenant Profile</h3>
+              <h3>Edit Tenant Profile</h3>
               <button className="modal-close" onClick={() => {
                 setShowEditClientModal(false);
                 setEditingClient(null);
