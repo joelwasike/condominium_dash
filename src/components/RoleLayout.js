@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { LifeBuoy, LogOut, Settings, Bell, Search, UserCircle } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { LifeBuoy, LogOut, Settings, Bell, Search, UserCircle, Menu, X } from 'lucide-react';
 import './RoleLayout.css';
 
 const roleLabels = {
@@ -27,8 +27,37 @@ const RoleLayout = ({
   subtitle
 }) => {
   const [internalActive, setInternalActive] = useState(menu[0]?.id || null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const currentActiveId = activeId !== undefined ? activeId : internalActive;
+
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close sidebar when menu item is clicked on mobile
+  const handleMenuClick = (item) => {
+    if (item.onSelect) {
+      item.onSelect();
+    }
+    if (onActiveChange) {
+      onActiveChange(item.id);
+    }
+    if (activeId === undefined) {
+      setInternalActive(item.id);
+    }
+    // Close sidebar on mobile after selection
+    if (window.innerWidth <= 768) {
+      setSidebarOpen(false);
+    }
+  };
 
   const userProfile = useMemo(() => {
     try {
@@ -42,21 +71,17 @@ const RoleLayout = ({
 
   const roleLabel = userProfile?.role ? (roleLabels[userProfile.role] || userProfile.role) : 'User';
 
-  const handleMenuClick = (item) => {
-    if (item.onSelect) {
-      item.onSelect();
-    }
-    if (onActiveChange) {
-      onActiveChange(item.id);
-    }
-    if (activeId === undefined) {
-      setInternalActive(item.id);
-    }
-  };
-
   return (
     <div className="role-layout technician-dashboard">
-      <aside className="role-sidebar technician-sidebar">
+      {/* Mobile Menu Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="mobile-sidebar-overlay" 
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      <aside className={`role-sidebar technician-sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-brand">
           <div className="brand-logo">
             {brand.logoImage ? (
@@ -117,6 +142,14 @@ const RoleLayout = ({
 
       <div className="role-main technician-main">
         <header className="role-topbar technician-topbar">
+          <button 
+            className="mobile-menu-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle menu"
+          >
+            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          
           {!hideSearch && (
             <div className="topbar-search">
               <Search size={18} />

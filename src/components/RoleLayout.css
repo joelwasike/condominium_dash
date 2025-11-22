@@ -311,28 +311,131 @@
   }
 }
 
-@media (max-width: 900px) {
-  .role-layout {
-    flex-direction: column;
-    overflow: visible;
+/* Mobile Menu Toggle Button */
+.mobile-menu-toggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid rgba(19, 42, 132, 0.12);
+  background: #f7f8ff;
+  color: #102a83;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-menu-toggle:hover {
+  background: #e7eaff;
+}
+
+.mobile-sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  .mobile-sidebar-overlay {
+    display: block;
   }
 
   .role-sidebar {
-    width: 100%;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 16px;
-    padding: 24px 28px;
+    position: fixed;
+    left: -264px;
+    top: 0;
+    bottom: 0;
+    width: 264px;
+    z-index: 999;
+    transition: left 0.3s ease;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
   }
 
-  .sidebar-menu {
-    flex-direction: row;
-    flex-wrap: wrap;
+  .role-sidebar.mobile-open {
+    left: 0;
   }
 
   .role-main {
-    height: auto;
+    width: 100%;
+  }
+
+  .role-topbar {
+    padding: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .topbar-search {
+    min-width: 0;
+    flex: 1;
+    order: 3;
+    width: 100%;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .topbar-profile {
+    padding-left: 8px;
+    border-left: none;
+  }
+
+  .profile-details {
+    display: none;
+  }
+
+  .role-content {
+    padding: 16px;
+  }
+
+  .sidebar-menu {
+    flex-direction: column;
+  }
+
+  .menu-item {
+    padding: 14px 16px;
+  }
+
+  .menu-item span {
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .role-topbar {
+    padding: 12px;
+  }
+
+  .role-content {
+    padding: 12px;
+  }
+
+  .topbar-search {
+    padding: 10px 12px;
+  }
+
+  .icon-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .profile-avatar {
+    width: 36px;
+    height: 36px;
   }
 }
 
