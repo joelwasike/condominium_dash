@@ -12,7 +12,8 @@ import {
   CreditCard,
   FileText,
   TrendingUp,
-  UserCheck
+  UserCheck,
+  Megaphone
 } from 'lucide-react';
 import {
   LineChart,
@@ -27,6 +28,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { agencyDirectorService } from '../services/agencyDirectorService';
+import { API_CONFIG } from '../config/api';
 import RoleLayout from '../components/RoleLayout';
 import Modal from '../components/Modal';
 import SettingsPage from './SettingsPage';
@@ -47,6 +49,7 @@ const AgencyDirectorDashboard = () => {
   const [works, setWorks] = useState([]);
   const [accountingData, setAccountingData] = useState(null);
   const [landlordPayments, setLandlordPayments] = useState([]);
+  const [advertisements, setAdvertisements] = useState([]);
 
   // Filters
   const [userCompanyFilter, setUserCompanyFilter] = useState('');
@@ -477,6 +480,13 @@ const AgencyDirectorDashboard = () => {
     }
   }, [activeTab, loadAnalyticsData]);
 
+  // Load advertisements when advertisements tab is active
+  useEffect(() => {
+    if (activeTab === 'advertisements') {
+      loadAdvertisements();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const tabs = useMemo(
     () => [
       { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -487,6 +497,7 @@ const AgencyDirectorDashboard = () => {
       { id: 'accounting', label: 'Accounting', icon: DollarSign },
       { id: 'analytics', label: 'Analytics', icon: TrendingUp },
       { id: 'works', label: 'Works', icon: Wrench },
+      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'messages', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
@@ -2108,6 +2119,73 @@ const AgencyDirectorDashboard = () => {
     </div>
   );
 
+  // Load advertisements
+  const loadAdvertisements = async () => {
+    try {
+      const ads = await agencyDirectorService.getAdvertisements();
+      setAdvertisements(Array.isArray(ads) ? ads : []);
+    } catch (error) {
+      console.error('Failed to load advertisements:', error);
+      addNotification('Failed to load advertisements', 'error');
+      setAdvertisements([]);
+    }
+  };
+
+  const renderAdvertisements = () => {
+    return (
+      <div className="sa-ads-page">
+        <div className="sa-ads-header">
+          <div>
+            <h2>Advertisements</h2>
+            <p>View active advertisements posted by Super Admin</p>
+          </div>
+        </div>
+
+        <div className="sa-ads-list">
+          {advertisements.length > 0 ? (
+            advertisements.map((ad, index) => {
+              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+              const fullImageUrl = imageUrl 
+                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+                : null;
+
+              return (
+                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
+                  <div className="sa-ad-status-column">
+                    <span className="sa-ad-status published">Active</span>
+                  </div>
+                  <div className="sa-ad-main">
+                    {fullImageUrl && (
+                      <img 
+                        src={fullImageUrl} 
+                        alt={ad.Title || ad.title || 'Advertisement'} 
+                        className="sa-ad-image"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
+                    <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
+                    {ad.CreatedAt && (
+                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
+                        Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="sa-table-empty">
+              No active advertisements available at this time.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -2126,6 +2204,8 @@ const AgencyDirectorDashboard = () => {
         return renderAnalytics();
       case 'works':
         return renderWorks();
+      case 'advertisements':
+        return renderAdvertisements();
       case 'messages':
         return renderMessages();
       case 'settings':

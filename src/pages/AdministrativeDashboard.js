@@ -12,7 +12,8 @@ import {
   DollarSign,
   Download,
   Plus,
-  MessageCircle
+  MessageCircle,
+  Megaphone
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -21,6 +22,7 @@ import '../components/RoleLayout.css';
 import './AdministrativeDashboard.css';
 import { adminService } from '../services/adminService';
 import { messagingService } from '../services/messagingService';
+import { API_CONFIG } from '../config/api';
 
 const AdministrativeDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -40,6 +42,7 @@ const AdministrativeDashboard = () => {
   const [reminders, setReminders] = useState([]);
   const [leases, setLeases] = useState([]);
   const [pendingPaymentFollowUps, setPendingPaymentFollowUps] = useState([]);
+  const [advertisements, setAdvertisements] = useState([]);
   
   // Filter states
   const [documentStatusFilter, setDocumentStatusFilter] = useState('');
@@ -250,6 +253,13 @@ const AdministrativeDashboard = () => {
     loadData();
   }, [loadData]);
 
+  // Load advertisements when advertisements tab is active
+  useEffect(() => {
+    if (activeTab === 'advertisements') {
+      loadAdvertisements();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load users when chat tab is active
   useEffect(() => {
     if (activeTab === 'chat' && !isLoadingUsersRef.current) {
@@ -267,6 +277,7 @@ const AdministrativeDashboard = () => {
       { id: 'reminders', label: 'Reminders', icon: Bell },
       { id: 'leases', label: 'Leases', icon: FileText },
       { id: 'automation', label: 'Automation & Reports', icon: TrendingUp },
+      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
@@ -1302,6 +1313,73 @@ const AdministrativeDashboard = () => {
     </div>
   );
 
+  // Load advertisements
+  const loadAdvertisements = async () => {
+    try {
+      const ads = await adminService.getAdvertisements();
+      setAdvertisements(Array.isArray(ads) ? ads : []);
+    } catch (error) {
+      console.error('Failed to load advertisements:', error);
+      addNotification('Failed to load advertisements', 'error');
+      setAdvertisements([]);
+    }
+  };
+
+  const renderAdvertisements = () => {
+    return (
+      <div className="sa-ads-page">
+        <div className="sa-ads-header">
+          <div>
+            <h2>Advertisements</h2>
+            <p>View active advertisements posted by Super Admin</p>
+          </div>
+        </div>
+
+        <div className="sa-ads-list">
+          {advertisements.length > 0 ? (
+            advertisements.map((ad, index) => {
+              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+              const fullImageUrl = imageUrl 
+                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+                : null;
+
+              return (
+                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
+                  <div className="sa-ad-status-column">
+                    <span className="sa-ad-status published">Active</span>
+                  </div>
+                  <div className="sa-ad-main">
+                    {fullImageUrl && (
+                      <img 
+                        src={fullImageUrl} 
+                        alt={ad.Title || ad.title || 'Advertisement'} 
+                        className="sa-ad-image"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
+                    <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
+                    {ad.CreatedAt && (
+                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
+                        Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="sa-table-empty">
+              No active advertisements available at this time.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = (currentTab = activeTab) => {
     switch (currentTab) {
       case 'overview':
@@ -1320,6 +1398,8 @@ const AdministrativeDashboard = () => {
         return renderLeases();
       case 'automation':
         return renderAutomation();
+      case 'advertisements':
+        return renderAdvertisements();
       case 'chat':
         return renderMessages();
       case 'settings':

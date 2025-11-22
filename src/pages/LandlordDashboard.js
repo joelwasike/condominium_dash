@@ -14,7 +14,8 @@ import {
   FileEdit,
   Package,
   BarChart3,
-  Settings
+  Settings,
+  Megaphone
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
@@ -27,6 +28,7 @@ import './SalesManagerDashboard.css';
 import '../components/RoleLayout.css';
 import { landlordService } from '../services/landlordService';
 import { messagingService } from '../services/messagingService';
+import { API_CONFIG } from '../config/api';
 import { MessageCircle } from 'lucide-react';
 
 const LandlordDashboard = () => {
@@ -53,6 +55,7 @@ const LandlordDashboard = () => {
   const [claims, setClaims] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [businessTracking, setBusinessTracking] = useState(null);
+  const [advertisements, setAdvertisements] = useState([]);
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -155,6 +158,13 @@ const LandlordDashboard = () => {
     }
   };
   
+  // Load advertisements when advertisements tab is active
+  useEffect(() => {
+    if (activeTab === 'advertisements') {
+      loadAdvertisements();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load expenses
   const loadExpenses = async () => {
     try {
@@ -638,6 +648,7 @@ const LandlordDashboard = () => {
       { id: 'documents', label: 'Documents', icon: FileText },
       { id: 'inventory', label: 'Inventory', icon: Package },
       { id: 'tracking', label: 'Business Tracking', icon: BarChart3 },
+      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messaging', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
@@ -654,34 +665,34 @@ const LandlordDashboard = () => {
         <div className="sa-metric-card">
           <p className="sa-metric-label">Total Rent Collected</p>
           <p className="sa-metric-value">{overviewData?.totalRent?.toLocaleString() || 0} XOF</p>
-        </div>
+      </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Cash Flow</p>
           <p className="sa-metric-value">{overviewData?.netCashFlow?.toLocaleString() || 0} XOF</p>
-        </div>
+          </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Payment Rate</p>
           <p className="sa-metric-number">{overviewData?.paymentRate || 0}%</p>
-        </div>
+          </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Active Tenants</p>
           <p className="sa-metric-number">{overviewData?.activeTenants || 0}</p>
-        </div>
+          </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Pending Claims</p>
           <p className="sa-metric-number">{overviewData?.pendingClaims || 0}</p>
-        </div>
+          </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Works in Progress</p>
           <p className="sa-metric-number">{overviewData?.worksInProgress || 0}</p>
-        </div>
+          </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Occupancy Rate</p>
           <p className="sa-metric-number">{overviewData?.occupancyRate || 0}%</p>
-        </div>
-      </div>
-    </div>
-  );
+          </div>
+          </div>
+          </div>
+        );
       
   const renderProperties = () => (
     <div className="sa-clients-page">
@@ -689,30 +700,30 @@ const LandlordDashboard = () => {
         <div>
           <h2>Property Management</h2>
           <p>{properties.length} properties found</p>
-        </div>
+      </div>
         <div className="sa-clients-header-right">
           <button className="sa-primary-cta" onClick={() => setShowPropertyModal(true)} disabled={loading}>
             <Plus size={16} />
-            Add New Property
-          </button>
+          Add New Property
+        </button>
         </div>
       </div>
-
+              
       <div className="sa-table-wrapper">
         <table className="sa-table">
-          <thead>
-            <tr>
+            <thead>
+              <tr>
               <th>No</th>
-              <th>Property Address</th>
-              <th>Type</th>
-              <th>Bedrooms</th>
-              <th>Bathrooms</th>
-              <th>Rent</th>
-              <th>Status</th>
+                <th>Property Address</th>
+                <th>Type</th>
+                <th>Bedrooms</th>
+                <th>Bathrooms</th>
+                <th>Rent</th>
+                <th>Status</th>
               <th />
-            </tr>
-          </thead>
-          <tbody>
+              </tr>
+            </thead>
+            <tbody>
             {properties.length === 0 ? (
               <tr>
                 <td colSpan={8} className="sa-table-empty">No properties found</td>
@@ -740,9 +751,9 @@ const LandlordDashboard = () => {
                 </tr>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
     </div>
   );
 
@@ -751,27 +762,27 @@ const LandlordDashboard = () => {
       <div className="sa-clients-header">
         <div>
           <h2>Document Management</h2>
-          <p>Upload and manage your property documents and contracts</p>
-        </div>
+        <p>Upload and manage your property documents and contracts</p>
+                      </div>
         <div className="sa-clients-header-right">
-          <button 
+        <button 
             className="sa-primary-cta"
-            onClick={() => setShowKycModal(true)}
+          onClick={() => setShowKycModal(true)}
             disabled={loading}
-          >
+        >
             <Upload size={16} />
-            Upload KYC Documents
-          </button>
-          <button 
+          Upload KYC Documents
+        </button>
+        <button 
             className="sa-primary-cta"
-            onClick={() => setShowContractModal(true)}
+          onClick={() => setShowContractModal(true)}
             disabled={loading}
-          >
+        >
             <Plus size={16} />
-            Upload Essential Contract
-          </button>
+          Upload Essential Contract
+        </button>
         </div>
-      </div>
+                    </div>
 
       <div className="sa-table-wrapper">
         <table className="sa-table">
@@ -818,15 +829,15 @@ const LandlordDashboard = () => {
             </tr>
           </tbody>
         </table>
-      </div>
-    </div>
+                </div>
+              </div>
   );
 
   const renderPayments = () => {
     return (
       <div className="sa-transactions-page">
         <div className="sa-transactions-header">
-          <h2>Payments & Cash Flow Management</h2>
+      <h2>Payments & Cash Flow Management</h2>
         </div>
         
         <div className="sa-transactions-tabs">
@@ -866,26 +877,26 @@ const LandlordDashboard = () => {
               <div className="sa-clients-header-right">
                 <button className="sa-primary-cta" onClick={() => setShowReceiptModal(true)} disabled={loading}>
                   <Receipt size={16} />
-                  Generate Receipt
-                </button>
+          Generate Receipt
+        </button>
               </div>
-            </div>
-
+      </div>
+      
             <div className="sa-table-wrapper">
               <table className="sa-table">
-                <thead>
-                  <tr>
+              <thead>
+                <tr>
                     <th>No</th>
-                    <th>Date</th>
-                    <th>Property</th>
-                    <th>Tenant</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Status</th>
+                  <th>Date</th>
+                  <th>Property</th>
+                  <th>Tenant</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Status</th>
                     <th />
-                  </tr>
-                </thead>
-                <tbody>
+                </tr>
+              </thead>
+              <tbody>
                   {payments.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="sa-table-empty">No payment transactions found</td>
@@ -905,7 +916,7 @@ const LandlordDashboard = () => {
                           <span className={`sa-status-pill ${(payment.Status || payment.status || 'pending').toLowerCase()}`}>
                             {payment.Status || payment.status || 'Pending'}
                           </span>
-                        </td>
+                  </td>
                         <td className="sa-row-actions">
                           <button className="sa-icon-button" onClick={() => setShowReceiptModal(true)} title="Receipt">🧾</button>
                         </td>
@@ -999,14 +1010,14 @@ const LandlordDashboard = () => {
                             <td>
                               <span className={`sa-status-pill ${(payment.status || payment.Status || 'pending').toLowerCase()}`}>
                                 {payment.status || payment.Status || 'Pending'}
-                              </span>
-                            </td>
+                    </span>
+                  </td>
                           </tr>
                         ))
                       )}
                     </tbody>
                   </table>
-                </div>
+                    </div>
               </>
             )}
           </div>
@@ -1075,11 +1086,11 @@ const LandlordDashboard = () => {
                                 <span className={`sa-status-pill ${(payment.status || payment.Status || 'pending').toLowerCase()}`}>
                                   {payment.status || payment.Status || 'Pending'}
                                 </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
                     </div>
                   </div>
                 )}
@@ -1131,9 +1142,9 @@ const LandlordDashboard = () => {
               </>
             )}
           </div>
-        )}
-      </div>
-    );
+      )}
+    </div>
+  );
   };
 
   const renderTenants = () => (
@@ -1141,61 +1152,61 @@ const LandlordDashboard = () => {
       <div className="sa-clients-header">
         <div>
           <h2>Tenant Management</h2>
-          <p>Manage your tenants and their information</p>
+        <p>Manage your tenants and their information</p>
         </div>
       </div>
-
+      
       <div className="sa-table-wrapper">
         <table className="sa-table">
-          <thead>
-            <tr>
+            <thead>
+              <tr>
               <th>No</th>
-              <th>Tenant Name</th>
-              <th>Property</th>
-              <th>Rent</th>
-              <th>Status</th>
-              <th>Contact</th>
+                <th>Tenant Name</th>
+                <th>Property</th>
+                <th>Rent</th>
+                <th>Status</th>
+                <th>Contact</th>
               <th />
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
               <td>1</td>
               <td className="sa-cell-main">
                 <span className="sa-cell-title">John Doe</span>
-              </td>
-              <td>123 Main Street, Apt 4B</td>
-              <td>1,200 XOF/month</td>
-              <td>
+                </td>
+                <td>123 Main Street, Apt 4B</td>
+                <td>1,200 XOF/month</td>
+                <td>
                 <span className="sa-status-pill active">Active</span>
-              </td>
-              <td>N/A</td>
+                </td>
+                <td>N/A</td>
               <td className="sa-row-actions">
                 <button className="sa-icon-button" title="View">👁️</button>
                 <button className="sa-icon-button" title="Contact">📞</button>
-              </td>
-            </tr>
-            <tr>
+                </td>
+              </tr>
+              <tr>
               <td>2</td>
               <td className="sa-cell-main">
                 <span className="sa-cell-title">Jane Smith</span>
-              </td>
-              <td>456 Oak Avenue, Unit 2</td>
-              <td>900 XOF/month</td>
-              <td>
+                </td>
+                <td>456 Oak Avenue, Unit 2</td>
+                <td>900 XOF/month</td>
+                <td>
                 <span className="sa-status-pill active">Active</span>
-              </td>
-              <td>N/A</td>
+                </td>
+                <td>N/A</td>
               <td className="sa-row-actions">
                 <button className="sa-icon-button" title="View">👁️</button>
                 <button className="sa-icon-button" title="Contact">📞</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+                </td>
+              </tr>
+            </tbody>
+          </table>
+                  </div>
+          </div>
+        );
       
   const renderRentalManagement = () => (
     <div className="sa-overview-page">
@@ -1203,178 +1214,178 @@ const LandlordDashboard = () => {
         <div className="sa-metric-card sa-metric-primary">
           <p className="sa-metric-label">Generation of Lease Agreements</p>
           <p className="sa-metric-value">Active</p>
-        </div>
+              </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Rent Reviews</p>
           <p className="sa-metric-number">Track</p>
-        </div>
+                </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Adjustment of Charges</p>
           <p className="sa-metric-number">Available</p>
-        </div>
+                </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Tenant Interface</p>
           <p className="sa-metric-number">Active</p>
-        </div>
+                </div>
       </div>
-    </div>
+                  </div>
   );
 
   const renderWorksAndClaims = () => (
     <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
-          <h2>Works & Interventions Management</h2>
-          <p>Track maintenance works, interventions, and automatic claims management</p>
+      <h2>Works & Interventions Management</h2>
+      <p>Track maintenance works, interventions, and automatic claims management</p>
         </div>
         <div className="sa-clients-header-right">
           <button className="sa-primary-cta" onClick={() => setShowWorkOrderModal(true)} disabled={loading}>
             <Plus size={16} />
-            Create Work Order
-          </button>
+          Create Work Order
+        </button>
         </div>
-      </div>
-
-      {workOrders.length > 0 && (
+                </div>
+                
+          {workOrders.length > 0 && (
         <div className="sa-section-card" style={{ marginBottom: '24px' }}>
           <div className="sa-section-header">
-            <div>
+                <div>
               <h3>Work Orders</h3>
-              <p>Maintenance and intervention requests</p>
-            </div>
-          </div>
+                  <p>Maintenance and intervention requests</p>
+                </div>
+              </div>
           <div className="sa-table-wrapper">
             <table className="sa-table">
-              <thead>
-                <tr>
+                  <thead>
+                    <tr>
                   <th>No</th>
-                  <th>Title</th>
-                  <th>Property</th>
-                  <th>Description</th>
-                  <th>Status</th>
-                  <th>Date</th>
+                      <th>Title</th>
+                      <th>Property</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th>Date</th>
                   <th />
-                </tr>
-              </thead>
-              <tbody>
-                {workOrders.map((work, index) => (
-                  <tr key={work.ID || `work-${index}`}>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workOrders.map((work, index) => (
+                      <tr key={work.ID || `work-${index}`}>
                     <td>{index + 1}</td>
                     <td className="sa-cell-main">
                       <span className="sa-cell-title">{work.Title || work.title || 'N/A'}</span>
-                    </td>
-                    <td>{work.Property || work.property || 'N/A'}</td>
-                    <td>
+                        </td>
+                        <td>{work.Property || work.property || 'N/A'}</td>
+                        <td>
                       <span className="sa-cell-sub">{work.Description || work.description || 'N/A'}</span>
                     </td>
                     <td>
                       <span className={`sa-status-pill ${(work.Status || work.status || 'pending').toLowerCase()}`}>
-                        {work.Status || work.status || 'Pending'}
-                      </span>
-                    </td>
-                    <td>{work.Date ? new Date(work.Date).toLocaleDateString() : (work.date ? new Date(work.date).toLocaleDateString() : 'N/A')}</td>
+                            {work.Status || work.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td>{work.Date ? new Date(work.Date).toLocaleDateString() : (work.date ? new Date(work.date).toLocaleDateString() : 'N/A')}</td>
                     <td className="sa-row-actions">
                       <button className="sa-icon-button" title="View">👁️</button>
                       <button className="sa-icon-button" title="Edit">✏️</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
       <div className="sa-section-card">
         <div className="sa-section-header">
-          <div>
+            <div>
             <h3>Claims</h3>
-            <p>Property claims and requests</p>
-          </div>
+                  <p>Property claims and requests</p>
+              </div>
           <button className="sa-primary-cta" onClick={() => setShowClaimModal(true)} disabled={loading}>
             <Plus size={16} />
-            Create Claim
-          </button>
-        </div>
+                  Create Claim
+                </button>
+              </div>
         <div className="sa-table-wrapper">
           <table className="sa-table">
-            <thead>
-              <tr>
+                  <thead>
+                    <tr>
                 <th>No</th>
-                <th>Title</th>
-                <th>Property</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th>Date</th>
+                      <th>Title</th>
+                      <th>Property</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th>Date</th>
                 <th />
-              </tr>
-            </thead>
-            <tbody>
+                    </tr>
+                  </thead>
+                  <tbody>
               {claims.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="sa-table-empty">No claims found</td>
                 </tr>
               ) : (
                 claims.map((claim, index) => (
-                  <tr key={claim.ID || `claim-${index}`}>
+                      <tr key={claim.ID || `claim-${index}`}>
                     <td>{index + 1}</td>
                     <td className="sa-cell-main">
                       <span className="sa-cell-title">{claim.Title || claim.title || 'N/A'}</span>
-                    </td>
-                    <td>{claim.Property || claim.property || 'N/A'}</td>
-                    <td>
+                        </td>
+                        <td>{claim.Property || claim.property || 'N/A'}</td>
+                        <td>
                       <span className="sa-cell-sub">{claim.Description || claim.description || 'N/A'}</span>
                     </td>
                     <td>
                       <span className={`sa-status-pill ${(claim.Status || claim.status || 'pending').toLowerCase()}`}>
-                        {claim.Status || claim.status || 'Pending'}
-                      </span>
-                    </td>
-                    <td>{claim.Date ? new Date(claim.Date).toLocaleDateString() : (claim.date ? new Date(claim.date).toLocaleDateString() : 'N/A')}</td>
+                            {claim.Status || claim.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td>{claim.Date ? new Date(claim.Date).toLocaleDateString() : (claim.date ? new Date(claim.date).toLocaleDateString() : 'N/A')}</td>
                     <td className="sa-row-actions">
                       <button className="sa-icon-button" title="View">👁️</button>
                       <button className="sa-icon-button" title="Edit">✏️</button>
-                    </td>
-                  </tr>
+                        </td>
+                      </tr>
                 ))
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
       
   const renderInventory = () => (
     <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
-          <h2>Inventory Management</h2>
+      <h2>Inventory Management</h2>
           <p>{inventory.length} inventory items found</p>
         </div>
         <div className="sa-clients-header-right">
           <button className="sa-primary-cta" onClick={() => setShowInventoryModal(true)} disabled={loading}>
             <Plus size={16} />
-            Add New Inventory
-          </button>
+          Add New Inventory
+        </button>
         </div>
-      </div>
-
+                </div>
+        
       <div className="sa-table-wrapper">
         <table className="sa-table">
-          <thead>
-            <tr>
+            <thead>
+              <tr>
               <th>No</th>
-              <th>Property</th>
-              <th>Item Name</th>
-              <th>Category</th>
-              <th>Quantity</th>
-              <th>Condition</th>
-              <th>Last Updated</th>
+                <th>Property</th>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Condition</th>
+                <th>Last Updated</th>
               <th />
-            </tr>
-          </thead>
-          <tbody>
+              </tr>
+            </thead>
+            <tbody>
             {inventory.length === 0 ? (
               <tr>
                 <td colSpan={8} className="sa-table-empty">No inventory found</td>
@@ -1405,7 +1416,7 @@ const LandlordDashboard = () => {
             )}
           </tbody>
         </table>
-      </div>
+                </div>
     </div>
   );
 
@@ -1484,13 +1495,13 @@ const LandlordDashboard = () => {
                           <span className={`sa-status-pill ${(rent.status || rent.Status || 'approved').toLowerCase()}`}>
                             {rent.status || rent.Status || 'Approved'}
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
               </div>
-            </div>
+              </div>
           )}
 
           {rents.pendingRents && rents.pendingRents.length > 0 && (
@@ -1535,7 +1546,7 @@ const LandlordDashboard = () => {
           )}
         </>
       )}
-    </div>
+                  </div>
   );
 
   const renderExpenses = () => (
@@ -1574,9 +1585,9 @@ const LandlordDashboard = () => {
               placeholder="End Date"
             />
           </div>
-        </div>
-      </div>
-
+                  </div>
+                </div>
+                
       {expenses.length > 0 && expenses[0].property ? (
         expenses.map((propertyGroup, groupIndex) => (
           <div key={propertyGroup.property || `property-${groupIndex}`} className="sa-section-card" style={{ marginBottom: '24px' }}>
@@ -1584,8 +1595,8 @@ const LandlordDashboard = () => {
               <div>
                 <h3>{propertyGroup.property || 'Unknown Property'}</h3>
                 <p>Total: {propertyGroup.total?.toLocaleString() || 0} XOF</p>
-              </div>
-            </div>
+                </div>
+                </div>
             <div className="sa-table-wrapper">
               <table className="sa-table">
                 <thead>
@@ -1617,7 +1628,7 @@ const LandlordDashboard = () => {
                   )}
                 </tbody>
               </table>
-            </div>
+              </div>
           </div>
         ))
       ) : (
@@ -1656,9 +1667,9 @@ const LandlordDashboard = () => {
               )}
             </tbody>
           </table>
-        </div>
+          </div>
       )}
-    </div>
+        </div>
   );
 
   // Render messaging page
@@ -1689,7 +1700,7 @@ const LandlordDashboard = () => {
                         {user.unreadCount} unread
                       </span>
                     )}
-                  </div>
+          </div>
                 </li>
               );
             })}
@@ -1699,7 +1710,7 @@ const LandlordDashboard = () => {
               </li>
             )}
           </ul>
-        </div>
+          </div>
         
         <div className="sa-chat-conversation">
           <div className="sa-chat-header">
@@ -1713,7 +1724,7 @@ const LandlordDashboard = () => {
                 }
               </span>
             )}
-          </div>
+        </div>
           <div className="sa-chat-messages">
             {chatMessages.map((msg, index) => {
               const messageContent = msg.content || msg.Content || '';
@@ -1745,7 +1756,7 @@ const LandlordDashboard = () => {
                       ? new Date(messageCreatedAt).toLocaleString()
                       : ''}
                   </span>
-                </div>
+          </div>
               );
             })}
             {chatMessages.length === 0 && (
@@ -1753,10 +1764,10 @@ const LandlordDashboard = () => {
                 {selectedUserId 
                   ? 'No messages yet. Start the conversation!'
                   : 'Select a conversation on the left to start messaging.'}
-              </div>
+          </div>
             )}
             <div ref={messagesEndRef} />
-          </div>
+        </div>
           <div className="sa-chat-input-row">
             <input
               type="text"
@@ -1845,10 +1856,77 @@ const LandlordDashboard = () => {
             <p className="sa-metric-number">{businessTracking.netProfit.toLocaleString()} XOF</p>
           </div>
         )}
-      </div>
-    </div>
-  );
+              </div>
+          </div>
+        );
       
+  // Load advertisements
+  const loadAdvertisements = async () => {
+    try {
+      const ads = await landlordService.getAdvertisements();
+      setAdvertisements(Array.isArray(ads) ? ads : []);
+    } catch (error) {
+      console.error('Failed to load advertisements:', error);
+      addNotification('Failed to load advertisements', 'error');
+      setAdvertisements([]);
+    }
+  };
+
+  const renderAdvertisements = () => {
+    return (
+      <div className="sa-ads-page">
+        <div className="sa-ads-header">
+          <div>
+            <h2>Advertisements</h2>
+            <p>View active advertisements posted by Super Admin</p>
+          </div>
+        </div>
+
+        <div className="sa-ads-list">
+          {advertisements.length > 0 ? (
+            advertisements.map((ad, index) => {
+              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+              const fullImageUrl = imageUrl 
+                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+                : null;
+
+              return (
+                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
+                  <div className="sa-ad-status-column">
+                    <span className="sa-ad-status published">Active</span>
+                  </div>
+                  <div className="sa-ad-main">
+                    {fullImageUrl && (
+                      <img 
+                        src={fullImageUrl} 
+                        alt={ad.Title || ad.title || 'Advertisement'} 
+                        className="sa-ad-image"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
+                    <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
+                    {ad.CreatedAt && (
+                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
+                        Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="sa-table-empty">
+              No active advertisements available at this time.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -1869,6 +1947,8 @@ const LandlordDashboard = () => {
         return renderInventory();
       case 'tracking':
         return renderBusinessTracking();
+      case 'advertisements':
+        return renderAdvertisements();
       case 'chat':
         return renderChat();
       case 'settings':

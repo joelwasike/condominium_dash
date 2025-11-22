@@ -14,10 +14,12 @@ import {
   MessageCircle,
   Plus,
   Filter,
-  Search
+  Search,
+  Megaphone
 } from 'lucide-react';
 import { technicianService } from '../services/technicianService';
 import { messagingService } from '../services/messagingService';
+import { API_CONFIG } from '../config/api';
 import './TechnicianDashboard.css';
 import './SuperAdminDashboard.css';
 import SettingsPage from './SettingsPage';
@@ -60,6 +62,9 @@ const TechnicianDashboard = () => {
   
   // Progress report state
   const [progressReport, setProgressReport] = useState(null);
+  
+  // Advertisements state
+  const [advertisements, setAdvertisements] = useState([]);
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -452,6 +457,13 @@ const TechnicianDashboard = () => {
     }
   };
 
+  // Load advertisements when advertisements tab is active
+  useEffect(() => {
+    if (activeTab === 'advertisements') {
+      loadAdvertisements();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const tabs = useMemo(
     () => [
       { id: 'overview', label: 'Overview', icon: Building },
@@ -461,6 +473,7 @@ const TechnicianDashboard = () => {
       { id: 'quotes', label: 'Quotes', icon: Send },
       { id: 'progress', label: 'Progress', icon: BarChart2 },
       { id: 'tasks', label: 'Tasks', icon: Calendar },
+      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Settings', icon: Settings }
     ],
@@ -1271,6 +1284,73 @@ const TechnicianDashboard = () => {
     </div>
   );
 
+  // Load advertisements
+  const loadAdvertisements = async () => {
+    try {
+      const ads = await technicianService.getAdvertisements();
+      setAdvertisements(Array.isArray(ads) ? ads : []);
+    } catch (error) {
+      console.error('Failed to load advertisements:', error);
+      addNotification('Failed to load advertisements', 'error');
+      setAdvertisements([]);
+    }
+  };
+
+  const renderAdvertisements = () => {
+    return (
+      <div className="sa-ads-page">
+        <div className="sa-ads-header">
+          <div>
+            <h2>Advertisements</h2>
+            <p>View active advertisements posted by Super Admin</p>
+            </div>
+            </div>
+
+        <div className="sa-ads-list">
+          {advertisements.length > 0 ? (
+            advertisements.map((ad, index) => {
+              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+              const fullImageUrl = imageUrl 
+                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+                : null;
+
+              return (
+                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
+                  <div className="sa-ad-status-column">
+                    <span className="sa-ad-status published">Active</span>
+          </div>
+                  <div className="sa-ad-main">
+                    {fullImageUrl && (
+                      <img 
+                        src={fullImageUrl} 
+                        alt={ad.Title || ad.title || 'Advertisement'} 
+                        className="sa-ad-image"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
+                    <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
+                    {ad.CreatedAt && (
+                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
+                        Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
+                      </span>
+                    )}
+            </div>
+            </div>
+              );
+            })
+          ) : (
+            <div className="sa-table-empty">
+              No active advertisements available at this time.
+          </div>
+          )}
+      </div>
+    </div>
+  );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -1287,6 +1367,8 @@ const TechnicianDashboard = () => {
         return renderProgress();
       case 'tasks':
         return renderTasks();
+      case 'advertisements':
+        return renderAdvertisements();
       case 'chat':
         return renderMessages();
       case 'settings':
