@@ -9,8 +9,23 @@ import {
   Plus,
   Search,
   MessageCircle,
-  CreditCard
+  CreditCard,
+  FileText,
+  TrendingUp,
+  UserCheck
 } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 import { agencyDirectorService } from '../services/agencyDirectorService';
 import RoleLayout from '../components/RoleLayout';
 import Modal from '../components/Modal';
@@ -57,6 +72,36 @@ const AgencyDirectorDashboard = () => {
   // Subscription payment state
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [subscriptionForm, setSubscriptionForm] = useState({ amount: '', currency: 'USD', reference: '', status: 'completed' });
+  const [subscriptionType, setSubscriptionType] = useState('monthly'); // 'monthly' or 'annual'
+
+  // Contracts state
+  const [leasesAwaitingSignature, setLeasesAwaitingSignature] = useState([]);
+  const [expenseRequests, setExpenseRequests] = useState([]);
+  const [quoteRequests, setQuoteRequests] = useState([]);
+  const [owners, setOwners] = useState([]);
+
+  // Reports/Analytics state
+  const [transferHistory, setTransferHistory] = useState([]);
+  const [expensesPerBuilding, setExpensesPerBuilding] = useState({});
+  const [expensesPerOwner, setExpensesPerOwner] = useState({});
+  const [internalExpenses, setInternalExpenses] = useState([]);
+  const [commissionsData, setCommissionsData] = useState({});
+  const [allBuildingsReport, setAllBuildingsReport] = useState([]);
+  const [unpaidRentReport, setUnpaidRentReport] = useState(null);
+  const [reportFilters, setReportFilters] = useState({
+    ownerId: '',
+    building: '',
+    startDate: '',
+    endDate: '',
+    month: ''
+  });
+
+  // Tenants state
+  const [tenants, setTenants] = useState([]);
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [tenantProfile, setTenantProfile] = useState(null);
+  const [showTenantProfileModal, setShowTenantProfileModal] = useState(false);
+  const [tenantStatusFilter, setTenantStatusFilter] = useState('');
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -275,16 +320,172 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
+  // Contract handlers
+  const handleApproveExpense = async (expenseId) => {
+    if (!window.confirm('Are you sure you want to approve this expense?')) return;
+    try {
+      await agencyDirectorService.approveExpense(expenseId);
+      addNotification('Expense approved successfully!', 'success');
+      await loadContractsData();
+    } catch (error) {
+      console.error('Error approving expense:', error);
+      addNotification(error.message || 'Failed to approve expense', 'error');
+    }
+  };
+
+  const handleRejectExpense = async (expenseId) => {
+    if (!window.confirm('Are you sure you want to reject this expense?')) return;
+    try {
+      await agencyDirectorService.rejectExpense(expenseId);
+      addNotification('Expense rejected successfully!', 'success');
+      await loadContractsData();
+    } catch (error) {
+      console.error('Error rejecting expense:', error);
+      addNotification(error.message || 'Failed to reject expense', 'error');
+    }
+  };
+
+  const handleApproveQuote = async (quoteId) => {
+    if (!window.confirm('Are you sure you want to approve this quote?')) return;
+    try {
+      await agencyDirectorService.approveQuote(quoteId);
+      addNotification('Quote approved successfully!', 'success');
+      await loadContractsData();
+    } catch (error) {
+      console.error('Error approving quote:', error);
+      addNotification(error.message || 'Failed to approve quote', 'error');
+    }
+  };
+
+  const handleRejectQuote = async (quoteId) => {
+    if (!window.confirm('Are you sure you want to reject this quote?')) return;
+    try {
+      await agencyDirectorService.rejectQuote(quoteId);
+      addNotification('Quote rejected successfully!', 'success');
+      await loadContractsData();
+    } catch (error) {
+      console.error('Error rejecting quote:', error);
+      addNotification(error.message || 'Failed to reject quote', 'error');
+    }
+  };
+
+  // Annual subscription handler
+  const handlePayAnnualSubscription = async (e) => {
+    e.preventDefault();
+    try {
+      await agencyDirectorService.payAnnualSubscription(subscriptionForm);
+      addNotification('Annual subscription payment processed successfully!', 'success');
+      setShowSubscriptionModal(false);
+      setSubscriptionForm({ amount: '', currency: 'USD', reference: '', status: 'completed' });
+      await loadData();
+    } catch (error) {
+      console.error('Error processing annual subscription payment:', error);
+      addNotification(error.message || 'Failed to process annual subscription payment', 'error');
+    }
+  };
+
+  // Load contracts data
+  const loadContractsData = useCallback(async () => {
+    try {
+      const [leases, ownersData] = await Promise.all([
+        agencyDirectorService.getLeasesAwaitingSignature().catch(() => []),
+        agencyDirectorService.getOwners().catch(() => [])
+      ]);
+      setLeasesAwaitingSignature(Array.isArray(leases) ? leases : []);
+      setOwners(Array.isArray(ownersData) ? ownersData : []);
+    } catch (error) {
+      console.error('Error loading contracts data:', error);
+    }
+  }, []);
+
+  // Load tenants data
+  const loadTenantsData = useCallback(async () => {
+    try {
+      const tenantsData = await agencyDirectorService.getTenants(tenantStatusFilter || null).catch(() => []);
+      setTenants(Array.isArray(tenantsData) ? tenantsData : []);
+    } catch (error) {
+      console.error('Error loading tenants:', error);
+      addNotification('Failed to load tenants', 'error');
+    }
+  }, [tenantStatusFilter, addNotification]);
+
+  // Load tenant profile
+  const loadTenantProfile = useCallback(async (tenantId) => {
+    try {
+      const profile = await agencyDirectorService.getTenantProfile(tenantId);
+      setTenantProfile(profile);
+      setShowTenantProfileModal(true);
+    } catch (error) {
+      console.error('Error loading tenant profile:', error);
+      addNotification('Failed to load tenant profile', 'error');
+    }
+  }, [addNotification]);
+
+  // Load analytics/reports data
+  const loadAnalyticsData = useCallback(async () => {
+    try {
+      const filters = reportFilters;
+      const [
+        transfers,
+        expensesBuilding,
+        expensesOwner,
+        internal,
+        commissions,
+        buildings,
+        unpaidRent
+      ] = await Promise.all([
+        agencyDirectorService.getTransferHistory(filters).catch(() => []),
+        agencyDirectorService.getExpensesPerBuilding(filters).catch(() => ({})),
+        agencyDirectorService.getExpensesPerOwner(filters).catch(() => ({})),
+        agencyDirectorService.getInternalExpenses(filters).catch(() => []),
+        agencyDirectorService.getCommissionsPerMonthPerBuilding(filters).catch(() => ({})),
+        agencyDirectorService.getAllBuildingsReport().catch(() => []),
+        agencyDirectorService.getUnpaidRentReport(filters).catch(() => null)
+      ]);
+      setTransferHistory(Array.isArray(transfers) ? transfers : []);
+      setExpensesPerBuilding(expensesBuilding || {});
+      setExpensesPerOwner(expensesOwner || {});
+      setInternalExpenses(Array.isArray(internal) ? internal : []);
+      setCommissionsData(commissions || {});
+      setAllBuildingsReport(Array.isArray(buildings) ? buildings : []);
+      setUnpaidRentReport(unpaidRent);
+    } catch (error) {
+      console.error('Error loading analytics data:', error);
+    }
+  }, [reportFilters]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Load data when specific tabs are active
+  useEffect(() => {
+    if (activeTab === 'contracts') {
+      loadContractsData();
+    }
+  }, [activeTab, loadContractsData]);
+
+  useEffect(() => {
+    if (activeTab === 'tenants') {
+      loadTenantsData();
+    }
+  }, [activeTab, loadTenantsData]);
+
+  useEffect(() => {
+    if (activeTab === 'analytics') {
+      loadAnalyticsData();
+    }
+  }, [activeTab, loadAnalyticsData]);
 
   const tabs = useMemo(
     () => [
       { id: 'overview', label: 'Overview', icon: BarChart3 },
       { id: 'users', label: 'Users', icon: Users },
       { id: 'properties', label: 'Properties', icon: Home },
+      { id: 'tenants', label: 'Tenants', icon: UserCheck },
+      { id: 'contracts', label: 'Contracts', icon: FileText },
       { id: 'accounting', label: 'Accounting', icon: DollarSign },
+      { id: 'analytics', label: 'Analytics', icon: TrendingUp },
       { id: 'works', label: 'Works', icon: Wrench },
       { id: 'messages', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
@@ -472,44 +673,212 @@ const AgencyDirectorDashboard = () => {
   // Render functions
   const renderOverview = () => (
     <div className="sa-overview-page">
-      <div className="sa-overview-metrics" style={{ width: '100%' }}>
-        <div className="sa-metric-card sa-metric-primary">
-          <p className="sa-metric-label">Total Companies</p>
-          <p className="sa-metric-value">
-            {overviewData?.totalCompanies || 0}
-          </p>
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>Agency Director Dashboard Overview</h3>
+            <p>Comprehensive overview of your agency operations</p>
+          </div>
         </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Users</p>
-          <p className="sa-metric-number">
-            {overviewData?.totalUsers || users.length || 0}
-          </p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Properties</p>
-          <p className="sa-metric-number">
-            {overviewData?.totalProperties || properties.length || 0}
-          </p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Revenue</p>
-          <p className="sa-metric-value">
-            {(overviewData?.totalRevenue || financialData?.totalRevenue || 0).toLocaleString()} FCFA
-          </p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Active Works</p>
-          <p className="sa-metric-number">
-            {overviewData?.activeWorks || works.filter(w => (w.Status || w.status) === 'Active' || (w.Status || w.status) === 'in_progress').length || 0}
-          </p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Pending Claims</p>
-          <p className="sa-metric-number">
-            {overviewData?.pendingClaims || 0}
-          </p>
+        <div className="sa-overview-metrics" style={{ width: '100%', marginTop: '20px' }}>
+          <div className="sa-metric-card sa-metric-primary">
+            <p className="sa-metric-label">Overall Occupancy Rate</p>
+            <p className="sa-metric-value">
+              {overviewData?.overallOccupancyRate ? `${overviewData.overallOccupancyRate.toFixed(1)}%` : '0%'}
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Managed Apartments</p>
+            <p className="sa-metric-number">
+              {overviewData?.totalManagedApartments || overviewData?.totalProperties || properties.length || 0}
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Vacant Units</p>
+            <p className="sa-metric-number">
+              {overviewData?.numberOfVacantUnits || overviewData?.vacantProperties || 0}
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Active Tenants</p>
+            <p className="sa-metric-number">
+              {overviewData?.numberOfActiveTenants || overviewData?.activeTenants || 0}
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Rent Collected</p>
+            <p className="sa-metric-value">
+              {(overviewData?.totalRentCollected || 0).toLocaleString()} FCFA
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Unpaid Rent</p>
+            <p className="sa-metric-value" style={{ color: '#dc2626' }}>
+              {(overviewData?.totalUnpaidRent || 0).toLocaleString()} FCFA
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Reimbursements to Owners</p>
+            <p className="sa-metric-value">
+              {(overviewData?.totalReimbursementsToOwners || 0).toLocaleString()} FCFA
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Agency Commissions (This Month)</p>
+            <p className="sa-metric-value">
+              {(overviewData?.totalAgencyCommissions || overviewData?.agencyCommissionsCurrentMonth || 0).toLocaleString()} FCFA
+            </p>
+          </div>
         </div>
       </div>
+
+      {overviewData?.vacantUnitsList && overviewData.vacantUnitsList.length > 0 && (
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <h3>Vacant Units</h3>
+            <p>List of currently vacant properties</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Property Address</th>
+                  <th>Type</th>
+                  <th>Rent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overviewData.vacantUnitsList.map((unit, index) => (
+                  <tr key={`vacant-${unit.id || unit.ID || index}`}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{unit.address || unit.Address}</span>
+                    </td>
+                    <td>{unit.type || unit.Type}</td>
+                    <td>{(unit.rent || unit.Rent || 0).toLocaleString()} FCFA</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {overviewData?.newTenantsAwaitingApproval && overviewData.newTenantsAwaitingApproval.length > 0 && (
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <h3>New Tenants Awaiting Approval</h3>
+            <p>{overviewData.newTenantsAwaitingApproval.length} tenants pending approval</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Property</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overviewData.newTenantsAwaitingApproval.map((tenant, index) => (
+                  <tr key={`pending-tenant-${tenant.id || tenant.ID || index}`}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{tenant.name || tenant.Name}</span>
+                    </td>
+                    <td>{tenant.email || tenant.Email}</td>
+                    <td>{tenant.property || tenant.Property}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(tenant.status || tenant.Status || 'pending').toLowerCase()}`}>
+                        {tenant.status || tenant.Status || 'Pending'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {overviewData?.ongoingWorkInBuildings && overviewData.ongoingWorkInBuildings.length > 0 && (
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <h3>Ongoing Work in Buildings</h3>
+            <p>{overviewData.ongoingWorkInBuildings.length} active work orders</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Building</th>
+                  <th>Work Type</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overviewData.ongoingWorkInBuildings.map((work, index) => (
+                  <tr key={`ongoing-work-${work.id || work.ID || index}`}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{work.building || work.Building}</span>
+                    </td>
+                    <td>{work.type || work.Type || 'Maintenance'}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(work.status || work.Status || 'in_progress').toLowerCase().replace('_', '-')}`}>
+                        {work.status || work.Status || 'In Progress'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {overviewData?.latePaymentsStatus && overviewData.latePaymentsStatus.length > 0 && (
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <h3>Late Payments Status</h3>
+            <p>Tenants with overdue payments</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Tenant</th>
+                  <th>Property</th>
+                  <th>Amount Due</th>
+                  <th>Days Overdue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overviewData.latePaymentsStatus.map((payment, index) => (
+                  <tr key={`late-payment-${payment.id || payment.ID || index}`}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{payment.tenant || payment.Tenant}</span>
+                    </td>
+                    <td>{payment.property || payment.Property}</td>
+                    <td style={{ color: '#dc2626' }}>
+                      {(payment.amountDue || payment.AmountDue || 0).toLocaleString()} FCFA
+                    </td>
+                    <td style={{ color: '#dc2626' }}>
+                      {payment.daysOverdue || payment.DaysOverdue || 0} days
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -894,7 +1263,18 @@ const AgencyDirectorDashboard = () => {
       </div>
 
       <Modal isOpen={showSubscriptionModal} onClose={() => setShowSubscriptionModal(false)} title="Pay Subscription">
-        <form onSubmit={handlePaySubscription} className="sa-form">
+        <form onSubmit={subscriptionType === 'monthly' ? handlePaySubscription : handlePayAnnualSubscription} className="sa-form">
+          <div className="sa-form-group">
+            <label>Subscription Type *</label>
+            <select
+              value={subscriptionType}
+              onChange={(e) => setSubscriptionType(e.target.value)}
+              required
+            >
+              <option value="monthly">Monthly</option>
+              <option value="annual">Annual</option>
+            </select>
+          </div>
           <div className="sa-form-group">
             <label>Amount *</label>
             <input
@@ -903,7 +1283,7 @@ const AgencyDirectorDashboard = () => {
               value={subscriptionForm.amount}
               onChange={(e) => setSubscriptionForm({...subscriptionForm, amount: e.target.value})}
               required
-              placeholder="299.99"
+              placeholder={subscriptionType === 'annual' ? "12000.00" : "299.99"}
             />
           </div>
           <div className="sa-form-group">
@@ -925,7 +1305,7 @@ const AgencyDirectorDashboard = () => {
               value={subscriptionForm.reference}
               onChange={(e) => setSubscriptionForm({...subscriptionForm, reference: e.target.value})}
               required
-              placeholder="PAY-2024-001"
+              placeholder={subscriptionType === 'annual' ? "ANNUAL-2024-001" : "PAY-2024-001"}
             />
           </div>
           <div className="sa-form-group">
@@ -942,7 +1322,9 @@ const AgencyDirectorDashboard = () => {
           </div>
           <div className="sa-form-actions">
             <button type="button" className="sa-outline-button" onClick={() => setShowSubscriptionModal(false)}>Cancel</button>
-            <button type="submit" className="sa-primary-cta">Process Payment</button>
+            <button type="submit" className="sa-primary-cta">
+              Process {subscriptionType === 'annual' ? 'Annual' : 'Monthly'} Payment
+            </button>
           </div>
         </form>
       </Modal>
@@ -992,6 +1374,581 @@ const AgencyDirectorDashboard = () => {
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+
+  // Render Contracts page
+  const renderContracts = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Contract Management</h2>
+          <p>Manage leases, expenses, and quotes</p>
+        </div>
+      </div>
+
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <h3>Leases Awaiting Signature</h3>
+          <p>Lease agreements pending signature</p>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Tenant</th>
+                <th>Property</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Rent</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leasesAwaitingSignature.map((lease, index) => (
+                <tr key={`lease-${lease.id || lease.ID || index}`}>
+                  <td>{index + 1}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{lease.tenant || lease.Tenant}</span>
+                  </td>
+                  <td>{lease.property || lease.Property}</td>
+                  <td>
+                    {lease.startDate || lease.StartDate
+                      ? new Date(lease.startDate || lease.StartDate).toLocaleDateString()
+                      : 'N/A'}
+                  </td>
+                  <td>
+                    {lease.endDate || lease.EndDate
+                      ? new Date(lease.endDate || lease.EndDate).toLocaleDateString()
+                      : 'N/A'}
+                  </td>
+                  <td>{(lease.rent || lease.Rent || 0).toLocaleString()} FCFA</td>
+                  <td>
+                    <span className={`sa-status-pill ${(lease.status || lease.Status || 'draft').toLowerCase()}`}>
+                      {lease.status || lease.Status || 'Draft'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {leasesAwaitingSignature.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="sa-table-empty">No leases awaiting signature</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <h3>Owners</h3>
+          <p>All property owners with management contracts</p>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Properties Count</th>
+                <th>Contracts Count</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {owners.map((owner, index) => (
+                <tr key={`owner-${owner.id || owner.ID || index}`}>
+                  <td>{index + 1}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{owner.name || owner.Name}</span>
+                  </td>
+                  <td>{owner.email || owner.Email}</td>
+                  <td>{owner.propertiesCount || owner.PropertiesCount || 0}</td>
+                  <td>{owner.contractsCount || owner.ContractsCount || 0}</td>
+                  <td>
+                    <span className={`sa-status-pill ${(owner.status || owner.Status || 'active').toLowerCase()}`}>
+                      {owner.status || owner.Status || 'Active'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {owners.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="sa-table-empty">No owners found</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render Tenants page
+  const renderTenants = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Tenant Management</h2>
+          <p>Manage all tenants and view detailed profiles</p>
+        </div>
+      </div>
+
+      <div className="sa-filters-section" style={{ marginTop: '20px' }}>
+        <select
+          className="sa-filter-select"
+          value={tenantStatusFilter}
+          onChange={(e) => setTenantStatusFilter(e.target.value)}
+        >
+          <option value="">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <h3>All Tenants</h3>
+          <p>{tenants.length} tenants found</p>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Property</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tenants.map((tenant, index) => (
+                <tr key={`tenant-${tenant.id || tenant.ID || index}`}>
+                  <td>{index + 1}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{tenant.name || tenant.Name}</span>
+                  </td>
+                  <td>{tenant.email || tenant.Email}</td>
+                  <td>{tenant.phone || tenant.Phone}</td>
+                  <td>{tenant.property || tenant.Property}</td>
+                  <td>{(tenant.amount || tenant.Amount || 0).toLocaleString()} FCFA</td>
+                  <td>
+                    <span className={`sa-status-pill ${(tenant.status || tenant.Status || 'active').toLowerCase()}`}>
+                      {tenant.status || tenant.Status || 'Active'}
+                    </span>
+                  </td>
+                  <td className="sa-row-actions">
+                    <button
+                      className="sa-icon-button"
+                      onClick={() => loadTenantProfile(tenant.id || tenant.ID)}
+                      title="View Profile"
+                      style={{ color: '#3b82f6' }}
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {tenants.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="sa-table-empty">No tenants found</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showTenantProfileModal && tenantProfile && (
+        <Modal
+          isOpen={showTenantProfileModal}
+          onClose={() => {
+            setShowTenantProfileModal(false);
+            setTenantProfile(null);
+          }}
+          title="Tenant Profile"
+        >
+          <div className="sa-form">
+            <div className="sa-section-card" style={{ marginBottom: '20px' }}>
+              <h4>Tenant Information</h4>
+              <div className="sa-form-group">
+                <label>Name:</label>
+                <p>{tenantProfile.tenant?.name || tenantProfile.tenant?.Name || 'N/A'}</p>
+              </div>
+              <div className="sa-form-group">
+                <label>Email:</label>
+                <p>{tenantProfile.tenant?.email || tenantProfile.tenant?.Email || 'N/A'}</p>
+              </div>
+              <div className="sa-form-group">
+                <label>Phone:</label>
+                <p>{tenantProfile.tenant?.phone || tenantProfile.tenant?.Phone || 'N/A'}</p>
+              </div>
+              <div className="sa-form-group">
+                <label>Property:</label>
+                <p>{tenantProfile.tenant?.property || tenantProfile.tenant?.Property || 'N/A'}</p>
+              </div>
+              <div className="sa-form-group">
+                <label>Status:</label>
+                <p>
+                  <span className={`sa-status-pill ${(tenantProfile.tenant?.status || tenantProfile.tenant?.Status || 'active').toLowerCase()}`}>
+                    {tenantProfile.tenant?.status || tenantProfile.tenant?.Status || 'Active'}
+                  </span>
+                </p>
+              </div>
+              <div className="sa-form-group">
+                <label>Payment Status:</label>
+                <p>
+                  <span className={`sa-status-pill ${tenantProfile.isUpToDate ? 'active' : 'pending'}`}>
+                    {tenantProfile.isUpToDate ? 'Up to Date' : 'Pending'}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {tenantProfile.leaseAgreement && (
+              <div className="sa-section-card" style={{ marginBottom: '20px' }}>
+                <h4>Lease Agreement</h4>
+                <div className="sa-form-group">
+                  <label>Start Date:</label>
+                  <p>
+                    {tenantProfile.leaseAgreement.startDate || tenantProfile.leaseAgreement.StartDate
+                      ? new Date(tenantProfile.leaseAgreement.startDate || tenantProfile.leaseAgreement.StartDate).toLocaleDateString()
+                      : 'N/A'}
+                  </p>
+                </div>
+                <div className="sa-form-group">
+                  <label>End Date:</label>
+                  <p>
+                    {tenantProfile.leaseAgreement.endDate || tenantProfile.leaseAgreement.EndDate
+                      ? new Date(tenantProfile.leaseAgreement.endDate || tenantProfile.leaseAgreement.EndDate).toLocaleDateString()
+                      : 'N/A'}
+                  </p>
+                </div>
+                <div className="sa-form-group">
+                  <label>Rent:</label>
+                  <p>{(tenantProfile.leaseAgreement.rent || tenantProfile.leaseAgreement.Rent || 0).toLocaleString()} FCFA</p>
+                </div>
+              </div>
+            )}
+
+            {tenantProfile.paymentHistory && tenantProfile.paymentHistory.length > 0 && (
+              <div className="sa-section-card" style={{ marginBottom: '20px' }}>
+                <h4>Payment History</h4>
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tenantProfile.paymentHistory.map((payment, idx) => (
+                        <tr key={`payment-${idx}`}>
+                          <td>
+                            {payment.date || payment.Date
+                              ? new Date(payment.date || payment.Date).toLocaleDateString()
+                              : 'N/A'}
+                          </td>
+                          <td>{(payment.amount || payment.Amount || 0).toLocaleString()} FCFA</td>
+                          <td>
+                            <span className={`sa-status-pill ${(payment.status || payment.Status || 'pending').toLowerCase()}`}>
+                              {payment.status || payment.Status || 'Pending'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+
+  // Prepare chart data for Analytics
+  const prepareTransferHistoryChartData = useMemo(() => {
+    if (!transferHistory || transferHistory.length === 0) return [];
+    
+    // Group by date
+    const grouped = transferHistory.reduce((acc, transfer) => {
+      const date = transfer.date || transfer.Date;
+      if (!date) return acc;
+      const dateStr = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (!acc[dateStr]) {
+        acc[dateStr] = { date: dateStr, netAmount: 0, commission: 0, count: 0 };
+      }
+      acc[dateStr].netAmount += transfer.netAmount || transfer.NetAmount || 0;
+      acc[dateStr].commission += transfer.commission || transfer.Commission || 0;
+      acc[dateStr].count += 1;
+      return acc;
+    }, {});
+    
+    return Object.values(grouped).sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [transferHistory]);
+
+  const prepareExpensesPerBuildingChartData = useMemo(() => {
+    if (!expensesPerBuilding || Object.keys(expensesPerBuilding).length === 0) return [];
+    
+    return Object.entries(expensesPerBuilding).map(([building, expenses]) => {
+      const total = Array.isArray(expenses) 
+        ? expenses.reduce((sum, exp) => sum + (exp.amount || exp.Amount || 0), 0)
+        : 0;
+      return { building, amount: total };
+    }).sort((a, b) => b.amount - a.amount).slice(0, 10); // Top 10
+  }, [expensesPerBuilding]);
+
+  const prepareExpensesPerOwnerChartData = useMemo(() => {
+    if (!expensesPerOwner || Object.keys(expensesPerOwner).length === 0) return [];
+    
+    return Object.entries(expensesPerOwner).map(([ownerName, ownerData]) => {
+      const total = ownerData?.totalAmount || ownerData?.expenses?.reduce((sum, exp) => sum + (exp.amount || exp.Amount || 0), 0) || 0;
+      return { owner: ownerName, amount: total };
+    }).sort((a, b) => b.amount - a.amount).slice(0, 10); // Top 10
+  }, [expensesPerOwner]);
+
+  const prepareCommissionsChartData = useMemo(() => {
+    if (!commissionsData || Object.keys(commissionsData).length === 0) return [];
+    
+    const chartData = [];
+    Object.entries(commissionsData).forEach(([building, months]) => {
+      Object.entries(months).forEach(([month, amount]) => {
+        chartData.push({ building, month, commission: amount || 0 });
+      });
+    });
+    return chartData.sort((a, b) => a.month.localeCompare(b.month));
+  }, [commissionsData]);
+
+  const prepareUnpaidRentChartData = useMemo(() => {
+    if (!unpaidRentReport || !unpaidRentReport.unpaidPayments) return [];
+    
+    return unpaidRentReport.unpaidPayments
+      .map(payment => ({
+        tenant: (payment.tenant || payment.Tenant || '').substring(0, 15),
+        amount: payment.amount || payment.Amount || 0
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10); // Top 10
+  }, [unpaidRentReport]);
+
+  const prepareInternalExpensesChartData = useMemo(() => {
+    if (!internalExpenses || internalExpenses.length === 0) return [];
+    
+    const grouped = internalExpenses.reduce((acc, expense) => {
+      const date = expense.date || expense.Date;
+      if (!date) return acc;
+      const dateStr = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (!acc[dateStr]) {
+        acc[dateStr] = { date: dateStr, amount: 0 };
+      }
+      acc[dateStr].amount += expense.amount || expense.Amount || 0;
+      return acc;
+    }, {});
+    
+    return Object.values(grouped).sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [internalExpenses]);
+
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
+
+  // Render Analytics/Reports page
+  const renderAnalytics = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Analytics & Reports</h2>
+          <p>Comprehensive financial and operational reports with visualizations</p>
+        </div>
+      </div>
+
+      <div className="sa-filters-section" style={{ marginTop: '20px' }}>
+        <input
+          type="text"
+          className="sa-filter-input"
+          placeholder="Owner ID"
+          value={reportFilters.ownerId}
+          onChange={(e) => setReportFilters({...reportFilters, ownerId: e.target.value})}
+        />
+        <input
+          type="text"
+          className="sa-filter-input"
+          placeholder="Building"
+          value={reportFilters.building}
+          onChange={(e) => setReportFilters({...reportFilters, building: e.target.value})}
+        />
+        <input
+          type="date"
+          className="sa-filter-input"
+          placeholder="Start Date"
+          value={reportFilters.startDate}
+          onChange={(e) => setReportFilters({...reportFilters, startDate: e.target.value})}
+        />
+        <input
+          type="date"
+          className="sa-filter-input"
+          placeholder="End Date"
+          value={reportFilters.endDate}
+          onChange={(e) => setReportFilters({...reportFilters, endDate: e.target.value})}
+        />
+        <input
+          type="month"
+          className="sa-filter-input"
+          placeholder="Month (YYYY-MM)"
+          value={reportFilters.month}
+          onChange={(e) => setReportFilters({...reportFilters, month: e.target.value})}
+        />
+        <button className="sa-primary-cta" onClick={loadAnalyticsData}>
+          Apply Filters
+        </button>
+      </div>
+
+      {/* Transfer History Chart */}
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <h3>Transfer History Over Time</h3>
+          <p>Net amounts and commissions transferred to owners</p>
+        </div>
+        <div style={{ width: '100%', height: '400px', padding: '20px' }}>
+          {prepareTransferHistoryChartData.length > 0 ? (
+            <ResponsiveContainer>
+              <LineChart data={prepareTransferHistoryChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Legend />
+                <Line type="monotone" dataKey="netAmount" stroke="#3b82f6" strokeWidth={2} name="Net Amount" />
+                <Line type="monotone" dataKey="commission" stroke="#10b981" strokeWidth={2} name="Commission" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '100px', color: '#9ca3af' }}>No transfer data available</div>
+          )}
+        </div>
+      </div>
+
+      {/* Expenses Per Building Chart */}
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <h3>Expenses Per Building</h3>
+          <p>Top 10 buildings by total expenses</p>
+        </div>
+        <div style={{ width: '100%', height: '400px', padding: '20px' }}>
+          {prepareExpensesPerBuildingChartData.length > 0 ? (
+            <ResponsiveContainer>
+              <BarChart data={prepareExpensesPerBuildingChartData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="building" type="category" width={150} />
+                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Bar dataKey="amount" fill="#3b82f6" name="Expenses" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '100px', color: '#9ca3af' }}>No expense data available</div>
+          )}
+        </div>
+      </div>
+
+      {/* Expenses Per Owner Chart */}
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <h3>Expenses Per Owner</h3>
+          <p>Top 10 owners by total expenses</p>
+        </div>
+        <div style={{ width: '100%', height: '400px', padding: '20px' }}>
+          {prepareExpensesPerOwnerChartData.length > 0 ? (
+            <ResponsiveContainer>
+              <BarChart data={prepareExpensesPerOwnerChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="owner" angle={-45} textAnchor="end" height={100} />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Bar dataKey="amount" fill="#10b981" name="Expenses" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '100px', color: '#9ca3af' }}>No expense data available</div>
+          )}
+        </div>
+      </div>
+
+      {/* Commissions Chart */}
+      {prepareCommissionsChartData.length > 0 && (
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <h3>Commissions Per Month Per Building</h3>
+            <p>Commission trends by building and month</p>
+          </div>
+          <div style={{ width: '100%', height: '400px', padding: '20px' }}>
+            <ResponsiveContainer>
+              <BarChart data={prepareCommissionsChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Legend />
+                <Bar dataKey="commission" fill="#f59e0b" name="Commission" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Unpaid Rent Chart */}
+      {unpaidRentReport && prepareUnpaidRentChartData.length > 0 && (
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <h3>Unpaid Rent by Tenant</h3>
+            <p>Top 10 tenants with highest unpaid amounts - Total: {(unpaidRentReport.totalUnpaid || 0).toLocaleString()} FCFA</p>
+          </div>
+          <div style={{ width: '100%', height: '400px', padding: '20px' }}>
+            <ResponsiveContainer>
+              <BarChart data={prepareUnpaidRentChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="tenant" angle={-45} textAnchor="end" height={100} />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Bar dataKey="amount" fill="#ef4444" name="Unpaid Amount" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Internal Expenses Chart */}
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <h3>Internal Expenses Over Time</h3>
+          <p>Agency internal expenses trend</p>
+        </div>
+        <div style={{ width: '100%', height: '400px', padding: '20px' }}>
+          {prepareInternalExpensesChartData.length > 0 ? (
+            <ResponsiveContainer>
+              <LineChart data={prepareInternalExpensesChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Line type="monotone" dataKey="amount" stroke="#8b5cf6" strokeWidth={2} name="Internal Expenses" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '100px', color: '#9ca3af' }}>No internal expense data available</div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1159,8 +2116,14 @@ const AgencyDirectorDashboard = () => {
         return renderUsers();
       case 'properties':
         return renderProperties();
+      case 'tenants':
+        return renderTenants();
+      case 'contracts':
+        return renderContracts();
       case 'accounting':
         return renderAccounting();
+      case 'analytics':
+        return renderAnalytics();
       case 'works':
         return renderWorks();
       case 'messages':

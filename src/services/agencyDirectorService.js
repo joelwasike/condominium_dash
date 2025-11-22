@@ -328,5 +328,203 @@ export const agencyDirectorService = {
     if (!response.ok) throw new Error('Failed to fetch inbox');
     return parseJson(response);
   },
+
+  // Contracts
+  getLeasesAwaitingSignature: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/leases-awaiting-signature`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch leases awaiting signature');
+    return parseJson(response);
+  },
+
+  approveExpense: async (expenseId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/expenses/${expenseId}/approve`, {
+      method: 'POST',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to approve expense');
+    return parseJson(response);
+  },
+
+  rejectExpense: async (expenseId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/expenses/${expenseId}/reject`, {
+      method: 'POST',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to reject expense');
+    return parseJson(response);
+  },
+
+  approveQuote: async (quoteId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/${quoteId}/approve`, {
+      method: 'POST',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to approve quote');
+    return parseJson(response);
+  },
+
+  rejectQuote: async (quoteId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/${quoteId}/reject`, {
+      method: 'POST',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to reject quote');
+    return parseJson(response);
+  },
+
+  getOwners: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch owners');
+    return parseJson(response);
+  },
+
+  // Reports
+  getTransferHistory: async (filters = {}) => {
+    const headers = getAuthHeaders(false);
+    const params = new URLSearchParams();
+    if (filters.ownerId) params.append('ownerId', filters.ownerId);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/transfer-history${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch transfer history');
+    return parseJson(response);
+  },
+
+  getExpensesPerBuilding: async (filters = {}) => {
+    const headers = getAuthHeaders(false);
+    const params = new URLSearchParams();
+    if (filters.building) params.append('building', filters.building);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/expenses-per-building${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch expenses per building');
+    return parseJson(response);
+  },
+
+  getExpensesPerOwner: async (filters = {}) => {
+    const headers = getAuthHeaders(false);
+    const params = new URLSearchParams();
+    if (filters.ownerId) params.append('ownerId', filters.ownerId);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/expenses-per-owner${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch expenses per owner');
+    return parseJson(response);
+  },
+
+  getInternalExpenses: async (filters = {}) => {
+    const headers = getAuthHeaders(false);
+    const params = new URLSearchParams();
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/internal-expenses${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch internal expenses');
+    return parseJson(response);
+  },
+
+  getCommissionsPerMonthPerBuilding: async (filters = {}) => {
+    const headers = getAuthHeaders(false);
+    const params = new URLSearchParams();
+    if (filters.building) params.append('building', filters.building);
+    if (filters.month) params.append('month', filters.month);
+    const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/commissions-per-month-per-building${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch commissions per month per building');
+    return parseJson(response);
+  },
+
+  getAllBuildingsReport: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/reports/all-buildings`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch all buildings report');
+    return parseJson(response);
+  },
+
+  getUnpaidRentReport: async (filters = {}) => {
+    const headers = getAuthHeaders(false);
+    const params = new URLSearchParams();
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/unpaid-rent${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch unpaid rent report');
+    return parseJson(response);
+  },
+
+  // Tenants
+  getTenants: async (status = null) => {
+    const headers = getAuthHeaders(false);
+    const url = status 
+      ? `${AGENCY_DIRECTOR_BASE_URL}/tenants?status=${status}`
+      : `${AGENCY_DIRECTOR_BASE_URL}/tenants`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch tenants');
+    return parseJson(response);
+  },
+
+  getTenantProfile: async (tenantId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/tenants/${tenantId}/profile`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch tenant profile');
+    return parseJson(response);
+  },
+
+  // Annual Subscription
+  payAnnualSubscription: async (paymentData) => {
+    const headers = getAuthHeaders(true);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/subscription/pay-annual`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(paymentData)
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to process annual subscription payment');
+    }
+    return parseJson(response);
+  },
 };
 

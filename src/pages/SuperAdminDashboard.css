@@ -667,6 +667,67 @@
   min-width: 200px;
 }
 
+/* Analytics Filters Section */
+.sa-filters-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+}
+
+.sa-filter-input {
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #1f2937;
+  font-size: 0.9rem;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s ease;
+  min-width: 180px;
+  flex: 1;
+  max-width: 250px;
+}
+
+.sa-filter-input::placeholder {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.sa-filter-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background-color: #fff;
+}
+
+.sa-filter-input:hover {
+  border-color: #d1d5db;
+}
+
+.sa-filter-input[type="date"],
+.sa-filter-input[type="month"] {
+  cursor: pointer;
+  color-scheme: light;
+}
+
+.sa-filter-input[type="date"]::-webkit-calendar-picker-indicator,
+.sa-filter-input[type="month"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.sa-filter-input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.sa-filter-input[type="month"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 /* System Settings */
 .settings-grid {
   display: grid;
@@ -1464,13 +1525,29 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: none;
-  padding: 10px 18px;
-  background: #2563eb;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: #fff;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  white-space: nowrap;
+}
+
+.sa-primary-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+}
+
+.sa-primary-cta:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
 }
 
 .sa-ads-list {
