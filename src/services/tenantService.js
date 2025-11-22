@@ -72,5 +72,12 @@ export const tenantService = {
     const response = await fetch(`${TENANT_BASE_URL}/lease`);
     if (!response.ok) throw new Error('Failed to fetch lease info');
     return response.json();
+  },
+
+  // Get advertisements
+  getAdvertisements: async () => {
+    const response = await fetch(`${TENANT_BASE_URL}/advertisements`);
+    if (!response.ok) throw new Error('Failed to fetch advertisements');
+    return response.json();
   }
 };
