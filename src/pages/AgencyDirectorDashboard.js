@@ -71,6 +71,7 @@ const AgencyDirectorDashboard = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [superAdmins, setSuperAdmins] = useState([]);
+  const [conversations, setConversations] = useState([]);
   
   // Subscription payment state
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
@@ -141,17 +142,27 @@ const AgencyDirectorDashboard = () => {
       setAccountingData(accounting);
       setLandlordPayments(Array.isArray(landlordPaymentsData) ? landlordPaymentsData : []);
       
-      // Fetch super admins for chat - try to get from conversations API which should include them
+      // Fetch conversations to get super admins and other users who have messaged
       try {
         const conversationsData = await agencyDirectorService.getConversations().catch(() => []);
-        // Extract super admins from conversations (users with role 'superadmin')
-        const superAdminUsers = Array.isArray(conversationsData) 
-          ? conversationsData.filter(conv => (conv.role || '').toLowerCase() === 'superadmin')
-          : [];
-        setSuperAdmins(superAdminUsers);
+        if (Array.isArray(conversationsData)) {
+          // Extract super admins from conversations (users with role 'superadmin')
+          const superAdminUsers = conversationsData.filter(conv => {
+            const role = (conv.role || conv.user?.role || '').toLowerCase();
+            return role === 'superadmin';
+          });
+          setSuperAdmins(superAdminUsers);
+          
+          // Store all conversations for use in chatUsers useMemo
+          setConversations(conversationsData);
+        } else {
+          setSuperAdmins([]);
+          setConversations([]);
+        }
       } catch (error) {
-        console.warn('Could not fetch super admins from conversations:', error);
+        console.warn('Could not fetch conversations:', error);
         setSuperAdmins([]);
+        setConversations([]);
       }
     } catch (error) {
       console.error('Error loading agency director data:', error);
@@ -176,7 +187,7 @@ const AgencyDirectorDashboard = () => {
     [addNotification]
   );
 
-  // Get all chat users (agency users + super admins)
+  // Get all chat users (agency users + super admins + users from conversations)
   const chatUsers = useMemo(() => {
     const allUsers = [];
     const addedUserIds = new Set();
@@ -196,15 +207,16 @@ const AgencyDirectorDashboard = () => {
       users.forEach(user => {
         const userId = user.ID || user.id;
         // Don't include current user in the list
-        if (userId && userId !== currentUserId && !addedUserIds.has(userId)) {
+        if (userId && String(userId) !== String(currentUserId) && !addedUserIds.has(String(userId))) {
           allUsers.push({
             userId: userId,
             name: user.Name || user.name,
             email: user.Email || user.email,
             role: user.Role || user.role,
-            company: user.Company || user.company
+            company: user.Company || user.company,
+            unreadCount: 0
           });
-          addedUserIds.add(userId);
+          addedUserIds.add(String(userId));
         }
       });
     }
@@ -213,16 +225,50 @@ const AgencyDirectorDashboard = () => {
     if (superAdmins && Array.isArray(superAdmins)) {
       superAdmins.forEach(admin => {
         const adminId = admin.userId || admin.ID || admin.id;
-        if (adminId && !addedUserIds.has(adminId)) {
+        const adminIdStr = String(adminId);
+        if (adminId && adminIdStr !== String(currentUserId) && !addedUserIds.has(adminIdStr)) {
           allUsers.push({
             userId: adminId,
             name: admin.name || admin.Name,
             email: admin.email || admin.Email,
             role: admin.role || admin.Role || 'superadmin',
-            company: admin.company || admin.Company || 'SAAF IMMO'
+            company: admin.company || admin.Company || 'SAAF IMMO',
+            unreadCount: admin.unreadCount || 0
           });
-          addedUserIds.add(adminId);
+          addedUserIds.add(adminIdStr);
         }
+      });
+    }
+    
+    // Add users from conversations who have messaged but aren't in users list
+    if (conversations && Array.isArray(conversations)) {
+      conversations.forEach(conv => {
+        const convUserId = conv.userId || conv.userID || conv.user?.id || conv.user?.ID;
+        const convUserIdStr = String(convUserId);
+        
+        // Skip if already added or is current user
+        if (!convUserId || convUserIdStr === String(currentUserId) || addedUserIds.has(convUserIdStr)) {
+          return;
+        }
+        
+        // Skip if it's a superadmin (already handled above)
+        const role = (conv.role || conv.user?.role || '').toLowerCase();
+        if (role === 'superadmin') {
+          return;
+        }
+        
+        // Add user from conversation
+        const convUser = conv.user || {};
+        allUsers.push({
+          userId: convUserId,
+          name: convUser.name || convUser.Name || conv.name || 'User',
+          email: convUser.email || convUser.Email || conv.email || '',
+          role: convUser.role || convUser.Role || conv.role || '',
+          company: convUser.company || convUser.Company || conv.company || '',
+          unreadCount: conv.unreadCount || 0
+        });
+        addedUserIds.add(convUserIdStr);
+        console.log('Added user from conversation:', { userId: convUserId, name: convUser.name || conv.name });
       });
     }
     
@@ -232,7 +278,7 @@ const AgencyDirectorDashboard = () => {
       if (a.role !== 'superadmin' && b.role === 'superadmin') return 1;
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, [users, superAdmins]);
+  }, [users, superAdmins, conversations]);
 
   // Load initial chat when users are loaded
   useEffect(() => {

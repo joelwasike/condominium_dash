@@ -157,18 +157,56 @@ const AdministrativeDashboard = () => {
           return nameA.localeCompare(nameB);
         });
       
+      // Get conversations to update unread counts and include users who have messaged but aren't in users list
       try {
         const conversations = await messagingService.getConversations();
         if (Array.isArray(conversations)) {
+          // Create a map of existing users by ID for quick lookup
+          const existingUsersMap = new Map();
+          chatUsersList.forEach(u => {
+            existingUsersMap.set(String(u.userId), u);
+          });
+          
+          // Process conversations to update unread counts and add missing users
           conversations.forEach(conv => {
-            const chatUser = chatUsersList.find(u => {
-              const uId = String(u.userId);
-              const convId = String(conv.userId);
-              return uId === convId;
-            });
-            if (chatUser && conv.unreadCount) {
-              chatUser.unreadCount = conv.unreadCount;
+            const convUserId = String(conv.userId || conv.userID);
+            const existingUser = existingUsersMap.get(convUserId);
+            
+            if (existingUser) {
+              // Update unread count for existing user
+              if (conv.unreadCount) {
+                existingUser.unreadCount = conv.unreadCount;
+              }
+            } else {
+              // User has a conversation but isn't in the users list - add them
+              // This handles cases where users from other companies or roles have messaged
+              const convUser = conv.user || {};
+              const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
+              
+              // Only add if it's not the current user
+              const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+              if (userId && String(userId) !== currentUserIdStr) {
+                const newUser = {
+                  userId: userId,
+                  name: convUser.name || convUser.Name || conv.name || 'User',
+                  email: convUser.email || convUser.Email || conv.email || '',
+                  role: convUser.role || convUser.Role || conv.role || '',
+                  company: convUser.company || convUser.Company || conv.company || '',
+                  status: convUser.status || convUser.Status || conv.status || 'Active',
+                  unreadCount: conv.unreadCount || 0
+                };
+                chatUsersList.push(newUser);
+                existingUsersMap.set(String(userId), newUser);
+                console.log('Added user from conversation:', newUser);
+              }
             }
+          });
+          
+          // Re-sort after adding new users
+          chatUsersList.sort((a, b) => {
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+            return nameA.localeCompare(nameB);
           });
         }
       } catch (convError) {
