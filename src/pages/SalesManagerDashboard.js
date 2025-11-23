@@ -158,8 +158,18 @@ const SalesManagerDashboard = () => {
       }
     } catch (error) {
       console.error('Error loading chat:', error);
-      addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
-      setChatMessages([]);
+      
+      // Handle company restriction error specifically
+      if (error.message && error.message.includes('own company')) {
+        addNotification('Cannot view conversations with users from different companies', 'warning');
+        // Remove the user from the list if they're from a different company
+        setChatUsers(prev => prev.filter(u => String(u.userId) !== String(userId)));
+        setSelectedUserId(null);
+        setChatMessages([]);
+      } else {
+        addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
+        setChatMessages([]);
+      }
     }
   }, [addNotification]);
 
@@ -191,29 +201,47 @@ const SalesManagerDashboard = () => {
       
       console.log('Processed users array:', usersArray);
       
-      // Get current user ID to exclude from list
+      // Get current user ID and company to exclude from list and filter by company
       const storedUser = localStorage.getItem('user');
       let currentUserId = null;
+      let currentUserCompany = null;
       if (storedUser) {
         try {
           const user = JSON.parse(storedUser);
           currentUserId = user.id || user.ID;
+          currentUserCompany = user.company || user.Company;
           console.log('Current user ID:', currentUserId);
+          console.log('Current user company:', currentUserCompany);
         } catch (error) {
           console.error('Error parsing stored user:', error);
         }
       }
       
       // Map users to chat format and exclude current user
+      // Also filter by company to ensure we only show users from the same company
       const chatUsersList = usersArray
         .filter(user => {
           const userId = user.id || user.ID;
+          const userCompany = user.company || user.Company;
+          
           // Convert both to strings for comparison to handle type mismatches
           const userIdStr = userId ? String(userId) : null;
           const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+          
+          // Check if user is not the current user
+          const isNotCurrentUser = userIdStr && userIdStr !== currentUserIdStr;
+          
+          // Check if user is from the same company (if company info is available)
+          const isSameCompany = !currentUserCompany || !userCompany || currentUserCompany === userCompany;
+          
+          const shouldInclude = isNotCurrentUser && isSameCompany;
+          
           if (!shouldInclude && userIdStr) {
-            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+            if (!isNotCurrentUser) {
+              console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+            } else if (!isSameCompany) {
+              console.log(`Excluding user ${userIdStr} (different company: ${userCompany} vs ${currentUserCompany})`);
+            }
           }
           return shouldInclude;
         })
@@ -259,25 +287,34 @@ const SalesManagerDashboard = () => {
               }
             } else {
               // User has a conversation but isn't in the users list - add them
-              // This handles cases where users from other companies or roles have messaged
+              // BUT only if they're from the same company (to avoid 403 errors)
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
+              const userCompany = convUser.company || convUser.Company || conv.company || '';
               
-              // Only add if it's not the current user
+              // Only add if it's not the current user AND from the same company
               const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-              if (userId && String(userId) !== currentUserIdStr) {
+              const isSameCompany = !currentUserCompany || !userCompany || currentUserCompany === userCompany;
+              
+              if (userId && String(userId) !== currentUserIdStr && isSameCompany) {
                 const newUser = {
                   userId: userId,
                   name: convUser.name || convUser.Name || conv.name || 'User',
                   email: convUser.email || convUser.Email || conv.email || '',
                   role: convUser.role || convUser.Role || conv.role || '',
-                  company: convUser.company || convUser.Company || conv.company || '',
+                  company: userCompany,
                   status: convUser.status || convUser.Status || conv.status || 'Active',
                   unreadCount: conv.unreadCount || 0
                 };
                 chatUsersList.push(newUser);
                 existingUsersMap.set(String(userId), newUser);
-                console.log('Added user from conversation:', newUser);
+                console.log('Added user from conversation (same company):', newUser);
+              } else if (userId && String(userId) !== currentUserIdStr && !isSameCompany) {
+                console.log('Skipping user from different company:', {
+                  userId,
+                  userCompany,
+                  currentUserCompany
+                });
               }
             }
           });
@@ -1114,7 +1151,7 @@ const SalesManagerDashboard = () => {
     return clients.filter(client => {
       // Status filter
       if (clientStatusFilter) {
-        const clientStatus = (client.Status || '').toLowerCase().replace(' ', '-');
+        const clientStatus = ((client.Status || client.status) || '').toLowerCase().replace(' ', '-');
         const filterStatus = clientStatusFilter.toLowerCase();
         if (clientStatus !== filterStatus && !clientStatus.includes(filterStatus)) {
           return false;
@@ -1123,7 +1160,7 @@ const SalesManagerDashboard = () => {
 
       // Property filter
       if (clientPropertyFilter) {
-        const clientProperty = (client.Property || '').toLowerCase();
+        const clientProperty = ((client.Property || client.property) || '').toLowerCase();
         const filterProperty = clientPropertyFilter.toLowerCase();
         if (clientProperty !== filterProperty && !clientProperty.includes(filterProperty)) {
           return false;
@@ -1133,9 +1170,9 @@ const SalesManagerDashboard = () => {
       // Search text filter
       if (clientSearchText) {
         const searchLower = clientSearchText.toLowerCase();
-        const name = (client.Name || '').toLowerCase();
-        const email = (client.Email || '').toLowerCase();
-        const phone = (client.Phone || '').toLowerCase();
+        const name = ((client.Name || client.name) || '').toLowerCase();
+        const email = ((client.Email || client.email) || '').toLowerCase();
+        const phone = ((client.Phone || client.phone) || '').toLowerCase();
         
         if (!name.includes(searchLower) && !email.includes(searchLower) && !phone.includes(searchLower)) {
           return false;
@@ -1243,22 +1280,22 @@ const SalesManagerDashboard = () => {
                     </td>
                     <td>
                       <div className="sa-cell-main">
-                        <span className="sa-cell-title">{client.Name || 'N/A'}</span>
-                        <span className="sa-cell-sub">{client.Email || 'N/A'}</span>
+                        <span className="sa-cell-title">{client.Name || client.name || 'N/A'}</span>
+                        <span className="sa-cell-sub">{client.Email || client.email || 'N/A'}</span>
                       </div>
                     </td>
-                    <td>{client.Property || 'N/A'}</td>
+                    <td>{client.Property || client.property || 'N/A'}</td>
                     <td>
-                      <span className={`sa-status-pill ${(client.Status || 'unknown').toLowerCase().replace(' ', '-')}`}>
-                        {client.Status || 'Unknown'}
+                      <span className={`sa-status-pill ${(client.Status || client.status || 'unknown').toLowerCase().replace(' ', '-')}`}>
+                        {client.Status || client.status || 'Unknown'}
                       </span>
                     </td>
-                    <td>{client.LastPayment ? new Date(client.LastPayment).toLocaleDateString() : 'N/A'}</td>
-                    <td>{(client.Amount || 0).toLocaleString()} XOF</td>
+                    <td>{(client.LastPayment || client.lastPayment) ? new Date(client.LastPayment || client.lastPayment).toLocaleDateString() : 'N/A'}</td>
+                    <td>{(client.Amount || client.amount || 0).toLocaleString()} XOF</td>
                     <td>
                       <div className="sa-cell-main">
-                        <span className="sa-cell-title">{client.Phone || 'N/A'}</span>
-                        <span className="sa-cell-sub">{client.Email || 'N/A'}</span>
+                        <span className="sa-cell-title">{client.Phone || client.phone || 'N/A'}</span>
+                        <span className="sa-cell-sub">{client.Email || client.email || 'N/A'}</span>
                       </div>
                     </td>
                     <td className="sa-row-actions">
@@ -1303,12 +1340,12 @@ const SalesManagerDashboard = () => {
                     </td>
                     <td>
                       <div className="sa-cell-main">
-                        <span className="sa-cell-title">{client.Name || 'N/A'}</span>
-                        <span className="sa-cell-sub">{client.Email || 'N/A'}</span>
+                        <span className="sa-cell-title">{client.Name || client.name || 'N/A'}</span>
+                        <span className="sa-cell-sub">{client.Email || client.email || 'N/A'}</span>
                       </div>
                     </td>
-                    <td>{client.Phone || 'N/A'}</td>
-                    <td>{client.Property || 'Any'}</td>
+                    <td>{client.Phone || client.phone || 'N/A'}</td>
+                    <td>{client.Property || client.property || 'Any'}</td>
                     <td>
                       <span className="sa-status-pill pending">
                         Waiting List
@@ -1965,11 +2002,17 @@ const SalesManagerDashboard = () => {
                       <select name="property" required>
                         <option value="">Select Property</option>
                         {properties.length > 0 ? (
-                          properties.map(property => (
-                            <option key={property.ID} value={property.Address}>
-                              {property.Address} - {property.Type}
-                            </option>
-                          ))
+                          properties.map(property => {
+                            const propertyId = property.ID || property.id;
+                            const address = property.Address || property.address || 'Unnamed Property';
+                            const type = property.Type || property.type || '';
+                            const displayText = type ? `${address} - ${type}` : address;
+                            return (
+                              <option key={propertyId || `property-${address}`} value={address}>
+                                {displayText}
+                              </option>
+                            );
+                          })
                         ) : (
                           <option value="" disabled>No properties available. Start backend to load properties.</option>
                         )}
