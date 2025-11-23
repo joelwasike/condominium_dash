@@ -239,8 +239,7 @@ const TechnicianDashboard = () => {
     if (!userId) return;
     
     try {
-      // Use functional update to avoid dependency cycle
-      setSelectedUserId(prev => prev !== userId ? userId : prev);
+      setSelectedUserId(userId);
       const messages = await messagingService.getConversation(userId);
       
       // Normalize messages array
@@ -255,122 +254,136 @@ const TechnicianDashboard = () => {
       }
     } catch (error) {
       console.error('Error loading chat:', error);
-      // Don't show error notification for CORS errors - they're backend configuration issues
-      if (!error.message || !error.message.includes('CORS')) {
-        addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
-      }
+      addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
       setChatMessages([]);
     }
   }, [addNotification]);
 
-  // Load users for messaging
+  // Load users for messaging (from same company)
   const loadUsers = useCallback(async () => {
+    // Prevent multiple simultaneous calls
     if (isLoadingUsersRef.current) {
       console.log('Users already loading, skipping...');
       return;
     }
-    
-    isLoadingUsersRef.current = true;
+
     try {
+      isLoadingUsersRef.current = true;
+      console.log('Loading users for messaging...');
+      // Use the new getUsers endpoint
       const users = await messagingService.getUsers();
-      console.log('Fetched users:', users);
+      console.log('Users API response:', users);
       
-      // Get current user ID
+      // Handle different response formats
+      let usersArray = [];
+      if (Array.isArray(users)) {
+        usersArray = users;
+      } else if (users && Array.isArray(users.users)) {
+        usersArray = users.users;
+      } else if (users && typeof users === 'object') {
+        // Try to find array in response
+        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+      }
+      
+      console.log('Processed users array:', usersArray);
+      
+      // Get current user ID to exclude from list
       const storedUser = localStorage.getItem('user');
       let currentUserId = null;
       if (storedUser) {
         try {
           const user = JSON.parse(storedUser);
           currentUserId = user.id || user.ID;
+          console.log('Current user ID:', currentUserId);
         } catch (error) {
           console.error('Error parsing stored user:', error);
         }
       }
       
-      // Filter out current user and normalize
-      let normalizedUsers = Array.isArray(users) ? users : [];
-      if (Array.isArray(normalizedUsers[0])) {
-        normalizedUsers = normalizedUsers[0];
-      }
+      // Map users to chat format and exclude current user
+      const chatUsersList = usersArray
+        .filter(user => {
+          const userId = user.id || user.ID;
+          // Convert both to strings for comparison to handle type mismatches
+          const userIdStr = userId ? String(userId) : null;
+          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+          if (!shouldInclude && userIdStr) {
+            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+          }
+          return shouldInclude;
+        })
+        .map(user => {
+          const userId = user.id || user.ID;
+          return {
+            userId: userId,
+            name: user.name || user.Name || 'User',
+            email: user.email || user.Email || '',
+            role: user.role || user.Role || '',
+            company: user.company || user.Company || '',
+            status: user.status || user.Status || 'Active',
+            unreadCount: 0 // Will be updated from conversations if needed
+          };
+        })
+        .sort((a, b) => {
+          const nameA = (a.name || '').toLowerCase();
+          const nameB = (b.name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
       
-      const filteredUsers = normalizedUsers.filter(user => {
-        const userId = user.id || user.ID || user.userId;
-        return userId && String(userId) !== String(currentUserId);
-      });
-      
-      // Sort by name
-      filteredUsers.sort((a, b) => {
-        const nameA = (a.name || a.Name || '').toLowerCase();
-        const nameB = (b.name || b.Name || '').toLowerCase();
-        return nameA.localeCompare(nameB);
-      });
+      console.log('Final chat users list:', chatUsersList);
       
       // Get conversations to update unread counts
       try {
         const conversations = await messagingService.getConversations();
-        const conversationsMap = new Map();
-        conversations.forEach(conv => {
-          const userId = conv.userId || conv.userID;
-          if (userId) {
-            conversationsMap.set(String(userId), conv);
-          }
-        });
-        
-        // Update users with conversation data
-        const usersWithUnread = filteredUsers.map(user => {
-          const userId = String(user.id || user.ID || user.userId);
-          const conv = conversationsMap.get(userId);
-          return {
-            ...user,
-            userId: user.id || user.ID || user.userId,
-            name: user.name || user.Name,
-            email: user.email || user.Email,
-            role: user.role || user.Role,
-            unreadCount: conv?.unreadCount || 0,
-          };
-        });
-        
-        setChatUsers(usersWithUnread);
-        
-        // Auto-select first user if none selected (use functional update to avoid dependency)
-        setSelectedUserId(prev => {
-          if (!prev && usersWithUnread.length > 0) {
-            return usersWithUnread[0].userId;
-          }
-          return prev;
-        });
+        if (Array.isArray(conversations)) {
+          conversations.forEach(conv => {
+            const chatUser = chatUsersList.find(u => {
+              const uId = String(u.userId);
+              const convId = String(conv.userId);
+              return uId === convId;
+            });
+            if (chatUser && conv.unreadCount) {
+              chatUser.unreadCount = conv.unreadCount;
+            }
+          });
+        }
       } catch (convError) {
-        console.error('Error loading conversations:', convError);
-        // Still set users even if conversations fail
-        const usersMapped = filteredUsers.map(user => ({
-          ...user,
-          userId: user.id || user.ID || user.userId,
-          name: user.name || user.Name,
-          email: user.email || user.Email,
-          role: user.role || user.Role,
-          unreadCount: 0,
-        }));
-        setChatUsers(usersMapped);
-        
-        // Auto-select first user if none selected
-        setSelectedUserId(prev => {
-          if (!prev && usersMapped.length > 0) {
-            return usersMapped[0].userId;
-          }
-          return prev;
-        });
+        console.error('Error loading conversations for unread counts:', convError);
+      }
+      
+      setChatUsers(chatUsersList);
+      
+      // Auto-select first user if available and no user is selected
+      // Use functional update to avoid dependency on selectedUserId
+      setSelectedUserId(prevSelected => {
+        if (chatUsersList.length > 0 && !prevSelected) {
+          const firstUserId = chatUsersList[0].userId;
+          // Load chat for first user asynchronously
+          setTimeout(() => {
+            loadChatForUser(firstUserId);
+          }, 0);
+          return firstUserId;
+        }
+        return prevSelected;
+      });
+      
+      if (chatUsersList.length === 0) {
+        console.warn('No users found. This could mean:');
+        console.warn('1. No other users in the same company');
+        console.warn('2. API endpoint returned empty array');
+        console.warn('3. All users were filtered out');
+        addNotification('No users available for messaging', 'info');
       }
     } catch (error) {
       console.error('Error loading users:', error);
-      // Don't show error notification for CORS errors - they're backend configuration issues
-      if (!error.message || !error.message.includes('CORS')) {
-        addNotification('Failed to load users for messaging', 'error');
-      }
+      console.error('Error details:', error.message, error.stack);
+      addNotification(`Failed to load users: ${error.message || 'Unknown error'}`, 'error');
       setChatUsers([]);
     } finally {
       isLoadingUsersRef.current = false;
     }
-  }, [addNotification]);
+  }, [loadChatForUser, addNotification]);
 
   // Load users when chat tab is active (only once per tab switch)
   useEffect(() => {
@@ -378,19 +391,13 @@ const TechnicianDashboard = () => {
       loadUsers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab]); // Only depend on activeTab, not loadUsers
 
-  // Load chat when user is selected (only if user actually changed)
-  useEffect(() => {
-    if (selectedUserId && activeTab === 'chat') {
-      loadChatForUser(selectedUserId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedUserId, activeTab]);
-
-  // Handle send message
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
+    
+    const content = chatInput.trim();
+    const tempMessageId = `temp-${Date.now()}`;
     
     // Get current user ID from localStorage
     const storedUser = localStorage.getItem('user');
@@ -409,40 +416,33 @@ const TechnicianDashboard = () => {
       return;
     }
     
-    const content = chatInput.trim();
-    const tempMessageId = `temp-${Date.now()}`;
-    
-    // Optimistically add message to UI immediately
+    // Optimistic update: add message immediately to UI
     const optimisticMessage = {
       id: tempMessageId,
-      ID: tempMessageId,
       fromUserId: currentUserId,
       toUserId: selectedUserId,
       content: content,
       createdAt: new Date().toISOString(),
-      read: false,
-      type: 'message'
+      read: false
     };
     
     setChatMessages(prev => [...prev, optimisticMessage]);
     setChatInput('');
     
     try {
-      const payload = {
+      const newMessage = await messagingService.sendMessage({
+        fromUserId: currentUserId,
         toUserId: selectedUserId,
-        content,
-      };
-      const sentMessage = await messagingService.sendMessage(payload);
+        content: content
+      });
       
-      // Replace optimistic message with real message from server
-      if (sentMessage && sentMessage.id) {
-        setChatMessages(prev => 
-          prev.map(msg => 
-            msg.id === tempMessageId ? sentMessage : msg
-          )
-        );
-      } else {
-        // If server response doesn't have expected format, reload chat
+      // Replace optimistic message with actual message from server
+      setChatMessages(prev => prev.map(msg => 
+        msg.id === tempMessageId ? newMessage : msg
+      ));
+      
+      // Reload chat to ensure we have the latest messages
+      if (selectedUserId) {
         await loadChatForUser(selectedUserId);
       }
     } catch (error) {
@@ -450,7 +450,8 @@ const TechnicianDashboard = () => {
       addNotification(error.message || 'Failed to send message', 'error');
       // Remove optimistic message on error
       setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      setChatInput(content); // Restore input on error
+      // Restore input
+      setChatInput(content);
     }
   };
 
