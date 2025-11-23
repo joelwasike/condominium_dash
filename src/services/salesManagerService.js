@@ -133,10 +133,16 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
-  // Import clients/tenants from Excel
+  // Import clients/tenants from Excel or CSV
+  // Note: Backend endpoint accepts .xlsx, .xls, and .csv files
   importClientsFromExcel: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
+    
+    // Determine file type for better error messages
+    const fileName = file.name || '';
+    const isCSV = fileName.toLowerCase().endsWith('.csv');
+    const fileType = isCSV ? 'CSV' : 'Excel';
     
     const url = buildApiUrl('/api/salesmanager/clients/import-excel');
     const token = localStorage.getItem('token');
@@ -152,9 +158,20 @@ export const salesManagerService = {
         const errorText = await response.text();
         try {
           const errorJson = JSON.parse(errorText);
-          throw new Error(errorJson.error || errorJson.message || `Failed to import Excel file: ${response.status}`);
+          let errorMessage = errorJson.error || errorJson.message || `Failed to import ${fileType} file: ${response.status}`;
+          
+          // Provide helpful error message if CSV is rejected
+          if (isCSV && errorMessage.includes('Invalid file type') && errorMessage.includes('.xlsx and .xls')) {
+            errorMessage = 'CSV file support needs to be enabled on the backend. Please contact the administrator or use .xlsx/.xls format.';
+          }
+          
+          throw new Error(errorMessage);
         } catch (e) {
-          throw new Error(`Failed to import Excel file: ${response.status} ${response.statusText}. ${errorText}`);
+          // If error is already an Error object, rethrow it
+          if (e instanceof Error && e.message) {
+            throw e;
+          }
+          throw new Error(`Failed to import ${fileType} file: ${response.status} ${response.statusText}. ${errorText}`);
         }
       }
       return response.json();
