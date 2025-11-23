@@ -64,6 +64,8 @@ const TechnicianDashboard = () => {
   const [chatInput, setChatInput] = useState('');
   const isLoadingUsersRef = useRef(false);
   const messagesEndRef = useRef(null);
+  const markReadTimeoutRef = useRef(null);
+  const lastMarkedReadRef = useRef(null);
   
   // Notifications
   const [notifications, setNotifications] = useState([]);
@@ -240,20 +242,47 @@ const TechnicianDashboard = () => {
     
     try {
       setSelectedUserId(userId);
+      console.log('Loading chat for user:', userId);
       const messages = await messagingService.getConversation(userId);
+      console.log('Loaded messages:', messages);
       
       // Normalize messages array
       const normalizedMessages = Array.isArray(messages) ? messages : [];
+      console.log('Normalized messages:', normalizedMessages);
       setChatMessages(normalizedMessages);
       
-      // Mark messages as read
-      try {
-        await messagingService.markMessagesAsRead(userId);
-      } catch (readError) {
-        console.error('Error marking messages as read:', readError);
+      // Mark messages as read with debouncing to avoid rate limiting
+      // Only mark as read if we haven't marked this user recently
+      const userIdStr = String(userId);
+      if (lastMarkedReadRef.current !== userIdStr) {
+        // Clear any pending timeout
+        if (markReadTimeoutRef.current) {
+          clearTimeout(markReadTimeoutRef.current);
+        }
+        
+        // Mark this user as being processed to prevent duplicate calls
+        lastMarkedReadRef.current = userIdStr;
+        
+        // Debounce the mark as read call with a longer delay to avoid rate limiting
+        markReadTimeoutRef.current = setTimeout(async () => {
+          try {
+            await messagingService.markMessagesAsRead(userId);
+            console.log('Marked messages as read for user:', userId);
+          } catch (readError) {
+            // Silently ignore rate limit errors - they're expected if called too frequently
+            if (!readError.message || !readError.message.includes('Rate limit')) {
+              console.error('Error marking messages as read:', readError);
+            }
+            // Reset the last marked ref on error so we can retry later
+            if (readError.message && readError.message.includes('Rate limit')) {
+              lastMarkedReadRef.current = null;
+            }
+          }
+        }, 2000); // Wait 2 seconds before marking as read to avoid rate limiting
       }
     } catch (error) {
       console.error('Error loading chat:', error);
+      console.error('Error details:', error.message, error.stack);
       addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
       setChatMessages([]);
     }
@@ -430,23 +459,40 @@ const TechnicianDashboard = () => {
     setChatInput('');
     
     try {
+      console.log('Sending message:', { fromUserId: currentUserId, toUserId: selectedUserId, content });
       const newMessage = await messagingService.sendMessage({
         fromUserId: currentUserId,
         toUserId: selectedUserId,
         content: content
       });
       
-      // Replace optimistic message with actual message from server
-      setChatMessages(prev => prev.map(msg => 
-        msg.id === tempMessageId ? newMessage : msg
-      ));
+      console.log('Message sent successfully, server response:', newMessage);
       
-      // Reload chat to ensure we have the latest messages
-      if (selectedUserId) {
-        await loadChatForUser(selectedUserId);
+      // Replace optimistic message with actual message from server
+      // Check if newMessage has the expected structure
+      if (newMessage && (newMessage.id || newMessage.ID)) {
+        console.log('Replacing optimistic message with server response');
+        setChatMessages(prev => {
+          const updated = prev.map(msg => 
+            msg.id === tempMessageId ? newMessage : msg
+          );
+          console.log('Updated messages:', updated);
+          return updated;
+        });
+      } else {
+        console.log('Server response format unexpected, reloading chat after delay');
+        // If server response format is unexpected, reload chat after a short delay
+        // to give server time to process
+        setTimeout(async () => {
+          if (selectedUserId) {
+            console.log('Reloading chat for user:', selectedUserId);
+            await loadChatForUser(selectedUserId);
+          }
+        }, 1000);
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      console.error('Error details:', error.message, error.stack);
       addNotification(error.message || 'Failed to send message', 'error');
       // Remove optimistic message on error
       setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
