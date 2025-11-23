@@ -43,6 +43,7 @@ const TenantDashboard = () => {
   });
   const [loading, setLoading] = useState(false);
   const [overviewData, setOverviewData] = useState(null);
+  const [leaseInfo, setLeaseInfo] = useState(null);
   const [payments, setPayments] = useState([]);
   const [maintenanceRequests, setMaintenanceRequests] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
@@ -78,13 +79,15 @@ const TenantDashboard = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [overview, paymentsData, maintenanceData] = await Promise.all([
+      const [overview, paymentsData, maintenanceData, lease] = await Promise.all([
         tenantService.getOverview().catch(() => null),
         tenantService.listPayments().catch(() => []),
-        tenantService.listMaintenance().catch(() => [])
+        tenantService.listMaintenance().catch(() => []),
+        tenantService.getLeaseInfo().catch(() => null)
       ]);
 
       setOverviewData(overview);
+      setLeaseInfo(lease);
       // Ensure payments is an array
       const paymentsArray = Array.isArray(paymentsData) ? paymentsData : [];
       setPayments(paymentsArray);
@@ -408,13 +411,46 @@ const TenantDashboard = () => {
 
     try {
       setLoading(true);
+      
+      // Get tenant name from user profile or overview data
+      let tenantName = 'Current Tenant';
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          tenantName = user.name || user.Name || tenantName;
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+      // Also check overviewData for tenant name
+      if (overviewData && overviewData.tenant) {
+        tenantName = overviewData.tenant;
+      }
+      
+      // Get property from lease info, overview data, or use default
+      let property = 'Apartment 4B, 123 Main St';
+      if (leaseInfo && leaseInfo.property) {
+        property = leaseInfo.property;
+      } else if (overviewData) {
+        if (overviewData.lease && overviewData.lease.property) {
+          property = overviewData.lease.property;
+        } else if (overviewData.property) {
+          property = overviewData.property;
+        }
+      }
+      
+      // Backend expects Tenant and Property with capital letters based on error message
       const paymentData = {
+        Tenant: tenantName,
+        Property: property,
         amount: parseFloat(paymentForm.amount),
         method: paymentForm.paymentMethod,
         chargeType: 'rent',
         reference: paymentForm.reference
       };
 
+      console.log('Submitting payment with data:', paymentData);
       await tenantService.recordPayment(paymentData);
       addNotification('Payment submitted successfully!', 'success');
 
