@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Home,
   Building2,
@@ -8,7 +8,8 @@ import {
   Plus,
   Settings,
   ClipboardList,
-  Megaphone
+  Megaphone,
+  MessageCircle
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -16,6 +17,7 @@ import Modal from '../components/Modal';
 import '../components/RoleLayout.css';
 import './SalesDashboard.css';
 import { commercialService } from '../services/commercialService';
+import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 
 const FETCH_TIMEOUT = 8000;
@@ -39,6 +41,14 @@ const SalesDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [interestedClients, setInterestedClients] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
+  
+  // Messaging states
+  const [chatUsers, setChatUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const isLoadingUsersRef = useRef(false);
+  const messagesEndRef = useRef(null);
   
   // Filter states
   const [listingStatusFilter, setListingStatusFilter] = useState('');
@@ -122,12 +132,300 @@ const SalesDashboard = () => {
     }
   }, [addNotification, listingStatusFilter, listingTypeFilter, visitStatusFilter, requestStatusFilter]);
 
+  // Scroll to bottom of messages
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [chatMessages, scrollToBottom]);
+
+  // Load chat for a specific user
+  const loadChatForUser = useCallback(async (userId) => {
+    if (!userId) return;
+    
+    try {
+      setSelectedUserId(userId);
+      const messages = await messagingService.getConversation(userId);
+      
+      // Normalize messages array
+      const normalizedMessages = Array.isArray(messages) ? messages : [];
+      setChatMessages(normalizedMessages);
+      
+      // Mark messages as read
+      try {
+        await messagingService.markMessagesAsRead(userId);
+      } catch (readError) {
+        console.error('Error marking messages as read:', readError);
+      }
+    } catch (error) {
+      console.error('Error loading chat:', error);
+      addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
+      setChatMessages([]);
+    }
+  }, [addNotification]);
+
+  // Load users for messaging (from same company)
+  const loadUsers = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (isLoadingUsersRef.current) {
+      console.log('Users already loading, skipping...');
+      return;
+    }
+
+    try {
+      isLoadingUsersRef.current = true;
+      console.log('Loading users for messaging...');
+      // Use the new getUsers endpoint
+      const users = await messagingService.getUsers();
+      console.log('Users API response:', users);
+      
+      // Handle different response formats
+      let usersArray = [];
+      if (Array.isArray(users)) {
+        usersArray = users;
+      } else if (users && Array.isArray(users.users)) {
+        usersArray = users.users;
+      } else if (users && typeof users === 'object') {
+        // Try to find array in response
+        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+      }
+      
+      console.log('Processed users array:', usersArray);
+      
+      // Get current user ID to exclude from list
+      const storedUser = localStorage.getItem('user');
+      let currentUserId = null;
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          currentUserId = user.id || user.ID;
+          console.log('Current user ID:', currentUserId);
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+      
+      // Map users to chat format and exclude current user
+      const chatUsersList = usersArray
+        .filter(user => {
+          const userId = user.id || user.ID;
+          // Convert both to strings for comparison to handle type mismatches
+          const userIdStr = userId ? String(userId) : null;
+          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+          if (!shouldInclude && userIdStr) {
+            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+          }
+          return shouldInclude;
+        })
+        .map(user => {
+          const userId = user.id || user.ID;
+          return {
+            userId: userId,
+            name: user.name || user.Name || 'User',
+            email: user.email || user.Email || '',
+            role: user.role || user.Role || '',
+            company: user.company || user.Company || '',
+            status: user.status || user.Status || 'Active',
+            unreadCount: 0 // Will be updated from conversations if needed
+          };
+        })
+        .sort((a, b) => {
+          const nameA = (a.name || '').toLowerCase();
+          const nameB = (b.name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+      
+      console.log('Final chat users list:', chatUsersList);
+      
+      // Get conversations to update unread counts and include users who have messaged but aren't in users list
+      try {
+        const conversations = await messagingService.getConversations();
+        if (Array.isArray(conversations)) {
+          // Create a map of existing users by ID for quick lookup
+          const existingUsersMap = new Map();
+          chatUsersList.forEach(u => {
+            existingUsersMap.set(String(u.userId), u);
+          });
+          
+          // Process conversations to update unread counts and add missing users
+          conversations.forEach(conv => {
+            const convUserId = String(conv.userId || conv.userID);
+            const existingUser = existingUsersMap.get(convUserId);
+            
+            if (existingUser) {
+              // Update unread count for existing user
+              if (conv.unreadCount) {
+                existingUser.unreadCount = conv.unreadCount;
+              }
+            } else {
+              // User has a conversation but isn't in the users list - add them
+              // This handles cases where users from other companies or roles have messaged
+              const convUser = conv.user || {};
+              const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
+              
+              // Only add if it's not the current user
+              const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+              if (userId && String(userId) !== currentUserIdStr) {
+                const newUser = {
+                  userId: userId,
+                  name: convUser.name || convUser.Name || conv.name || 'User',
+                  email: convUser.email || convUser.Email || conv.email || '',
+                  role: convUser.role || convUser.Role || conv.role || '',
+                  company: convUser.company || convUser.Company || conv.company || '',
+                  status: convUser.status || convUser.Status || conv.status || 'Active',
+                  unreadCount: conv.unreadCount || 0
+                };
+                chatUsersList.push(newUser);
+                existingUsersMap.set(String(userId), newUser);
+                console.log('Added user from conversation:', newUser);
+              }
+            }
+          });
+          
+          // Re-sort after adding new users
+          chatUsersList.sort((a, b) => {
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+          });
+        }
+      } catch (convError) {
+        console.error('Error loading conversations for unread counts:', convError);
+      }
+      
+      setChatUsers(chatUsersList);
+      
+      // Auto-select first user if available and no user is selected
+      // Use functional update to avoid dependency on selectedUserId
+      setSelectedUserId(prevSelected => {
+        if (chatUsersList.length > 0 && !prevSelected) {
+          const firstUserId = chatUsersList[0].userId;
+          // Load chat for first user asynchronously
+          setTimeout(() => {
+            loadChatForUser(firstUserId);
+          }, 0);
+          return firstUserId;
+        }
+        return prevSelected;
+      });
+      
+      if (chatUsersList.length === 0) {
+        console.warn('No users found. This could mean:');
+        console.warn('1. No other users in the same company');
+        console.warn('2. API endpoint returned empty array');
+        console.warn('3. All users were filtered out');
+        addNotification('No users available for messaging', 'info');
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      console.error('Error details:', error.message, error.stack);
+      addNotification(`Failed to load users: ${error.message || 'Unknown error'}`, 'error');
+      setChatUsers([]);
+    } finally {
+      isLoadingUsersRef.current = false;
+    }
+  }, [loadChatForUser, addNotification]);
+
+  // Handle send message
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedUserId) return;
+    
+    const content = chatInput.trim();
+    const tempMessageId = `temp-${Date.now()}`;
+    
+    // Get current user ID from localStorage
+    const storedUser = localStorage.getItem('user');
+    let currentUserId = null;
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        currentUserId = user.id || user.ID;
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+      }
+    }
+    
+    if (!currentUserId) {
+      addNotification('Unable to identify current user. Please log in again.', 'error');
+      return;
+    }
+    
+    // Optimistic update: add message immediately to UI
+    const optimisticMessage = {
+      id: tempMessageId,
+      fromUserId: currentUserId,
+      toUserId: selectedUserId,
+      content: content,
+      createdAt: new Date().toISOString(),
+      read: false
+    };
+    
+    setChatMessages(prev => [...prev, optimisticMessage]);
+    setChatInput('');
+    
+    try {
+      console.log('Sending message:', { fromUserId: currentUserId, toUserId: selectedUserId, content });
+      const newMessage = await messagingService.sendMessage({
+        fromUserId: currentUserId,
+        toUserId: selectedUserId,
+        content: content
+      });
+      
+      console.log('Message sent successfully, server response:', newMessage);
+      
+      // Replace optimistic message with actual message from server
+      // Check if newMessage has the expected structure
+      if (newMessage && (newMessage.id || newMessage.ID)) {
+        console.log('Replacing optimistic message with server response');
+        setChatMessages(prev => {
+          const updated = prev.map(msg => 
+            msg.id === tempMessageId ? newMessage : msg
+          );
+          console.log('Updated messages:', updated);
+          return updated;
+        });
+      } else {
+        console.log('Server response format unexpected, reloading chat after delay');
+        // If server response format is unexpected, reload chat after a short delay
+        // to give server time to process
+        setTimeout(async () => {
+          if (selectedUserId) {
+            console.log('Reloading chat for user:', selectedUserId);
+            await loadChatForUser(selectedUserId);
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      console.error('Error details:', error.message, error.stack);
+      addNotification(error.message || 'Failed to send message', 'error');
+      // Remove optimistic message on error
+      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      // Restore input
+      setChatInput(content);
+    }
+  };
+
   // Load advertisements when advertisements tab is active
   useEffect(() => {
     if (activeTab === 'advertisements') {
       loadAdvertisements();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load users when chat tab is active (only once per tab switch)
+  useEffect(() => {
+    if (activeTab === 'chat' && !isLoadingUsersRef.current) {
+      loadUsers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]); // Only depend on activeTab, not loadUsers
 
   useEffect(() => {
     loadData();
@@ -140,6 +438,7 @@ const SalesDashboard = () => {
       { id: 'visits', label: 'Visits', icon: Calendar },
       { id: 'requests', label: 'Requests', icon: Users },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
+      { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
     []
@@ -815,6 +1114,159 @@ const SalesDashboard = () => {
     );
   };
 
+  // Render messaging page
+  const renderMessages = () => (
+    <div className="sa-chat-page">
+      <div className="sa-chat-layout">
+        <div className="sa-chat-list">
+          <h3>Users</h3>
+          <ul>
+            {chatUsers.map((user) => {
+              const active = user.userId === selectedUserId;
+              return (
+                <li
+                  key={`chat-user-${user.userId}`}
+                  className={active ? 'active' : ''}
+                  onClick={() => loadChatForUser(user.userId)}
+                >
+                  <div className="sa-cell-main">
+                    <span className="sa-cell-title">{user.name || 'User'}</span>
+                    <span className="sa-cell-sub">{user.email || ''}</span>
+                    {user.role && (
+                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {user.role}
+                      </span>
+                    )}
+                    {user.unreadCount > 0 && (
+                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                        {user.unreadCount} unread
+                      </span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+            {chatUsers.length === 0 && (
+              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                No users available
+              </li>
+            )}
+          </ul>
+        </div>
+        
+        <div className="sa-chat-conversation">
+          <div className="sa-chat-header">
+            <h3>Messages</h3>
+            {selectedUserId && (
+              <span className="sa-chat-subtitle">
+                Chat with{' '}
+                {
+                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
+                    .name || 'User'
+                }
+              </span>
+            )}
+          </div>
+          <div className="sa-chat-messages">
+            {chatMessages.map((msg, index) => {
+              const messageContent = msg.content || msg.Content || '';
+              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+              const messageFromUserId = msg.fromUserId || msg.FromUserId;
+              const messageId = msg.id || msg.ID || index;
+              
+              // Determine if message is outgoing or incoming
+              const storedUser = localStorage.getItem('user');
+              let isOutgoing = false;
+              if (storedUser) {
+                try {
+                  const user = JSON.parse(storedUser);
+                  const currentUserId = user.id || user.ID;
+                  isOutgoing = String(messageFromUserId) === String(currentUserId);
+                } catch (e) {
+                  // Default to incoming if we can't parse user
+                }
+              }
+              
+              return (
+                <div
+                  key={`msg-${messageId}`}
+                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
+                >
+                  <p>{messageContent}</p>
+                  <span className="sa-chat-meta">
+                    {messageCreatedAt
+                      ? new Date(messageCreatedAt).toLocaleString()
+                      : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {chatMessages.length === 0 && (
+              <div className="sa-table-empty">
+                {selectedUserId 
+                  ? 'No messages yet. Start the conversation!'
+                  : 'Select a conversation on the left to start messaging.'}
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="sa-chat-input-row">
+            <input
+              type="text"
+              placeholder="Reply..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={!selectedUserId}
+            />
+            <button 
+              className="sa-primary-cta" 
+              onClick={handleSendMessage}
+              disabled={!selectedUserId || !chatInput.trim()}
+            >
+              <MessageCircle size={16} />
+              Send
+            </button>
+          </div>
+        </div>
+        
+        <div className="sa-chat-details">
+          <h4>Contact Details</h4>
+          {selectedUserId ? (
+            (() => {
+              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
+              return (
+                <>
+                  <p>
+                    <strong>Name:</strong> {user.name || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {user.email || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Role:</strong> {user.role || 'N/A'}
+                  </p>
+                  {user.company && (
+                    <p>
+                      <strong>Company:</strong> {user.company}
+                    </p>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <p>Select a conversation to view details.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   const renderContent = (currentTab = activeTab) => {
     switch (currentTab) {
       case 'overview':
@@ -827,6 +1279,8 @@ const SalesDashboard = () => {
         return renderRequests();
       case 'advertisements':
         return renderAdvertisements();
+      case 'chat':
+        return renderMessages();
       case 'settings':
         return (
           <div className="embedded-settings">
