@@ -46,6 +46,7 @@ const LandlordDashboard = () => {
   // API Data States
   const [overviewData, setOverviewData] = useState(null);
   const [properties, setProperties] = useState([]);
+  const [tenants, setTenants] = useState([]);
   const [payments, setPayments] = useState([]);
   const [rents, setRents] = useState(null);
   const [netPayments, setNetPayments] = useState(null);
@@ -96,9 +97,10 @@ const LandlordDashboard = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [overview, propertiesData, paymentsData, rentsData, workOrdersData, claimsData, inventoryData, trackingData, expensesData] = await Promise.all([
+      const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, claimsData, inventoryData, trackingData, expensesData] = await Promise.all([
         landlordService.getOverview(),
         landlordService.getProperties(),
+        landlordService.getTenants().catch(() => []),
         landlordService.getPayments(),
         landlordService.getRents().catch(() => null),
         landlordService.getWorkOrders(),
@@ -114,6 +116,7 @@ const LandlordDashboard = () => {
       
       setOverviewData(overview);
       setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      setTenants(Array.isArray(tenantsData) ? tenantsData : []);
       setPayments(Array.isArray(paymentsData) ? paymentsData : []);
       setRents(rentsData);
       setWorkOrders(Array.isArray(workOrdersData) ? workOrdersData : []);
@@ -678,6 +681,7 @@ const LandlordDashboard = () => {
     () => [
       { id: 'overview', label: 'Overview', icon: Home },
       { id: 'properties', label: 'Property & Asset', icon: Home },
+      { id: 'tenants', label: 'Tenants', icon: Users },
       { id: 'payments', label: 'Payments & Cash Flow', icon: DollarSign },
       { id: 'rents', label: 'Rents Tracking', icon: DollarSign },
       { id: 'expenses', label: 'Expenses', icon: FileText },
@@ -767,18 +771,18 @@ const LandlordDashboard = () => {
               </tr>
             ) : (
               properties.map((property, index) => (
-                <tr key={property.ID || `property-${index}`}>
+                <tr key={property.ID || property.id || `property-${index}`}>
                   <td>{index + 1}</td>
                   <td className="sa-cell-main">
-                    <span className="sa-cell-title">{property.Address || 'Unknown Address'}</span>
+                    <span className="sa-cell-title">{property.Address || property.address || 'Unknown Address'}</span>
                   </td>
-                  <td>{property.Type || 'N/A'}</td>
-                  <td>{property.Bedrooms || 0}</td>
-                  <td>{property.Bathrooms || 0}</td>
-                  <td>{property.Rent?.toLocaleString() || 0} XOF/month</td>
+                  <td>{property.Type || property.type || 'N/A'}</td>
+                  <td>{property.Bedrooms || property.bedrooms || 0}</td>
+                  <td>{property.Bathrooms || property.bathrooms || 0}</td>
+                  <td>{property.Rent?.toLocaleString() || property.rent?.toLocaleString() || 0} XOF/month</td>
                   <td>
-                    <span className={`sa-status-pill ${(property.Status || 'vacant').toLowerCase()}`}>
-                      {property.Status || 'Vacant'}
+                    <span className={`sa-status-pill ${(property.Status || property.status || 'vacant').toLowerCase()}`}>
+                      {property.Status || property.status || 'Vacant'}
                     </span>
                   </td>
                   <td className="sa-row-actions">
@@ -791,6 +795,69 @@ const LandlordDashboard = () => {
             </tbody>
           </table>
         </div>
+    </div>
+  );
+
+  const renderTenants = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Tenant Management</h2>
+          <p>{tenants.length} tenants found</p>
+        </div>
+      </div>
+              
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Tenant Name</th>
+              <th>Property</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Rent Amount</th>
+              <th>Status</th>
+              <th>Last Payment</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {tenants.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="sa-table-empty">No tenants found</td>
+              </tr>
+            ) : (
+              tenants.map((tenant, index) => (
+                <tr key={tenant.id || tenant.ID || `tenant-${index}`}>
+                  <td>{index + 1}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{tenant.name || tenant.Name || 'N/A'}</span>
+                  </td>
+                  <td>{tenant.property || tenant.Property || 'N/A'}</td>
+                  <td>{tenant.email || tenant.Email || 'N/A'}</td>
+                  <td>{tenant.phone || tenant.Phone || 'N/A'}</td>
+                  <td>{(tenant.amount || tenant.Amount || 0).toLocaleString()} XOF</td>
+                  <td>
+                    <span className={`sa-status-pill ${(tenant.status || tenant.Status || 'active').toLowerCase().replace(' ', '-')}`}>
+                      {tenant.status || tenant.Status || 'Active'}
+                    </span>
+                  </td>
+                  <td>
+                    {tenant.lastPayment || tenant.LastPayment 
+                      ? new Date(tenant.lastPayment || tenant.LastPayment).toLocaleDateString()
+                      : 'N/A'}
+                  </td>
+                  <td className="sa-row-actions">
+                    <button className="sa-icon-button" title="View">👁️</button>
+                    <button className="sa-icon-button" title="Edit">✏️</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 
@@ -1179,71 +1246,10 @@ const LandlordDashboard = () => {
               </>
             )}
           </div>
-      )}
-    </div>
-  );
-  };
-
-  const renderTenants = () => (
-    <div className="sa-clients-page">
-      <div className="sa-clients-header">
-        <div>
-          <h2>Tenant Management</h2>
-        <p>Manage your tenants and their information</p>
-        </div>
+        )}
       </div>
-      
-      <div className="sa-table-wrapper">
-        <table className="sa-table">
-            <thead>
-              <tr>
-              <th>No</th>
-                <th>Tenant Name</th>
-                <th>Property</th>
-                <th>Rent</th>
-                <th>Status</th>
-                <th>Contact</th>
-              <th />
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-              <td>1</td>
-              <td className="sa-cell-main">
-                <span className="sa-cell-title">John Doe</span>
-                </td>
-                <td>123 Main Street, Apt 4B</td>
-                <td>1,200 XOF/month</td>
-                <td>
-                <span className="sa-status-pill active">Active</span>
-                </td>
-                <td>N/A</td>
-              <td className="sa-row-actions">
-                <button className="sa-icon-button" title="View">👁️</button>
-                <button className="sa-icon-button" title="Contact">📞</button>
-                </td>
-              </tr>
-              <tr>
-              <td>2</td>
-              <td className="sa-cell-main">
-                <span className="sa-cell-title">Jane Smith</span>
-                </td>
-                <td>456 Oak Avenue, Unit 2</td>
-                <td>900 XOF/month</td>
-                <td>
-                <span className="sa-status-pill active">Active</span>
-                </td>
-                <td>N/A</td>
-              <td className="sa-row-actions">
-                <button className="sa-icon-button" title="View">👁️</button>
-                <button className="sa-icon-button" title="Contact">📞</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-                  </div>
-          </div>
-        );
+    );
+  };
       
   const renderRentalManagement = () => (
     <div className="sa-overview-page">
@@ -1970,6 +1976,8 @@ const LandlordDashboard = () => {
         return renderOverview();
       case 'properties':
         return renderProperties();
+      case 'tenants':
+        return renderTenants();
       case 'payments':
         return renderPayments();
       case 'rents':

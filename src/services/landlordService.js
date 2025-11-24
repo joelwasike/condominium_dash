@@ -21,6 +21,11 @@ export const landlordService = {
     });
   },
 
+  // Tenants
+  getTenants: async () => {
+    return await apiRequest(buildApiUrl('/api/landlord/tenants'));
+  },
+
   // Rents
   getRents: async () => {
     return await apiRequest(buildApiUrl('/api/landlord/rents'));
