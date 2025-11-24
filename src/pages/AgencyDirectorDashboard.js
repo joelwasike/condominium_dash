@@ -63,7 +63,7 @@ const AgencyDirectorDashboard = () => {
   const [showPropertyModal, setShowPropertyModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editingProperty, setEditingProperty] = useState(null);
-  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'salesmanager', password: '' });
+  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'salesmanager', password: '', properties: [] });
   const [propertyForm, setPropertyForm] = useState({ address: '', type: '', rent: '', tenant: '', status: 'Vacant' });
   
   // Messaging states
@@ -609,8 +609,49 @@ const AgencyDirectorDashboard = () => {
   // User management
   const handleOpenAddUser = () => {
     setEditingUser(null);
-    setUserForm({ name: '', email: '', role: 'salesmanager', password: '' });
+    setUserForm({ name: '', email: '', role: 'salesmanager', password: '', properties: [] });
     setShowUserModal(true);
+  };
+
+  const handleAddPropertyToForm = () => {
+    setUserForm(prev => ({
+      ...prev,
+      properties: [...prev.properties, { propertyId: '' }]
+    }));
+  };
+
+  const handleRemovePropertyFromForm = (index) => {
+    setUserForm(prev => ({
+      ...prev,
+      properties: prev.properties.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handlePropertyFormChange = (index, propertyId) => {
+    setUserForm(prev => ({
+      ...prev,
+      properties: prev.properties.map((prop, i) => 
+        i === index ? { propertyId: propertyId } : prop
+      )
+    }));
+  };
+
+  // Get available properties (not already selected)
+  const getAvailableProperties = useMemo(() => {
+    const selectedPropertyIds = userForm.properties
+      .map(p => p.propertyId)
+      .filter(id => id && id !== '');
+    
+    return properties.filter(prop => {
+      const propId = String(prop.id || prop.ID || '');
+      return propId && !selectedPropertyIds.includes(propId);
+    });
+  }, [properties, userForm.properties]);
+
+  // Get selected property details
+  const getSelectedProperty = (propertyId) => {
+    if (!propertyId) return null;
+    return properties.find(prop => String(prop.id || prop.ID || '') === String(propertyId));
   };
 
   const handleOpenEditUser = (user) => {
@@ -619,7 +660,8 @@ const AgencyDirectorDashboard = () => {
       name: user.Name || user.name || '',
       email: user.Email || user.email || '',
       role: user.Role || user.role || 'salesmanager',
-      password: ''
+      password: '',
+      properties: [] // Properties are only for creating new landlords, not editing
     });
     setShowUserModal(true);
   };
@@ -633,6 +675,45 @@ const AgencyDirectorDashboard = () => {
         role: userForm.role
         // Company is automatically set from token, not required in request
       };
+
+      // If creating a landlord, properties are required
+      if (!editingUser && userForm.role === 'landlord') {
+        // Filter out empty property selections
+        const validProperties = userForm.properties.filter(prop => prop.propertyId && prop.propertyId !== '');
+        if (validProperties.length === 0) {
+          addNotification('At least one property must be selected when creating a landlord', 'error');
+          return;
+        }
+        // Get property details from selected property IDs
+        userData.properties = validProperties.map(prop => {
+          const selectedProp = properties.find(p => String(p.id || p.ID || '') === String(prop.propertyId));
+          if (!selectedProp) {
+            throw new Error(`Property with ID ${prop.propertyId} not found`);
+          }
+          // Format property for API (address is required, other fields optional)
+          const formattedProp = { 
+            address: (selectedProp.address || selectedProp.Address || '').trim()
+          };
+          if (!formattedProp.address) {
+            throw new Error('Selected property must have an address');
+          }
+          // Include optional fields if they exist
+          if (selectedProp.type || selectedProp.Type) formattedProp.type = (selectedProp.type || selectedProp.Type || '').trim();
+          if (selectedProp.bedrooms !== undefined || selectedProp.Bedrooms !== undefined) {
+            formattedProp.bedrooms = parseFloat(selectedProp.bedrooms || selectedProp.Bedrooms || 0);
+          }
+          if (selectedProp.bathrooms !== undefined || selectedProp.Bathrooms !== undefined) {
+            formattedProp.bathrooms = parseFloat(selectedProp.bathrooms || selectedProp.Bathrooms || 0);
+          }
+          if (selectedProp.rent !== undefined || selectedProp.Rent !== undefined) {
+            formattedProp.rent = parseFloat(selectedProp.rent || selectedProp.Rent || 0);
+          }
+          if (selectedProp.status || selectedProp.Status) {
+            formattedProp.status = (selectedProp.status || selectedProp.Status || 'Vacant').trim();
+          }
+          return formattedProp;
+        });
+      }
 
       if (editingUser) {
         if (userForm.password) userData.password = userForm.password;
@@ -651,7 +732,7 @@ const AgencyDirectorDashboard = () => {
       await loadData();
     } catch (error) {
       console.error('Error saving user:', error);
-      addNotification(editingUser ? 'Failed to update user' : 'Failed to create user', 'error');
+      addNotification(error.message || (editingUser ? 'Failed to update user' : 'Failed to create user'), 'error');
     }
   };
 
@@ -1040,7 +1121,19 @@ const AgencyDirectorDashboard = () => {
           </div>
           <div className="sa-form-group">
             <label>Role *</label>
-            <select value={userForm.role} onChange={(e) => setUserForm({...userForm, role: e.target.value})} required>
+            <select 
+              value={userForm.role} 
+              onChange={(e) => {
+                const newRole = e.target.value;
+                setUserForm({
+                  ...userForm, 
+                  role: newRole,
+                  // Reset properties if role changes from/to landlord
+                  properties: newRole === 'landlord' && !editingUser ? (userForm.properties.length > 0 ? userForm.properties : [{ propertyId: '' }]) : []
+                });
+              }} 
+              required
+            >
               <option value="commercial">Commercial</option>
               <option value="technician">Technician</option>
               <option value="accounting">Accounting</option>
@@ -1051,8 +1144,152 @@ const AgencyDirectorDashboard = () => {
             </select>
             <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
               Company will be automatically set from your account
+              {!editingUser && userForm.role === 'landlord' && (
+                <span style={{ color: '#dc2626', display: 'block', marginTop: '4px' }}>
+                  ⚠️ Properties are required for landlords
+                </span>
+              )}
             </small>
           </div>
+          
+          {/* Properties section - only show when creating a landlord */}
+          {!editingUser && userForm.role === 'landlord' && (
+            <div className="sa-form-group" style={{ marginTop: '24px', padding: '20px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <label style={{ margin: 0, fontWeight: 600, color: '#1f2937' }}>
+                  Properties * <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#6b7280' }}>(At least one required)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAddPropertyToForm}
+                  style={{
+                    padding: '6px 12px',
+                    background: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Plus size={14} />
+                  Add Property
+                </button>
+              </div>
+              
+              {userForm.properties.length === 0 && (
+                <div style={{ padding: '16px', textAlign: 'center', color: '#6b7280', fontSize: '0.9rem' }}>
+                  No properties selected. Click "Add Property" to select at least one property.
+                </div>
+              )}
+              
+              {userForm.properties.map((property, index) => {
+                const selectedProperty = getSelectedProperty(property.propertyId);
+                return (
+                  <div key={index} style={{ 
+                    marginBottom: '16px', 
+                    padding: '16px', 
+                    background: 'white', 
+                    borderRadius: '8px', 
+                    border: '1px solid #d1d5db',
+                    position: 'relative'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#1f2937' }}>Property {index + 1}</h4>
+                      {userForm.properties.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePropertyFromForm(index)}
+                          style={{
+                            padding: '4px 8px',
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ fontSize: '0.8rem', color: '#6b7280', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
+                        Select Property *
+                      </label>
+                      <select
+                        value={property.propertyId}
+                        onChange={(e) => handlePropertyFormChange(index, e.target.value)}
+                        required
+                        style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
+                      >
+                        <option value="">-- Select a property --</option>
+                        {getAvailableProperties.map(prop => {
+                          const propId = String(prop.id || prop.ID || '');
+                          const address = prop.address || prop.Address || 'Unknown Address';
+                          const type = prop.type || prop.Type || '';
+                          return (
+                            <option key={propId} value={propId}>
+                              {address} {type ? `(${type})` : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    
+                    {selectedProperty && (
+                      <div style={{ 
+                        padding: '12px', 
+                        background: '#f0f9ff', 
+                        borderRadius: '6px', 
+                        border: '1px solid #bae6fd',
+                        fontSize: '0.85rem'
+                      }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', color: '#1e40af' }}>
+                          <div>
+                            <strong>Address:</strong> {selectedProperty.address || selectedProperty.Address || 'N/A'}
+                          </div>
+                          <div>
+                            <strong>Type:</strong> {selectedProperty.type || selectedProperty.Type || 'N/A'}
+                          </div>
+                          {(selectedProperty.bedrooms !== undefined || selectedProperty.Bedrooms !== undefined) && (
+                            <div>
+                              <strong>Bedrooms:</strong> {selectedProperty.bedrooms || selectedProperty.Bedrooms || 'N/A'}
+                            </div>
+                          )}
+                          {(selectedProperty.bathrooms !== undefined || selectedProperty.Bathrooms !== undefined) && (
+                            <div>
+                              <strong>Bathrooms:</strong> {selectedProperty.bathrooms || selectedProperty.Bathrooms || 'N/A'}
+                            </div>
+                          )}
+                          {(selectedProperty.rent !== undefined || selectedProperty.Rent !== undefined) && (
+                            <div>
+                              <strong>Rent:</strong> {(selectedProperty.rent || selectedProperty.Rent || 0).toLocaleString()} XOF
+                            </div>
+                          )}
+                          <div>
+                            <strong>Status:</strong> {selectedProperty.status || selectedProperty.Status || 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              
+              {properties.length === 0 && (
+                <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fbbf24', fontSize: '0.85rem', color: '#92400e' }}>
+                  ⚠️ No properties available. Please create properties first before assigning them to a landlord.
+                </div>
+              )}
+            </div>
+          )}
+          
           <div className="sa-form-group">
             <label>Password {editingUser ? '(leave blank to keep current)' : '*'}</label>
             <input type="password" value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} required={!editingUser} />

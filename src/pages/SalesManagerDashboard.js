@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check } from 'lucide-react';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
 import ContractUpload from '../components/ContractUpload';
@@ -12,6 +12,104 @@ import SettingsPage from './SettingsPage';
 import '../components/RoleLayout.css';
 import './SalesManagerDashboard.css';
 
+// Password Display Component
+const PasswordDisplayItem = ({ email, password }) => {
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = async (text, type) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(type);
+      setTimeout(() => setCopied(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+            Email
+          </label>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            padding: '8px 12px',
+            background: '#f9fafb',
+            borderRadius: '6px',
+            border: '1px solid #e5e7eb'
+          }}>
+            <span style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.9rem' }}>{email}</span>
+            <button
+              onClick={() => copyToClipboard(email, 'email')}
+              style={{
+                padding: '4px 8px',
+                background: copied === 'email' ? '#10b981' : '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '0.75rem',
+                color: copied === 'email' ? 'white' : '#374151',
+                transition: 'all 0.2s'
+              }}
+              title="Copy email"
+            >
+              {copied === 'email' ? <Check size={14} /> : <Copy size={14} />}
+              {copied === 'email' ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+            Password
+          </label>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            padding: '8px 12px',
+            background: '#fef3c7',
+            borderRadius: '6px',
+            border: '1px solid #fbbf24'
+          }}>
+            <span style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.9rem', fontWeight: 600, color: '#92400e' }}>
+              {password}
+            </span>
+            <button
+              onClick={() => copyToClipboard(password, 'password')}
+              style={{
+                padding: '4px 8px',
+                background: copied === 'password' ? '#10b981' : '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '0.75rem',
+                color: copied === 'password' ? 'white' : '#374151',
+                transition: 'all 0.2s'
+              }}
+              title="Copy password"
+            >
+              {copied === 'password' ? <Check size={14} /> : <Copy size={14} />}
+              {copied === 'password' ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SalesManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showTenantCreationModal, setShowTenantCreationModal] = useState(false);
@@ -23,6 +121,8 @@ const SalesManagerDashboard = () => {
   const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Documents
   const [excelFile, setExcelFile] = useState(null);
   const [importMode, setImportMode] = useState('manual'); // 'manual' or 'excel'
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState(null); // { type: 'single' | 'bulk', user: {...} | users: [...] }
   
   // API Data States
   const [overviewData, setOverviewData] = useState(null);
@@ -529,10 +629,33 @@ const SalesManagerDashboard = () => {
       // Reload clients data
       await loadData();
       
-      addNotification(
-        result.message || `Successfully imported ${result.count || result.imported || 'tenants'} from file!`,
-        'success'
-      );
+      // Check if passwords are returned in the response
+      if (result.createdUsers && Array.isArray(result.createdUsers) && result.createdUsers.length > 0) {
+        // Filter users that have passwords (newly created)
+        const usersWithPasswords = result.createdUsers.filter(user => user.password && !user.note);
+        if (usersWithPasswords.length > 0) {
+          setPasswordData({
+            type: 'bulk',
+            users: usersWithPasswords,
+            success: result.success || usersWithPasswords.length,
+            failed: result.failed || 0,
+            errors: result.errors || []
+          });
+          setShowPasswordModal(true);
+        }
+      }
+      
+      // Show success notification
+      const successCount = result.success || result.createdUsers?.length || 0;
+      const failedCount = result.failed || 0;
+      let notificationMessage = `Successfully imported ${successCount} tenant(s) from file!`;
+      if (failedCount > 0) {
+        notificationMessage += ` ${failedCount} failed.`;
+      }
+      if (result.errors && result.errors.length > 0) {
+        notificationMessage += ` Check password modal for details.`;
+      }
+      addNotification(notificationMessage, 'success');
       
       // Close modal and reset
       setShowTenantCreationModal(false);
@@ -581,7 +704,18 @@ const SalesManagerDashboard = () => {
           console.log('Creating tenant with data:', tenantData);
           const newClient = await salesManagerService.createClient(tenantData);
           console.log('Created tenant response:', newClient);
-          setNewTenantData({ ...tenantData, id: newClient.id, documents: uploadedDocuments });
+          
+          // Check if password is returned in the response
+          if (newClient.user && newClient.user.password) {
+            setPasswordData({
+              type: 'single',
+              user: newClient.user,
+              client: newClient.client || newClient
+            });
+            setShowPasswordModal(true);
+          }
+          
+          setNewTenantData({ ...tenantData, id: newClient.client?.id || newClient.id, documents: uploadedDocuments });
           setCurrentStep(2); // Move to document upload step
           addNotification(`Tenant "${tenantData.name}" created successfully!`, 'success');
         } catch (error) {
@@ -1837,6 +1971,143 @@ const SalesManagerDashboard = () => {
           </div>
         )}
       </RoleLayout>
+
+      {/* Password Display Modal */}
+      {showPasswordModal && passwordData && (
+        <div className="modal-overlay" onClick={() => {
+          setShowPasswordModal(false);
+          setPasswordData(null);
+        }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                {passwordData.type === 'bulk' 
+                  ? `Tenant Passwords (${passwordData.users.length} created)`
+                  : 'Tenant Password Created'}
+              </h3>
+              <button 
+                className="modal-close" 
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordData(null);
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ 
+                padding: '16px', 
+                background: '#fef3c7', 
+                borderRadius: '8px', 
+                marginBottom: '20px',
+                border: '1px solid #fbbf24'
+              }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#92400e', fontWeight: 500 }}>
+                  ⚠️ Important: Passwords are only shown once. Please copy and securely share them with tenants.
+                </p>
+              </div>
+
+              {passwordData.type === 'single' ? (
+                <div>
+                  <div style={{ marginBottom: '20px' }}>
+                    <h4 style={{ marginBottom: '12px', color: '#1f2937' }}>Tenant Information</h4>
+                    <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+                      <p style={{ margin: '4px 0' }}><strong>Name:</strong> {passwordData.user.name || passwordData.client?.name || 'N/A'}</p>
+                      <p style={{ margin: '4px 0' }}><strong>Email:</strong> {passwordData.user.email || passwordData.client?.email || 'N/A'}</p>
+                      {passwordData.client?.property && (
+                        <p style={{ margin: '4px 0' }}><strong>Property:</strong> {passwordData.client.property}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 style={{ marginBottom: '12px', color: '#1f2937' }}>Login Credentials</h4>
+                    <PasswordDisplayItem 
+                      email={passwordData.user.email} 
+                      password={passwordData.user.password}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {passwordData.failed > 0 && (
+                    <div style={{ 
+                      padding: '12px', 
+                      background: '#fee2e2', 
+                      borderRadius: '8px', 
+                      marginBottom: '16px',
+                      border: '1px solid #fca5a5'
+                    }}>
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
+                        <strong>Import Summary:</strong> {passwordData.success} succeeded, {passwordData.failed} failed
+                      </p>
+                    </div>
+                  )}
+                  
+                  {passwordData.errors && passwordData.errors.length > 0 && (
+                    <div style={{ 
+                      padding: '12px', 
+                      background: '#fee2e2', 
+                      borderRadius: '8px', 
+                      marginBottom: '16px',
+                      border: '1px solid #fca5a5'
+                    }}>
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b', fontWeight: 500, marginBottom: '8px' }}>
+                        Errors:
+                      </p>
+                      <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85rem', color: '#991b1b' }}>
+                        {passwordData.errors.map((error, idx) => (
+                          <li key={idx}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <h4 style={{ marginBottom: '12px', color: '#1f2937' }}>
+                      Passwords for Newly Created Tenants ({passwordData.users.length})
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {passwordData.users.map((user, index) => (
+                        <div key={user.id || index} style={{ 
+                          border: '1px solid #e5e7eb', 
+                          borderRadius: '8px', 
+                          padding: '16px',
+                          background: '#ffffff'
+                        }}>
+                          <div style={{ marginBottom: '12px' }}>
+                            <p style={{ margin: '4px 0', fontWeight: 500, color: '#1f2937' }}>
+                              {user.name || 'N/A'}
+                            </p>
+                            <p style={{ margin: '4px 0', fontSize: '0.85rem', color: '#6b7280' }}>
+                              {user.email || 'N/A'}
+                            </p>
+                          </div>
+                          <PasswordDisplayItem 
+                            email={user.email} 
+                            password={user.password}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="action-button primary" 
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordData(null);
+                }}
+              >
+                I've Copied the Passwords
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="notifications-container">
         {notifications.map(notification => (
