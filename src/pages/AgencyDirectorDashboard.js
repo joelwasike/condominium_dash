@@ -636,10 +636,10 @@ const AgencyDirectorDashboard = () => {
     }));
   };
 
-  // Get available properties (not already selected)
-  const getAvailableProperties = useMemo(() => {
+  // Get available properties for a specific index (excludes other selected properties but includes the current one)
+  const getAvailablePropertiesForIndex = useCallback((index) => {
     const selectedPropertyIds = userForm.properties
-      .map(p => p.propertyId)
+      .map((p, i) => i !== index ? p.propertyId : null) // Exclude current index
       .filter(id => id && id !== '');
     
     return properties.filter(prop => {
@@ -1223,13 +1223,13 @@ const AgencyDirectorDashboard = () => {
                         Select Property *
                       </label>
                       <select
-                        value={property.propertyId}
+                        value={property.propertyId || ''}
                         onChange={(e) => handlePropertyFormChange(index, e.target.value)}
                         required
                         style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
                       >
                         <option value="">-- Select a property --</option>
-                        {getAvailableProperties.map(prop => {
+                        {getAvailablePropertiesForIndex(index).map(prop => {
                           const propId = String(prop.id || prop.ID || '');
                           const address = prop.address || prop.Address || 'Unknown Address';
                           const type = prop.type || prop.Type || '';
