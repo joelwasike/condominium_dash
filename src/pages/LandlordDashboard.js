@@ -696,44 +696,58 @@ const LandlordDashboard = () => {
     []
   );
 
-  const renderOverview = () => (
-    <div className="sa-overview-page">
-      <div className="sa-overview-metrics" style={{ width: '100%' }}>
-        <div className="sa-metric-card sa-metric-primary">
-          <p className="sa-metric-label">Total Properties</p>
-          <p className="sa-metric-value">{overviewData?.totalProperties || 0}</p>
+  const renderOverview = () => {
+    // Calculate active tenants from tenants array (fallback if not in overview)
+    const activeTenantsCount = overviewData?.activeTenants || tenants.filter(t => 
+      (t.status || t.Status || '').toLowerCase() === 'active'
+    ).length;
+    
+    // Calculate occupancy rate if not provided
+    const totalProps = overviewData?.totalPropertiesUnderManagement || properties.length;
+    const occupiedProps = overviewData?.occupiedProperties || properties.filter(p => 
+      (p.Status || p.status || '').toLowerCase() === 'occupied'
+    ).length;
+    const occupancyRate = totalProps > 0 ? ((occupiedProps / totalProps) * 100).toFixed(1) : 0;
+    
+    return (
+      <div className="sa-overview-page">
+        <div className="sa-overview-metrics" style={{ width: '100%' }}>
+          <div className="sa-metric-card sa-metric-primary">
+            <p className="sa-metric-label">Total Properties</p>
+            <p className="sa-metric-value">{overviewData?.totalPropertiesUnderManagement || properties.length || 0}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Rent Collected</p>
+            <p className="sa-metric-value">{(overviewData?.totalRentCollected || 0).toLocaleString()} XOF</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Net Payout Received</p>
+            <p className="sa-metric-value">{(overviewData?.totalNetPayoutReceived || 0).toLocaleString()} XOF</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Payment Rate</p>
+            <p className="sa-metric-number">{overviewData?.paymentRate || 0}%</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Active Tenants</p>
+            <p className="sa-metric-number">{activeTenantsCount}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Occupied Properties</p>
+            <p className="sa-metric-number">{overviewData?.occupiedProperties || occupiedProps}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Vacant Properties</p>
+            <p className="sa-metric-number">{overviewData?.vacantProperties || (totalProps - occupiedProps)}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Occupancy Rate</p>
+            <p className="sa-metric-number">{occupancyRate}%</p>
+          </div>
         </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Rent Collected</p>
-          <p className="sa-metric-value">{overviewData?.totalRent?.toLocaleString() || 0} XOF</p>
       </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Cash Flow</p>
-          <p className="sa-metric-value">{overviewData?.netCashFlow?.toLocaleString() || 0} XOF</p>
-          </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Payment Rate</p>
-          <p className="sa-metric-number">{overviewData?.paymentRate || 0}%</p>
-          </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Active Tenants</p>
-          <p className="sa-metric-number">{overviewData?.activeTenants || 0}</p>
-          </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Pending Claims</p>
-          <p className="sa-metric-number">{overviewData?.pendingClaims || 0}</p>
-          </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Works in Progress</p>
-          <p className="sa-metric-number">{overviewData?.worksInProgress || 0}</p>
-          </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Occupancy Rate</p>
-          <p className="sa-metric-number">{overviewData?.occupancyRate || 0}%</p>
-          </div>
-          </div>
-          </div>
-        );
+    );
+  };
       
   const renderProperties = () => (
     <div className="sa-clients-page">
