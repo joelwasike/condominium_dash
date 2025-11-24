@@ -447,40 +447,59 @@ const AccountingDashboard = () => {
     addNotification(`Payment from ${payment.Tenant} rejected.`, 'warning');
   };
 
-  const renderOverview = () => (
-    <div className="sa-overview-page">
-      <div className="sa-overview-metrics">
-        <div className="sa-metric-card sa-metric-primary">
-          <p className="sa-metric-label">Total Available Balance</p>
-          <p className="sa-metric-period">Current balance</p>
-          <p className="sa-metric-value">
-            {overviewData ? `${overviewData.netRevenue?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
-          </p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Collected This Month</p>
-          <p className="sa-metric-period">November 2024</p>
-          <p className="sa-metric-value">
-            {overviewData ? `${overviewData.totalTenantPayments?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
-          </p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Transferred to Landlords</p>
-          <p className="sa-metric-period">This month</p>
-          <p className="sa-metric-value">
-            {overviewData ? `${overviewData.totalLandlordPayments?.toFixed(2) || '0.00'} XOF` : 'Loading...'}
-          </p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Company Commission Earned</p>
-          <p className="sa-metric-period">This month</p>
-          <p className="sa-metric-value">
-            {overviewData ? `${overviewData.pendingPayments || 0} XOF` : 'Loading...'}
-          </p>
+  const renderOverview = () => {
+    // Get current month name for display
+    const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    
+    return (
+      <div className="sa-overview-page">
+        <div className="sa-overview-metrics">
+          <div className="sa-metric-card sa-metric-primary">
+            <p className="sa-metric-label">Total Available Balance</p>
+            <p className="sa-metric-period">Current balance</p>
+            <p className="sa-metric-value">
+              {overviewData ? `${(overviewData.totalAvailableBalance || overviewData.globalBalance || 0).toFixed(2)} XOF` : 'Loading...'}
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Collected This Month</p>
+            <p className="sa-metric-period">{currentMonth}</p>
+            <p className="sa-metric-value">
+              {overviewData ? `${(overviewData.totalCollectedThisMonth || 0).toFixed(2)} XOF` : 'Loading...'}
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Transferred to Landlords</p>
+            <p className="sa-metric-period">This month</p>
+            <p className="sa-metric-value">
+              {overviewData ? `${(overviewData.totalTransferredToLandlords || 0).toFixed(2)} XOF` : 'Loading...'}
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Company Commission Earned</p>
+            <p className="sa-metric-period">This month</p>
+            <p className="sa-metric-value">
+              {overviewData ? `${(overviewData.totalCompanyCommissionEarned || 0).toFixed(2)} XOF` : 'Loading...'}
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Pending Rent Amount</p>
+            <p className="sa-metric-period">Outstanding</p>
+            <p className="sa-metric-value">
+              {overviewData ? `${(overviewData.pendingRentAmount || 0).toFixed(2)} XOF` : 'Loading...'}
+            </p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Expenses This Month</p>
+            <p className="sa-metric-period">{currentMonth}</p>
+            <p className="sa-metric-value">
+              {overviewData ? `${(overviewData.totalExpensesThisMonth || 0).toFixed(2)} XOF` : 'Loading...'}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderCollections = () => (
     <div className="sa-section-card">
