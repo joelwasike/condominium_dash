@@ -38,6 +38,7 @@ import './SuperAdminDashboard.css';
 
 const AgencyDirectorDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [managementSubTab, setManagementSubTab] = useState('users'); // Sub-tab for management page
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
@@ -509,16 +510,16 @@ const AgencyDirectorDashboard = () => {
 
   // Load data when specific tabs are active
   useEffect(() => {
-    if (activeTab === 'contracts') {
+    if (activeTab === 'contracts' || (activeTab === 'management' && managementSubTab === 'contracts')) {
       loadContractsData();
     }
-  }, [activeTab, loadContractsData]);
+  }, [activeTab, managementSubTab, loadContractsData]);
 
   useEffect(() => {
-    if (activeTab === 'tenants') {
+    if (activeTab === 'tenants' || (activeTab === 'management' && managementSubTab === 'tenants')) {
       loadTenantsData();
     }
-  }, [activeTab, loadTenantsData]);
+  }, [activeTab, managementSubTab, loadTenantsData]);
 
   useEffect(() => {
     if (activeTab === 'analytics') {
@@ -536,10 +537,7 @@ const AgencyDirectorDashboard = () => {
   const tabs = useMemo(
     () => [
       { id: 'overview', label: 'Overview', icon: BarChart3 },
-      { id: 'users', label: 'Users', icon: Users },
-      { id: 'properties', label: 'Properties', icon: Home },
-      { id: 'tenants', label: 'Tenants', icon: UserCheck },
-      { id: 'contracts', label: 'Contracts', icon: FileText },
+      { id: 'management', label: 'Management', icon: Users },
       { id: 'accounting', label: 'Accounting', icon: DollarSign },
       { id: 'analytics', label: 'Analytics', icon: TrendingUp },
       { id: 'works', label: 'Works', icon: Wrench },
@@ -2469,10 +2467,474 @@ const AgencyDirectorDashboard = () => {
     );
   };
 
+  // Combined Management page with tabs
+  const renderManagement = () => {
+    const managementTabs = [
+      { id: 'users', label: 'USERS' },
+      { id: 'properties', label: 'PROPERTIES' },
+      { id: 'contracts', label: 'LEASE AGREEMENTS TO SIGN' },
+      { id: 'tenants', label: 'LIST OF OWNERS' }
+    ];
+
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header">
+          <div>
+            <h2>Overview</h2>
+          </div>
+        </div>
+
+        {/* Sub-tabs navigation */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '0', 
+          marginTop: '20px',
+          borderBottom: '2px solid #e5e7eb',
+          paddingBottom: '0'
+        }}>
+          {managementTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setManagementSubTab(tab.id)}
+              style={{
+                padding: '12px 24px',
+                border: 'none',
+                background: managementSubTab === tab.id ? '#f3f4f6' : 'transparent',
+                color: managementSubTab === tab.id ? '#1f2937' : '#6b7280',
+                fontWeight: managementSubTab === tab.id ? '600' : '400',
+                fontSize: '14px',
+                cursor: 'pointer',
+                borderBottom: managementSubTab === tab.id ? '2px solid #8b5cf6' : '2px solid transparent',
+                marginBottom: '-2px',
+                transition: 'all 0.2s',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content based on selected sub-tab */}
+        <div style={{ marginTop: '20px' }}>
+          {managementSubTab === 'users' && renderUsersContent()}
+          {managementSubTab === 'properties' && renderPropertiesContent()}
+          {managementSubTab === 'contracts' && renderContractsContent()}
+          {managementSubTab === 'tenants' && renderOwnersContent()}
+        </div>
+      </div>
+    );
+  };
+
+  // Extract content rendering functions (without headers since header is in renderManagement)
+  const renderUsersContent = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <p style={{ color: '#6b7280', margin: 0 }}>{filteredUsers.length} results found</p>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button className="sa-primary-cta" onClick={handleOpenAddUser}>
+            <Plus size={16} />
+            Add User
+          </button>
+          <div className="sa-transactions-filters">
+            <select 
+              value={userCompanyFilter} 
+              onChange={(e) => setUserCompanyFilter(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', marginRight: '8px' }}
+            >
+              <option value="">All Companies</option>
+              {uniqueCompanies.map(company => (
+                <option key={company} value={company}>{company}</option>
+              ))}
+            </select>
+            <select 
+              value={userRoleFilter} 
+              onChange={(e) => setUserRoleFilter(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', marginRight: '8px' }}
+            >
+              <option value="">All Roles</option>
+              {uniqueRoles.map(role => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+            <div className="sa-search-input">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search by name or email"
+                value={userSearchText}
+                onChange={(e) => setUserSearchText(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Company</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((user, index) => (
+              <tr key={`user-${user.id || user.ID || index}`}>
+                <td>{index + 1}</td>
+                <td className="sa-cell-main">
+                  <span className="sa-cell-title">{user.name || user.Name}</span>
+                </td>
+                <td>{user.email || user.Email}</td>
+                <td>
+                  <span className="sa-role-badge">
+                    {user.role || user.Role || 'N/A'}
+                  </span>
+                </td>
+                <td>{user.company || user.Company || 'N/A'}</td>
+                <td>
+                  <span className={`sa-status-pill ${(user.status || user.Status || 'active').toLowerCase()}`}>
+                    {user.status || user.Status || 'Active'}
+                  </span>
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="sa-action-btn sa-action-edit"
+                      onClick={() => handleOpenEditUser(user)}
+                      title="Edit"
+                    >
+                      Edit
+                    </button>
+                    {user.role !== 'superadmin' && (
+                      <button
+                        className="sa-action-btn sa-action-delete"
+                        onClick={() => handleDeleteUser(user.id || user.ID)}
+                        title="Delete"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filteredUsers.length === 0 && (
+              <tr>
+                <td colSpan={7} className="sa-table-empty">No users found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderPropertiesContent = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <p style={{ color: '#6b7280', margin: 0 }}>{filteredProperties.length} results found</p>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button className="sa-primary-cta" onClick={handleOpenAddProperty}>
+            <Plus size={16} />
+            Add Property
+          </button>
+          <div className="sa-transactions-filters">
+            <select 
+              value={propertyCompanyFilter} 
+              onChange={(e) => setPropertyCompanyFilter(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', marginRight: '8px' }}
+            >
+              <option value="">All Companies</option>
+              {uniqueCompanies.map(company => (
+                <option key={company} value={company}>{company}</option>
+              ))}
+            </select>
+            <select 
+              value={propertyStatusFilter} 
+              onChange={(e) => setPropertyStatusFilter(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+            >
+              <option value="">All Status</option>
+              <option value="Occupied">Occupied</option>
+              <option value="Vacant">Vacant</option>
+              <option value="Maintenance">Maintenance</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Address</th>
+              <th>Type</th>
+              <th>Rent</th>
+              <th>Tenant</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredProperties.map((property, index) => (
+              <tr key={`property-${property.id || property.ID || index}`}>
+                <td>{index + 1}</td>
+                <td className="sa-cell-main">
+                  <span className="sa-cell-title">{property.address || property.Address}</span>
+                </td>
+                <td>{property.type || property.Type || 'N/A'}</td>
+                <td>{(property.rent || property.Rent || 0).toLocaleString()} FCFA</td>
+                <td>{property.tenant || property.Tenant || 'Vacant'}</td>
+                <td>
+                  <span className={`sa-status-pill ${(property.status || property.Status || 'vacant').toLowerCase()}`}>
+                    {property.status || property.Status || 'Vacant'}
+                  </span>
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="sa-action-btn sa-action-edit"
+                      onClick={() => handleOpenEditProperty(property)}
+                      title="Edit"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="sa-action-btn sa-action-delete"
+                      onClick={() => handleDeleteProperty(property.id || property.ID)}
+                      title="Delete"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filteredProperties.length === 0 && (
+              <tr>
+                <td colSpan={7} className="sa-table-empty">No properties found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderContractsContent = () => (
+    <div>
+      <div style={{ marginBottom: '20px' }}>
+        <p style={{ color: '#6b7280', margin: 0 }}>Lease agreements pending signature</p>
+      </div>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Property</th>
+              <th>Tenant</th>
+              <th>Rent</th>
+              <th>Status</th>
+              <th>Contract</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leasesAwaitingSignature.map((lease, index) => (
+              <tr key={`lease-${lease.id || lease.ID || index}`}>
+                <td>{index + 1}</td>
+                <td className="sa-cell-main">
+                  <span className="sa-cell-title">{lease.property || lease.Property || 'N/A'}</span>
+                  <span className="sa-cell-subtitle" style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                    {lease.address || lease.Address || ''}
+                  </span>
+                </td>
+                <td className="sa-cell-main">
+                  <span className="sa-cell-title">{lease.tenant || lease.Tenant || 'N/A'}</span>
+                  <span className="sa-cell-subtitle" style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                    {lease.email || lease.Email || ''}
+                  </span>
+                </td>
+                <td>
+                  <span style={{ fontWeight: '600' }}>{(lease.rent || lease.Rent || 0).toLocaleString()}</span>
+                  <span style={{ display: 'block', fontSize: '12px', color: '#6b7280' }}>F CFA</span>
+                </td>
+                <td>
+                  <span style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '6px',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: '#fef3c7',
+                    color: '#92400e',
+                    fontSize: '12px'
+                  }}>
+                    <span style={{ 
+                      width: '8px', 
+                      height: '8px', 
+                      borderRadius: '50%', 
+                      backgroundColor: '#f59e0b' 
+                    }}></span>
+                    Pending signature
+                  </span>
+                </td>
+                <td>
+                  <button 
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Print
+                  </button>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#6b7280' }}>Document pdf</p>
+                </td>
+              </tr>
+            ))}
+            {leasesAwaitingSignature.length === 0 && (
+              <tr>
+                <td colSpan={6} className="sa-table-empty">No leases awaiting signature</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderOwnersContent = () => {
+    // Filter owners by search text
+    const filteredOwners = (() => {
+      if (!owners || !Array.isArray(owners)) return [];
+      if (!userSearchText) return owners;
+      const searchLower = userSearchText.toLowerCase();
+      return owners.filter(owner => 
+        (owner.name || owner.Name || '').toLowerCase().includes(searchLower) ||
+        (owner.email || owner.Email || '').toLowerCase().includes(searchLower)
+      );
+    })();
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+          <div className="sa-search-input" style={{ width: '300px' }}>
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="Search by owner name"
+              value={userSearchText}
+              onChange={(e) => setUserSearchText(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '12px' }}>
+          <h3 style={{ margin: 0, color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>Property</h3>
+        </div>
+
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>Owner</th>
+                <th>Number of Properties</th>
+                <th>Number of Tenants</th>
+                <th>Revenue/Month</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOwners.map((owner, index) => {
+                // Use owner data if available, otherwise calculate from properties/tenants
+                const propertiesCount = owner.propertiesCount || owner.PropertiesCount || 
+                  properties.filter(p => 
+                    (p.landlord || p.Landlord || '').toLowerCase().includes((owner.name || owner.Name || '').toLowerCase())
+                  ).length;
+                
+                const ownerProperties = properties.filter(p => 
+                  (p.landlord || p.Landlord || '').toLowerCase().includes((owner.name || owner.Name || '').toLowerCase())
+                );
+                
+                const tenantsCount = owner.tenantsCount || owner.TenantsCount ||
+                  tenants.filter(t => 
+                    ownerProperties.some(p => (p.address || p.Address) === (t.property || t.Property))
+                  ).length;
+                
+                const monthlyRevenue = owner.monthlyRevenue || owner.MonthlyRevenue ||
+                  ownerProperties.reduce((sum, p) => sum + (p.rent || p.Rent || 0), 0);
+                
+                const propertyType = ownerProperties.length > 0 
+                  ? (ownerProperties[0].type || ownerProperties[0].Type || 'Properties')
+                  : (owner.propertyType || owner.PropertyType || 'Properties');
+                
+                return (
+                  <tr key={`owner-${owner.id || owner.ID || index}`}>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{owner.name || owner.Name || `Owner ${index + 1}`}</span>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: '600' }}>{propertiesCount}</span>
+                      <span style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                        {propertyType}
+                      </span>
+                    </td>
+                    <td>{tenantsCount}</td>
+                    <td>
+                      <span style={{ fontWeight: '600' }}>{monthlyRevenue.toLocaleString()}</span>
+                      <span style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>F</span>
+                    </td>
+                    <td>
+                      <button 
+                        style={{
+                          padding: '6px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredOwners.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="sa-table-empty">No owners found</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
         return renderOverview();
+      case 'management':
+        return renderManagement();
       case 'users':
         return renderUsers();
       case 'properties':
