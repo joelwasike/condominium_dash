@@ -300,24 +300,6 @@ const AdministrativeDashboard = () => {
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-slide carousel for advertisements on overview page
-  useEffect(() => {
-    if (activeTab === 'overview' && advertisements.length > 1) {
-      carouselIntervalRef.current = setInterval(() => {
-        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
-      }, 5000); // Change slide every 5 seconds
-
-      return () => {
-        if (carouselIntervalRef.current) {
-          clearInterval(carouselIntervalRef.current);
-        }
-      };
-    } else {
-      if (carouselIntervalRef.current) {
-        clearInterval(carouselIntervalRef.current);
-      }
-    }
-  }, [activeTab, advertisements.length]);
 
   // Load users when chat tab is active
   useEffect(() => {
@@ -583,14 +565,106 @@ const AdministrativeDashboard = () => {
               <p className="sa-metric-label">Files Rejected</p>
               <p className="sa-metric-number">{stats.filesRejected || 0}</p>
             </div>
-            <div className="sa-banner-card">
-              <div className="sa-banner-text">
-                <h3>Document Management</h3>
-                <p>
-                  Track document verification, automation, and administrative tasks all in one place.
-                </p>
+            {/* Advertisements Display - Replacing Banner Card */}
+            {advertisements.length > 0 ? (
+              <div style={{
+                gridColumn: 'span 2',
+                minHeight: '400px',
+                padding: '32px',
+                backgroundColor: '#fff',
+                borderRadius: '12px',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '24px',
+                overflowX: 'auto'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  gap: '24px',
+                  flexWrap: 'nowrap',
+                  overflowX: 'auto',
+                  paddingBottom: '16px',
+                  width: '100%'
+                }}>
+                  {advertisements.map((ad, index) => {
+                    const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+                    const fullImageUrl = imageUrl 
+                      ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+                      : null;
+
+                    return (
+                      <div 
+                        key={`ad-${ad.ID || ad.id || index}`}
+                        style={{
+                          minWidth: '350px',
+                          maxWidth: '450px',
+                          padding: '20px',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          textAlign: 'center',
+                          flexShrink: 0
+                        }}
+                      >
+                        {fullImageUrl && (
+                          <img 
+                            src={fullImageUrl} 
+                            alt={ad.Title || ad.title || 'Advertisement'} 
+                            style={{
+                              width: '100%',
+                              height: 'auto',
+                              maxHeight: '250px',
+                              objectFit: 'contain',
+                              borderRadius: '8px',
+                              marginBottom: '16px'
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        )}
+                        <h3 style={{ 
+                          margin: '0 0 8px 0', 
+                          fontSize: '1.1rem', 
+                          color: '#1f2937',
+                          fontWeight: '600'
+                        }}>
+                          {ad.Title || ad.title || 'Untitled Advertisement'}
+                        </h3>
+                        <p style={{ 
+                          margin: '0 0 12px 0', 
+                          fontSize: '0.9rem', 
+                          color: '#6b7280',
+                          lineHeight: '1.5'
+                        }}>
+                          {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
+                        </p>
+                        {ad.CreatedAt && (
+                          <span style={{ 
+                            fontSize: '0.8rem', 
+                            color: '#9ca3af'
+                          }}>
+                            Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="sa-banner-card">
+                <div className="sa-banner-text">
+                  <h3>Document Management</h3>
+                  <p>
+                    Track document verification, automation, and administrative tasks all in one place.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -617,130 +691,6 @@ const AdministrativeDashboard = () => {
           </div>
         </div>
 
-        {/* Advertisements Carousel */}
-        {advertisements.length > 0 && (
-          <div className="sa-section-card" style={{ marginTop: '24px' }}>
-            <div className="sa-section-header">
-              <h3>Advertisements</h3>
-              <p>Active promotions and announcements</p>
-            </div>
-            <div style={{ 
-              position: 'relative', 
-              overflow: 'hidden', 
-              borderRadius: '12px',
-              marginTop: '20px',
-              backgroundColor: '#fff',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-            }}>
-              <div style={{
-                display: 'flex',
-                transform: `translateX(-${currentAdIndex * 100}%)`,
-                transition: 'transform 0.5s ease-in-out',
-                width: `${advertisements.length * 100}%`
-              }}>
-                {advertisements.map((ad, index) => {
-                  const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-                  const fullImageUrl = imageUrl 
-                    ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                    : null;
-
-                  return (
-                    <div 
-                      key={`ad-carousel-${ad.ID || ad.id || index}`}
-                      style={{
-                        width: `${100 / advertisements.length}%`,
-                        flexShrink: 0,
-                        padding: '24px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        textAlign: 'center'
-                      }}
-                    >
-                      {fullImageUrl && (
-                        <img 
-                          src={fullImageUrl} 
-                          alt={ad.Title || ad.title || 'Advertisement'} 
-                          style={{
-                            width: '100%',
-                            maxWidth: '600px',
-                            height: 'auto',
-                            maxHeight: '300px',
-                            objectFit: 'contain',
-                            borderRadius: '8px',
-                            marginBottom: '16px'
-                          }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
-                        />
-                      )}
-                      <h3 style={{ 
-                        margin: '0 0 8px 0', 
-                        fontSize: '1.25rem', 
-                        color: '#1f2937',
-                        fontWeight: '600'
-                      }}>
-                        {ad.Title || ad.title || 'Untitled Advertisement'}
-                      </h3>
-                      <p style={{ 
-                        margin: '0 0 12px 0', 
-                        fontSize: '0.95rem', 
-                        color: '#6b7280',
-                        lineHeight: '1.5'
-                      }}>
-                        {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
-                      </p>
-                      {ad.CreatedAt && (
-                        <span style={{ 
-                          fontSize: '0.85rem', 
-                          color: '#9ca3af'
-                        }}>
-                          Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* Carousel Indicators */}
-              {advertisements.length > 1 && (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '16px',
-                  backgroundColor: '#f9fafb'
-                }}>
-                  {advertisements.map((_, index) => (
-                    <button
-                      key={`indicator-${index}`}
-                      onClick={() => {
-                        setCurrentAdIndex(index);
-                        if (carouselIntervalRef.current) {
-                          clearInterval(carouselIntervalRef.current);
-                        }
-                        carouselIntervalRef.current = setInterval(() => {
-                          setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
-                        }, 5000);
-                      }}
-                      style={{
-                        width: index === currentAdIndex ? '24px' : '8px',
-                        height: '8px',
-                        borderRadius: '4px',
-                        border: 'none',
-                        backgroundColor: index === currentAdIndex ? '#3b82f6' : '#d1d5db',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease'
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     );
   };
