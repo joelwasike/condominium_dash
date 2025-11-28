@@ -1,4 +1,16 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check } from 'lucide-react';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
@@ -134,6 +146,26 @@ const SalesManagerDashboard = () => {
   const [advertisements, setAdvertisements] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
+
+  // Auto-slide carousel for advertisements on overview page
+  useEffect(() => {
+    if (activeTab === 'overview' && advertisements.length > 1) {
+      carouselIntervalRef.current = setInterval(() => {
+        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+      }, 5000); // Change slide every 5 seconds
+
+      return () => {
+        if (carouselIntervalRef.current) {
+          clearInterval(carouselIntervalRef.current);
+        }
+      };
+    } else {
+      if (carouselIntervalRef.current) {
+        clearInterval(carouselIntervalRef.current);
+      }
+      setCurrentAdIndex(0);
+    }
+  }, [activeTab, advertisements.length]);
   const [loading, setLoading] = useState(false);
   
   // Filter states
@@ -973,13 +1005,13 @@ const SalesManagerDashboard = () => {
               <span className="sa-card-subtitle">Welcome, {currentUser?.name || currentUser?.Name || 'Sales Manager'}!</span>
             </div>
             <div className="sa-mini-legend">
-              <span className="sa-legend-item sa-legend-expected">Occupancy Rate</span>
+              <span className="sa-legend-item sa-legend-expected">Occupancy Rate (%)</span>
               <span className="sa-legend-item sa-legend-current">Active Tenants</span>
             </div>
             <div className="sa-chart-placeholder">
               <div className="sa-chart-line sa-chart-line-expected" />
               <div className="sa-chart-line sa-chart-line-current" />
-            </div>
+          </div>
             <div className="sa-chart-footer">
               <span>Jan</span>
               <span>Feb</span>
@@ -994,7 +1026,7 @@ const SalesManagerDashboard = () => {
               <span>Nov</span>
               <span>Dec</span>
             </div>
-          </div>
+            </div>
 
           <div className="sa-overview-metrics">
             <div className="sa-metric-card sa-metric-primary">
@@ -1003,7 +1035,7 @@ const SalesManagerDashboard = () => {
               <p className="sa-metric-value">
                 {unpaidAmount.toLocaleString()} XOF
               </p>
-            </div>
+          </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Active Tenants</p>
               <p className="sa-metric-number">
@@ -1023,7 +1055,7 @@ const SalesManagerDashboard = () => {
                 {unpaidCount}
                 <span className="sa-metric-trend negative">-1.5%</span>
               </p>
-            </div>
+          </div>
             {/* Advertisements Display - Replacing Banner Card */}
             {advertisements.length > 0 ? (
               <div style={{
@@ -1109,10 +1141,10 @@ const SalesManagerDashboard = () => {
                             Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
                           </span>
                         )}
-                      </div>
+            </div>
                     );
                   })}
-                </div>
+            </div>
               </div>
             ) : (
               <div className="sa-banner-card">
@@ -1131,7 +1163,7 @@ const SalesManagerDashboard = () => {
 
         <div className="sa-section-card">
           <div className="sa-section-header">
-            <h3>Priority Alerts</h3>
+        <h3>Priority Alerts</h3>
             <p>Track urgent alerts and overdue payments.</p>
           </div>
           <div className="sa-table-wrapper">
@@ -1147,8 +1179,8 @@ const SalesManagerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {alerts.length > 0 ? (
-                  alerts.filter(alert => alert.Urgency === 'urgent' || alert.Urgency === 'high').map(alert => (
+          {alerts.length > 0 ? (
+            alerts.filter(alert => alert.Urgency === 'urgent' || alert.Urgency === 'high').map(alert => (
                     <tr key={alert.ID}>
                       <td>
                         <input type="checkbox" />
@@ -1157,7 +1189,7 @@ const SalesManagerDashboard = () => {
                         <div className="sa-cell-main">
                           <span className="sa-cell-title">{alert.Title || 'N/A'}</span>
                           <span className="sa-cell-sub">{alert.Message || 'N/A'}</span>
-                        </div>
+                </div>
                       </td>
                       <td>{alert.Property || 'N/A'}</td>
                       <td>
@@ -1174,8 +1206,8 @@ const SalesManagerDashboard = () => {
                         {alert.Amount ? `${alert.Amount.toLocaleString()} XOF` : '—'}
                       </td>
                     </tr>
-                  ))
-                ) : (
+            ))
+          ) : (
                   <tr>
                     <td colSpan={6} className="sa-table-empty">
                       No priority alerts at the moment.
@@ -1184,10 +1216,10 @@ const SalesManagerDashboard = () => {
                 )}
               </tbody>
             </table>
-          </div>
         </div>
       </div>
-    );
+    </div>
+  );
   };
 
   const renderOccupancy = () => {
@@ -1205,7 +1237,7 @@ const SalesManagerDashboard = () => {
         <div className="sa-occupancy-header">
           <div>
             <h2>Property Occupancy Overview</h2>
-            <p>Monitor occupancy status and manage vacant properties</p>
+          <p>Monitor occupancy status and manage vacant properties</p>
           </div>
         </div>
 
@@ -1213,11 +1245,11 @@ const SalesManagerDashboard = () => {
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Properties</p>
             <p className="sa-metric-value">{totalProperties}</p>
-          </div>
+            </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Occupied</p>
             <p className="sa-metric-value">{occupiedCount}</p>
-          </div>
+            </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Vacant</p>
             <p className="sa-metric-value">{vacantCount}</p>
@@ -1245,7 +1277,7 @@ const SalesManagerDashboard = () => {
             <option value="">All Status</option>
             <option value="Vacant">Vacant</option>
             <option value="Occupied">Occupied</option>
-          </select>
+            </select>
           <select 
             className="sa-filter-button"
             value={propertyTypeFilter}
@@ -1257,7 +1289,7 @@ const SalesManagerDashboard = () => {
             <option value="House">House</option>
             <option value="Condo">Condo</option>
             <option value="Studio">Studio</option>
-          </select>
+            </select>
           <select 
             className="sa-filter-button"
             value={propertyUrgencyFilter}
@@ -1265,10 +1297,10 @@ const SalesManagerDashboard = () => {
             style={{ padding: '8px 14px', cursor: 'pointer' }}
           >
             <option value="">All Urgency</option>
-            <option value="urgent">Urgent</option>
-            <option value="high">High</option>
-            <option value="normal">Normal</option>
-          </select>
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="normal">Normal</option>
+            </select>
           <div className="sa-search-input">
             <Search size={16} />
             <input
@@ -1294,20 +1326,20 @@ const SalesManagerDashboard = () => {
           </div>
           <div className="sa-table-wrapper">
             <table className="sa-table">
-              <thead>
-                <tr>
+            <thead>
+              <tr>
                   <th />
                   <th>Property</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Tenant</th>
-                  <th>Rent</th>
-                  <th>Urgency</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {properties.length > 0 ? (
+                <th>Type</th>
+                <th>Status</th>
+                <th>Tenant</th>
+                <th>Rent</th>
+                <th>Urgency</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {properties.length > 0 ? (
                   properties.map(property => {
                     const propertyId = property.ID || property.id;
                     return (
@@ -1324,20 +1356,20 @@ const SalesManagerDashboard = () => {
                         <td>
                           <span className={`sa-status-pill ${(property.Status || property.status || 'unknown').toLowerCase()}`}>
                             {property.Status || property.status || 'Unknown'}
-                          </span>
-                        </td>
+                      </span>
+                    </td>
                         <td>{property.Tenant || property.tenant || 'No tenant'}</td>
                         <td>{property.Rent || property.rent ? `${property.Rent || property.rent} XOF/month` : 'N/A'}</td>
                         <td>
                           {property.Urgency || property.urgency ? (
                             <span className={`sa-status-pill ${(property.Urgency || property.urgency).toLowerCase()}`}>
                               {property.Urgency || property.urgency}
-                            </span>
-                          ) : (
-                            'N/A'
-                          )}
-                        </td>
-                        <td>
+                        </span>
+                      ) : (
+                        'N/A'
+                      )}
+                    </td>
+                    <td>
                           <button
                             className="sa-action-button"
                             onClick={() => {
@@ -1347,18 +1379,18 @@ const SalesManagerDashboard = () => {
                             title="Edit Property"
                           >
                             ✏️
-                          </button>
-                        </td>
-                      </tr>
+                      </button>
+                    </td>
+                  </tr>
                     );
                   })
-                ) : (
-                  <tr>
+              ) : (
+                <tr>
                     <td colSpan={8} className="sa-table-empty">No properties found. Create your first property to get started.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </tr>
+              )}
+            </tbody>
+          </table>
           </div>
         </div>
       </div>
@@ -1419,7 +1451,7 @@ const SalesManagerDashboard = () => {
         <div>
           <h2>Tenant List</h2>
           <p>{filteredClients.length} results found</p>
-        </div>
+      </div>
         <div className="sa-clients-header-right">
           <button className="sa-primary-cta" onClick={() => {
             setImportMode('manual');
@@ -1431,8 +1463,8 @@ const SalesManagerDashboard = () => {
           </button>
           <button className="sa-sort-button">Sort: Creation Date</button>
           <button className="sa-date-button">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</button>
-        </div>
-      </div>
+          </div>
+          </div>
 
       <div className="sa-overview-metrics">
         <div className="sa-metric-card">
@@ -1448,20 +1480,20 @@ const SalesManagerDashboard = () => {
             {filteredClients.filter(client => client.Status === 'Overdue').length}
             <span className="sa-metric-trend negative">-1.5%</span>
           </p>
-        </div>
+          </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Waiting List</p>
           <p className="sa-metric-value">
             {filteredClients.filter(client => client.Status === 'Waiting List').length}
           </p>
-        </div>
+          </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Total Monthly Revenue</p>
           <p className="sa-metric-value">
-            {filteredClients.reduce(
-              (sum, client) => sum + (client.Amount || client.amount || 0),
-              0
-            ).toLocaleString()} XOF
+              {filteredClients.reduce(
+                (sum, client) => sum + (client.Amount || client.amount || 0),
+                0
+              ).toLocaleString()} XOF
           </p>
         </div>
       </div>
@@ -1473,12 +1505,12 @@ const SalesManagerDashboard = () => {
         </button>
         <div className="sa-search-input">
           <Search size={16} />
-          <input
-            type="text"
+        <input 
+          type="text" 
             placeholder="Search by Name, Email or Phone"
-            value={clientSearchText}
-            onChange={(e) => setClientSearchText(e.target.value)}
-          />
+          value={clientSearchText}
+          onChange={(e) => setClientSearchText(e.target.value)}
+        />
         </div>
       </div>
 
@@ -1489,31 +1521,31 @@ const SalesManagerDashboard = () => {
         </div>
         <div className="sa-table-wrapper">
           <table className="sa-table">
-            <thead>
-              <tr>
+          <thead>
+            <tr>
                 <th />
                 <th>Client</th>
-                <th>Property</th>
-                <th>Status</th>
-                <th>Last Payment</th>
-                <th>Amount</th>
-                <th>Contact</th>
+              <th>Property</th>
+              <th>Status</th>
+              <th>Last Payment</th>
+              <th>Amount</th>
+              <th>Contact</th>
                 <th />
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClients.length > 0 ? (
-                filteredClients.map(client => (
-                  <tr key={client.ID}>
-                    <td>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredClients.length > 0 ? (
+              filteredClients.map(client => (
+              <tr key={client.ID}>
+                <td>
                       <input type="checkbox" />
-                    </td>
+                </td>
                     <td>
                       <div className="sa-cell-main">
                         <span className="sa-cell-title">{client.Name || client.name || 'N/A'}</span>
                         <span className="sa-cell-sub">{client.Email || client.email || 'N/A'}</span>
-                      </div>
-                    </td>
+                  </div>
+                </td>
                     <td>{client.Property || client.property || 'N/A'}</td>
                     <td>
                       <span className={`sa-status-pill ${(client.Status || client.status || 'unknown').toLowerCase().replace(' ', '-')}`}>
@@ -1530,16 +1562,16 @@ const SalesManagerDashboard = () => {
                     </td>
                     <td className="sa-row-actions">
                       <button className="sa-icon-button" onClick={() => handleEditClient(client)} title="Edit">✏️</button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
+                </td>
+              </tr>
+            ))
+            ) : (
+              <tr>
                   <td colSpan={8} className="sa-table-empty">No tenants found. Start the backend to see real data.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </tr>
+            )}
+          </tbody>
+        </table>
         </div>
       </div>
 
@@ -1650,7 +1682,7 @@ const SalesManagerDashboard = () => {
       <div className="sa-alerts-header">
         <div>
           <h2>Unpaid Rent Alerts</h2>
-          <p>Monitor and manage overdue payments</p>
+        <p>Monitor and manage overdue payments</p>
         </div>
       </div>
 
@@ -1686,22 +1718,22 @@ const SalesManagerDashboard = () => {
         </div>
         <div className="sa-table-wrapper">
           <table className="sa-table">
-            <thead>
-              <tr>
+          <thead>
+            <tr>
                 <th />
                 <th>Alert</th>
-                <th>Property</th>
-                <th>Urgency</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {alerts.length > 0 ? (
-                alerts.map(alert => (
-                  <tr key={alert.ID}>
-                    <td>
+              <th>Property</th>
+              <th>Urgency</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {alerts.length > 0 ? (
+              alerts.map(alert => (
+                <tr key={alert.ID}>
+                  <td>
                       <input type="checkbox" />
                     </td>
                     <td>
@@ -1709,29 +1741,29 @@ const SalesManagerDashboard = () => {
                         <span className="sa-cell-title">{alert.Title || 'N/A'}</span>
                         <span className="sa-cell-sub">{alert.Message || 'N/A'}</span>
                       </div>
-                    </td>
-                    <td>{alert.Property || 'N/A'}</td>
-                    <td>
+                  </td>
+                  <td>{alert.Property || 'N/A'}</td>
+                  <td>
                       <span className={`sa-status-pill ${(alert.Urgency || 'normal').toLowerCase()}`}>
-                        {alert.Urgency || 'Normal'}
-                      </span>
-                    </td>
-                    <td>
+                      {alert.Urgency || 'Normal'}
+                    </span>
+                  </td>
+                  <td>
                       <span className={`sa-status-pill ${(alert.Status || 'open').toLowerCase()}`}>
-                        {alert.Status || 'Open'}
-                      </span>
-                    </td>
-                    <td>{alert.CreatedAt ? new Date(alert.CreatedAt).toLocaleDateString() : 'N/A'}</td>
+                      {alert.Status || 'Open'}
+                    </span>
+                  </td>
+                  <td>{alert.CreatedAt ? new Date(alert.CreatedAt).toLocaleDateString() : 'N/A'}</td>
                     <td>{alert.Amount ? `${alert.Amount.toLocaleString()} XOF` : '—'}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="sa-table-empty">No alerts found. Start the backend to see real data.</td>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              ))
+            ) : (
+              <tr>
+                  <td colSpan={7} className="sa-table-empty">No alerts found. Start the backend to see real data.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
         </div>
       </div>
     </div>
@@ -2063,7 +2095,7 @@ const SalesManagerDashboard = () => {
       >
         {({ activeId }) => (
           <div className="content-body sales-manager-content">
-            {renderContent(activeId || activeTab)}
+              {renderContent(activeId || activeTab)}
           </div>
         )}
       </RoleLayout>
@@ -2340,7 +2372,7 @@ const SalesManagerDashboard = () => {
                       </div>
                     </div>
                   ) : (
-                    <form onSubmit={handleCreateTenant}>
+                <form onSubmit={handleCreateTenant}>
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="firstName">First Name</label>
@@ -2377,7 +2409,7 @@ const SalesManagerDashboard = () => {
                             return (
                               <option key={propertyId || `property-${address}`} value={address}>
                                 {displayText}
-                              </option>
+                            </option>
                             );
                           })
                         ) : (
