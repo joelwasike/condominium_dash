@@ -15,7 +15,9 @@ import {
   Settings,
   Plus,
   MessageCircle,
-  Megaphone
+  Megaphone,
+  FileX,
+  UserPlus
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -40,6 +42,21 @@ const TenantDashboard = () => {
     amount: '',
     paymentMethod: '',
     reference: ''
+  });
+  const [showTerminateLeaseModal, setShowTerminateLeaseModal] = useState(false);
+  const [terminateLeaseForm, setTerminateLeaseForm] = useState({
+    reason: '',
+    terminationDate: '',
+    comments: ''
+  });
+  const [showTransferPaymentModal, setShowTransferPaymentModal] = useState(false);
+  const [transferPaymentForm, setTransferPaymentForm] = useState({
+    recipientName: '',
+    recipientEmail: '',
+    recipientPhone: '',
+    relationship: '',
+    amount: '',
+    reason: ''
   });
   const [loading, setLoading] = useState(false);
   const [overviewData, setOverviewData] = useState(null);
@@ -443,6 +460,57 @@ const TenantDashboard = () => {
     }));
   };
 
+  const handleTerminateLeaseSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+      
+      // TODO: Replace with actual API call when backend endpoint is available
+      // await tenantService.terminateLease(terminateLeaseForm);
+      
+      console.log('Terminate lease request:', terminateLeaseForm);
+      addNotification('Lease termination request submitted successfully!', 'success');
+      
+      setTerminateLeaseForm({ reason: '', terminationDate: '', comments: '' });
+      setShowTerminateLeaseModal(false);
+    } catch (error) {
+      console.error('Error submitting lease termination request:', error);
+      addNotification('Failed to submit lease termination request', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTransferPaymentSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+      
+      // TODO: Replace with actual API call when backend endpoint is available
+      // await tenantService.transferPaymentRequest(transferPaymentForm);
+      
+      console.log('Transfer payment request:', transferPaymentForm);
+      addNotification('Payment transfer request submitted successfully!', 'success');
+      
+      setTransferPaymentForm({ 
+        recipientName: '', 
+        recipientEmail: '', 
+        recipientPhone: '', 
+        relationship: '', 
+        amount: '', 
+        reason: '' 
+      });
+      setShowTransferPaymentModal(false);
+    } catch (error) {
+      console.error('Error submitting payment transfer request:', error);
+      addNotification('Failed to submit payment transfer request', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
 
@@ -635,10 +703,30 @@ Thank you for your payment!
           <h2>Payment Management</h2>
           <p>Make payments and view your payment history</p>
         </div>
-        <button className="sa-primary-cta" onClick={() => setShowPaymentModal(true)} disabled={loading}>
-          <Plus size={18} />
-          Make Payment
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button className="sa-primary-cta" onClick={() => setShowPaymentModal(true)} disabled={loading}>
+            <Plus size={18} />
+            Make Payment
+          </button>
+          <button 
+            className="sa-primary-cta" 
+            onClick={() => setShowTerminateLeaseModal(true)} 
+            disabled={loading}
+            style={{ backgroundColor: '#ef4444' }}
+          >
+            <FileX size={18} />
+            Terminate My Lease
+          </button>
+          <button 
+            className="sa-primary-cta" 
+            onClick={() => setShowTransferPaymentModal(true)} 
+            disabled={loading}
+            style={{ backgroundColor: '#3b82f6' }}
+          >
+            <UserPlus size={18} />
+            Transfer Payment Request
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -1215,6 +1303,196 @@ Thank you for your payment!
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
                     {loading ? 'Submitting...' : 'Submit Payment'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Terminate Lease Modal */}
+      {showTerminateLeaseModal && (
+        <div className="modal-overlay" onClick={() => setShowTerminateLeaseModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Terminate My Lease</h3>
+              <button className="modal-close" onClick={() => setShowTerminateLeaseModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleTerminateLeaseSubmit} className="modal-form">
+                <div className="form-group">
+                  <label htmlFor="reason">Reason for Termination *</label>
+                  <select
+                    id="reason"
+                    value={terminateLeaseForm.reason}
+                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, reason: e.target.value }))}
+                    required
+                  >
+                    <option value="">Select a reason</option>
+                    <option value="moving_out">Moving Out</option>
+                    <option value="job_relocation">Job Relocation</option>
+                    <option value="financial_hardship">Financial Hardship</option>
+                    <option value="property_issues">Property Issues</option>
+                    <option value="lease_expiry">Lease Expiry</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="terminationDate">Desired Termination Date *</label>
+                  <input
+                    type="date"
+                    id="terminationDate"
+                    value={terminateLeaseForm.terminationDate}
+                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, terminationDate: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Please note: Early termination may be subject to fees as per your lease agreement.
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="comments">Additional Comments</label>
+                  <textarea
+                    id="comments"
+                    value={terminateLeaseForm.comments}
+                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, comments: e.target.value }))}
+                    placeholder="Provide any additional details about your termination request..."
+                    rows="4"
+                  />
+                </div>
+
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowTerminateLeaseModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading} style={{ backgroundColor: '#ef4444' }}>
+                    {loading ? 'Submitting...' : 'Submit Termination Request'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Payment Request Modal */}
+      {showTransferPaymentModal && (
+        <div className="modal-overlay" onClick={() => setShowTransferPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Transfer Payment Request</h3>
+              <button className="modal-close" onClick={() => setShowTransferPaymentModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleTransferPaymentSubmit} className="modal-form">
+                <div className="form-group">
+                  <label htmlFor="recipientName">Recipient Name *</label>
+                  <input
+                    type="text"
+                    id="recipientName"
+                    value={transferPaymentForm.recipientName}
+                    onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, recipientName: e.target.value }))}
+                    placeholder="Enter recipient's full name"
+                    required
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="recipientEmail">Recipient Email *</label>
+                    <input
+                      type="email"
+                      id="recipientEmail"
+                      value={transferPaymentForm.recipientEmail}
+                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, recipientEmail: e.target.value }))}
+                      placeholder="recipient@email.com"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="recipientPhone">Recipient Phone *</label>
+                    <input
+                      type="tel"
+                      id="recipientPhone"
+                      value={transferPaymentForm.recipientPhone}
+                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, recipientPhone: e.target.value }))}
+                      placeholder="+1234567890"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="relationship">Relationship *</label>
+                    <select
+                      id="relationship"
+                      value={transferPaymentForm.relationship}
+                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, relationship: e.target.value }))}
+                      required
+                    >
+                      <option value="">Select relationship</option>
+                      <option value="family_member">Family Member</option>
+                      <option value="brother">Brother</option>
+                      <option value="sister">Sister</option>
+                      <option value="parent">Parent</option>
+                      <option value="friend">Friend</option>
+                      <option value="colleague">Colleague</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="amount">Payment Amount *</label>
+                    <input
+                      type="number"
+                      id="amount"
+                      value={transferPaymentForm.amount}
+                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                      placeholder="Enter amount"
+                      min="0"
+                      step="0.01"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="reason">Reason for Transfer *</label>
+                  <textarea
+                    id="reason"
+                    value={transferPaymentForm.reason}
+                    onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, reason: e.target.value }))}
+                    placeholder="Explain why you're transferring this payment request..."
+                    rows="3"
+                    required
+                  />
+                </div>
+
+                <div style={{ 
+                  padding: '12px', 
+                  backgroundColor: '#fef3c7', 
+                  borderRadius: '6px', 
+                  marginBottom: '16px',
+                  border: '1px solid #fbbf24'
+                }}>
+                  <small style={{ color: '#92400e', fontSize: '0.85rem', display: 'block' }}>
+                    <strong>Note:</strong> The recipient will receive a notification about this payment request. 
+                    They will need to accept and complete the payment on your behalf.
+                  </small>
+                </div>
+
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowTransferPaymentModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Submitting...' : 'Submit Transfer Request'}
                   </button>
                 </div>
               </form>

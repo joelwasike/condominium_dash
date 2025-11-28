@@ -132,6 +132,8 @@ const SalesManagerDashboard = () => {
   const [unpaidRents, setUnpaidRents] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const carouselIntervalRef = useRef(null);
   const [loading, setLoading] = useState(false);
   
   // Filter states
@@ -219,12 +221,31 @@ const SalesManagerDashboard = () => {
     loadData();
   }, [propertyStatusFilter, propertyTypeFilter, propertyUrgencyFilter, alertTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load advertisements when advertisements tab is active
+  // Load advertisements when advertisements or overview tab is active
   useEffect(() => {
-    if (activeTab === 'advertisements') {
+    if (activeTab === 'advertisements' || activeTab === 'overview') {
       loadAdvertisements();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-slide carousel for advertisements on overview page
+  useEffect(() => {
+    if (activeTab === 'overview' && advertisements.length > 1) {
+      carouselIntervalRef.current = setInterval(() => {
+        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+      }, 5000); // Change slide every 5 seconds
+
+      return () => {
+        if (carouselIntervalRef.current) {
+          clearInterval(carouselIntervalRef.current);
+        }
+      };
+    } else {
+      if (carouselIntervalRef.current) {
+        clearInterval(carouselIntervalRef.current);
+      }
+    }
+  }, [activeTab, advertisements.length]);
 
   // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
@@ -959,14 +980,15 @@ const SalesManagerDashboard = () => {
     const activeTenants = data.totalActiveTenants || data.activeClients || 0;
     const unpaidCount = data.numberOfUnpaidAccounts || data.unpaidCount || 0;
     const unpaidAmount = data.totalUnpaidRentAmount || data.unpaidAmount || 0;
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
     return (
       <div className="sa-overview-page">
         <div className="sa-overview-top">
           <div className="sa-overview-chart-card">
             <div className="sa-card-header">
-              <h2>Overview</h2>
-              <span className="sa-card-subtitle">Weekly Performance</span>
+              <h2>Sales Manager Dashboard</h2>
+              <span className="sa-card-subtitle">Welcome, {currentUser?.name || currentUser?.Name || 'Sales Manager'}!</span>
             </div>
             <div className="sa-mini-legend">
               <span className="sa-legend-item sa-legend-expected">Occupancy Rate</span>

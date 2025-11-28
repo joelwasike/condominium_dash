@@ -57,6 +57,8 @@ const LandlordDashboard = () => {
   const [inventory, setInventory] = useState([]);
   const [businessTracking, setBusinessTracking] = useState(null);
   const [advertisements, setAdvertisements] = useState([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const carouselIntervalRef = useRef(null);
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -161,12 +163,31 @@ const LandlordDashboard = () => {
     }
   };
   
-  // Load advertisements when advertisements tab is active
+  // Load advertisements when advertisements or overview tab is active
   useEffect(() => {
-    if (activeTab === 'advertisements') {
+    if (activeTab === 'advertisements' || activeTab === 'overview') {
       loadAdvertisements();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-slide carousel for advertisements on overview page
+  useEffect(() => {
+    if (activeTab === 'overview' && advertisements.length > 1) {
+      carouselIntervalRef.current = setInterval(() => {
+        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+      }, 5000); // Change slide every 5 seconds
+
+      return () => {
+        if (carouselIntervalRef.current) {
+          clearInterval(carouselIntervalRef.current);
+        }
+      };
+    } else {
+      if (carouselIntervalRef.current) {
+        clearInterval(carouselIntervalRef.current);
+      }
+    }
+  }, [activeTab, advertisements.length]);
 
   // Load expenses
   const loadExpenses = async () => {
@@ -697,6 +718,10 @@ const LandlordDashboard = () => {
   );
 
   const renderOverview = () => {
+    if (loading) {
+      return <div className="sa-table-empty">Loading overview data...</div>;
+    }
+
     // Calculate active tenants from tenants array (fallback if not in overview)
     const activeTenantsCount = overviewData?.activeTenants || tenants.filter(t => 
       (t.status || t.Status || '').toLowerCase() === 'active'
@@ -709,44 +734,214 @@ const LandlordDashboard = () => {
     ).length;
     const occupancyRate = totalProps > 0 ? ((occupiedProps / totalProps) * 100).toFixed(1) : 0;
     
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const userName = currentUser.name || currentUser.Name || 'Landlord';
+
     return (
       <div className="sa-overview-page">
-        <div className="sa-overview-metrics" style={{ width: '100%' }}>
-          <div className="sa-metric-card sa-metric-primary">
-            <p className="sa-metric-label">Total Properties</p>
-            <p className="sa-metric-value">{overviewData?.totalPropertiesUnderManagement || properties.length || 0}</p>
+        <div className="sa-overview-top">
+          <div className="sa-overview-chart-card">
+            <div className="sa-card-header">
+              <h2>Landlord Dashboard</h2>
+              <span className="sa-card-subtitle">Welcome, {userName}!</span>
           </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Total Rent Collected</p>
-            <p className="sa-metric-value">{(overviewData?.totalRentCollected || 0).toLocaleString()} XOF</p>
+            <div className="sa-mini-legend">
+              <span className="sa-legend-item sa-legend-expected">Rent Collected</span>
+              <span className="sa-legend-item sa-legend-current">Occupancy Rate</span>
           </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Net Payout Received</p>
-            <p className="sa-metric-value">{(overviewData?.totalNetPayoutReceived || 0).toLocaleString()} XOF</p>
+            <div className="sa-chart-placeholder">
+              <div className="sa-chart-line sa-chart-line-expected" />
+              <div className="sa-chart-line sa-chart-line-current" />
           </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Payment Rate</p>
-            <p className="sa-metric-number">{overviewData?.paymentRate || 0}%</p>
+            <div className="sa-chart-footer">
+              <span>Jan</span>
+              <span>Feb</span>
+              <span>Mar</span>
+              <span>Apr</span>
+              <span>May</span>
+              <span>Jun</span>
           </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Active Tenants</p>
-            <p className="sa-metric-number">{activeTenantsCount}</p>
           </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Occupied Properties</p>
-            <p className="sa-metric-number">{overviewData?.occupiedProperties || occupiedProps}</p>
+
+          <div className="sa-overview-metrics">
+            <div className="sa-metric-card sa-metric-primary">
+              <p className="sa-metric-label">Total Properties</p>
+              <p className="sa-metric-period">Under Management</p>
+              <p className="sa-metric-value">{overviewData?.totalPropertiesUnderManagement || properties.length || 0}</p>
           </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Vacant Properties</p>
-            <p className="sa-metric-number">{overviewData?.vacantProperties || (totalProps - occupiedProps)}</p>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Total Rent Collected</p>
+              <p className="sa-metric-period">All Time</p>
+              <p className="sa-metric-value">{(overviewData?.totalRentCollected || 0).toLocaleString()} XOF</p>
           </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Occupancy Rate</p>
-            <p className="sa-metric-number">{occupancyRate}%</p>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Net Payout Received</p>
+              <p className="sa-metric-number">{(overviewData?.totalNetPayoutReceived || 0).toLocaleString()} XOF</p>
+          </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Active Tenants</p>
+              <p className="sa-metric-number">{activeTenantsCount}</p>
+        </div>
+            <div className="sa-banner-card">
+              <div className="sa-banner-text">
+                <h3>Property Management</h3>
+                <p>
+                  Manage your properties, tenants, and payments all in one place.
+                </p>
+              </div>
+            </div>
+          </div>
+            </div>
+
+        <div className="sa-section-card" style={{ marginTop: '24px' }}>
+          <div className="sa-section-header">
+            <h3>Quick Actions</h3>
+            <p>Manage your properties and view key metrics.</p>
+            </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('properties')}>
+                <p className="sa-metric-label">Occupied Properties</p>
+                <p className="sa-metric-value">{overviewData?.occupiedProperties || occupiedProps}</p>
+          </div>
+              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('properties')}>
+                <p className="sa-metric-label">Occupancy Rate</p>
+                <p className="sa-metric-value">{occupancyRate}%</p>
+            </div>
+              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('payments')}>
+                <p className="sa-metric-label">Payment Rate</p>
+                <p className="sa-metric-value">{overviewData?.paymentRate || 0}%</p>
+            </div>
+          </div>
+            </div>
+            </div>
+
+        {/* Advertisements Carousel */}
+        {advertisements.length > 0 && (
+          <div className="sa-section-card" style={{ marginTop: '24px' }}>
+            <div className="sa-section-header">
+              <h3>Advertisements</h3>
+              <p>Active promotions and announcements</p>
+          </div>
+            <div style={{ 
+              position: 'relative', 
+              overflow: 'hidden', 
+              borderRadius: '12px',
+              marginTop: '20px',
+              backgroundColor: '#fff',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{
+                display: 'flex',
+                transform: `translateX(-${currentAdIndex * 100}%)`,
+                transition: 'transform 0.5s ease-in-out',
+                width: `${advertisements.length * 100}%`
+              }}>
+                {advertisements.map((ad, index) => {
+                  const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+                  const fullImageUrl = imageUrl 
+                    ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+                    : null;
+
+                  return (
+                    <div 
+                      key={`ad-carousel-${ad.ID || ad.id || index}`}
+                      style={{
+                        width: `${100 / advertisements.length}%`,
+                        flexShrink: 0,
+                        padding: '24px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {fullImageUrl && (
+                        <img 
+                          src={fullImageUrl} 
+                          alt={ad.Title || ad.title || 'Advertisement'} 
+                          style={{
+                            width: '100%',
+                            maxWidth: '600px',
+                            height: 'auto',
+                            maxHeight: '300px',
+                            objectFit: 'contain',
+                            borderRadius: '8px',
+                            marginBottom: '16px'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      )}
+                      <h3 style={{ 
+                        margin: '0 0 8px 0', 
+                        fontSize: '1.25rem', 
+                        color: '#1f2937',
+                        fontWeight: '600'
+                      }}>
+                        {ad.Title || ad.title || 'Untitled Advertisement'}
+                      </h3>
+                      <p style={{ 
+                        margin: '0 0 12px 0', 
+                        fontSize: '0.95rem', 
+                        color: '#6b7280',
+                        lineHeight: '1.5'
+                      }}>
+                        {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
+                      </p>
+                      {ad.CreatedAt && (
+                        <span style={{ 
+                          fontSize: '0.85rem', 
+                          color: '#9ca3af'
+                        }}>
+                          Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
+                        </span>
+                      )}
+            </div>
+                  );
+                })}
+            </div>
+              
+              {/* Carousel Indicators */}
+              {advertisements.length > 1 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '16px',
+                  backgroundColor: '#f9fafb'
+                }}>
+                  {advertisements.map((_, index) => (
+                    <button
+                      key={`indicator-${index}`}
+                      onClick={() => {
+                        setCurrentAdIndex(index);
+                        if (carouselIntervalRef.current) {
+                          clearInterval(carouselIntervalRef.current);
+                        }
+                        carouselIntervalRef.current = setInterval(() => {
+                          setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+                        }, 5000);
+                      }}
+                      style={{
+                        width: index === currentAdIndex ? '24px' : '8px',
+                        height: '8px',
+                        borderRadius: '4px',
+                        border: 'none',
+                        backgroundColor: index === currentAdIndex ? '#3b82f6' : '#d1d5db',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
           </div>
         </div>
-      </div>
-    );
+      )}
+          </div>
+        );
   };
       
   const renderProperties = () => (
@@ -1026,31 +1221,31 @@ const LandlordDashboard = () => {
                         <td>{new Date(payment.Date || payment.date || payment.CreatedAt || payment.createdAt).toLocaleDateString()}</td>
                         <td className="sa-cell-main">
                           <span className="sa-cell-title">{payment.Property || payment.property || 'Unknown'}</span>
-                        </td>
+                  </td>
                         <td>{payment.Tenant || payment.tenant || 'Unknown'}</td>
                         <td>{payment.Amount || payment.amount ? (payment.Amount || payment.amount).toLocaleString() : 0} XOF</td>
                         <td>{payment.Method || payment.method || 'Unknown'}</td>
                         <td>
                           <span className={`sa-status-pill ${(payment.Status || payment.status || 'pending').toLowerCase()}`}>
                             {payment.Status || payment.status || 'Pending'}
-                          </span>
+                    </span>
                   </td>
                         <td className="sa-row-actions">
                           <button className="sa-icon-button" onClick={() => setShowReceiptModal(true)} title="Receipt">🧾</button>
-                        </td>
-                      </tr>
+                  </td>
+                  </tr>
                     ))
                   )}
-                </tbody>
-              </table>
-            </div>
+              </tbody>
+            </table>
           </div>
+    </div>
         )}
 
         {paymentSubTab === 'net' && (
           <div className="sa-clients-page">
             <div className="sa-clients-header">
-              <div>
+        <div>
                 <h2>Net Payments After Commission</h2>
                 <p>View net payments after commission deduction</p>
               </div>
@@ -1080,9 +1275,9 @@ const LandlordDashboard = () => {
                     placeholder="End Date"
                   />
                 </div>
-              </div>
-            </div>
-
+        </div>
+      </div>
+      
             {netPayments && (
               <>
                 <div className="sa-overview-metrics" style={{ marginBottom: '24px' }}>
@@ -1098,22 +1293,22 @@ const LandlordDashboard = () => {
 
                 <div className="sa-table-wrapper">
                   <table className="sa-table">
-                    <thead>
-                      <tr>
+            <thead>
+              <tr>
                         <th>No</th>
                         <th>Date</th>
                         <th>Landlord</th>
                         <th>Building</th>
                         <th>Net Amount</th>
                         <th>Commission</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
                       {(!netPayments.payments || netPayments.payments.length === 0) ? (
                         <tr>
                           <td colSpan={7} className="sa-table-empty">No net payments found</td>
-                        </tr>
+              </tr>
                       ) : (
                         netPayments.payments.map((payment, index) => (
                           <tr key={payment.id || payment.ID || `net-payment-${index}`}>
@@ -1121,7 +1316,7 @@ const LandlordDashboard = () => {
                             <td>{new Date(payment.date || payment.Date).toLocaleDateString()}</td>
                             <td className="sa-cell-main">
                               <span className="sa-cell-title">{payment.landlord || payment.Landlord || 'Unknown'}</span>
-                            </td>
+                </td>
                             <td>{payment.building || payment.Building || 'Unknown'}</td>
                             <td>{(payment.netAmount || payment.NetAmount || 0).toLocaleString()} XOF</td>
                             <td>{(payment.commission || payment.Commission || 0).toLocaleString()} XOF</td>
@@ -1129,22 +1324,22 @@ const LandlordDashboard = () => {
                               <span className={`sa-status-pill ${(payment.status || payment.Status || 'pending').toLowerCase()}`}>
                                 {payment.status || payment.Status || 'Pending'}
                     </span>
-                  </td>
-                          </tr>
+                </td>
+              </tr>
                         ))
                       )}
-                    </tbody>
-                  </table>
-                    </div>
+            </tbody>
+          </table>
+                  </div>
               </>
-            )}
+      )}
           </div>
         )}
 
         {paymentSubTab === 'history' && (
           <div className="sa-clients-page">
             <div className="sa-clients-header">
-              <div>
+        <div>
                 <h2>Payment & Payout History</h2>
                 <p>View payment and payout history</p>
               </div>
@@ -1166,8 +1361,8 @@ const LandlordDashboard = () => {
                   />
                 </div>
               </div>
-            </div>
-
+                </div>
+                
             {paymentHistory && (
               <>
                 {paymentHistory.rentPayments && paymentHistory.rentPayments.length > 0 && (
@@ -1176,8 +1371,8 @@ const LandlordDashboard = () => {
                       <div>
                         <h3>Rent Payments</h3>
                         <p>Collected rent payments</p>
-                      </div>
-                    </div>
+                </div>
+          </div>
                     <div className="sa-table-wrapper">
                       <table className="sa-table">
                         <thead>
@@ -1209,8 +1404,8 @@ const LandlordDashboard = () => {
                 ))}
               </tbody>
             </table>
-                    </div>
-                  </div>
+        </div>
+          </div>
                 )}
 
                 {paymentHistory.payouts && paymentHistory.payouts.length > 0 && (
@@ -1219,8 +1414,8 @@ const LandlordDashboard = () => {
                       <div>
                         <h3>Payouts</h3>
                         <p>Net payments after commission</p>
-                      </div>
-                    </div>
+          </div>
+        </div>
                     <div className="sa-table-wrapper">
                       <table className="sa-table">
                         <thead>
@@ -1254,14 +1449,14 @@ const LandlordDashboard = () => {
                           ))}
                         </tbody>
                       </table>
-                    </div>
-                  </div>
+          </div>
+          </div>
                 )}
               </>
             )}
-          </div>
+        </div>
         )}
-      </div>
+          </div>
     );
   };
       
@@ -1271,7 +1466,7 @@ const LandlordDashboard = () => {
         <div className="sa-metric-card sa-metric-primary">
           <p className="sa-metric-label">Generation of Lease Agreements</p>
           <p className="sa-metric-value">Active</p>
-              </div>
+          </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Rent Reviews</p>
           <p className="sa-metric-number">Track</p>
@@ -1983,7 +2178,7 @@ const LandlordDashboard = () => {
       </div>
     );
   };
-
+      
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':

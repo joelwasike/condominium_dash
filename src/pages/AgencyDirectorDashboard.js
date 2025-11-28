@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   BarChart3,
   Users,
@@ -41,6 +41,8 @@ const AgencyDirectorDashboard = () => {
   const [managementSubTab, setManagementSubTab] = useState('users'); // Sub-tab for management page
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const carouselIntervalRef = useRef(null);
 
   // Data states
   const [overviewData, setOverviewData] = useState(null);
@@ -65,7 +67,14 @@ const AgencyDirectorDashboard = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [editingProperty, setEditingProperty] = useState(null);
   const [userForm, setUserForm] = useState({ name: '', email: '', role: 'salesmanager', password: '', properties: [] });
-  const [propertyForm, setPropertyForm] = useState({ address: '', type: '', rent: '', tenant: '', status: 'Vacant' });
+  const [propertyForm, setPropertyForm] = useState({ 
+    address: '', 
+    type: '', 
+    rent: '', 
+    tenant: '', 
+    status: 'Vacant',
+    units: [] 
+  });
   
   // Messaging states
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -527,12 +536,32 @@ const AgencyDirectorDashboard = () => {
     }
   }, [activeTab, loadAnalyticsData]);
 
-  // Load advertisements when advertisements tab is active
+  // Load advertisements when advertisements tab is active or overview is active
   useEffect(() => {
-    if (activeTab === 'advertisements') {
+    if (activeTab === 'advertisements' || activeTab === 'overview') {
       loadAdvertisements();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-slide carousel for advertisements on overview page
+  useEffect(() => {
+    if (activeTab === 'overview' && advertisements.length > 1) {
+      carouselIntervalRef.current = setInterval(() => {
+        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+      }, 5000); // Change slide every 5 seconds
+
+      return () => {
+        if (carouselIntervalRef.current) {
+          clearInterval(carouselIntervalRef.current);
+        }
+      };
+    } else {
+      if (carouselIntervalRef.current) {
+        clearInterval(carouselIntervalRef.current);
+      }
+      setCurrentAdIndex(0);
+    }
+  }, [activeTab, advertisements.length]);
 
   const tabs = useMemo(
     () => [
@@ -750,20 +779,53 @@ const AgencyDirectorDashboard = () => {
   // Property management
   const handleOpenAddProperty = () => {
     setEditingProperty(null);
-    setPropertyForm({ address: '', type: '', rent: '', tenant: '', status: 'Vacant' });
+    setPropertyForm({ address: '', type: '', rent: '', tenant: '', status: 'Vacant', units: [] });
     setShowPropertyModal(true);
   };
 
   const handleOpenEditProperty = (property) => {
     setEditingProperty(property);
+    const propertyUnits = property.units || property.Units || [];
     setPropertyForm({
       address: property.Address || property.address || '',
       type: property.Type || property.type || '',
       rent: property.Rent || property.rent || '',
       tenant: property.Tenant || property.tenant || '',
-      status: property.Status || property.status || 'Vacant'
+      status: property.Status || property.status || 'Vacant',
+      units: propertyUnits.map(unit => ({
+        unitNumber: unit.unitNumber || unit.UnitNumber || '',
+        rent: unit.rent || unit.Rent || '',
+        bedrooms: unit.bedrooms || unit.Bedrooms || '',
+        bathrooms: unit.bathrooms || unit.Bathrooms || '',
+        status: unit.status || unit.Status || 'Vacant',
+        tenant: unit.tenant || unit.Tenant || ''
+      }))
     });
     setShowPropertyModal(true);
+  };
+
+  // Unit management functions
+  const handleAddUnit = () => {
+    setPropertyForm(prev => ({
+      ...prev,
+      units: [...prev.units, { unitNumber: '', rent: '', bedrooms: '', bathrooms: '', status: 'Vacant', tenant: '' }]
+    }));
+  };
+
+  const handleRemoveUnit = (index) => {
+    setPropertyForm(prev => ({
+      ...prev,
+      units: prev.units.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleUnitChange = (index, field, value) => {
+    setPropertyForm(prev => ({
+      ...prev,
+      units: prev.units.map((unit, i) => 
+        i === index ? { ...unit, [field]: value } : unit
+      )
+    }));
   };
 
   const handleSubmitProperty = async (e) => {
@@ -773,10 +835,24 @@ const AgencyDirectorDashboard = () => {
         address: propertyForm.address,
         type: propertyForm.type,
         rent: parseFloat(propertyForm.rent) || 0,
-        tenant: propertyForm.tenant,
+        tenant: propertyForm.tenant || null,
         status: propertyForm.status
         // Company is automatically set from token, not required in request
       };
+
+      // Add units if provided (only for new properties or if updating with units)
+      if (propertyForm.units && propertyForm.units.length > 0) {
+        propertyData.units = propertyForm.units
+          .filter(unit => unit.unitNumber && unit.unitNumber.trim() !== '') // Only include units with unitNumber
+          .map(unit => ({
+            unitNumber: unit.unitNumber.trim(),
+            rent: parseFloat(unit.rent) || 0,
+            bedrooms: parseInt(unit.bedrooms) || 0,
+            bathrooms: parseFloat(unit.bathrooms) || 0,
+            status: unit.status || 'Vacant',
+            tenant: unit.tenant && unit.tenant.trim() !== '' ? unit.tenant.trim() : null
+          }));
+      }
 
       if (editingProperty) {
         await agencyDirectorService.updateProperty(editingProperty.ID || editingProperty.id, propertyData);
@@ -807,216 +883,319 @@ const AgencyDirectorDashboard = () => {
   };
 
   // Render functions
-  const renderOverview = () => (
-    <div className="sa-overview-page">
-      <div className="sa-section-card">
-        <div className="sa-section-header">
-          <div>
-            <h3>Agency Director Dashboard Overview</h3>
-            <p>Comprehensive overview of your agency operations</p>
+  const renderOverview = () => {
+    if (loading) {
+      return <div className="sa-table-empty">Loading overview data...</div>;
+    }
+
+    const data = overviewData || {};
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const userName = currentUser.name || currentUser.Name || 'Agency Director';
+
+    return (
+      <div className="sa-overview-page">
+        <div className="sa-overview-top">
+          <div className="sa-overview-chart-card">
+            <div className="sa-card-header">
+              <h2>Agency Director Dashboard</h2>
+              <span className="sa-card-subtitle">Welcome, {userName}!</span>
+            </div>
+            <div className="sa-mini-legend">
+              <span className="sa-legend-item sa-legend-expected">Rent Collected</span>
+              <span className="sa-legend-item sa-legend-current">Occupancy Rate</span>
+            </div>
+            <div className="sa-chart-placeholder">
+              <div className="sa-chart-line sa-chart-line-expected" />
+              <div className="sa-chart-line sa-chart-line-current" />
+            </div>
+            <div className="sa-chart-footer">
+              <span>Jan</span>
+              <span>Feb</span>
+              <span>Mar</span>
+              <span>Apr</span>
+              <span>May</span>
+              <span>Jun</span>
+            </div>
+          </div>
+
+          <div className="sa-overview-metrics">
+            <div className="sa-metric-card sa-metric-primary">
+              <p className="sa-metric-label">Total Rent Collected</p>
+              <p className="sa-metric-period">This Month</p>
+              <p className="sa-metric-value">
+                {(data.totalRentCollected || 0).toLocaleString()} XOF
+              </p>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Overall Occupancy Rate</p>
+              <p className="sa-metric-number">
+                {data.overallOccupancyRate ? `${data.overallOccupancyRate.toFixed(1)}%` : '0%'}
+              </p>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Active Tenants</p>
+              <p className="sa-metric-value">
+                {data.numberOfActiveTenants || data.activeTenants || 0}
+              </p>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Total Managed Apartments</p>
+              <p className="sa-metric-number">
+                {data.totalManagedApartments || data.totalProperties || properties.length || 0}
+              </p>
+            </div>
+            <div className="sa-banner-card">
+              <div className="sa-banner-text">
+                <h3>Agency Management</h3>
+                <p>
+                  Manage your properties, tenants, and financial operations all in one place.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="sa-overview-metrics" style={{ width: '100%', marginTop: '20px' }}>
-          <div className="sa-metric-card sa-metric-primary">
-            <p className="sa-metric-label">Overall Occupancy Rate</p>
-            <p className="sa-metric-value">
-              {overviewData?.overallOccupancyRate ? `${overviewData.overallOccupancyRate.toFixed(1)}%` : '0%'}
-            </p>
+
+        <div className="sa-section-card" style={{ marginTop: '24px' }}>
+          <div className="sa-section-header">
+            <h3>Quick Actions</h3>
+            <p>Manage your agency operations and view key metrics.</p>
           </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Total Managed Apartments</p>
-            <p className="sa-metric-number">
-              {overviewData?.totalManagedApartments || overviewData?.totalProperties || properties.length || 0}
-            </p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Vacant Units</p>
-            <p className="sa-metric-number">
-              {overviewData?.numberOfVacantUnits || overviewData?.vacantProperties || 0}
-            </p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Active Tenants</p>
-            <p className="sa-metric-number">
-              {overviewData?.numberOfActiveTenants || overviewData?.activeTenants || 0}
-            </p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Total Rent Collected</p>
-            <p className="sa-metric-value">
-              {(overviewData?.totalRentCollected || 0).toLocaleString()} FCFA
-            </p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Total Unpaid Rent</p>
-            <p className="sa-metric-value" style={{ color: '#dc2626' }}>
-              {(overviewData?.totalUnpaidRent || 0).toLocaleString()} FCFA
-            </p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Reimbursements to Owners</p>
-            <p className="sa-metric-value">
-              {(overviewData?.totalReimbursementsToOwners || 0).toLocaleString()} FCFA
-            </p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Agency Commissions (This Month)</p>
-            <p className="sa-metric-value">
-              {(overviewData?.totalAgencyCommissions || overviewData?.agencyCommissionsCurrentMonth || 0).toLocaleString()} FCFA
-            </p>
+          <div style={{ padding: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('management')}>
+                <p className="sa-metric-label">Total Unpaid Rent</p>
+                <p className="sa-metric-value" style={{ color: '#dc2626' }}>
+                  {(data.totalUnpaidRent || 0).toLocaleString()} FCFA
+                </p>
+              </div>
+              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('accounting')}>
+                <p className="sa-metric-label">Reimbursements to Owners</p>
+                <p className="sa-metric-value">
+                  {(data.totalReimbursementsToOwners || 0).toLocaleString()} FCFA
+                </p>
+              </div>
+              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('accounting')}>
+                <p className="sa-metric-label">Agency Commissions</p>
+                <p className="sa-metric-value">
+                  {(data.totalAgencyCommissions || data.agencyCommissionsCurrentMonth || 0).toLocaleString()} FCFA
+                </p>
+              </div>
+              {data.ongoingWorkInBuildings > 0 && (
+                <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('works')}>
+                  <p className="sa-metric-label">Ongoing Work</p>
+                  <p className="sa-metric-number">
+                    {data.ongoingWorkInBuildings || 0}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Advertisements Carousel */}
+        {advertisements.length > 0 && (
+          <div className="sa-section-card" style={{ marginTop: '24px' }}>
+            <div className="sa-section-header">
+              <h3>Advertisements</h3>
+              <p>Active promotions and announcements</p>
+            </div>
+            <div style={{ 
+              position: 'relative', 
+              overflow: 'hidden', 
+              borderRadius: '12px',
+              marginTop: '20px',
+              backgroundColor: '#fff',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{
+                display: 'flex',
+                transform: `translateX(-${currentAdIndex * 100}%)`,
+                transition: 'transform 0.5s ease-in-out',
+                width: `${advertisements.length * 100}%`
+              }}>
+                {advertisements.map((ad, index) => {
+                  const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+                  const fullImageUrl = imageUrl 
+                    ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+                    : null;
+
+                  return (
+                    <div 
+                      key={`ad-carousel-${ad.ID || ad.id || index}`}
+                      style={{
+                        width: `${100 / advertisements.length}%`,
+                        flexShrink: 0,
+                        padding: '24px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {fullImageUrl && (
+                        <img 
+                          src={fullImageUrl} 
+                          alt={ad.Title || ad.title || 'Advertisement'} 
+                          style={{
+                            width: '100%',
+                            maxWidth: '600px',
+                            height: 'auto',
+                            maxHeight: '300px',
+                            objectFit: 'contain',
+                            borderRadius: '8px',
+                            marginBottom: '16px'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      )}
+                      <h3 style={{ 
+                        margin: '0 0 8px 0', 
+                        fontSize: '1.25rem', 
+                        color: '#1f2937',
+                        fontWeight: '600'
+                      }}>
+                        {ad.Title || ad.title || 'Untitled Advertisement'}
+                      </h3>
+                      <p style={{ 
+                        margin: '0 0 12px 0', 
+                        fontSize: '0.95rem', 
+                        color: '#6b7280',
+                        lineHeight: '1.5'
+                      }}>
+                        {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
+                      </p>
+                      {ad.CreatedAt && (
+                        <span style={{ 
+                          fontSize: '0.85rem', 
+                          color: '#9ca3af'
+                        }}>
+                          Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Carousel Indicators */}
+              {advertisements.length > 1 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '16px',
+                  backgroundColor: '#f9fafb',
+                  borderTop: '1px solid #e5e7eb'
+                }}>
+                  {advertisements.map((_, index) => (
+                    <button
+                      key={`indicator-${index}`}
+                      onClick={() => {
+                        setCurrentAdIndex(index);
+                        if (carouselIntervalRef.current) {
+                          clearInterval(carouselIntervalRef.current);
+                        }
+                        carouselIntervalRef.current = setInterval(() => {
+                          setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+                        }, 5000);
+                      }}
+                      style={{
+                        width: currentAdIndex === index ? '24px' : '8px',
+                        height: '8px',
+                        borderRadius: '4px',
+                        border: 'none',
+                        backgroundColor: currentAdIndex === index ? '#3b82f6' : '#d1d5db',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        padding: 0
+                      }}
+                      aria-label={`Go to slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Navigation Arrows */}
+              {advertisements.length > 1 && (
+                <>
+                  <button
+                    onClick={() => {
+                      setCurrentAdIndex((prevIndex) => 
+                        prevIndex === 0 ? advertisements.length - 1 : prevIndex - 1
+                      );
+                      if (carouselIntervalRef.current) {
+                        clearInterval(carouselIntervalRef.current);
+                      }
+                      carouselIntervalRef.current = setInterval(() => {
+                        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+                      }, 5000);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      left: '16px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '50%',
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                      zIndex: 10,
+                      fontSize: '20px',
+                      color: '#1f2937'
+                    }}
+                    aria-label="Previous advertisement"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+                      if (carouselIntervalRef.current) {
+                        clearInterval(carouselIntervalRef.current);
+                      }
+                      carouselIntervalRef.current = setInterval(() => {
+                        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+                      }, 5000);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '16px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '50%',
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                      zIndex: 10,
+                      fontSize: '20px',
+                      color: '#1f2937'
+                    }}
+                    aria-label="Next advertisement"
+                  >
+                    ›
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-
-      {overviewData?.vacantUnitsList && overviewData.vacantUnitsList.length > 0 && (
-        <div className="sa-section-card" style={{ marginTop: '20px' }}>
-          <div className="sa-section-header">
-            <h3>Vacant Units</h3>
-            <p>List of currently vacant properties</p>
-          </div>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Property Address</th>
-                  <th>Type</th>
-                  <th>Rent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overviewData.vacantUnitsList.map((unit, index) => (
-                  <tr key={`vacant-${unit.id || unit.ID || index}`}>
-                    <td>{index + 1}</td>
-                    <td className="sa-cell-main">
-                      <span className="sa-cell-title">{unit.address || unit.Address}</span>
-                    </td>
-                    <td>{unit.type || unit.Type}</td>
-                    <td>{(unit.rent || unit.Rent || 0).toLocaleString()} FCFA</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {overviewData?.newTenantsAwaitingApproval && overviewData.newTenantsAwaitingApproval.length > 0 && (
-        <div className="sa-section-card" style={{ marginTop: '20px' }}>
-          <div className="sa-section-header">
-            <h3>New Tenants Awaiting Approval</h3>
-            <p>{overviewData.newTenantsAwaitingApproval.length} tenants pending approval</p>
-          </div>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Property</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overviewData.newTenantsAwaitingApproval.map((tenant, index) => (
-                  <tr key={`pending-tenant-${tenant.id || tenant.ID || index}`}>
-                    <td>{index + 1}</td>
-                    <td className="sa-cell-main">
-                      <span className="sa-cell-title">{tenant.name || tenant.Name}</span>
-                    </td>
-                    <td>{tenant.email || tenant.Email}</td>
-                    <td>{tenant.property || tenant.Property}</td>
-                    <td>
-                      <span className={`sa-status-pill ${(tenant.status || tenant.Status || 'pending').toLowerCase()}`}>
-                        {tenant.status || tenant.Status || 'Pending'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {overviewData?.ongoingWorkInBuildings && overviewData.ongoingWorkInBuildings.length > 0 && (
-        <div className="sa-section-card" style={{ marginTop: '20px' }}>
-          <div className="sa-section-header">
-            <h3>Ongoing Work in Buildings</h3>
-            <p>{overviewData.ongoingWorkInBuildings.length} active work orders</p>
-          </div>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Building</th>
-                  <th>Work Type</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overviewData.ongoingWorkInBuildings.map((work, index) => (
-                  <tr key={`ongoing-work-${work.id || work.ID || index}`}>
-                    <td>{index + 1}</td>
-                    <td className="sa-cell-main">
-                      <span className="sa-cell-title">{work.building || work.Building}</span>
-                    </td>
-                    <td>{work.type || work.Type || 'Maintenance'}</td>
-                    <td>
-                      <span className={`sa-status-pill ${(work.status || work.Status || 'in_progress').toLowerCase().replace('_', '-')}`}>
-                        {work.status || work.Status || 'In Progress'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {overviewData?.latePaymentsStatus && overviewData.latePaymentsStatus.length > 0 && (
-        <div className="sa-section-card" style={{ marginTop: '20px' }}>
-          <div className="sa-section-header">
-            <h3>Late Payments Status</h3>
-            <p>Tenants with overdue payments</p>
-          </div>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Tenant</th>
-                  <th>Property</th>
-                  <th>Amount Due</th>
-                  <th>Days Overdue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overviewData.latePaymentsStatus.map((payment, index) => (
-                  <tr key={`late-payment-${payment.id || payment.ID || index}`}>
-                    <td>{index + 1}</td>
-                    <td className="sa-cell-main">
-                      <span className="sa-cell-title">{payment.tenant || payment.Tenant}</span>
-                    </td>
-                    <td>{payment.property || payment.Property}</td>
-                    <td style={{ color: '#dc2626' }}>
-                      {(payment.amountDue || payment.AmountDue || 0).toLocaleString()} FCFA
-                    </td>
-                    <td style={{ color: '#dc2626' }}>
-                      {payment.daysOverdue || payment.DaysOverdue || 0} days
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   const renderUsers = () => (
     <div className="sa-clients-page">
@@ -1396,15 +1575,15 @@ const AgencyDirectorDashboard = () => {
           </div>
           <div className="sa-form-group">
             <label>Type *</label>
-            <input type="text" value={propertyForm.type} onChange={(e) => setPropertyForm({...propertyForm, type: e.target.value})} required />
+            <input type="text" value={propertyForm.type} onChange={(e) => setPropertyForm({...propertyForm, type: e.target.value})} required placeholder="e.g., Apartment Building, House, Condo" />
           </div>
           <div className="sa-form-group">
             <label>Rent</label>
-            <input type="number" value={propertyForm.rent} onChange={(e) => setPropertyForm({...propertyForm, rent: e.target.value})} />
+            <input type="number" value={propertyForm.rent} onChange={(e) => setPropertyForm({...propertyForm, rent: e.target.value})} placeholder="Base rent (optional if units provided)" />
           </div>
           <div className="sa-form-group">
             <label>Tenant</label>
-            <input type="text" value={propertyForm.tenant} onChange={(e) => setPropertyForm({...propertyForm, tenant: e.target.value})} />
+            <input type="text" value={propertyForm.tenant} onChange={(e) => setPropertyForm({...propertyForm, tenant: e.target.value})} placeholder="Main tenant (optional)" />
           </div>
           <div className="sa-form-group">
             <label>Status *</label>
@@ -1414,6 +1593,132 @@ const AgencyDirectorDashboard = () => {
               <option value="Maintenance">Maintenance</option>
             </select>
           </div>
+
+          {/* Units Section */}
+          <div className="sa-form-group" style={{ marginTop: '24px', padding: '20px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <label style={{ margin: 0, fontWeight: 600, color: '#1f2937' }}>
+                Units/Houses <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#6b7280' }}>(Optional - for properties with multiple units)</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleAddUnit}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '500'
+                }}
+              >
+                + Add Unit
+              </button>
+            </div>
+            {propertyForm.units.map((unit, index) => (
+              <div key={index} style={{ marginBottom: '16px', padding: '16px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#6b7280' }}>Unit {index + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveUnit(index)}
+                    style={{
+                      padding: '4px 8px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '11px'
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Unit Number *</label>
+                    <input
+                      type="text"
+                      value={unit.unitNumber}
+                      onChange={(e) => handleUnitChange(index, 'unitNumber', e.target.value)}
+                      placeholder="e.g., 101, A1, Unit 5"
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
+                      required={propertyForm.units.length > 0}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Rent *</label>
+                    <input
+                      type="number"
+                      value={unit.rent}
+                      onChange={(e) => handleUnitChange(index, 'rent', e.target.value)}
+                      placeholder="0.00"
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
+                      required={propertyForm.units.length > 0}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Bedrooms</label>
+                    <input
+                      type="number"
+                      value={unit.bedrooms}
+                      onChange={(e) => handleUnitChange(index, 'bedrooms', e.target.value)}
+                      placeholder="0"
+                      min="0"
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Bathrooms</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={unit.bathrooms}
+                      onChange={(e) => handleUnitChange(index, 'bathrooms', e.target.value)}
+                      placeholder="0.0"
+                      min="0"
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Status</label>
+                    <select
+                      value={unit.status}
+                      onChange={(e) => handleUnitChange(index, 'status', e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
+                    >
+                      <option value="Vacant">Vacant</option>
+                      <option value="Occupied">Occupied</option>
+                      <option value="Maintenance">Maintenance</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Tenant</label>
+                    <input
+                      type="text"
+                      value={unit.tenant}
+                      onChange={(e) => handleUnitChange(index, 'tenant', e.target.value)}
+                      placeholder="Tenant name (optional)"
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {propertyForm.units.length === 0 && (
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', fontStyle: 'italic', textAlign: 'center', padding: '12px' }}>
+                No units added. Click "Add Unit" to add units/houses for this property.
+              </p>
+            )}
+          </div>
+
           <div className="sa-form-actions">
             <button type="button" className="sa-outline-button" onClick={() => setShowPropertyModal(false)}>Cancel</button>
             <button type="submit" className="sa-primary-cta">{editingProperty ? 'Update' : 'Create'} Property</button>
@@ -2609,14 +2914,42 @@ const AgencyDirectorDashboard = () => {
                       className="sa-action-btn sa-action-edit"
                       onClick={() => handleOpenEditUser(user)}
                       title="Edit"
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
                     >
                       Edit
                     </button>
-                    {user.role !== 'superadmin' && (
+                    {user.role !== 'superadmin' && user.Role !== 'superadmin' && (
                       <button
                         className="sa-action-btn sa-action-delete"
                         onClick={() => handleDeleteUser(user.id || user.ID)}
                         title="Delete"
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
                       >
                         Delete
                       </button>
@@ -2678,20 +3011,40 @@ const AgencyDirectorDashboard = () => {
               <th>Address</th>
               <th>Type</th>
               <th>Rent</th>
+              <th>Units</th>
               <th>Tenant</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredProperties.map((property, index) => (
+            {filteredProperties.map((property, index) => {
+              const units = property.units || property.Units || [];
+              const totalUnits = property.totalUnits || property.TotalUnits || units.length || 0;
+              const vacantUnits = property.vacantUnits || property.VacantUnits || units.filter(u => (u.status || u.Status || 'Vacant') === 'Vacant').length || 0;
+              
+              return (
               <tr key={`property-${property.id || property.ID || index}`}>
                 <td>{index + 1}</td>
                 <td className="sa-cell-main">
                   <span className="sa-cell-title">{property.address || property.Address}</span>
+                  {totalUnits > 0 && (
+                    <span style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
+                      {totalUnits} unit{totalUnits !== 1 ? 's' : ''} ({vacantUnits} vacant)
+                    </span>
+                  )}
                 </td>
                 <td>{property.type || property.Type || 'N/A'}</td>
                 <td>{(property.rent || property.Rent || 0).toLocaleString()} FCFA</td>
+                <td>
+                  {totalUnits > 0 ? (
+                    <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                      {totalUnits} / {vacantUnits} vacant
+                    </span>
+                  ) : (
+                    <span style={{ color: '#9ca3af' }}>—</span>
+                  )}
+                </td>
                 <td>{property.tenant || property.Tenant || 'Vacant'}</td>
                 <td>
                   <span className={`sa-status-pill ${(property.status || property.Status || 'vacant').toLowerCase()}`}>
@@ -2704,6 +3057,20 @@ const AgencyDirectorDashboard = () => {
                       className="sa-action-btn sa-action-edit"
                       onClick={() => handleOpenEditProperty(property)}
                       title="Edit"
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
                     >
                       Edit
                     </button>
@@ -2711,16 +3078,31 @@ const AgencyDirectorDashboard = () => {
                       className="sa-action-btn sa-action-delete"
                       onClick={() => handleDeleteProperty(property.id || property.ID)}
                       title="Delete"
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
                     >
                       Delete
                     </button>
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {filteredProperties.length === 0 && (
               <tr>
-                <td colSpan={7} className="sa-table-empty">No properties found</td>
+                <td colSpan={8} className="sa-table-empty">No properties found</td>
               </tr>
             )}
           </tbody>
@@ -2979,6 +3361,186 @@ const AgencyDirectorDashboard = () => {
           </div>
         )}
       </RoleLayout>
+      
+      {/* User Modal */}
+      <Modal isOpen={showUserModal} onClose={() => setShowUserModal(false)} title={editingUser ? 'Edit User' : 'Add User'}>
+        <form onSubmit={handleSubmitUser} className="sa-form">
+          <div className="sa-form-group">
+            <label>Name *</label>
+            <input type="text" value={userForm.name} onChange={(e) => setUserForm({...userForm, name: e.target.value})} required />
+          </div>
+          <div className="sa-form-group">
+            <label>Email *</label>
+            <input type="email" value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} required />
+          </div>
+          <div className="sa-form-group">
+            <label>Role *</label>
+            <select 
+              value={userForm.role} 
+              onChange={(e) => {
+                const newRole = e.target.value;
+                setUserForm({
+                  ...userForm, 
+                  role: newRole,
+                  // Reset properties if role changes from/to landlord
+                  properties: newRole === 'landlord' && !editingUser ? (userForm.properties.length > 0 ? userForm.properties : [{ propertyId: '' }]) : []
+                });
+              }} 
+              required
+            >
+              <option value="commercial">Commercial</option>
+              <option value="technician">Technician</option>
+              <option value="accounting">Accounting</option>
+              <option value="admin">Admin</option>
+              <option value="landlord">Landlord</option>
+              <option value="salesmanager">Sales Manager</option>
+              <option value="agency_director">Agency Director</option>
+            </select>
+            <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+              Company will be automatically set from your account
+              {!editingUser && userForm.role === 'landlord' && (
+                <span style={{ color: '#dc2626', display: 'block', marginTop: '4px' }}>
+                  ⚠️ Properties are required for landlords
+                </span>
+              )}
+            </small>
+          </div>
+          
+          {/* Properties section - only show when creating a landlord */}
+          {!editingUser && userForm.role === 'landlord' && (
+            <div className="sa-form-group" style={{ marginTop: '24px', padding: '20px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <label style={{ margin: 0, fontWeight: 600, color: '#1f2937' }}>
+                  Properties * <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#6b7280' }}>(At least one required)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAddPropertyToForm}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500'
+                  }}
+                >
+                  + Add Property
+                </button>
+              </div>
+              {userForm.properties.map((prop, index) => (
+                <div key={index} style={{ marginBottom: '12px', padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#6b7280' }}>Property {index + 1}</span>
+                    {userForm.properties.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePropertyFromForm(index)}
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '11px'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <select
+                    value={prop.propertyId || ''}
+                    onChange={(e) => handlePropertyFormChange(index, e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #d1d5db',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    <option value="">Please select a property</option>
+                    {getAvailablePropertiesForIndex(index).map(property => (
+                      <option key={property.id || property.ID} value={property.id || property.ID}>
+                        {property.address || property.Address} - {property.type || property.Type || 'N/A'}
+                      </option>
+                    ))}
+                  </select>
+                  {prop.propertyId && getSelectedProperty(prop.propertyId) && (
+                    <div style={{ marginTop: '8px', padding: '8px', background: '#f0f9ff', borderRadius: '4px', fontSize: '0.8rem', color: '#0369a1' }}>
+                      <div><strong>Type:</strong> {getSelectedProperty(prop.propertyId).type || getSelectedProperty(prop.propertyId).Type || 'N/A'}</div>
+                      <div><strong>Rent:</strong> {(getSelectedProperty(prop.propertyId).rent || getSelectedProperty(prop.propertyId).Rent || 0).toLocaleString()} FCFA</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!editingUser && userForm.role !== 'landlord' && (
+            <div className="sa-form-group">
+              <label>Password {!editingUser ? '*' : ''}</label>
+              <input 
+                type="password" 
+                value={userForm.password} 
+                onChange={(e) => setUserForm({...userForm, password: e.target.value})} 
+                required={!editingUser}
+                placeholder={editingUser ? 'Leave blank to keep current password' : ''}
+              />
+            </div>
+          )}
+
+          <div className="sa-form-actions">
+            <button type="button" className="sa-outline-button" onClick={() => setShowUserModal(false)}>Cancel</button>
+            <button type="submit" className="sa-primary-cta">{editingUser ? 'Update' : 'Create'} User</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Property Modal */}
+      <Modal isOpen={showPropertyModal} onClose={() => setShowPropertyModal(false)} title={editingProperty ? 'Edit Property' : 'Add Property'}>
+        <form onSubmit={handleSubmitProperty} className="sa-form">
+          <div className="sa-form-group">
+            <label>Address *</label>
+            <input type="text" value={propertyForm.address} onChange={(e) => setPropertyForm({...propertyForm, address: e.target.value})} required />
+          </div>
+          <div className="sa-form-group">
+            <small style={{ color: '#6b7280', fontSize: '0.75rem', marginBottom: '8px', display: 'block' }}>
+              Company will be automatically set from your account
+            </small>
+          </div>
+          <div className="sa-form-group">
+            <label>Type *</label>
+            <input type="text" value={propertyForm.type} onChange={(e) => setPropertyForm({...propertyForm, type: e.target.value})} required />
+          </div>
+          <div className="sa-form-group">
+            <label>Rent</label>
+            <input type="number" value={propertyForm.rent} onChange={(e) => setPropertyForm({...propertyForm, rent: e.target.value})} />
+          </div>
+          <div className="sa-form-group">
+            <label>Tenant</label>
+            <input type="text" value={propertyForm.tenant} onChange={(e) => setPropertyForm({...propertyForm, tenant: e.target.value})} />
+          </div>
+          <div className="sa-form-group">
+            <label>Status *</label>
+            <select value={propertyForm.status} onChange={(e) => setPropertyForm({...propertyForm, status: e.target.value})} required>
+              <option value="Vacant">Vacant</option>
+              <option value="Occupied">Occupied</option>
+              <option value="Maintenance">Maintenance</option>
+            </select>
+          </div>
+          <div className="sa-form-actions">
+            <button type="button" className="sa-outline-button" onClick={() => setShowPropertyModal(false)}>Cancel</button>
+            <button type="submit" className="sa-primary-cta">{editingProperty ? 'Update' : 'Create'} Property</button>
+          </div>
+        </form>
+      </Modal>
+
       <div className="notifications-container">
         {notifications.map(notification => (
           <div key={`notification-${notification.id}`} className={`notification notification-${notification.type}`}>
