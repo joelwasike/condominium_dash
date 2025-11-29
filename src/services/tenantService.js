@@ -66,5 +66,49 @@ export const tenantService = {
   getAdvertisements: async () => {
     const url = buildApiUrl('/api/tenant/advertisements');
     return await apiRequest(url);
+  },
+
+  // Terminate lease
+  terminateLease: async (terminationData) => {
+    const url = buildApiUrl('/api/tenant/lease/terminate');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        reason: terminationData.reason,
+        terminationDate: terminationData.terminationDate,
+        comments: terminationData.comments,
+        securityDepositRefundMethod: terminationData.securityDepositRefundMethod,
+        inventoryCheckDate: terminationData.inventoryCheckDate
+      })
+    });
+  },
+
+  // Transfer payment request
+  transferPaymentRequest: async (transferData) => {
+    const url = buildApiUrl('/api/tenant/payments/transfer');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        property: transferData.property || '',
+        recipientIDCardNumber: transferData.recipientIdCard,
+        recipientEntryDate: transferData.entryDate,
+        recipientName: transferData.recipientName,
+        recipientEmail: transferData.recipientEmail,
+        recipientPhone: transferData.recipientPhone,
+        relationship: transferData.relationship,
+        reason: transferData.reason
+      })
+    });
+  },
+
+  // Upload profile picture
+  uploadProfilePicture: async (profilePictureURL) => {
+    const url = buildApiUrl('/api/tenant/profile/picture');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        profilePictureURL: profilePictureURL
+      })
+    });
   }
 };

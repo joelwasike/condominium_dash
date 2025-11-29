@@ -103,8 +103,8 @@ const SettingsPage = () => {
       const result = await cloudinaryService.uploadFile(file, 'profile-pictures');
       
       if (result.success) {
-        // Update profile with the new picture URL
-        const updatedProfile = await profileService.updateProfile({
+        // Update profile with the new picture URL using generic profile service (works for all dashboards)
+        await profileService.updateProfile({
           profilePicture: result.url
         });
         
@@ -119,7 +119,7 @@ const SettingsPage = () => {
       }
     } catch (error) {
       console.error('Error uploading profile picture:', error);
-      addNotification('Failed to upload profile picture', 'error');
+      addNotification(error.message || 'Failed to upload profile picture', 'error');
     } finally {
       setUploadingPicture(false);
       if (fileInputRef.current) {
@@ -195,7 +195,7 @@ const SettingsPage = () => {
   const renderProfileForm = () => (
     <div className="settings-card">
       <div className="settings-card-header">
-        <div className="settings-avatar" style={{ position: 'relative' }}>
+        <div className="settings-avatar" style={{ position: 'relative', width: '80px', height: '80px' }}>
           {profileForm.profilePicture ? (
             <img 
               src={profileForm.profilePicture} 
@@ -220,10 +220,10 @@ const SettingsPage = () => {
             disabled={uploadingPicture}
             style={{
               position: 'absolute',
-              bottom: 0,
-              right: 0,
-              width: '28px',
-              height: '28px',
+              bottom: '2px',
+              right: '2px',
+              width: '24px',
+              height: '24px',
               borderRadius: '50%',
               background: '#3b82f6',
               border: '2px solid white',
@@ -231,15 +231,16 @@ const SettingsPage = () => {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: uploadingPicture ? 'not-allowed' : 'pointer',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-              padding: 0
+              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+              padding: 0,
+              zIndex: 10
             }}
             title="Upload profile picture"
           >
             {uploadingPicture ? (
-              <div style={{ width: '14px', height: '14px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <div style={{ width: '12px', height: '12px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             ) : (
-              <Camera size={14} color="white" />
+              <Camera size={12} color="white" />
             )}
           </button>
           <input

@@ -469,17 +469,15 @@ const TenantDashboard = () => {
     try {
       setLoading(true);
       
-      // TODO: Replace with actual API call when backend endpoint is available
-      // await tenantService.terminateLease(terminateLeaseForm);
+      await tenantService.terminateLease(terminateLeaseForm);
       
-      console.log('Terminate lease request:', terminateLeaseForm);
       addNotification('Lease termination request submitted successfully!', 'success');
       
       setTerminateLeaseForm({ reason: '', terminationDate: '', comments: '', securityDepositRefundMethod: '', inventoryCheckDate: '' });
       setShowTerminateLeaseModal(false);
     } catch (error) {
       console.error('Error submitting lease termination request:', error);
-      addNotification('Failed to submit lease termination request', 'error');
+      addNotification(error.message || 'Failed to submit lease termination request', 'error');
     } finally {
       setLoading(false);
     }
@@ -491,10 +489,14 @@ const TenantDashboard = () => {
     try {
       setLoading(true);
       
-      // TODO: Replace with actual API call when backend endpoint is available
-      // await tenantService.transferPaymentRequest(transferPaymentForm);
+      // Get property from leaseInfo if available
+      const property = leaseInfo?.property || leaseInfo?.address || '';
       
-      console.log('Transfer payment request:', transferPaymentForm);
+      await tenantService.transferPaymentRequest({
+        ...transferPaymentForm,
+        property: property
+      });
+      
       addNotification('Payment transfer request submitted successfully!', 'success');
       
       setTransferPaymentForm({ 
@@ -509,7 +511,7 @@ const TenantDashboard = () => {
       setShowTransferPaymentModal(false);
     } catch (error) {
       console.error('Error submitting payment transfer request:', error);
-      addNotification('Failed to submit payment transfer request', 'error');
+      addNotification(error.message || 'Failed to submit payment transfer request', 'error');
     } finally {
       setLoading(false);
     }
