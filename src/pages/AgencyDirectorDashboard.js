@@ -176,12 +176,12 @@ const AgencyDirectorDashboard = () => {
       try {
         const conversationsData = await agencyDirectorService.getConversations().catch(() => []);
         if (Array.isArray(conversationsData)) {
-          // Extract super admins from conversations (users with role 'superadmin')
+        // Extract super admins from conversations (users with role 'superadmin')
           const superAdminUsers = conversationsData.filter(conv => {
             const role = (conv.role || conv.user?.role || '').toLowerCase();
             return role === 'superadmin';
           });
-          setSuperAdmins(superAdminUsers);
+        setSuperAdmins(superAdminUsers);
           
           // Store all conversations for use in chatUsers useMemo
           setConversations(conversationsData);
@@ -893,8 +893,18 @@ const AgencyDirectorDashboard = () => {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const userName = currentUser.name || currentUser.Name || 'Agency Director';
 
+    // Calculate chart data
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const currentRent = data.totalRentCollected || 0;
+    const currentOccupancy = data.overallOccupancyRate || 0;
+    const chartData = months.map((month, index) => ({
+      month,
+      rent: Math.round(currentRent * (0.7 + (index * 0.05))),
+      occupancy: Math.round(currentOccupancy * (0.85 + (index * 0.025)))
+    }));
+
     return (
-      <div className="sa-overview-page">
+    <div className="sa-overview-page">
         <div className="sa-overview-top">
           <div className="sa-overview-chart-card">
             <div className="sa-card-header">
@@ -908,16 +918,7 @@ const AgencyDirectorDashboard = () => {
             <div style={{ width: '100%', height: '200px', marginTop: '20px' }}>
               <ResponsiveContainer>
                 <LineChart
-                  data={(() => {
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                    const currentRent = data.totalRentCollected || 0;
-                    const currentOccupancy = data.overallOccupancyRate || 0;
-                    return months.map((month, index) => ({
-                      month,
-                      rent: Math.round(currentRent * (0.7 + (index * 0.05))),
-                      occupancy: Math.round(currentOccupancy * (0.85 + (index * 0.025)))
-                    }));
-                  })()}
+                  data={chartData}
                   margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -956,26 +957,26 @@ const AgencyDirectorDashboard = () => {
           </div>
 
           <div className="sa-overview-metrics">
-            <div className="sa-metric-card sa-metric-primary">
+        <div className="sa-metric-card sa-metric-primary">
               <p className="sa-metric-label">Total Rent Collected</p>
               <p className="sa-metric-period">This Month</p>
-              <p className="sa-metric-value">
+          <p className="sa-metric-value">
                 {(data.totalRentCollected || 0).toLocaleString()} XOF
-              </p>
-            </div>
-            <div className="sa-metric-card">
+          </p>
+        </div>
+        <div className="sa-metric-card">
               <p className="sa-metric-label">Overall Occupancy Rate</p>
-              <p className="sa-metric-number">
+          <p className="sa-metric-number">
                 {data.overallOccupancyRate ? `${data.overallOccupancyRate.toFixed(1)}%` : '0%'}
-              </p>
-            </div>
-            <div className="sa-metric-card">
+          </p>
+        </div>
+        <div className="sa-metric-card">
               <p className="sa-metric-label">Active Tenants</p>
               <p className="sa-metric-value">
                 {data.numberOfActiveTenants || data.activeTenants || 0}
-              </p>
-            </div>
-            <div className="sa-metric-card">
+          </p>
+        </div>
+        <div className="sa-metric-card">
               <p className="sa-metric-label">Total Managed Apartments</p>
               <p className="sa-metric-number">
                 {data.totalManagedApartments || data.totalProperties || properties.length || 0}
@@ -1150,29 +1151,29 @@ const AgencyDirectorDashboard = () => {
               </div>
               <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('accounting')}>
                 <p className="sa-metric-label">Reimbursements to Owners</p>
-                <p className="sa-metric-value">
+          <p className="sa-metric-value">
                   {(data.totalReimbursementsToOwners || 0).toLocaleString()} FCFA
-                </p>
-              </div>
+          </p>
+        </div>
               <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('accounting')}>
                 <p className="sa-metric-label">Agency Commissions</p>
                 <p className="sa-metric-value">
                   {(data.totalAgencyCommissions || data.agencyCommissionsCurrentMonth || 0).toLocaleString()} FCFA
-                </p>
-              </div>
+          </p>
+        </div>
               {data.ongoingWorkInBuildings > 0 && (
                 <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('works')}>
                   <p className="sa-metric-label">Ongoing Work</p>
-                  <p className="sa-metric-number">
+          <p className="sa-metric-number">
                     {data.ongoingWorkInBuildings || 0}
-                  </p>
+          </p>
                 </div>
               )}
             </div>
-          </div>
         </div>
       </div>
-    );
+    </div>
+  );
   };
 
   const renderUsers = () => (
