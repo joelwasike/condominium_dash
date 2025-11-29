@@ -47,7 +47,9 @@ const TenantDashboard = () => {
   const [terminateLeaseForm, setTerminateLeaseForm] = useState({
     reason: '',
     terminationDate: '',
-    comments: ''
+    comments: '',
+    securityDepositRefundMethod: '',
+    inventoryCheckDate: ''
   });
   const [showTransferPaymentModal, setShowTransferPaymentModal] = useState(false);
   const [transferPaymentForm, setTransferPaymentForm] = useState({
@@ -55,7 +57,8 @@ const TenantDashboard = () => {
     recipientEmail: '',
     recipientPhone: '',
     relationship: '',
-    amount: '',
+    recipientIdCard: '',
+    entryDate: '',
     reason: ''
   });
   const [loading, setLoading] = useState(false);
@@ -472,7 +475,7 @@ const TenantDashboard = () => {
       console.log('Terminate lease request:', terminateLeaseForm);
       addNotification('Lease termination request submitted successfully!', 'success');
       
-      setTerminateLeaseForm({ reason: '', terminationDate: '', comments: '' });
+      setTerminateLeaseForm({ reason: '', terminationDate: '', comments: '', securityDepositRefundMethod: '', inventoryCheckDate: '' });
       setShowTerminateLeaseModal(false);
     } catch (error) {
       console.error('Error submitting lease termination request:', error);
@@ -499,7 +502,8 @@ const TenantDashboard = () => {
         recipientEmail: '', 
         recipientPhone: '', 
         relationship: '', 
-        amount: '', 
+        recipientIdCard: '',
+        entryDate: '',
         reason: '' 
       });
       setShowTransferPaymentModal(false);
@@ -1278,9 +1282,7 @@ Thank you for your payment!
                       required
                     >
                       <option value="">Select payment method</option>
-                      <option value="cash">Cash Payment</option>
                       <option value="mobile_money">Mobile Money</option>
-                      <option value="bank_transfer">Bank Transfer</option>
                     </select>
                   </div>
                 </div>
@@ -1363,6 +1365,39 @@ Thank you for your payment!
                     placeholder="Provide any additional details about your termination request..."
                     rows="4"
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="securityDepositRefundMethod">Security Deposit Refund Payment Method *</label>
+                  <select
+                    id="securityDepositRefundMethod"
+                    value={terminateLeaseForm.securityDepositRefundMethod}
+                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, securityDepositRefundMethod: e.target.value }))}
+                    required
+                  >
+                    <option value="">Select payment method for refund</option>
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cash">Cash</option>
+                  </select>
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Select how you would like to receive your security deposit refund.
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="inventoryCheckDate">Inventory Check Date *</label>
+                  <input
+                    type="date"
+                    id="inventoryCheckDate"
+                    value={terminateLeaseForm.inventoryCheckDate}
+                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, inventoryCheckDate: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Please schedule a date for the property inventory check before you move out.
+                  </small>
                 </div>
 
                 <div className="modal-footer">
@@ -1448,18 +1483,31 @@ Thank you for your payment!
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="amount">Payment Amount *</label>
+                    <label htmlFor="recipientIdCard">Recipient ID Card Number *</label>
                     <input
-                      type="number"
-                      id="amount"
-                      value={transferPaymentForm.amount}
-                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="Enter amount"
-                      min="0"
-                      step="0.01"
+                      type="text"
+                      id="recipientIdCard"
+                      value={transferPaymentForm.recipientIdCard}
+                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, recipientIdCard: e.target.value }))}
+                      placeholder="Enter recipient's ID card number"
                       required
                     />
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="entryDate">Date When Recipient Will Enter *</label>
+                  <input
+                    type="date"
+                    id="entryDate"
+                    value={transferPaymentForm.entryDate}
+                    onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, entryDate: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Select the date when the recipient will enter/start.
+                  </small>
                 </div>
 
                 <div className="form-group">

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { PencilLine, Bell, ShieldCheck, ToggleLeft, ToggleRight, Lock, Mail } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { PencilLine, Bell, ShieldCheck, ToggleLeft, ToggleRight, Lock, Mail, Upload, Camera, X } from 'lucide-react';
 import './SettingsPage.css';
 import { profileService } from '../services/profileService';
+import { cloudinaryService } from '../services/cloudinaryService';
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -14,8 +15,11 @@ const SettingsPage = () => {
     email: '',
     company: '',
     role: '',
-    status: ''
+    status: '',
+    profilePicture: ''
   });
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const fileInputRef = useRef(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -47,7 +51,8 @@ const SettingsPage = () => {
         email: profile.email || '',
         company: profile.company || '',
         role: profile.role || '',
-        status: profile.status || ''
+        status: profile.status || '',
+        profilePicture: profile.profilePicture || profile.profile_picture || ''
       });
       // Store user ID for potential future use
       if (profile.id) {
@@ -72,6 +77,59 @@ const SettingsPage = () => {
 
   const handlePreferenceToggle = (field) => {
     setPreferences(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const handlePictureUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      addNotification('Please upload a valid image file (JPEG, PNG, or GIF)', 'error');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      addNotification('Image size must be less than 5MB', 'error');
+      return;
+    }
+
+    setUploadingPicture(true);
+    try {
+      // Upload to Cloudinary
+      const result = await cloudinaryService.uploadFile(file, 'profile-pictures');
+      
+      if (result.success) {
+        // Update profile with the new picture URL
+        const updatedProfile = await profileService.updateProfile({
+          profilePicture: result.url
+        });
+        
+        setProfileForm(prev => ({
+          ...prev,
+          profilePicture: result.url
+        }));
+        
+        addNotification('Profile picture updated successfully', 'success');
+      } else {
+        addNotification(result.error || 'Failed to upload picture', 'error');
+      }
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      addNotification('Failed to upload profile picture', 'error');
+    } finally {
+      setUploadingPicture(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handlePictureClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handlePasswordSubmit = async (e) => {
@@ -137,10 +195,60 @@ const SettingsPage = () => {
   const renderProfileForm = () => (
     <div className="settings-card">
       <div className="settings-card-header">
-        <div className="settings-avatar">
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #f97316 0%, #f43f5e 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '2rem', fontWeight: 'bold' }}>
-            {profileForm.name ? profileForm.name.charAt(0).toUpperCase() : 'U'}
-          </div>
+        <div className="settings-avatar" style={{ position: 'relative' }}>
+          {profileForm.profilePicture ? (
+            <img 
+              src={profileForm.profilePicture} 
+              alt="Profile" 
+              style={{ 
+                width: '80px', 
+                height: '80px', 
+                borderRadius: '50%', 
+                objectFit: 'cover',
+                border: '3px solid #fff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }} 
+            />
+          ) : (
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #f97316 0%, #f43f5e 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '2rem', fontWeight: 'bold' }}>
+              {profileForm.name ? profileForm.name.charAt(0).toUpperCase() : 'U'}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handlePictureClick}
+            disabled={uploadingPicture}
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              background: '#3b82f6',
+              border: '2px solid white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: uploadingPicture ? 'not-allowed' : 'pointer',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              padding: 0
+            }}
+            title="Upload profile picture"
+          >
+            {uploadingPicture ? (
+              <div style={{ width: '14px', height: '14px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            ) : (
+              <Camera size={14} color="white" />
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/gif"
+            onChange={handlePictureUpload}
+            style={{ display: 'none' }}
+          />
         </div>
         <div className="settings-card-title">
           <h2>Profile</h2>

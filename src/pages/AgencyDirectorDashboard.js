@@ -44,6 +44,16 @@ const AgencyDirectorDashboard = () => {
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
 
+  // Data states
+  const [overviewData, setOverviewData] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [properties, setProperties] = useState([]);
+  const [financialData, setFinancialData] = useState(null);
+  const [works, setWorks] = useState([]);
+  const [accountingData, setAccountingData] = useState(null);
+  const [landlordPayments, setLandlordPayments] = useState([]);
+  const [advertisements, setAdvertisements] = useState([]);
+
   // Auto-slide carousel for advertisements on overview page
   useEffect(() => {
     if (activeTab === 'overview' && advertisements.length > 1) {
@@ -63,16 +73,6 @@ const AgencyDirectorDashboard = () => {
       setCurrentAdIndex(0);
     }
   }, [activeTab, advertisements.length]);
-
-  // Data states
-  const [overviewData, setOverviewData] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [properties, setProperties] = useState([]);
-  const [financialData, setFinancialData] = useState(null);
-  const [works, setWorks] = useState([]);
-  const [accountingData, setAccountingData] = useState(null);
-  const [landlordPayments, setLandlordPayments] = useState([]);
-  const [advertisements, setAdvertisements] = useState([]);
 
   // Filters
   const [userCompanyFilter, setUserCompanyFilter] = useState('');
