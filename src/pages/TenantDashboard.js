@@ -67,6 +67,8 @@ const TenantDashboard = () => {
   const [payments, setPayments] = useState([]);
   const [maintenanceRequests, setMaintenanceRequests] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const carouselIntervalRef = useRef(null);
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -399,12 +401,32 @@ const TenantDashboard = () => {
     loadData();
   }, []);
 
-  // Load advertisements when advertisements tab is active
+  // Load advertisements when advertisements tab is active or overview is active
   useEffect(() => {
-    if (activeTab === 'advertisements') {
+    if (activeTab === 'advertisements' || activeTab === 'overview') {
       loadAdvertisements();
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Auto-slide carousel for advertisements on overview page
+  useEffect(() => {
+    if (activeTab === 'overview' && advertisements.length > 1) {
+      carouselIntervalRef.current = setInterval(() => {
+        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+      }, 5000); // Change slide every 5 seconds
+
+      return () => {
+        if (carouselIntervalRef.current) {
+          clearInterval(carouselIntervalRef.current);
+        }
+      };
+    } else {
+      if (carouselIntervalRef.current) {
+        clearInterval(carouselIntervalRef.current);
+      }
+      setCurrentAdIndex(0);
+    }
+  }, [activeTab, advertisements.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load users when chat tab is active (only once per tab switch)
   useEffect(() => {
@@ -678,14 +700,162 @@ Thank you for your payment!
                 {data.openMaintenanceTickets || 0}
               </p>
             </div>
-            <div className="sa-banner-card">
-              <div className="sa-banner-text">
-                <h3>Property Management</h3>
-                <p>
-                  Manage your lease, payments, and maintenance requests all in one place.
-                </p>
+            {/* Advertisements Carousel - Replacing Banner Card */}
+            {advertisements.length > 0 ? (
+              <div style={{
+                gridColumn: 'span 1',
+                minHeight: '300px',
+                padding: '24px',
+                backgroundColor: '#fff',
+                borderRadius: '12px',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                overflow: 'hidden',
+                position: 'relative'
+              }}>
+                <div style={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  flex: 1,
+                  borderRadius: '8px',
+                  backgroundColor: '#f9fafb'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    transform: `translateX(-${currentAdIndex * 100}%)`,
+                    transition: 'transform 0.5s ease-in-out',
+                    width: `${advertisements.length * 100}%`,
+                    height: '100%'
+                  }}>
+                    {advertisements.map((ad, index) => {
+                      const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+                      const fullImageUrl = imageUrl 
+                        ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
+                        : null;
+
+                      return (
+                        <div 
+                          key={`ad-${ad.ID || ad.id || index}`}
+                          style={{
+                            width: `${100 / advertisements.length}%`,
+                            padding: '20px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            textAlign: 'center',
+                            flexShrink: 0,
+                            height: '100%'
+                          }}
+                        >
+                          {fullImageUrl ? (
+                            <img 
+                              src={fullImageUrl} 
+                              alt={ad.Title || ad.title || 'Advertisement'} 
+                              style={{
+                                width: '100%',
+                                height: 'auto',
+                                maxHeight: '200px',
+                                objectFit: 'contain',
+                                borderRadius: '8px',
+                                marginBottom: '12px'
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              height: '150px',
+                              backgroundColor: '#e5e7eb',
+                              borderRadius: '8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginBottom: '12px',
+                              color: '#9ca3af'
+                            }}>
+                              No Image
+                            </div>
+                          )}
+                          <h3 style={{ 
+                            margin: '0 0 8px 0', 
+                            fontSize: '1rem', 
+                            color: '#1f2937',
+                            fontWeight: '600'
+                          }}>
+                            {ad.Title || ad.title || 'Untitled Advertisement'}
+                          </h3>
+                          <p style={{ 
+                            margin: '0', 
+                            fontSize: '0.85rem', 
+                            color: '#6b7280',
+                            lineHeight: '1.4',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}>
+                            {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Carousel Indicators */}
+                  {advertisements.length > 1 && (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '12px',
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                    }}>
+                      {advertisements.map((_, index) => (
+                        <button
+                          key={`indicator-${index}`}
+                          onClick={() => {
+                            setCurrentAdIndex(index);
+                            if (carouselIntervalRef.current) {
+                              clearInterval(carouselIntervalRef.current);
+                            }
+                            carouselIntervalRef.current = setInterval(() => {
+                              setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+                            }, 5000);
+                          }}
+                          style={{
+                            width: index === currentAdIndex ? '24px' : '8px',
+                            height: '8px',
+                            borderRadius: '4px',
+                            border: 'none',
+                            backgroundColor: index === currentAdIndex ? '#3b82f6' : '#d1d5db',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease'
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="sa-banner-card">
+                <div className="sa-banner-text">
+                  <h3>Property Management</h3>
+                  <p>
+                    Manage your lease, payments, and maintenance requests all in one place.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
