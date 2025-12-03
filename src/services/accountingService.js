@@ -304,4 +304,40 @@ export const accountingService = {
     const url = buildApiUrl('/api/accounting/advertisements');
     return await apiRequest(url);
   },
+
+  // Security Deposits
+  getSecurityDeposits: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/deposits');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.type) queryParams.append('type', filters.type);
+    if (filters.status) queryParams.append('status', filters.status);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
+  },
+
+  recordDepositPayment: async (paymentData) => {
+    const url = buildApiUrl('/api/accounting/deposits/payment');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(paymentData),
+    });
+  },
+
+  processDepositRefund: async (refundData) => {
+    const url = buildApiUrl('/api/accounting/deposits/refund');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(refundData),
+    });
+  },
+
+  getSecurityDeposit: async (depositId) => {
+    const url = buildApiUrl(`/api/accounting/deposits/${depositId}`);
+    return await apiRequest(url);
+  },
 };
