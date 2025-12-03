@@ -110,5 +110,20 @@ export const tenantService = {
         profilePictureURL: profilePictureURL
       })
     });
+  },
+
+  // Security Deposit Payment
+  paySecurityDeposit: async (depositData) => {
+    const url = buildApiUrl('/api/tenant/deposits/payment');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(depositData)
+    });
+  },
+
+  // Get security deposit status
+  getSecurityDeposit: async () => {
+    const url = buildApiUrl('/api/tenant/deposits');
+    return await apiRequest(url);
   }
 };

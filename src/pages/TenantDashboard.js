@@ -61,14 +61,22 @@ const TenantDashboard = () => {
     entryDate: '',
     reason: ''
   });
+  const [showDepositPaymentModal, setShowDepositPaymentModal] = useState(false);
+  const [depositPaymentForm, setDepositPaymentForm] = useState({
+    property: '',
+    tenantType: 'individual',
+    monthlyRent: '',
+    paymentMethod: 'mobile_money',
+    reference: '',
+    notes: ''
+  });
+  const [depositStatus, setDepositStatus] = useState([]);
   const [loading, setLoading] = useState(false);
   const [overviewData, setOverviewData] = useState(null);
   const [leaseInfo, setLeaseInfo] = useState(null);
   const [payments, setPayments] = useState([]);
   const [maintenanceRequests, setMaintenanceRequests] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
-  const [currentAdIndex, setCurrentAdIndex] = useState(0);
-  const carouselIntervalRef = useRef(null);
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -401,32 +409,12 @@ const TenantDashboard = () => {
     loadData();
   }, []);
 
-  // Load advertisements when advertisements tab is active or overview is active
+  // Load advertisements when advertisements tab is active
   useEffect(() => {
-    if (activeTab === 'advertisements' || activeTab === 'overview') {
+    if (activeTab === 'advertisements') {
       loadAdvertisements();
     }
-  }, [activeTab]);
-
-  // Auto-slide carousel for advertisements on overview page
-  useEffect(() => {
-    if (activeTab === 'overview' && advertisements.length > 1) {
-      carouselIntervalRef.current = setInterval(() => {
-        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
-      }, 5000); // Change slide every 5 seconds
-
-      return () => {
-        if (carouselIntervalRef.current) {
-          clearInterval(carouselIntervalRef.current);
-        }
-      };
-    } else {
-      if (carouselIntervalRef.current) {
-        clearInterval(carouselIntervalRef.current);
-      }
-      setCurrentAdIndex(0);
-    }
-  }, [activeTab, advertisements.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load users when chat tab is active (only once per tab switch)
   useEffect(() => {
@@ -700,162 +688,14 @@ Thank you for your payment!
                 {data.openMaintenanceTickets || 0}
               </p>
             </div>
-            {/* Advertisements Carousel - Replacing Banner Card */}
-            {advertisements.length > 0 ? (
-              <div style={{
-                gridColumn: 'span 1',
-                minHeight: '300px',
-                padding: '24px',
-                backgroundColor: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                overflow: 'hidden',
-                position: 'relative'
-              }}>
-                <div style={{
-                  position: 'relative',
-                  overflow: 'hidden',
-                  flex: 1,
-                  borderRadius: '8px',
-                  backgroundColor: '#f9fafb'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    transform: `translateX(-${currentAdIndex * 100}%)`,
-                    transition: 'transform 0.5s ease-in-out',
-                    width: `${advertisements.length * 100}%`,
-                    height: '100%'
-                  }}>
-                    {advertisements.map((ad, index) => {
-                      const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-                      const fullImageUrl = imageUrl 
-                        ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                        : null;
-
-                      return (
-                        <div 
-                          key={`ad-${ad.ID || ad.id || index}`}
-                          style={{
-                            width: `${100 / advertisements.length}%`,
-                            padding: '20px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            textAlign: 'center',
-                            flexShrink: 0,
-                            height: '100%'
-                          }}
-                        >
-                          {fullImageUrl ? (
-                            <img 
-                              src={fullImageUrl} 
-                              alt={ad.Title || ad.title || 'Advertisement'} 
-                              style={{
-                                width: '100%',
-                                height: 'auto',
-                                maxHeight: '200px',
-                                objectFit: 'contain',
-                                borderRadius: '8px',
-                                marginBottom: '12px'
-                              }}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div style={{
-                              width: '100%',
-                              height: '150px',
-                              backgroundColor: '#e5e7eb',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              marginBottom: '12px',
-                              color: '#9ca3af'
-                            }}>
-                              No Image
-                            </div>
-                          )}
-                          <h3 style={{ 
-                            margin: '0 0 8px 0', 
-                            fontSize: '1rem', 
-                            color: '#1f2937',
-                            fontWeight: '600'
-                          }}>
-                            {ad.Title || ad.title || 'Untitled Advertisement'}
-                          </h3>
-                          <p style={{ 
-                            margin: '0', 
-                            fontSize: '0.85rem', 
-                            color: '#6b7280',
-                            lineHeight: '1.4',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden'
-                          }}>
-                            {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Carousel Indicators */}
-                  {advertisements.length > 1 && (
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '12px',
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)'
-                    }}>
-                      {advertisements.map((_, index) => (
-                        <button
-                          key={`indicator-${index}`}
-                          onClick={() => {
-                            setCurrentAdIndex(index);
-                            if (carouselIntervalRef.current) {
-                              clearInterval(carouselIntervalRef.current);
-                            }
-                            carouselIntervalRef.current = setInterval(() => {
-                              setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
-                            }, 5000);
-                          }}
-                          style={{
-                            width: index === currentAdIndex ? '24px' : '8px',
-                            height: '8px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: index === currentAdIndex ? '#3b82f6' : '#d1d5db',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease'
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
+            <div className="sa-banner-card">
+              <div className="sa-banner-text">
+                <h3>Property Management</h3>
+                <p>
+                  Manage your lease, payments, and maintenance requests all in one place.
+                </p>
               </div>
-            ) : (
-              <div className="sa-banner-card">
-                <div className="sa-banner-text">
-                  <h3>Property Management</h3>
-                  <p>
-                    Manage your lease, payments, and maintenance requests all in one place.
-                  </p>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -901,6 +741,26 @@ Thank you for your payment!
           >
             <UserPlus size={18} />
             Transfer Payment Request
+          </button>
+          <button 
+            className="sa-primary-cta" 
+            onClick={() => {
+              const property = leaseInfo?.property || leaseInfo?.address || '';
+              setDepositPaymentForm({
+                property: property,
+                tenantType: 'individual',
+                monthlyRent: leaseInfo?.rent || '',
+                paymentMethod: 'mobile_money',
+                reference: '',
+                notes: ''
+              });
+              setShowDepositPaymentModal(true);
+            }} 
+            disabled={loading}
+            style={{ backgroundColor: '#10b981' }}
+          >
+            <CreditCard size={18} />
+            Pay Security Deposit
           </button>
         </div>
       </div>
@@ -1713,6 +1573,156 @@ Thank you for your payment!
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
                     {loading ? 'Submitting...' : 'Submit Transfer Request'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Security Deposit Payment Modal */}
+      {showDepositPaymentModal && (
+        <div className="modal-overlay" onClick={() => setShowDepositPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Pay Security Deposit</h3>
+              <button className="modal-close" onClick={() => setShowDepositPaymentModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  setLoading(true);
+                  const calculatedAmount = parseFloat(depositPaymentForm.monthlyRent) * 
+                    (depositPaymentForm.tenantType === 'company' ? 3 : 
+                     depositPaymentForm.property.toLowerCase().includes('house') || 
+                     depositPaymentForm.property.toLowerCase().includes('villa') ? 5 : 2);
+                  
+                  await tenantService.paySecurityDeposit({
+                    ...depositPaymentForm,
+                    monthlyRent: parseFloat(depositPaymentForm.monthlyRent),
+                    leaseId: leaseInfo?.leaseId || leaseInfo?.id
+                  });
+                  
+                  addNotification(`Security deposit payment submitted: ${calculatedAmount.toFixed(2)} XOF. Awaiting approval.`, 'success');
+                  setShowDepositPaymentModal(false);
+                  setDepositPaymentForm({
+                    property: '',
+                    tenantType: 'individual',
+                    monthlyRent: '',
+                    paymentMethod: 'mobile_money',
+                    reference: '',
+                    notes: ''
+                  });
+                  // Reload deposit status
+                  try {
+                    const deposits = await tenantService.getSecurityDeposit();
+                    setDepositStatus(Array.isArray(deposits) ? deposits : []);
+                  } catch (err) {
+                    console.error('Error loading deposit status:', err);
+                  }
+                } catch (error) {
+                  console.error('Error submitting deposit payment:', error);
+                  addNotification(error.message || 'Failed to submit deposit payment', 'error');
+                } finally {
+                  setLoading(false);
+                }
+              }}>
+                <div className="form-group">
+                  <label htmlFor="depositProperty">Property *</label>
+                  <input
+                    type="text"
+                    id="depositProperty"
+                    value={depositPaymentForm.property}
+                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, property: e.target.value})}
+                    required
+                    placeholder="e.g., Apartment 4B or House 123"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="depositTenantType">Tenant Type *</label>
+                  <select
+                    id="depositTenantType"
+                    value={depositPaymentForm.tenantType}
+                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, tenantType: e.target.value})}
+                    required
+                  >
+                    <option value="individual">Individual</option>
+                    <option value="company">Company</option>
+                  </select>
+                  <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                    {depositPaymentForm.tenantType === 'company' 
+                      ? 'Company: 3 months deposit for apartments, 5 months for houses'
+                      : 'Individual: 2 months deposit for apartments, 5 months for houses'}
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="depositMonthlyRent">Monthly Rent (XOF) *</label>
+                  <input
+                    type="number"
+                    id="depositMonthlyRent"
+                    step="0.01"
+                    value={depositPaymentForm.monthlyRent}
+                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, monthlyRent: e.target.value})}
+                    required
+                    placeholder="0.00"
+                  />
+                  {depositPaymentForm.monthlyRent && (
+                    <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>
+                      Deposit Amount: {
+                        (parseFloat(depositPaymentForm.monthlyRent) * 
+                        (depositPaymentForm.tenantType === 'company' ? 3 : 
+                         depositPaymentForm.property.toLowerCase().includes('house') || 
+                         depositPaymentForm.property.toLowerCase().includes('villa') ? 5 : 2)
+                        ).toFixed(2)
+                      } XOF
+                    </small>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="depositPaymentMethod">Payment Method *</label>
+                  <select
+                    id="depositPaymentMethod"
+                    value={depositPaymentForm.paymentMethod}
+                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, paymentMethod: e.target.value})}
+                    required
+                  >
+                    <option value="mobile_money">Mobile Money</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="depositReference">Reference</label>
+                  <input
+                    type="text"
+                    id="depositReference"
+                    value={depositPaymentForm.reference}
+                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, reference: e.target.value})}
+                    placeholder="Payment reference number"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="depositNotes">Notes</label>
+                  <textarea
+                    id="depositNotes"
+                    value={depositPaymentForm.notes}
+                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, notes: e.target.value})}
+                    placeholder="Additional notes"
+                    rows="3"
+                  />
+                </div>
+
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowDepositPaymentModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Submitting...' : 'Submit Payment'}
                   </button>
                 </div>
               </form>

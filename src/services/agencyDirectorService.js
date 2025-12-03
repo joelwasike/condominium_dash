@@ -274,6 +274,31 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
+  payAnnualSubscription: async (paymentData) => {
+    const headers = getAuthHeaders(true);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/subscription/pay-annual`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(paymentData)
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to process annual subscription payment');
+    }
+    return parseJson(response);
+  },
+
+  // Get current subscription status for the Agency Director's company
+  getSubscriptionStatus: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/subscription/status`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch subscription status');
+    return parseJson(response);
+  },
+
   // Messaging
   getConversations: async () => {
     const headers = getAuthHeaders(false);
@@ -367,6 +392,56 @@ export const agencyDirectorService = {
       headers: headers,
     });
     if (!response.ok) throw new Error('Failed to approve quote');
+    return parseJson(response);
+  },
+
+  // Get pending payments for approval
+  getPendingPayments: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/payments/pending-approval`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch pending payments');
+    return parseJson(response);
+  },
+
+  // Approve tenant payment
+  approveTenantPayment: async (paymentId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/payments/${paymentId}/approve`, {
+      method: 'POST',
+      headers: headers,
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to approve payment');
+    }
+    return parseJson(response);
+  },
+
+  // Reject tenant payment
+  rejectTenantPayment: async (paymentId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/payments/${paymentId}/reject`, {
+      method: 'POST',
+      headers: headers,
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to reject payment');
+    }
+    return parseJson(response);
+  },
+
+  // Get pending quotes for validation
+  getPendingQuotes: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/pending-validation`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch pending quotes');
     return parseJson(response);
   },
 

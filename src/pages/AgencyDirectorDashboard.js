@@ -4,7 +4,6 @@ import {
   Users,
   Home,
   DollarSign,
-  Wrench,
   Settings,
   Plus,
   Search,
@@ -49,7 +48,6 @@ const AgencyDirectorDashboard = () => {
   const [users, setUsers] = useState([]);
   const [properties, setProperties] = useState([]);
   const [financialData, setFinancialData] = useState(null);
-  const [works, setWorks] = useState([]);
   const [accountingData, setAccountingData] = useState(null);
   const [landlordPayments, setLandlordPayments] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
@@ -107,12 +105,17 @@ const AgencyDirectorDashboard = () => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [subscriptionForm, setSubscriptionForm] = useState({ amount: '', currency: 'USD', reference: '', status: 'completed' });
   const [subscriptionType, setSubscriptionType] = useState('monthly'); // 'monthly' or 'annual'
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
 
   // Contracts state
   const [leasesAwaitingSignature, setLeasesAwaitingSignature] = useState([]);
   const [expenseRequests, setExpenseRequests] = useState([]);
   const [quoteRequests, setQuoteRequests] = useState([]);
   const [owners, setOwners] = useState([]);
+  
+  // Management state - Pending approvals
+  const [pendingPayments, setPendingPayments] = useState([]);
+  const [pendingQuotes, setPendingQuotes] = useState([]);
 
   // Reports/Analytics state
   const [transferHistory, setTransferHistory] = useState([]);
@@ -154,23 +157,23 @@ const AgencyDirectorDashboard = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [overview, usersData, propertiesData, financial, worksData, accounting, landlordPaymentsData] = await Promise.all([
+      const [overview, usersData, propertiesData, financial, accounting, landlordPaymentsData, subscriptionStatusData] = await Promise.all([
         agencyDirectorService.getOverview().catch(() => null),
         agencyDirectorService.getUsers().catch(() => []),
         agencyDirectorService.getProperties().catch(() => []),
         agencyDirectorService.getFinancialOverview().catch(() => null),
-        agencyDirectorService.getWorks().catch(() => []),
         agencyDirectorService.getAccountingOverview().catch(() => null),
-        agencyDirectorService.getLandlordPayments().catch(() => [])
+        agencyDirectorService.getLandlordPayments().catch(() => []),
+        agencyDirectorService.getSubscriptionStatus().catch(() => null)
       ]);
 
       setOverviewData(overview);
       setUsers(Array.isArray(usersData) ? usersData : []);
       setProperties(Array.isArray(propertiesData) ? propertiesData : []);
       setFinancialData(financial);
-      setWorks(Array.isArray(worksData) ? worksData : []);
       setAccountingData(accounting);
       setLandlordPayments(Array.isArray(landlordPaymentsData) ? landlordPaymentsData : []);
+      setSubscriptionInfo(subscriptionStatusData);
       
       // Fetch conversations to get super admins and other users who have messaged
       try {
@@ -488,6 +491,21 @@ const AgencyDirectorDashboard = () => {
     }
   }, [tenantStatusFilter, addNotification]);
 
+  // Load pending approvals data
+  const loadPendingApprovals = useCallback(async () => {
+    try {
+      const [payments, quotes] = await Promise.all([
+        agencyDirectorService.getPendingPayments().catch(() => []),
+        agencyDirectorService.getPendingQuotes().catch(() => [])
+      ]);
+      setPendingPayments(Array.isArray(payments) ? payments : []);
+      setPendingQuotes(Array.isArray(quotes) ? quotes : []);
+    } catch (error) {
+      console.error('Error loading pending approvals:', error);
+      addNotification('Failed to load pending approvals', 'error');
+    }
+  }, [addNotification]);
+
   // Load tenant profile
   const loadTenantProfile = useCallback(async (tenantId) => {
     try {
@@ -551,6 +569,12 @@ const AgencyDirectorDashboard = () => {
   }, [activeTab, managementSubTab, loadTenantsData]);
 
   useEffect(() => {
+    if (activeTab === 'management' && (managementSubTab === 'payments-to-approve' || managementSubTab === 'quotes-to-validate')) {
+      loadPendingApprovals();
+    }
+  }, [activeTab, managementSubTab, loadPendingApprovals]);
+
+  useEffect(() => {
     if (activeTab === 'analytics') {
       loadAnalyticsData();
     }
@@ -568,9 +592,9 @@ const AgencyDirectorDashboard = () => {
     () => [
       { id: 'overview', label: 'Overview', icon: BarChart3 },
       { id: 'management', label: 'Management', icon: Users },
+      { id: 'properties', label: 'Properties', icon: Home },
       { id: 'accounting', label: 'Accounting', icon: DollarSign },
       { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-      { id: 'works', label: 'Works', icon: Wrench },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'messages', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
@@ -1161,14 +1185,6 @@ const AgencyDirectorDashboard = () => {
                   {(data.totalAgencyCommissions || data.agencyCommissionsCurrentMonth || 0).toLocaleString()} FCFA
           </p>
         </div>
-              {data.ongoingWorkInBuildings > 0 && (
-                <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('works')}>
-                  <p className="sa-metric-label">Ongoing Work</p>
-          <p className="sa-metric-number">
-                    {data.ongoingWorkInBuildings || 0}
-          </p>
-                </div>
-              )}
             </div>
         </div>
       </div>
@@ -1829,8 +1845,18 @@ const AgencyDirectorDashboard = () => {
 
       <div className="sa-section-card" style={{ marginTop: '20px' }}>
         <div className="sa-section-header">
-          <h3>Subscription Payment</h3>
-          <p>Pay for your white-label monthly subscription</p>
+          <div>
+            <h3>Subscription Payment</h3>
+            <p>Pay for your white-label monthly or annual subscription.</p>
+            {subscriptionInfo && (
+              <p style={{ marginTop: '4px', fontSize: '0.9rem', color: '#6b7280' }}>
+                Current status:{' '}
+                <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>
+                  {subscriptionInfo.subscriptionStatus || 'unknown'}
+                </span>
+              </p>
+            )}
+          </div>
           <button className="sa-primary-cta" onClick={() => setShowSubscriptionModal(true)} style={{ marginTop: '12px' }}>
             <CreditCard size={16} />
             Pay Subscription
@@ -1907,52 +1933,6 @@ const AgencyDirectorDashboard = () => {
     </div>
   );
 
-  const renderWorks = () => (
-    <div className="sa-clients-page">
-      <div className="sa-clients-header">
-        <div>
-          <h2>Works</h2>
-          <p>{works.length} work orders found</p>
-        </div>
-      </div>
-
-      <div className="sa-table-wrapper">
-        <table className="sa-table">
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>ID</th>
-              <th>Company</th>
-              <th>Property</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {works.map((work, index) => (
-              <tr key={`work-${work.ID || work.id || index}`}>
-                <td>{index + 1}</td>
-                <td>{work.ID || work.id}</td>
-                <td className="sa-cell-main">
-                  <span className="sa-cell-title">{work.Company || work.company}</span>
-                </td>
-                <td>{work.Property || work.property}</td>
-                <td>
-                  <span className={`sa-status-pill ${(work.Status || work.status || 'pending').toLowerCase().replace('_', '-')}`}>
-                    {work.Status || work.status || 'Pending'}
-                  </span>
-                </td>
-              </tr>
-            ))}
-            {works.length === 0 && (
-              <tr>
-                <td colSpan={5} className="sa-table-empty">No works found</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 
   // Render Contracts page
   const renderContracts = () => (
@@ -2681,6 +2661,38 @@ const AgencyDirectorDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Subscription Renewal Section - appears after messaging section */}
+      <div className="sa-section-card" style={{ marginTop: '24px' }}>
+        <div className="sa-section-header">
+          <div>
+            <h3>Subscription Renewal</h3>
+            <p>
+              {subscriptionInfo?.subscriptionStatus === 'expired'
+                ? 'Your subscription has expired. Renew now to reactivate your agency account.'
+                : subscriptionInfo?.subscriptionStatus === 'completed'
+                ? 'Your subscription is active. You can renew in advance if needed.'
+                : 'Manage your subscription status and renew when necessary.'}
+            </p>
+            {subscriptionInfo && (
+              <p style={{ marginTop: '4px', fontSize: '0.9rem', color: '#6b7280' }}>
+                Current status:{' '}
+                <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>
+                  {subscriptionInfo.subscriptionStatus || 'unknown'}
+                </span>
+              </p>
+            )}
+          </div>
+          <button
+            className="sa-primary-cta"
+            onClick={() => setShowSubscriptionModal(true)}
+            style={{ marginTop: '12px' }}
+          >
+            <CreditCard size={16} />
+            Renew Subscription
+          </button>
+        </div>
+      </div>
     </div>
   );
 
@@ -2755,9 +2767,10 @@ const AgencyDirectorDashboard = () => {
   const renderManagement = () => {
     const managementTabs = [
       { id: 'users', label: 'USERS' },
-      { id: 'properties', label: 'PROPERTIES' },
       { id: 'contracts', label: 'LEASE AGREEMENTS TO SIGN' },
-      { id: 'tenants', label: 'LIST OF OWNERS' }
+      { id: 'tenants', label: 'LIST OF OWNERS' },
+      { id: 'payments-to-approve', label: 'PAYMENT TO APPROVE' },
+      { id: 'quotes-to-validate', label: 'QUOTE TO VALIDATE' }
     ];
 
     return (
@@ -2803,9 +2816,10 @@ const AgencyDirectorDashboard = () => {
         {/* Content based on selected sub-tab */}
         <div style={{ marginTop: '20px' }}>
           {managementSubTab === 'users' && renderUsersContent()}
-          {managementSubTab === 'properties' && renderPropertiesContent()}
           {managementSubTab === 'contracts' && renderContractsContent()}
           {managementSubTab === 'tenants' && renderOwnersContent()}
+          {managementSubTab === 'payments-to-approve' && renderPaymentsToApproveContent()}
+          {managementSubTab === 'quotes-to-validate' && renderQuotesToValidateContent()}
         </div>
       </div>
     );
@@ -3290,6 +3304,178 @@ const AgencyDirectorDashboard = () => {
     );
   };
 
+  // Handle approve payment
+  const handleApprovePayment = async (paymentId) => {
+    try {
+      setLoading(true);
+      await agencyDirectorService.approveTenantPayment(paymentId);
+      addNotification('Payment approved successfully', 'success');
+      await loadPendingApprovals();
+    } catch (error) {
+      console.error('Error approving payment:', error);
+      addNotification(error.message || 'Failed to approve payment', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle reject payment
+  const handleRejectPayment = async (paymentId) => {
+    try {
+      setLoading(true);
+      await agencyDirectorService.rejectTenantPayment(paymentId);
+      addNotification('Payment rejected successfully', 'success');
+      await loadPendingApprovals();
+    } catch (error) {
+      console.error('Error rejecting payment:', error);
+      addNotification(error.message || 'Failed to reject payment', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Render Payments to Approve content
+  const renderPaymentsToApproveContent = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <p style={{ color: '#6b7280', margin: 0 }}>{pendingPayments.length} pending payments found</p>
+      </div>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Tenant</th>
+              <th>Property</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Charge Type</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingPayments.map((payment, index) => (
+              <tr key={`payment-${payment.id || payment.ID || index}`}>
+                <td>{index + 1}</td>
+                <td className="sa-cell-main">
+                  <span className="sa-cell-title">{payment.tenant || payment.Tenant || 'N/A'}</span>
+                </td>
+                <td>{payment.property || payment.Property || 'N/A'}</td>
+                <td>{(payment.amount || payment.Amount || 0).toLocaleString()} XOF</td>
+                <td>{payment.method || payment.Method || 'N/A'}</td>
+                <td>{payment.chargeType || payment.ChargeType || 'N/A'}</td>
+                <td>
+                  {payment.date || payment.Date
+                    ? new Date(payment.date || payment.Date).toLocaleDateString()
+                    : 'N/A'}
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="table-action-button edit"
+                      onClick={() => handleApprovePayment(payment.id || payment.ID)}
+                      disabled={loading}
+                      style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="table-action-button delete"
+                      onClick={() => handleRejectPayment(payment.id || payment.ID)}
+                      disabled={loading}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {pendingPayments.length === 0 && (
+              <tr>
+                <td colSpan={8} className="sa-table-empty">No pending payments to approve</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  // Render Quotes to Validate content
+  const renderQuotesToValidateContent = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <p style={{ color: '#6b7280', margin: 0 }}>{pendingQuotes.length} pending quotes found</p>
+      </div>
+
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Property</th>
+              <th>Issue</th>
+              <th>Recipient</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingQuotes.map((quote, index) => (
+              <tr key={`quote-${quote.id || quote.ID || index}`}>
+                <td>{index + 1}</td>
+                <td>{quote.property || quote.Property || 'N/A'}</td>
+                <td className="sa-cell-main">
+                  <span className="sa-cell-title">{quote.issue || quote.Issue || 'N/A'}</span>
+                </td>
+                <td>{quote.recipient || quote.Recipient || 'N/A'}</td>
+                <td>{(quote.amount || quote.Amount || 0).toLocaleString()} XOF</td>
+                <td>
+                  {quote.date || quote.Date
+                    ? new Date(quote.date || quote.Date).toLocaleDateString()
+                    : 'N/A'}
+                </td>
+                <td>
+                  <span className={`sa-status-pill ${(quote.status || quote.Status || 'pending').toLowerCase().replace('_', '-')}`}>
+                    {quote.status || quote.Status || 'Pending'}
+                  </span>
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="table-action-button edit"
+                      onClick={() => handleApproveQuote(quote.id || quote.ID)}
+                      disabled={loading}
+                      style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="table-action-button delete"
+                      onClick={() => handleRejectQuote(quote.id || quote.ID)}
+                      disabled={loading}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {pendingQuotes.length === 0 && (
+              <tr>
+                <td colSpan={8} className="sa-table-empty">No pending quotes to validate</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -3308,8 +3494,6 @@ const AgencyDirectorDashboard = () => {
         return renderAccounting();
       case 'analytics':
         return renderAnalytics();
-      case 'works':
-        return renderWorks();
       case 'advertisements':
         return renderAdvertisements();
       case 'messages':

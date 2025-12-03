@@ -55,6 +55,27 @@ export const accountingService = {
     });
   },
 
+  // Import payments from file
+  importPayments: async (formData) => {
+    const url = buildApiUrl('/api/accounting/tenant-payments/import');
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': token || '',
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to import payments');
+    }
+
+    return await response.json();
+  },
+
   // Landlord Payments APIs
   getLandlordPayments: async (filters = {}) => {
     let url = buildApiUrl('/api/accounting/landlord-payments');
@@ -86,6 +107,18 @@ export const accountingService = {
     return await apiRequest(url, {
       method: 'POST',
     });
+  },
+
+  // Get list of landlords
+  getLandlords: async () => {
+    const url = buildApiUrl('/api/accounting/landlords');
+    return await apiRequest(url);
+  },
+
+  // Calculate available payment amount for a building
+  calculateBuildingPaymentAmount: async (building) => {
+    const url = buildApiUrl(`/api/accounting/landlord-payments/calculate-amount?building=${encodeURIComponent(building)}`);
+    return await apiRequest(url);
   },
 
   // Collections APIs
@@ -171,6 +204,53 @@ export const accountingService = {
 
   getGlobalBalance: async () => {
     const url = buildApiUrl('/api/accounting/balance/global');
+    return await apiRequest(url);
+  },
+
+  // Comprehensive Reports
+  getPaymentsByPeriodReport: async (startDate, endDate, period = 'monthly') => {
+    const url = buildApiUrl(`/api/accounting/reports/payments-by-period?startDate=${startDate}&endDate=${endDate}&period=${period}`);
+    return await apiRequest(url);
+  },
+
+  getCommissionsByPeriodReport: async (startDate, endDate, period = 'monthly') => {
+    const url = buildApiUrl(`/api/accounting/reports/commissions-by-period?startDate=${startDate}&endDate=${endDate}&period=${period}`);
+    return await apiRequest(url);
+  },
+
+  getRefundsReport: async (startDate, endDate) => {
+    const url = buildApiUrl(`/api/accounting/reports/refunds?startDate=${startDate}&endDate=${endDate}`);
+    return await apiRequest(url);
+  },
+
+  getPaymentsByBuildingReport: async (startDate, endDate) => {
+    const url = buildApiUrl(`/api/accounting/reports/payments-by-building?startDate=${startDate}&endDate=${endDate}`);
+    return await apiRequest(url);
+  },
+
+  getPaymentsByTenantReport: async (startDate, endDate) => {
+    const url = buildApiUrl(`/api/accounting/reports/payments-by-tenant?startDate=${startDate}&endDate=${endDate}`);
+    return await apiRequest(url);
+  },
+
+  getExpensesByPeriodReport: async (startDate, endDate, category) => {
+    let url = buildApiUrl(`/api/accounting/reports/expenses-by-period?startDate=${startDate}&endDate=${endDate}`);
+    if (category) url += `&category=${encodeURIComponent(category)}`;
+    return await apiRequest(url);
+  },
+
+  getCollectionsByPeriodReport: async (startDate, endDate) => {
+    const url = buildApiUrl(`/api/accounting/reports/collections-by-period?startDate=${startDate}&endDate=${endDate}`);
+    return await apiRequest(url);
+  },
+
+  getBuildingPerformanceReport: async (startDate, endDate) => {
+    const url = buildApiUrl(`/api/accounting/reports/building-performance?startDate=${startDate}&endDate=${endDate}`);
+    return await apiRequest(url);
+  },
+
+  getPaymentStatusReport: async (startDate, endDate) => {
+    const url = buildApiUrl(`/api/accounting/reports/payment-status?startDate=${startDate}&endDate=${endDate}`);
     return await apiRequest(url);
   },
 
