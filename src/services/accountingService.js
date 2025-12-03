@@ -305,6 +305,12 @@ export const accountingService = {
     return await apiRequest(url);
   },
 
+  // Get tenants with payment status
+  getTenantsWithPaymentStatus: async () => {
+    const url = buildApiUrl('/api/accounting/tenants');
+    return await apiRequest(url);
+  },
+
   // Security Deposits
   getSecurityDeposits: async (filters = {}) => {
     let url = buildApiUrl('/api/accounting/deposits');
