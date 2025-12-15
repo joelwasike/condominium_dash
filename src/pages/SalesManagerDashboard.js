@@ -134,6 +134,7 @@ const SalesManagerDashboard = () => {
   const [alerts, setAlerts] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
   const [owners, setOwners] = useState([]); // Owners (landlords) for property assignment
+  const [salesProperties, setSalesProperties] = useState([]); // Properties that are strictly for sale
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
 
@@ -166,6 +167,7 @@ const SalesManagerDashboard = () => {
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
   const [propertyUrgencyFilter, setPropertyUrgencyFilter] = useState('');
   const [alertTypeFilter, setAlertTypeFilter] = useState('');
+  const [salesTypeFilter, setSalesTypeFilter] = useState(''); // Filter for sales properties by type
   
   // Edit states
   const [showEditClientModal, setShowEditClientModal] = useState(false);
@@ -177,6 +179,7 @@ const SalesManagerDashboard = () => {
   const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false);
   const [showEditPropertyModal, setShowEditPropertyModal] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
+  const [expandedOwnerId, setExpandedOwnerId] = useState(null); // For property management owner expansion
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -208,11 +211,12 @@ const SalesManagerDashboard = () => {
         setUnpaidRents(demoData.unpaidRents);
         setAlerts(demoData.alerts);
         setOwners(demoData.owners);
+        setSalesProperties(demoData.salesProperties || []);
         setLoading(false);
         return;
       }
       
-      const [overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData, ownersData] = await Promise.all([
+      const [overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData] = await Promise.all([
         salesManagerService.getOverview(),
         salesManagerService.getProperties({
           status: propertyStatusFilter || undefined,
@@ -224,9 +228,10 @@ const SalesManagerDashboard = () => {
         salesManagerService.getUnpaidRents().catch(() => []),
         salesManagerService.getAlerts(alertTypeFilter || null),
         salesManagerService.getOwners().catch(() => []),
+        salesManagerService.getSalesProperties().catch(() => []),
       ]);
 
-      console.log('Loaded data:', { overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData, ownersData });
+      console.log('Loaded data:', { overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData });
       setOverviewData(overview);
       setProperties(Array.isArray(propertiesData) ? propertiesData : []);
       setClients(Array.isArray(clientsData) ? clientsData : []);
@@ -234,6 +239,7 @@ const SalesManagerDashboard = () => {
       setUnpaidRents(Array.isArray(unpaidRentsData) ? unpaidRentsData : []);
       setAlerts(Array.isArray(alertsData) ? alertsData : []);
       setOwners(Array.isArray(ownersData) ? ownersData : []);
+      setSalesProperties(Array.isArray(salesPropsData) ? salesPropsData : []);
     } catch (error) {
       console.error('Failed to load data:', error);
       if (!isDemoMode()) {
@@ -523,7 +529,9 @@ const SalesManagerDashboard = () => {
     () => [
       { id: 'overview', label: 'Overview', icon: TrendingUp },
       { id: 'occupancy', label: 'Occupancy', icon: Building },
+      { id: 'sales-tracking', label: 'Sales Tracking', icon: FileText },
       { id: 'clients', label: 'Tenant Management', icon: Users },
+      { id: 'property-management', label: 'Property Management', icon: Building },
       { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
@@ -1406,6 +1414,269 @@ const SalesManagerDashboard = () => {
     );
   };
 
+  // Property Management - Owners and their properties
+  const renderPropertyManagement = () => {
+    const getOwnerId = (owner) => owner.id || owner.ID;
+    const getPropertyOwnerId = (property) =>
+      property.LandlordID || property.landlordId || property.landlordID;
+
+    const ownersWithProperties = owners.map((owner) => {
+      const ownerId = getOwnerId(owner);
+      const ownedProperties = properties.filter((property) => {
+        const landlordId = getPropertyOwnerId(property);
+        return landlordId && ownerId && String(landlordId) === String(ownerId);
+      });
+      return { owner, properties: ownedProperties };
+    });
+
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header">
+          <div>
+            <h2>Property Management</h2>
+            <p>{owners.length} owners found</p>
+          </div>
+        </div>
+
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <div>
+              <h3>Owners</h3>
+              <p>Click an owner to view all properties they own.</p>
+            </div>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Owner</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Properties</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ownersWithProperties.map(({ owner, properties: ownerProperties }, index) => {
+                  const ownerId = getOwnerId(owner);
+                  const isExpanded =
+                    expandedOwnerId && ownerId && String(expandedOwnerId) === String(ownerId);
+                  return (
+                    <React.Fragment key={`owner-${ownerId || index}`}>
+                      <tr
+                        className="clickable-row"
+                        onClick={() =>
+                          setExpandedOwnerId((prev) =>
+                            prev && ownerId && String(prev) === String(ownerId) ? null : ownerId
+                          )
+                        }
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td>{index + 1}</td>
+                        <td className="sa-cell-main">
+                          <span className="sa-cell-title">
+                            {owner.name || owner.Name || 'N/A'}
+                          </span>
+                        </td>
+                        <td>{owner.email || owner.Email || 'N/A'}</td>
+                        <td>{owner.phone || owner.Phone || 'N/A'}</td>
+                        <td>{ownerProperties.length}</td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={5} style={{ background: '#f9fafb' }}>
+                            {ownerProperties.length > 0 ? (
+                              <div style={{ padding: '12px 8px' }}>
+                                <h4
+                                  style={{
+                                    margin: '0 0 8px',
+                                    fontSize: '0.95rem',
+                                    color: '#374151',
+                                  }}
+                                >
+                                  Properties owned by {owner.name || owner.Name || 'Owner'}
+                                </h4>
+                                <table className="sa-table nested-table">
+                                  <thead>
+                                    <tr>
+                                      <th>Address</th>
+                                      <th>Type</th>
+                                      <th>Status</th>
+                                      <th>Rent</th>
+                                      <th>Bedrooms</th>
+                                      <th>Bathrooms</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {ownerProperties.map((property, pIndex) => (
+                                      <tr key={`owner-${ownerId}-property-${pIndex}`}>
+                                        <td>{property.Address || property.address || 'N/A'}</td>
+                                        <td>{property.Type || property.type || 'N/A'}</td>
+                                        <td>{property.Status || property.status || 'N/A'}</td>
+                                        <td>
+                                          {typeof (property.Rent || property.rent) === 'number'
+                                            ? (property.Rent || property.rent).toLocaleString()
+                                            : property.Rent || property.rent || 'N/A'}
+                                        </td>
+                                        <td>{property.Bedrooms || property.bedrooms || 0}</td>
+                                        <td>{property.Bathrooms || property.bathrooms || 0}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="sa-table-empty" style={{ padding: '12px 8px' }}>
+                                No properties linked to this owner yet.
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+                {owners.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="sa-table-empty">
+                      No owners found. Ask the Agency Director to add property owners.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Sales Tracking - Properties that are strictly for sale
+  const renderSalesTracking = () => {
+    const normalizeType = (type) => (type || '').toLowerCase();
+
+    const filteredSales = salesProperties.filter((property) => {
+      if (!salesTypeFilter) return true;
+      return normalizeType(property.Type || property.type) === salesTypeFilter;
+    });
+
+    const totalSales = salesProperties.length;
+    const typeCounts = {
+      house: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'house').length,
+      apartment: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'apartment')
+        .length,
+      villa: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'villa').length,
+      land: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'land').length,
+    };
+
+    return (
+      <div className="sa-occupancy-page">
+        <div className="sa-occupancy-header">
+          <div>
+            <h2>Sales Tracking</h2>
+            <p>Monitor all properties that are strictly for sale.</p>
+          </div>
+        </div>
+
+        <div className="sa-occupancy-metrics">
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total For Sale</p>
+            <p className="sa-metric-value">{totalSales}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Houses</p>
+            <p className="sa-metric-value">{typeCounts.house}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Apartments</p>
+            <p className="sa-metric-value">{typeCounts.apartment}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Villas</p>
+            <p className="sa-metric-value">{typeCounts.villa}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Land</p>
+            <p className="sa-metric-value">{typeCounts.land}</p>
+          </div>
+        </div>
+
+        <div className="sa-transactions-filters">
+          <button
+            className="sa-filter-button"
+            onClick={() => setSalesTypeFilter('')}
+          >
+            All Types
+          </button>
+          <button
+            className={`sa-filter-button ${salesTypeFilter === 'house' ? 'active' : ''}`}
+            onClick={() => setSalesTypeFilter('house')}
+          >
+            Houses
+          </button>
+          <button
+            className={`sa-filter-button ${salesTypeFilter === 'apartment' ? 'active' : ''}`}
+            onClick={() => setSalesTypeFilter('apartment')}
+          >
+            Apartments
+          </button>
+          <button
+            className={`sa-filter-button ${salesTypeFilter === 'villa' ? 'active' : ''}`}
+            onClick={() => setSalesTypeFilter('villa')}
+          >
+            Villas
+          </button>
+          <button
+            className={`sa-filter-button ${salesTypeFilter === 'land' ? 'active' : ''}`}
+            onClick={() => setSalesTypeFilter('land')}
+          >
+            Land
+          </button>
+        </div>
+
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <h3>Properties for Sale</h3>
+            <p>All houses, apartments, villas, and land that are currently for sale.</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th>Type</th>
+                  <th>Bedrooms</th>
+                  <th>Bathrooms</th>
+                  <th>Price</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSales.map((property, index) => (
+                  <tr key={property.id || index}>
+                    <td>{property.address || property.Address || 'N/A'}</td>
+                    <td>{property.type || property.Type || 'N/A'}</td>
+                    <td>{property.bedrooms || property.Bedrooms || 0}</td>
+                    <td>{property.bathrooms || property.Bathrooms || 0}</td>
+                    <td>{property.price || property.Price || 'N/A'}</td>
+                    <td>{property.status || property.Status || 'N/A'}</td>
+                  </tr>
+                ))}
+                {filteredSales.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="sa-table-empty">
+                      No properties for sale found for the selected filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Get unique properties from clients for filter dropdown
   const uniqueProperties = useMemo(() => {
     const props = new Set();
@@ -1460,20 +1731,38 @@ const SalesManagerDashboard = () => {
         <div>
           <h2>Tenant List</h2>
           <p>{filteredClients.length} results found</p>
-      </div>
+        </div>
         <div className="sa-clients-header-right">
-          <button className="sa-primary-cta" onClick={() => {
-            setImportMode('manual');
-            setExcelFile(null);
-            setShowTenantCreationModal(true);
-          }}>
+          <button
+            className="sa-primary-cta"
+            onClick={() => {
+              setImportMode('manual');
+              setExcelFile(null);
+              setShowTenantCreationModal(true);
+            }}
+          >
             <Plus size={16} />
             Add Tenant
           </button>
+          <button
+            type="button"
+            className="sa-primary-cta secondary"
+            style={{ marginLeft: '8px' }}
+            onClick={() => {
+              setImportMode('excel');
+              setExcelFile(null);
+              setShowTenantCreationModal(true);
+            }}
+          >
+            <FileSpreadsheet size={16} style={{ marginRight: '4px' }} />
+            Import from Excel
+          </button>
           <button className="sa-sort-button">Sort: Creation Date</button>
-          <button className="sa-date-button">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</button>
-          </div>
-          </div>
+          <button className="sa-date-button">
+            {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </button>
+        </div>
+      </div>
 
       <div className="sa-overview-metrics">
         <div className="sa-metric-card">
@@ -2058,8 +2347,12 @@ const SalesManagerDashboard = () => {
         return renderOverview();
       case 'occupancy':
         return renderOccupancy();
+      case 'sales-tracking':
+        return renderSalesTracking();
       case 'clients':
         return renderClients();
+      case 'property-management':
+        return renderPropertyManagement();
       case 'alerts':
         return renderAlerts();
       case 'advertisements':

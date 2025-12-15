@@ -31,6 +31,12 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Get properties that are strictly for sale (listings)
+  getSalesProperties: async () => {
+    const url = buildApiUrl('/api/salesmanager/sales-properties');
+    return await apiRequest(url);
+  },
+
   // Get all clients
   getClients: async () => {
     const url = buildApiUrl(API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS);
