@@ -24,6 +24,7 @@ import SettingsPage from './SettingsPage';
 import { tenantService } from '../services/tenantService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
+import { isDemoMode, getTenantDemoData } from '../utils/demoData';
 import '../components/RoleLayout.css';
 import './SalesManagerDashboard.css';
 
@@ -109,6 +110,18 @@ const TenantDashboard = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      if (isDemoMode()) {
+        // Use demo data
+        const demoData = getTenantDemoData();
+        setOverviewData(demoData.overview);
+        setLeaseInfo(demoData.leaseInfo);
+        setPayments(demoData.payments);
+        setMaintenanceRequests(demoData.maintenanceRequests);
+        setLoading(false);
+        return;
+      }
+      
       const [overview, paymentsData, maintenanceData, lease] = await Promise.all([
         tenantService.getOverview().catch(() => null),
         tenantService.listPayments().catch(() => []),
@@ -126,7 +139,9 @@ const TenantDashboard = () => {
       setMaintenanceRequests(maintenanceArray);
     } catch (error) {
       console.error('Error loading data:', error);
-      addNotification('Failed to load dashboard data', 'error');
+      if (!isDemoMode()) {
+        addNotification('Failed to load dashboard data', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -135,6 +150,12 @@ const TenantDashboard = () => {
   // Load payments separately
   const loadPayments = async () => {
     try {
+      if (isDemoMode()) {
+        const demoData = getTenantDemoData();
+        setPayments(demoData.payments);
+        return;
+      }
+      
       const paymentsData = await tenantService.listPayments();
       // Ensure payments is an array
       const paymentsArray = Array.isArray(paymentsData) ? paymentsData : [];
@@ -142,8 +163,10 @@ const TenantDashboard = () => {
       console.log('Loaded payments:', paymentsArray);
     } catch (error) {
       console.error('Error loading payments:', error);
-      addNotification('Failed to load payments', 'error');
-      setPayments([]);
+      if (!isDemoMode()) {
+        addNotification('Failed to load payments', 'error');
+        setPayments([]);
+      }
     }
   };
 
@@ -1150,6 +1173,7 @@ Thank you for your payment!
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
 

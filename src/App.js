@@ -30,14 +30,16 @@ function App() {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
+    const demoMode = localStorage.getItem('demo_mode') === 'true';
     
-    if (storedUser && storedToken) {
+    if (storedUser && (storedToken || demoMode)) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
+        localStorage.removeItem('demo_mode');
       }
     }
     setLoading(false);
@@ -74,11 +76,22 @@ function App() {
 
   // Protected Route component
   const ProtectedRoute = ({ children, requiredRole }) => {
-    if (!user) {
+    const demoMode = localStorage.getItem('demo_mode') === 'true';
+    const storedUser = localStorage.getItem('user');
+    const storedToken = localStorage.getItem('token');
+    
+    // Allow access if in demo mode OR if user is authenticated
+    if (!demoMode && !storedUser && !storedToken) {
       return <Navigate to="/" replace />;
     }
     
-    if (requiredRole && user.role !== requiredRole) {
+    // In demo mode, allow access regardless of role matching
+    if (demoMode) {
+      return children;
+    }
+    
+    // For real users, check role matching
+    if (requiredRole && user && user.role !== requiredRole) {
       return <Navigate to={getDashboardRoute(user.role)} replace />;
     }
     
@@ -102,11 +115,26 @@ function App() {
           <Route 
             path="/" 
             element={
-              user ? (
-                <Navigate to={getDashboardRoute(user.role)} replace />
-              ) : (
-                <LoginPage onLogin={handleLogin} />
-              )
+              (() => {
+                const storedUser = localStorage.getItem('user');
+                const storedToken = localStorage.getItem('token');
+                const demoMode = localStorage.getItem('demo_mode') === 'true';
+                const hasAuth = storedUser && (storedToken || demoMode);
+                
+                if (hasAuth) {
+                  try {
+                    const userData = JSON.parse(storedUser);
+                    return <Navigate to={getDashboardRoute(userData?.role || 'tenant')} replace />;
+                  } catch (e) {
+                    // Invalid user data, clear and show login
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('demo_mode');
+                    return <LoginPage onLogin={handleLogin} />;
+                  }
+                }
+                return <LoginPage onLogin={handleLogin} />;
+              })()
             } 
           />
           

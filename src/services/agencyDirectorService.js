@@ -465,6 +465,38 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
+  createOwner: async (ownerData) => {
+    const headers = getAuthHeaders(true);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(ownerData)
+    });
+    if (!response.ok) throw new Error('Failed to create owner');
+    return parseJson(response);
+  },
+
+  updateOwner: async (id, ownerData) => {
+    const headers = getAuthHeaders(true);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners/${id}`, {
+      method: 'PUT',
+      headers: headers,
+      body: JSON.stringify(ownerData)
+    });
+    if (!response.ok) throw new Error('Failed to update owner');
+    return parseJson(response);
+  },
+
+  deleteOwner: async (id) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners/${id}`, {
+      method: 'DELETE',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to delete owner');
+    return parseJson(response);
+  },
+
   // Reports
   getTransferHistory: async (filters = {}) => {
     const headers = getAuthHeaders(false);

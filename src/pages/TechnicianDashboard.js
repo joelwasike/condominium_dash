@@ -20,6 +20,7 @@ import {
 import { technicianService } from '../services/technicianService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
+import { isDemoMode, getTechnicianDemoData } from '../utils/demoData';
 import './TechnicianDashboard.css';
 import './SuperAdminDashboard.css';
 import SettingsPage from './SettingsPage';
@@ -88,6 +89,16 @@ const TechnicianDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      if (isDemoMode()) {
+        // Use demo data
+        const demoData = getTechnicianDemoData();
+        setOverviewData(demoData.overview);
+        setInspections(demoData.inspections);
+        setTasks(demoData.tasks);
+        setLoading(false);
+        return;
+      }
+      
       const [overview, inspection, task] = await Promise.all([
         technicianService.getOverview(),
         technicianService.listInspections(),
@@ -99,7 +110,9 @@ const TechnicianDashboard = () => {
       setTasks(Array.isArray(task) ? task : []);
     } catch (error) {
       console.error('Error loading technician data:', error);
-      addNotification('Failed to load dashboard data', 'error');
+      if (!isDemoMode()) {
+        addNotification('Failed to load dashboard data', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -223,6 +236,7 @@ const TechnicianDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
 

@@ -1,17 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts';
-import { TrendingUp, Users, AlertTriangle, Building, Eye, Phone, Mail, UserPlus, Upload, X, FileText, DollarSign, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check } from 'lucide-react';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
 import ContractUpload from '../components/ContractUpload';
@@ -19,6 +7,7 @@ import { salesManagerService } from '../services/salesManagerService';
 import { messagingService } from '../services/messagingService';
 import { cloudinaryService, validateFileType, validateFileSize } from '../services/cloudinaryService';
 import { API_CONFIG } from '../config/api';
+import { isDemoMode, getSalesManagerDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
 import '../components/RoleLayout.css';
@@ -144,6 +133,7 @@ const SalesManagerDashboard = () => {
   const [unpaidRents, setUnpaidRents] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
+  const [owners, setOwners] = useState([]); // Owners (landlords) for property assignment
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
 
@@ -208,7 +198,21 @@ const SalesManagerDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData] = await Promise.all([
+      if (isDemoMode()) {
+        // Use demo data
+        const demoData = getSalesManagerDemoData();
+        setOverviewData(demoData.overview);
+        setProperties(demoData.properties);
+        setClients(demoData.clients);
+        setWaitingListClients(demoData.waitingListClients);
+        setUnpaidRents(demoData.unpaidRents);
+        setAlerts(demoData.alerts);
+        setOwners(demoData.owners);
+        setLoading(false);
+        return;
+      }
+      
+      const [overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData, ownersData] = await Promise.all([
         salesManagerService.getOverview(),
         salesManagerService.getProperties({
           status: propertyStatusFilter || undefined,
@@ -219,18 +223,22 @@ const SalesManagerDashboard = () => {
         salesManagerService.getWaitingListClients().catch(() => []),
         salesManagerService.getUnpaidRents().catch(() => []),
         salesManagerService.getAlerts(alertTypeFilter || null),
+        salesManagerService.getOwners().catch(() => []),
       ]);
 
-      console.log('Loaded data:', { overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData });
+      console.log('Loaded data:', { overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData, ownersData });
       setOverviewData(overview);
       setProperties(Array.isArray(propertiesData) ? propertiesData : []);
       setClients(Array.isArray(clientsData) ? clientsData : []);
       setWaitingListClients(Array.isArray(waitingListData) ? waitingListData : []);
       setUnpaidRents(Array.isArray(unpaidRentsData) ? unpaidRentsData : []);
       setAlerts(Array.isArray(alertsData) ? alertsData : []);
+      setOwners(Array.isArray(ownersData) ? ownersData : []);
     } catch (error) {
       console.error('Failed to load data:', error);
-      addNotification('Failed to load dashboard data', 'error');
+      if (!isDemoMode()) {
+        addNotification('Failed to load dashboard data', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -899,6 +907,7 @@ const SalesManagerDashboard = () => {
       bathrooms: formData.get('bathrooms') ? parseFloat(formData.get('bathrooms')) : undefined,
       urgency: formData.get('urgency')?.trim() || 'normal',
       tenant: formData.get('tenant')?.trim() || null,
+      landlord_id: formData.get('owner') ? parseInt(formData.get('owner')) : null,
     };
 
     // Validate required fields
@@ -2081,6 +2090,7 @@ const SalesManagerDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
 
@@ -2825,6 +2835,25 @@ const SalesManagerDashboard = () => {
                       id="create-tenant"
                       placeholder="John Doe"
                     />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="create-owner">Owner *</label>
+                    <select name="owner" id="create-owner" required>
+                      <option value="">Select Owner</option>
+                      {owners.map(owner => (
+                        <option key={owner.id || owner.ID} value={owner.id || owner.ID}>
+                          {owner.name || owner.Name} ({owner.email || owner.Email})
+                        </option>
+                      ))}
+                    </select>
+                    {owners.length === 0 && (
+                      <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
+                        No owners available. Please ask Agency Director to add owners first.
+                      </small>
+                    )}
                   </div>
                 </div>
 

@@ -19,6 +19,7 @@ import './SalesDashboard.css';
 import { commercialService } from '../services/commercialService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
+import { isDemoMode, getCommercialDemoData } from '../utils/demoData';
 
 const FETCH_TIMEOUT = 8000;
 
@@ -83,6 +84,19 @@ const SalesDashboard = () => {
     console.debug('[SalesDashboard] Loading commercial data...');
     try {
       setLoading(true);
+      
+      if (isDemoMode()) {
+        // Use demo data
+        const demoData = getCommercialDemoData();
+        setOverviewData(demoData.overview);
+        setListings(demoData.listings);
+        setVisits(demoData.visits);
+        setRequests(demoData.requests);
+        setInterestedClients(demoData.interestedClients.clients || []);
+        setLoading(false);
+        return;
+      }
+      
       const [overview, listingsData, visitsData, requestsData, clientsData] = await Promise.all([
         fetchWithTimeout(commercialService.getOverview()).catch(() => null),
         fetchWithTimeout(commercialService.listListings({
@@ -458,6 +472,7 @@ const SalesDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
 

@@ -133,6 +133,12 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Get owners (landlords) for property assignment
+  getOwners: async () => {
+    const url = buildApiUrl('/api/salesmanager/owners');
+    return await apiRequest(url);
+  },
+
   // Import clients/tenants from Excel or CSV
   // Note: Backend endpoint accepts .xlsx, .xls, and .csv files
   importClientsFromExcel: async (file) => {

@@ -23,6 +23,7 @@ import './AdministrativeDashboard.css';
 import { adminService } from '../services/adminService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
+import { isDemoMode, getAdministrativeDemoData } from '../utils/demoData';
 
 const AdministrativeDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -244,6 +245,22 @@ const AdministrativeDashboard = () => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      
+      if (isDemoMode()) {
+        // Use demo data
+        const demoData = getAdministrativeDemoData();
+        setOverviewData(demoData.overview);
+        setInboxDocs([]);
+        setDocuments([]);
+        setUtilities([]);
+        setDebts([]);
+        setReminders([]);
+        setLeases(demoData.contracts);
+        setPendingPaymentFollowUps([]);
+        setLoading(false);
+        return;
+      }
+      
       const [
         overview,
         inboxData,
@@ -282,7 +299,9 @@ const AdministrativeDashboard = () => {
       setPendingPaymentFollowUps(Array.isArray(paymentFollowUpsData) ? paymentFollowUpsData : []);
     } catch (error) {
       console.error('Error loading admin data:', error);
-      addNotification('Failed to load dashboard data', 'error');
+      if (!isDemoMode()) {
+        addNotification('Failed to load dashboard data', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -1592,6 +1611,7 @@ const AdministrativeDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
 

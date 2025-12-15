@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
+  Area,
+  AreaChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -11,10 +9,11 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { DollarSign, TrendingUp, Building, Receipt, Download, Filter, Search, CreditCard, CheckCircle, XCircle, User, FileText, Mail, ArrowRightLeft, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2 } from 'lucide-react';
+import { DollarSign, TrendingUp, Building, Receipt, Download, Search, CreditCard, User, FileText, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2 } from 'lucide-react';
 import { accountingService } from '../services/accountingService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
+import { isDemoMode, getAccountingDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
 import '../components/RoleLayout.css';
@@ -190,6 +189,20 @@ const AccountingDashboard = () => {
       setLoading(true);
       console.log('Loading accounting dashboard data...');
       
+      if (isDemoMode()) {
+        // Use demo data
+        const demoData = getAccountingDemoData();
+        setOverviewData(demoData.overview);
+        setTenantPayments(demoData.tenantPayments);
+        setLandlordPayments(demoData.landlordPayments);
+        setCollections(demoData.collections);
+        setExpenses(demoData.expenses);
+        setMonthlySummary(demoData.monthlySummary);
+        setLandlords(demoData.landlords);
+        setLoading(false);
+        return;
+      }
+      
       const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary, landlordsData] = await Promise.all([
         accountingService.getOverview(),
         accountingService.getTenantPayments(),
@@ -211,7 +224,9 @@ const AccountingDashboard = () => {
       console.log('Accounting data loaded successfully:', { overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary });
     } catch (error) {
       console.error('Failed to load accounting data:', error);
-      addNotification('Failed to load dashboard data', 'error');
+      if (!isDemoMode()) {
+        addNotification('Failed to load dashboard data', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -700,7 +715,7 @@ const AccountingDashboard = () => {
             </div>
             <div style={{ width: '100%', height: '200px', marginTop: '20px' }}>
               <ResponsiveContainer>
-                <LineChart
+                <AreaChart
                   data={(() => {
                     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
                     const currentCollections = overviewData?.totalCollectedThisMonth || 0;
@@ -711,36 +726,69 @@ const AccountingDashboard = () => {
                       expenses: Math.round(currentExpenses * (0.7 + (index * 0.05)))
                     }));
                   })()}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" />
-                  <YAxis stroke="#3b82f6" />
+                  <defs>
+                    <linearGradient id="colorCollections" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#dc2626" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
+                  <YAxis 
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
                   <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      padding: '8px 12px'
+                    }}
                     formatter={(value, name) => {
                       if (name === 'collections') return [`${value.toLocaleString()} XOF`, 'Collections'];
                       if (name === 'expenses') return [`${value.toLocaleString()} XOF`, 'Expenses'];
                       return value;
                     }}
                   />
-                  <Legend />
-                  <Line
-                    type="monotone"
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '10px' }}
+                    iconType="line"
+                  />
+                  <Area
+                    type="natural"
                     dataKey="collections"
                     stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={{ fill: '#3b82f6', r: 4 }}
+                    strokeWidth={3}
+                    fill="url(#colorCollections)"
+                    dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
                     name="Collections"
                   />
-                  <Line
-                    type="monotone"
+                  <Area
+                    type="natural"
                     dataKey="expenses"
                     stroke="#dc2626"
-                    strokeWidth={2}
-                    dot={{ fill: '#dc2626', r: 4 }}
+                    strokeWidth={3}
+                    fill="url(#colorExpenses)"
+                    dot={{ fill: '#dc2626', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
                     name="Expenses"
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -3632,6 +3680,8 @@ const AccountingDashboard = () => {
         return renderTenants();
       case 'deposits':
         return renderDeposits();
+      case 'cashier':
+        return renderCashier();
       case 'advertisements':
         return renderAdvertisements();
       case 'chat':
@@ -3660,6 +3710,7 @@ const AccountingDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
 

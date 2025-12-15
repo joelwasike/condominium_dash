@@ -17,6 +17,8 @@ import {
 import {
   LineChart,
   Line,
+  Area,
+  AreaChart,
   BarChart,
   Bar,
   XAxis,
@@ -28,6 +30,7 @@ import {
 } from 'recharts';
 import { agencyDirectorService } from '../services/agencyDirectorService';
 import { API_CONFIG } from '../config/api';
+import { isDemoMode, getAgencyDirectorDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import Modal from '../components/Modal';
 import SettingsPage from './SettingsPage';
@@ -37,7 +40,7 @@ import './SuperAdminDashboard.css';
 
 const AgencyDirectorDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [managementSubTab, setManagementSubTab] = useState('users'); // Sub-tab for management page
+  const [managementSubTab, setManagementSubTab] = useState('contracts'); // Sub-tab for management page
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
@@ -82,8 +85,10 @@ const AgencyDirectorDashboard = () => {
   // Modals
   const [showUserModal, setShowUserModal] = useState(false);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
+  const [showOwnerModal, setShowOwnerModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editingProperty, setEditingProperty] = useState(null);
+  const [editingOwner, setEditingOwner] = useState(null);
   const [userForm, setUserForm] = useState({ name: '', email: '', role: 'salesmanager', password: '', properties: [] });
   const [propertyForm, setPropertyForm] = useState({ 
     address: '', 
@@ -93,6 +98,7 @@ const AgencyDirectorDashboard = () => {
     status: 'Vacant',
     units: [] 
   });
+  const [ownerForm, setOwnerForm] = useState({ name: '', email: '', phone: '', password: '' });
   
   // Messaging states
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -151,12 +157,30 @@ const AgencyDirectorDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      if (isDemoMode()) {
+        // Use demo data
+        const demoData = getAgencyDirectorDemoData();
+        setOverviewData(demoData.overview);
+        setUsers(demoData.users);
+        setProperties(demoData.properties);
+        setFinancialData(demoData.financial);
+        setAccountingData(demoData.accounting);
+        setLandlordPayments(demoData.landlordPayments);
+        setSubscriptionInfo(demoData.subscriptionInfo);
+        setOwners(demoData.owners);
+        setSuperAdmins([]);
+        setConversations(demoData.conversations);
+        setLoading(false);
+        return;
+      }
+      
       const [overview, usersData, propertiesData, financial, accounting, landlordPaymentsData, subscriptionStatusData] = await Promise.all([
         agencyDirectorService.getOverview().catch(() => null),
         agencyDirectorService.getUsers().catch(() => []),
@@ -199,7 +223,9 @@ const AgencyDirectorDashboard = () => {
       }
     } catch (error) {
       console.error('Error loading agency director data:', error);
-      addNotification('Failed to load data from server', 'error');
+      if (!isDemoMode()) {
+        addNotification('Failed to load data from server', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -469,6 +495,13 @@ const AgencyDirectorDashboard = () => {
   // Load contracts data
   const loadContractsData = useCallback(async () => {
     try {
+      if (isDemoMode()) {
+        const demoData = getAgencyDirectorDemoData();
+        setLeasesAwaitingSignature([]);
+        setOwners(demoData.owners);
+        return;
+      }
+      
       const [leases, ownersData] = await Promise.all([
         agencyDirectorService.getLeasesAwaitingSignature().catch(() => []),
         agencyDirectorService.getOwners().catch(() => [])
@@ -563,10 +596,10 @@ const AgencyDirectorDashboard = () => {
   }, [activeTab, managementSubTab, loadContractsData]);
 
   useEffect(() => {
-    if (activeTab === 'tenants' || (activeTab === 'management' && managementSubTab === 'tenants')) {
+    if (activeTab === 'tenants' || activeTab === 'owners') {
       loadTenantsData();
     }
-  }, [activeTab, managementSubTab, loadTenantsData]);
+  }, [activeTab, loadTenantsData]);
 
   useEffect(() => {
     if (activeTab === 'management' && (managementSubTab === 'payments-to-approve' || managementSubTab === 'quotes-to-validate')) {
@@ -592,11 +625,14 @@ const AgencyDirectorDashboard = () => {
     () => [
       { id: 'overview', label: 'Overview', icon: BarChart3 },
       { id: 'management', label: 'Management', icon: Users },
+      { id: 'users', label: 'Users', icon: UserCheck },
+      { id: 'owners', label: 'Owners', icon: Users },
       { id: 'properties', label: 'Properties', icon: Home },
       { id: 'accounting', label: 'Accounting', icon: DollarSign },
       { id: 'analytics', label: 'Analytics', icon: TrendingUp },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'messages', label: 'Messages', icon: MessageCircle },
+      { id: 'subscription', label: 'Subscription', icon: CreditCard },
       { id: 'settings', label: 'Profile Settings', icon: Settings }
     ],
     []
@@ -801,12 +837,61 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
-  // Property management
-  const handleOpenAddProperty = () => {
-    setEditingProperty(null);
-    setPropertyForm({ address: '', type: '', rent: '', tenant: '', status: 'Vacant', units: [] });
-    setShowPropertyModal(true);
+  // Owner management handlers
+  const handleOpenAddOwner = () => {
+    setEditingOwner(null);
+    setOwnerForm({ name: '', email: '', phone: '', password: '' });
+    setShowOwnerModal(true);
   };
+
+  const handleOpenEditOwner = (owner) => {
+    setEditingOwner(owner);
+    setOwnerForm({
+      name: owner.name || owner.Name || '',
+      email: owner.email || owner.Email || '',
+      phone: owner.phone || owner.Phone || '',
+      password: '' // Password is not pre-filled for security
+    });
+    setShowOwnerModal(true);
+  };
+
+  const handleSubmitOwner = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingOwner) {
+        await agencyDirectorService.updateOwner(editingOwner.id || editingOwner.ID, ownerForm);
+        addNotification('Owner updated successfully!', 'success');
+      } else {
+        await agencyDirectorService.createOwner(ownerForm);
+        addNotification('Owner created successfully!', 'success');
+      }
+      setShowOwnerModal(false);
+      await loadData();
+    } catch (error) {
+      console.error('Error saving owner:', error);
+      addNotification(error.message || (editingOwner ? 'Failed to update owner' : 'Failed to create owner'), 'error');
+    }
+  };
+
+  const handleDeleteOwner = async (owner) => {
+    if (window.confirm(`Are you sure you want to delete owner ${owner.name || owner.Name}? This action cannot be undone.`)) {
+      try {
+        await agencyDirectorService.deleteOwner(owner.id || owner.ID);
+        addNotification('Owner deleted successfully!', 'success');
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting owner:', error);
+        addNotification(error.message || 'Failed to delete owner', 'error');
+      }
+    }
+  };
+
+  // Property management - Add property functionality removed for Agency Director
+  // const handleOpenAddProperty = () => {
+  //   setEditingProperty(null);
+  //   setPropertyForm({ address: '', type: '', rent: '', tenant: '', status: 'Vacant', units: [] });
+  //   setShowPropertyModal(true);
+  // };
 
   const handleOpenEditProperty = (property) => {
     setEditingProperty(property);
@@ -883,8 +968,9 @@ const AgencyDirectorDashboard = () => {
         await agencyDirectorService.updateProperty(editingProperty.ID || editingProperty.id, propertyData);
         addNotification('Property updated successfully!', 'success');
       } else {
-        await agencyDirectorService.addProperty(propertyData);
-        addNotification('Property created successfully!', 'success');
+        // Agency Director cannot add new properties
+        addNotification('You do not have permission to add new properties', 'error');
+        return;
       }
       setShowPropertyModal(false);
       await loadData();
@@ -941,41 +1027,81 @@ const AgencyDirectorDashboard = () => {
             </div>
             <div style={{ width: '100%', height: '200px', marginTop: '20px' }}>
               <ResponsiveContainer>
-                <LineChart
+                <AreaChart
                   data={chartData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" />
-                  <YAxis yAxisId="left" stroke="#3b82f6" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#10b981" />
+                  <defs>
+                    <linearGradient id="colorRent" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorOccupancy" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
+                  <YAxis 
+                    yAxisId="left" 
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
+                  <YAxis 
+                    yAxisId="right" 
+                    orientation="right" 
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
                   <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      padding: '8px 12px'
+                    }}
                     formatter={(value, name) => {
                       if (name === 'rent') return [`${value.toLocaleString()} XOF`, 'Rent Collected'];
                       if (name === 'occupancy') return [`${value}%`, 'Occupancy Rate'];
                       return value;
                     }}
                   />
-                  <Legend />
-                  <Line
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '10px' }}
+                    iconType="line"
+                  />
+                  <Area
                     yAxisId="left"
-                    type="monotone"
+                    type="natural"
                     dataKey="rent"
                     stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={{ fill: '#3b82f6', r: 4 }}
+                    strokeWidth={3}
+                    fill="url(#colorRent)"
+                    dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
                     name="Rent Collected"
                   />
-                  <Line
+                  <Area
                     yAxisId="right"
-                    type="monotone"
+                    type="natural"
                     dataKey="occupancy"
                     stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ fill: '#10b981', r: 4 }}
+                    strokeWidth={3}
+                    fill="url(#colorOccupancy)"
+                    dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
                     name="Occupancy Rate"
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -1483,11 +1609,7 @@ const AgencyDirectorDashboard = () => {
           <p>{filteredProperties.length} results found</p>
         </div>
         <div className="sa-clients-header-right">
-          <button className="sa-primary-cta" onClick={handleOpenAddProperty}>
-            <Plus size={16} />
-            Add Property
-          </button>
-          <div className="sa-transactions-filters" style={{ marginLeft: '12px' }}>
+          <div className="sa-transactions-filters">
             <select 
               value={propertyCompanyFilter} 
               onChange={(e) => setPropertyCompanyFilter(e.target.value)}
@@ -1557,7 +1679,8 @@ const AgencyDirectorDashboard = () => {
         </table>
       </div>
 
-      <Modal isOpen={showPropertyModal} onClose={() => setShowPropertyModal(false)} title={editingProperty ? 'Edit Property' : 'Add Property'}>
+      <Modal isOpen={showPropertyModal && editingProperty} onClose={() => setShowPropertyModal(false)} title="Edit Property">
+        {editingProperty && (
         <form onSubmit={handleSubmitProperty} className="sa-form">
           <div className="sa-form-group">
             <label>Address *</label>
@@ -1716,9 +1839,10 @@ const AgencyDirectorDashboard = () => {
 
           <div className="sa-form-actions">
             <button type="button" className="sa-outline-button" onClick={() => setShowPropertyModal(false)}>Cancel</button>
-            <button type="submit" className="sa-primary-cta">{editingProperty ? 'Update' : 'Create'} Property</button>
+            <button type="submit" className="sa-primary-cta">Update Property</button>
           </div>
         </form>
+        )}
       </Modal>
     </div>
   );
@@ -1842,94 +1966,6 @@ const AgencyDirectorDashboard = () => {
           </table>
         </div>
       </div>
-
-      <div className="sa-section-card" style={{ marginTop: '20px' }}>
-        <div className="sa-section-header">
-          <div>
-            <h3>Subscription Payment</h3>
-            <p>Pay for your white-label monthly or annual subscription.</p>
-            {subscriptionInfo && (
-              <p style={{ marginTop: '4px', fontSize: '0.9rem', color: '#6b7280' }}>
-                Current status:{' '}
-                <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>
-                  {subscriptionInfo.subscriptionStatus || 'unknown'}
-                </span>
-              </p>
-            )}
-          </div>
-          <button className="sa-primary-cta" onClick={() => setShowSubscriptionModal(true)} style={{ marginTop: '12px' }}>
-            <CreditCard size={16} />
-            Pay Subscription
-          </button>
-        </div>
-      </div>
-
-      <Modal isOpen={showSubscriptionModal} onClose={() => setShowSubscriptionModal(false)} title="Pay Subscription">
-        <form onSubmit={subscriptionType === 'monthly' ? handlePaySubscription : handlePayAnnualSubscription} className="sa-form">
-          <div className="sa-form-group">
-            <label>Subscription Type *</label>
-            <select
-              value={subscriptionType}
-              onChange={(e) => setSubscriptionType(e.target.value)}
-              required
-            >
-              <option value="monthly">Monthly</option>
-              <option value="annual">Annual</option>
-            </select>
-          </div>
-          <div className="sa-form-group">
-            <label>Amount *</label>
-            <input
-              type="number"
-              step="0.01"
-              value={subscriptionForm.amount}
-              onChange={(e) => setSubscriptionForm({...subscriptionForm, amount: e.target.value})}
-              required
-              placeholder={subscriptionType === 'annual' ? "12000.00" : "299.99"}
-            />
-          </div>
-          <div className="sa-form-group">
-            <label>Currency *</label>
-            <select
-              value={subscriptionForm.currency}
-              onChange={(e) => setSubscriptionForm({...subscriptionForm, currency: e.target.value})}
-              required
-            >
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-              <option value="FCFA">FCFA</option>
-            </select>
-          </div>
-          <div className="sa-form-group">
-            <label>Reference *</label>
-            <input
-              type="text"
-              value={subscriptionForm.reference}
-              onChange={(e) => setSubscriptionForm({...subscriptionForm, reference: e.target.value})}
-              required
-              placeholder={subscriptionType === 'annual' ? "ANNUAL-2024-001" : "PAY-2024-001"}
-            />
-          </div>
-          <div className="sa-form-group">
-            <label>Status *</label>
-            <select
-              value={subscriptionForm.status}
-              onChange={(e) => setSubscriptionForm({...subscriptionForm, status: e.target.value})}
-              required
-            >
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="failed">Failed</option>
-            </select>
-          </div>
-          <div className="sa-form-actions">
-            <button type="button" className="sa-outline-button" onClick={() => setShowSubscriptionModal(false)}>Cancel</button>
-            <button type="submit" className="sa-primary-cta">
-              Process {subscriptionType === 'annual' ? 'Annual' : 'Monthly'} Payment
-            </button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 
@@ -2000,8 +2036,14 @@ const AgencyDirectorDashboard = () => {
 
       <div className="sa-section-card" style={{ marginTop: '20px' }}>
         <div className="sa-section-header">
-          <h3>Owners</h3>
-          <p>All property owners with management contracts</p>
+          <div>
+            <h3>Owners</h3>
+            <p>Manage property owners (landlords) for property assignment</p>
+          </div>
+          <button className="sa-primary-cta" onClick={handleOpenAddOwner}>
+            <Plus size={16} />
+            Add Owner
+          </button>
         </div>
         <div className="sa-table-wrapper">
           <table className="sa-table">
@@ -2013,6 +2055,7 @@ const AgencyDirectorDashboard = () => {
                 <th>Properties Count</th>
                 <th>Contracts Count</th>
                 <th>Status</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -2030,11 +2073,15 @@ const AgencyDirectorDashboard = () => {
                       {owner.status || owner.Status || 'Active'}
                     </span>
                   </td>
+                  <td className="sa-row-actions">
+                    <button className="sa-icon-button" onClick={() => handleOpenEditOwner(owner)} title="Edit">✏️</button>
+                    <button className="sa-icon-button" onClick={() => handleDeleteOwner(owner)} title="Delete">🗑️</button>
+                  </td>
                 </tr>
               ))}
               {owners.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="sa-table-empty">No owners found</td>
+                  <td colSpan={7} className="sa-table-empty">No owners found. Click "Add Owner" to create one.</td>
                 </tr>
               )}
             </tbody>
@@ -2661,38 +2708,6 @@ const AgencyDirectorDashboard = () => {
           )}
         </div>
       </div>
-
-      {/* Subscription Renewal Section - appears after messaging section */}
-      <div className="sa-section-card" style={{ marginTop: '24px' }}>
-        <div className="sa-section-header">
-          <div>
-            <h3>Subscription Renewal</h3>
-            <p>
-              {subscriptionInfo?.subscriptionStatus === 'expired'
-                ? 'Your subscription has expired. Renew now to reactivate your agency account.'
-                : subscriptionInfo?.subscriptionStatus === 'completed'
-                ? 'Your subscription is active. You can renew in advance if needed.'
-                : 'Manage your subscription status and renew when necessary.'}
-            </p>
-            {subscriptionInfo && (
-              <p style={{ marginTop: '4px', fontSize: '0.9rem', color: '#6b7280' }}>
-                Current status:{' '}
-                <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>
-                  {subscriptionInfo.subscriptionStatus || 'unknown'}
-                </span>
-              </p>
-            )}
-          </div>
-          <button
-            className="sa-primary-cta"
-            onClick={() => setShowSubscriptionModal(true)}
-            style={{ marginTop: '12px' }}
-          >
-            <CreditCard size={16} />
-            Renew Subscription
-          </button>
-        </div>
-      </div>
     </div>
   );
 
@@ -2766,9 +2781,7 @@ const AgencyDirectorDashboard = () => {
   // Combined Management page with tabs
   const renderManagement = () => {
     const managementTabs = [
-      { id: 'users', label: 'USERS' },
       { id: 'contracts', label: 'LEASE AGREEMENTS TO SIGN' },
-      { id: 'tenants', label: 'LIST OF OWNERS' },
       { id: 'payments-to-approve', label: 'PAYMENT TO APPROVE' },
       { id: 'quotes-to-validate', label: 'QUOTE TO VALIDATE' }
     ];
@@ -2815,9 +2828,7 @@ const AgencyDirectorDashboard = () => {
 
         {/* Content based on selected sub-tab */}
         <div style={{ marginTop: '20px' }}>
-          {managementSubTab === 'users' && renderUsersContent()}
           {managementSubTab === 'contracts' && renderContractsContent()}
-          {managementSubTab === 'tenants' && renderOwnersContent()}
           {managementSubTab === 'payments-to-approve' && renderPaymentsToApproveContent()}
           {managementSubTab === 'quotes-to-validate' && renderQuotesToValidateContent()}
         </div>
@@ -2967,10 +2978,6 @@ const AgencyDirectorDashboard = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <p style={{ color: '#6b7280', margin: 0 }}>{filteredProperties.length} results found</p>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button className="sa-primary-cta" onClick={handleOpenAddProperty}>
-            <Plus size={16} />
-            Add Property
-          </button>
           <div className="sa-transactions-filters">
             <select 
               value={propertyCompanyFilter} 
@@ -3476,6 +3483,226 @@ const AgencyDirectorDashboard = () => {
     </div>
   );
 
+  const renderSubscription = () => (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>Subscription Management</h2>
+          <p>Manage your white-label subscription payments and renewals</p>
+        </div>
+      </div>
+
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <div>
+            <h3>Subscription Payment</h3>
+            <p>Pay for your white-label monthly or annual subscription.</p>
+            {subscriptionInfo && (
+              <p style={{ marginTop: '4px', fontSize: '0.9rem', color: '#6b7280' }}>
+                Current status:{' '}
+                <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>
+                  {subscriptionInfo.subscriptionStatus || 'unknown'}
+                </span>
+              </p>
+            )}
+          </div>
+          <button className="sa-primary-cta" onClick={() => setShowSubscriptionModal(true)} style={{ marginTop: '12px' }}>
+            <CreditCard size={16} />
+            Pay Subscription
+          </button>
+        </div>
+      </div>
+
+      <div className="sa-section-card" style={{ marginTop: '24px' }}>
+        <div className="sa-section-header">
+          <div>
+            <h3>Subscription Renewal</h3>
+            <p>
+              {subscriptionInfo?.subscriptionStatus === 'expired'
+                ? 'Your subscription has expired. Renew now to reactivate your agency account.'
+                : subscriptionInfo?.subscriptionStatus === 'completed'
+                ? 'Your subscription is active. You can renew in advance if needed.'
+                : 'Manage your subscription status and renew when necessary.'}
+            </p>
+            {subscriptionInfo && (
+              <p style={{ marginTop: '4px', fontSize: '0.9rem', color: '#6b7280' }}>
+                Current status:{' '}
+                <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>
+                  {subscriptionInfo.subscriptionStatus || 'unknown'}
+                </span>
+              </p>
+            )}
+          </div>
+          <button
+            className="sa-primary-cta"
+            onClick={() => setShowSubscriptionModal(true)}
+            style={{ marginTop: '12px' }}
+          >
+            <CreditCard size={16} />
+            Renew Subscription
+          </button>
+        </div>
+      </div>
+
+      <Modal isOpen={showSubscriptionModal} onClose={() => setShowSubscriptionModal(false)} title="Pay Subscription">
+        <form onSubmit={subscriptionType === 'monthly' ? handlePaySubscription : handlePayAnnualSubscription} className="sa-form">
+          <div className="sa-form-group">
+            <label>Subscription Type *</label>
+            <select
+              value={subscriptionType}
+              onChange={(e) => setSubscriptionType(e.target.value)}
+              required
+            >
+              <option value="monthly">Monthly</option>
+              <option value="annual">Annual</option>
+            </select>
+          </div>
+          <div className="sa-form-group">
+            <label>Amount *</label>
+            <input
+              type="number"
+              step="0.01"
+              value={subscriptionForm.amount}
+              onChange={(e) => setSubscriptionForm({...subscriptionForm, amount: e.target.value})}
+              required
+              placeholder={subscriptionType === 'annual' ? "12000.00" : "299.99"}
+            />
+          </div>
+          <div className="sa-form-group">
+            <label>Currency *</label>
+            <select
+              value={subscriptionForm.currency}
+              onChange={(e) => setSubscriptionForm({...subscriptionForm, currency: e.target.value})}
+              required
+            >
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="FCFA">FCFA</option>
+            </select>
+          </div>
+          <div className="sa-form-group">
+            <label>Reference *</label>
+            <input
+              type="text"
+              value={subscriptionForm.reference}
+              onChange={(e) => setSubscriptionForm({...subscriptionForm, reference: e.target.value})}
+              required
+              placeholder={subscriptionType === 'annual' ? "ANNUAL-2024-001" : "PAY-2024-001"}
+            />
+          </div>
+          <div className="sa-form-group">
+            <label>Status *</label>
+            <select
+              value={subscriptionForm.status}
+              onChange={(e) => setSubscriptionForm({...subscriptionForm, status: e.target.value})}
+              required
+            >
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+          <div className="sa-form-actions">
+            <button type="button" className="sa-outline-button" onClick={() => setShowSubscriptionModal(false)}>Cancel</button>
+            <button type="submit" className="sa-primary-cta">
+              Process {subscriptionType === 'annual' ? 'Annual' : 'Monthly'} Payment
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+
+  const renderOwners = () => {
+    // Filter owners by search text
+    const filteredOwners = (() => {
+      if (!owners || !Array.isArray(owners)) return [];
+      if (!userSearchText) return owners;
+      const searchLower = userSearchText.toLowerCase();
+      return owners.filter(owner => 
+        (owner.name || owner.Name || '').toLowerCase().includes(searchLower) ||
+        (owner.email || owner.Email || '').toLowerCase().includes(searchLower)
+      );
+    })();
+
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header">
+          <div>
+            <h2>Owners</h2>
+            <p>{filteredOwners.length} results found</p>
+          </div>
+          <div className="sa-clients-header-right">
+            <button className="sa-primary-cta" onClick={handleOpenAddOwner}>
+              <Plus size={16} />
+              Add Owner
+            </button>
+            <div className="sa-search-input" style={{ marginLeft: '12px' }}>
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search by owner name or email"
+                value={userSearchText}
+                onChange={(e) => setUserSearchText(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <div>
+              <h3>Owners</h3>
+              <p>Manage property owners (landlords) for property assignment</p>
+            </div>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Properties Count</th>
+                  <th>Contracts Count</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOwners.map((owner, index) => (
+                  <tr key={`owner-${owner.id || owner.ID || index}`}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{owner.name || owner.Name}</span>
+                    </td>
+                    <td>{owner.email || owner.Email}</td>
+                    <td>{owner.propertiesCount || owner.PropertiesCount || 0}</td>
+                    <td>{owner.contractsCount || owner.ContractsCount || 0}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(owner.status || owner.Status || 'active').toLowerCase()}`}>
+                        {owner.status || owner.Status || 'Active'}
+                      </span>
+                    </td>
+                    <td className="sa-row-actions">
+                      <button className="sa-icon-button" onClick={() => handleOpenEditOwner(owner)} title="Edit">✏️</button>
+                      <button className="sa-icon-button" onClick={() => handleDeleteOwner(owner)} title="Delete">🗑️</button>
+                    </td>
+                  </tr>
+                ))}
+                {filteredOwners.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="sa-table-empty">No owners found. Click "Add Owner" to create one.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -3484,6 +3711,8 @@ const AgencyDirectorDashboard = () => {
         return renderManagement();
       case 'users':
         return renderUsers();
+      case 'owners':
+        return renderOwners();
       case 'properties':
         return renderProperties();
       case 'tenants':
@@ -3498,6 +3727,8 @@ const AgencyDirectorDashboard = () => {
         return renderAdvertisements();
       case 'messages':
         return renderMessages();
+      case 'subscription':
+        return renderSubscription();
       case 'settings':
         return (
           <div className="embedded-settings">
@@ -3665,8 +3896,9 @@ const AgencyDirectorDashboard = () => {
         </form>
       </Modal>
 
-      {/* Property Modal */}
-      <Modal isOpen={showPropertyModal} onClose={() => setShowPropertyModal(false)} title={editingProperty ? 'Edit Property' : 'Add Property'}>
+      {/* Property Modal - Only for editing (adding is disabled for Agency Director) */}
+      <Modal isOpen={showPropertyModal && editingProperty} onClose={() => setShowPropertyModal(false)} title="Edit Property">
+        {editingProperty && (
         <form onSubmit={handleSubmitProperty} className="sa-form">
           <div className="sa-form-group">
             <label>Address *</label>
@@ -3699,7 +3931,55 @@ const AgencyDirectorDashboard = () => {
           </div>
           <div className="sa-form-actions">
             <button type="button" className="sa-outline-button" onClick={() => setShowPropertyModal(false)}>Cancel</button>
-            <button type="submit" className="sa-primary-cta">{editingProperty ? 'Update' : 'Create'} Property</button>
+            <button type="submit" className="sa-primary-cta">Update Property</button>
+          </div>
+        </form>
+        )}
+      </Modal>
+
+      {/* Owner Modal */}
+      <Modal isOpen={showOwnerModal} onClose={() => setShowOwnerModal(false)} title={editingOwner ? 'Edit Owner' : 'Add Owner'}>
+        <form onSubmit={handleSubmitOwner} className="sa-form">
+          <div className="sa-form-group">
+            <label>Name *</label>
+            <input 
+              type="text" 
+              value={ownerForm.name} 
+              onChange={(e) => setOwnerForm({...ownerForm, name: e.target.value})} 
+              required 
+            />
+          </div>
+          <div className="sa-form-group">
+            <label>Email *</label>
+            <input 
+              type="email" 
+              value={ownerForm.email} 
+              onChange={(e) => setOwnerForm({...ownerForm, email: e.target.value})} 
+              required 
+            />
+          </div>
+          <div className="sa-form-group">
+            <label>Phone</label>
+            <input 
+              type="text" 
+              value={ownerForm.phone} 
+              onChange={(e) => setOwnerForm({...ownerForm, phone: e.target.value})} 
+              placeholder="Optional"
+            />
+          </div>
+          <div className="sa-form-group">
+            <label>Password {!editingOwner ? '*' : ''}</label>
+            <input 
+              type="password" 
+              value={ownerForm.password} 
+              onChange={(e) => setOwnerForm({...ownerForm, password: e.target.value})} 
+              required={!editingOwner}
+              placeholder={editingOwner ? 'Leave blank to keep current password' : ''}
+            />
+          </div>
+          <div className="sa-form-actions">
+            <button type="button" className="sa-outline-button" onClick={() => setShowOwnerModal(false)}>Cancel</button>
+            <button type="submit" className="sa-primary-cta">{editingOwner ? 'Update' : 'Create'} Owner</button>
           </div>
         </form>
       </Modal>

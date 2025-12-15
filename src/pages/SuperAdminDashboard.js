@@ -12,7 +12,9 @@ import {
   Plus
 } from 'lucide-react';
 import { superAdminService } from '../services/superAdminService';
+import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
+import { isDemoMode, getSuperAdminDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import Modal from '../components/Modal';
 import '../components/RoleLayout.css';
@@ -69,6 +71,7 @@ const SuperAdminDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
 
@@ -76,6 +79,21 @@ const SuperAdminDashboard = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      if (isDemoMode()) {
+        // Use demo data
+        const demoData = getSuperAdminDemoData();
+        setOverviewStats(demoData.overview);
+        setCompanies(demoData.agencies);
+        setAgencyAdmins([]);
+        setFinancialData(demoData.overview);
+        setAds([]);
+        setSubscriptions([]);
+        setSelectedAdminId(null);
+        setChatMessages([]);
+        setLoading(false);
+        return;
+      }
+      
       const [
         overview,
         companiesData,
@@ -115,7 +133,9 @@ const SuperAdminDashboard = () => {
       }
     } catch (error) {
       console.error('Error loading super admin data:', error);
-      addNotification('Failed to load data from server', 'error');
+      if (!isDemoMode()) {
+        addNotification('Failed to load data from server', 'error');
+      }
     } finally {
       setLoading(false);
     }

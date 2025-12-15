@@ -27,10 +27,8 @@ import './LandlordDashboard.css';
 import './SalesManagerDashboard.css';
 import '../components/RoleLayout.css';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
+  Area,
+  AreaChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -41,6 +39,7 @@ import {
 import { landlordService } from '../services/landlordService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
+import { isDemoMode, getLandlordDemoData } from '../utils/demoData';
 import { MessageCircle } from 'lucide-react';
 
 const LandlordDashboard = () => {
@@ -131,6 +130,24 @@ const LandlordDashboard = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      if (isDemoMode()) {
+        // Use demo data
+        const demoData = getLandlordDemoData();
+        setOverviewData(demoData.overview);
+        setProperties(demoData.properties);
+        setTenants(demoData.tenants);
+        setPayments(demoData.payments);
+        setRents(demoData.overview);
+        setWorkOrders(demoData.workOrders);
+        setClaims(demoData.claims);
+        setInventory(demoData.inventory);
+        setBusinessTracking(demoData.businessTracking);
+        setExpenses(demoData.expenses);
+        setLoading(false);
+        return;
+      }
+      
       const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, claimsData, inventoryData, trackingData, expensesData] = await Promise.all([
         landlordService.getOverview(),
         landlordService.getProperties(),
@@ -160,7 +177,9 @@ const LandlordDashboard = () => {
       setExpenses(Array.isArray(expensesData) ? expensesData : []);
     } catch (error) {
       console.error('Error loading landlord data:', error);
-      addNotification('Failed to load dashboard data', 'error');
+      if (!isDemoMode()) {
+        addNotification('Failed to load dashboard data', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -765,7 +784,7 @@ const LandlordDashboard = () => {
           </div>
             <div style={{ width: '100%', height: '200px', marginTop: '20px' }}>
               <ResponsiveContainer>
-                <LineChart
+                <AreaChart
                   data={(() => {
                     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
                     const currentRent = overviewData?.totalRentCollected || 0;
@@ -776,36 +795,69 @@ const LandlordDashboard = () => {
                       payout: Math.round(currentPayout * (0.7 + (index * 0.05)))
                     }));
                   })()}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" />
-                  <YAxis stroke="#3b82f6" />
+                  <defs>
+                    <linearGradient id="colorRentLandlord" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorPayout" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
+                  <YAxis 
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
                   <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      padding: '8px 12px'
+                    }}
                     formatter={(value, name) => {
                       if (name === 'rent') return [`${value.toLocaleString()} XOF`, 'Rent Collected'];
                       if (name === 'payout') return [`${value.toLocaleString()} XOF`, 'Net Payout'];
                       return value;
                     }}
                   />
-                  <Legend />
-                  <Line
-                    type="monotone"
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '10px' }}
+                    iconType="line"
+                  />
+                  <Area
+                    type="natural"
                     dataKey="rent"
                     stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={{ fill: '#3b82f6', r: 4 }}
+                    strokeWidth={3}
+                    fill="url(#colorRentLandlord)"
+                    dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
                     name="Rent Collected"
                   />
-                  <Line
-                    type="monotone"
+                  <Area
+                    type="natural"
                     dataKey="payout"
                     stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ fill: '#10b981', r: 4 }}
+                    strokeWidth={3}
+                    fill="url(#colorPayout)"
+                    dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
                     name="Net Payout"
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
           </div>
           </div>
@@ -2295,6 +2347,7 @@ const LandlordDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
 
