@@ -289,16 +289,21 @@ const AccountingDashboard = () => {
       setDeposits(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading deposits:', error);
-      addNotification('Failed to load deposits', 'error');
+      // Only show notification once, not on every retry
+      if (deposits.length === 0) {
+        addNotification('Failed to load deposits', 'error');
+      }
       setDeposits([]);
     }
-  }, [depositFilter, addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depositFilter]); // Removed addNotification to prevent infinite loop
 
   useEffect(() => {
     if (activeTab === 'deposits') {
       loadDeposits();
     }
-  }, [activeTab, depositFilter, loadDeposits]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, depositFilter]); // Removed loadDeposits to prevent infinite loop
 
   // Load advertisements
   const loadAdvertisements = async () => {

@@ -1084,6 +1084,7 @@ const LandlordDashboard = () => {
               <th>No</th>
                 <th>Property Address</th>
                 <th>Type</th>
+                <th>Property Type</th>
                 <th>Bedrooms</th>
                 <th>Bathrooms</th>
                 <th>Rent</th>
@@ -1094,7 +1095,7 @@ const LandlordDashboard = () => {
             <tbody>
             {properties.length === 0 ? (
               <tr>
-                <td colSpan={8} className="sa-table-empty">No properties found</td>
+                <td colSpan={9} className="sa-table-empty">No properties found</td>
               </tr>
             ) : (
               properties.map((property, index) => (
@@ -1103,7 +1104,15 @@ const LandlordDashboard = () => {
                   <td className="sa-cell-main">
                     <span className="sa-cell-title">{property.Address || property.address || 'Unknown Address'}</span>
                   </td>
-                  <td>{property.Type || property.type || 'N/A'}</td>
+                  <td>
+                    <div className="sa-cell-main">
+                      <span className="sa-cell-title">{property.Type || property.type || 'N/A'}</span>
+                      {property.BuildingType || property.buildingType ? (
+                        <span className="sa-cell-sub">({property.BuildingType || property.buildingType})</span>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td>{property.PropertyType || property.propertyType || 'N/A'}</td>
                   <td>{property.Bedrooms || property.bedrooms || 0}</td>
                   <td>{property.Bathrooms || property.bathrooms || 0}</td>
                   <td>{property.Rent?.toLocaleString() || property.rent?.toLocaleString() || 0} XOF/month</td>

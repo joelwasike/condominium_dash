@@ -42,6 +42,8 @@ const SalesDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [interestedClients, setInterestedClients] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
+  const [showBuildingType, setShowBuildingType] = useState(false);
+  const [editShowBuildingType, setEditShowBuildingType] = useState(false);
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -478,11 +480,14 @@ const SalesDashboard = () => {
 
   const openAddListingModal = () => {
     setSelectedListing(null);
+    setShowBuildingType(false);
     setShowAddListingModal(true);
   };
 
   const openEditListing = (listing) => {
     setSelectedListing(listing);
+    const listingType = listing.Type || listing.type || '';
+    setEditShowBuildingType(listingType === 'Apartment');
     setShowEditListingModal(true);
   };
 
@@ -733,6 +738,8 @@ const SalesDashboard = () => {
                   const address = listing.Address || listing.address || 'Unnamed Property';
                   const city = listing.City || listing.city || listing.District || listing.district || 'N/A';
                   const type = listing.Type || listing.type || 'N/A';
+                  const propertyType = listing.PropertyType || listing.propertyType || 'N/A';
+                  const buildingType = listing.BuildingType || listing.buildingType || null;
                   const bedrooms = listing.Bedrooms || listing.bedrooms || 0;
                   const bathrooms = listing.Bathrooms || listing.bathrooms || 0;
                   const price = listing.Price || listing.price || 'N/A';
@@ -749,8 +756,8 @@ const SalesDashboard = () => {
                   </td>
                   <td>
                         <div className="sa-cell-main">
-                          <span className="sa-cell-title">{type}</span>
-                          <span className="sa-cell-sub">{bedrooms} bd / {bathrooms} ba</span>
+                          <span className="sa-cell-title">{type} {buildingType ? `(${buildingType})` : ''}</span>
+                          <span className="sa-cell-sub">{propertyType} • {bedrooms} bd / {bathrooms} ba</span>
               </div>
                   </td>
                   <td>
@@ -1339,6 +1346,8 @@ const SalesDashboard = () => {
                 const listingData = {
                     address: formData.get('address'),
                     type: formData.get('type'),
+                    propertyType: formData.get('propertyType'),
+                    buildingType: formData.get('buildingType') || null,
                     bedrooms: Number(formData.get('bedrooms')),
                     bathrooms: Number(formData.get('bathrooms')),
                     price: formData.get('price'),
@@ -1358,15 +1367,41 @@ const SalesDashboard = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="add-type">Property Type *</label>
-                  <select id="add-type" name="type" required>
-                    <option value="">Select Type</option>
+                  <label htmlFor="add-type">Building Type *</label>
+                  <select 
+                    id="add-type" 
+                    name="type" 
+                    required
+                    onChange={(e) => setShowBuildingType(e.target.value === 'Apartment')}
+                  >
+                    <option value="">Select Building Type</option>
                     <option value="Apartment">Apartment</option>
                     <option value="House">House</option>
                     <option value="Studio">Studio</option>
                     <option value="Condo">Condo</option>
                   </select>
                 </div>
+                <div className="form-group">
+                  <label htmlFor="add-property-type">Property Type (For Sale or Rent) *</label>
+                  <select id="add-property-type" name="propertyType" required>
+                    <option value="">Select Property Type</option>
+                    <option value="For Sale">For Sale</option>
+                    <option value="For Rent">For Rent</option>
+                  </select>
+                </div>
+                {showBuildingType && (
+                  <div className="form-group">
+                    <label htmlFor="add-building-type">Building Type (if Apartment) *</label>
+                    <select id="add-building-type" name="buildingType" required>
+                      <option value="">Select Building Type</option>
+                      <option value="High-rise">High-rise</option>
+                      <option value="Low-rise">Low-rise</option>
+                      <option value="Duplex">Duplex</option>
+                      <option value="Townhouse">Townhouse</option>
+                      <option value="Penthouse">Penthouse</option>
+                    </select>
+                  </div>
+                )}
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="add-bedrooms">Bedrooms *</label>
@@ -1455,6 +1490,8 @@ const SalesDashboard = () => {
                 const listingData = {
                     address: formData.get('address'),
                     type: formData.get('type'),
+                    propertyType: formData.get('propertyType'),
+                    buildingType: formData.get('buildingType') || null,
                     bedrooms: Number(formData.get('bedrooms')),
                     bathrooms: Number(formData.get('bathrooms')),
                     price: formData.get('price'),
@@ -1474,20 +1511,52 @@ const SalesDashboard = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="edit-type">Property Type *</label>
+                  <label htmlFor="edit-type">Building Type *</label>
                   <select 
                     id="edit-type"
                     name="type" 
                     defaultValue={selectedListing.Type || selectedListing.type} 
                     required
+                    onChange={(e) => setEditShowBuildingType(e.target.value === 'Apartment')}
                   >
-                    <option value="">Select Type</option>
+                    <option value="">Select Building Type</option>
                     <option value="Apartment">Apartment</option>
                     <option value="House">House</option>
                     <option value="Studio">Studio</option>
                     <option value="Condo">Condo</option>
                   </select>
                 </div>
+                <div className="form-group">
+                  <label htmlFor="edit-property-type">Property Type (For Sale or Rent) *</label>
+                  <select 
+                    id="edit-property-type"
+                    name="propertyType" 
+                    defaultValue={selectedListing.PropertyType || selectedListing.propertyType || ''} 
+                    required
+                  >
+                    <option value="">Select Property Type</option>
+                    <option value="For Sale">For Sale</option>
+                    <option value="For Rent">For Rent</option>
+                  </select>
+                </div>
+                {editShowBuildingType && (
+                  <div className="form-group">
+                    <label htmlFor="edit-building-type">Building Type (if Apartment) *</label>
+                    <select 
+                      id="edit-building-type"
+                      name="buildingType" 
+                      defaultValue={selectedListing.BuildingType || selectedListing.buildingType || ''} 
+                      required
+                    >
+                      <option value="">Select Building Type</option>
+                      <option value="High-rise">High-rise</option>
+                      <option value="Low-rise">Low-rise</option>
+                      <option value="Duplex">Duplex</option>
+                      <option value="Townhouse">Townhouse</option>
+                      <option value="Penthouse">Penthouse</option>
+                    </select>
+                  </div>
+                )}
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="edit-bedrooms">Bedrooms *</label>

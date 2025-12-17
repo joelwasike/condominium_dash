@@ -180,6 +180,7 @@ const SalesManagerDashboard = () => {
   const [showEditPropertyModal, setShowEditPropertyModal] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
   const [expandedOwnerId, setExpandedOwnerId] = useState(null); // For property management owner expansion
+  const [showBuildingType, setShowBuildingType] = useState(false); // For showing building type field when type is Apartment
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -909,6 +910,8 @@ const SalesManagerDashboard = () => {
     const propertyData = {
       address: formData.get('address')?.trim(),
       type: formData.get('type')?.trim(),
+      propertyType: formData.get('propertyType')?.trim(),
+      buildingType: formData.get('buildingType')?.trim() || null,
       status: formData.get('status')?.trim(),
       rent: formData.get('rent') ? parseFloat(formData.get('rent')) : undefined,
       bedrooms: formData.get('bedrooms') ? parseInt(formData.get('bedrooms')) : undefined,
@@ -919,8 +922,14 @@ const SalesManagerDashboard = () => {
     };
 
     // Validate required fields
-    if (!propertyData.address || !propertyData.type || !propertyData.status || !propertyData.rent) {
-      addNotification('Please fill in all required fields (Address, Type, Status, Rent)', 'error');
+    if (!propertyData.address || !propertyData.type || !propertyData.propertyType || !propertyData.status || !propertyData.rent) {
+      addNotification('Please fill in all required fields (Address, Type, Property Type, Status, Rent)', 'error');
+      return;
+    }
+
+    // Validate building type if type is Apartment
+    if (propertyData.type === 'Apartment' && !propertyData.buildingType) {
+      addNotification('Building Type is required when Type is Apartment', 'error');
       return;
     }
 
@@ -954,6 +963,11 @@ const SalesManagerDashboard = () => {
     // Only include fields that are provided
     if (formData.get('address')) updateData.address = formData.get('address').trim();
     if (formData.get('type')) updateData.type = formData.get('type').trim();
+    if (formData.get('propertyType')) updateData.propertyType = formData.get('propertyType').trim();
+    if (formData.get('buildingType')) {
+      const buildingType = formData.get('buildingType').trim();
+      updateData.buildingType = buildingType || null;
+    }
     if (formData.get('status')) updateData.status = formData.get('status').trim();
     if (formData.get('rent')) updateData.rent = parseFloat(formData.get('rent'));
     if (formData.get('bedrooms')) updateData.bedrooms = parseInt(formData.get('bedrooms'));
@@ -1349,6 +1363,7 @@ const SalesManagerDashboard = () => {
                   <th>Property</th>
                 <th>Type</th>
                 <th>Status</th>
+                <th>Property Type</th>
                 <th>Tenant</th>
                 <th>Rent</th>
                 <th>Urgency</th>
@@ -1369,12 +1384,24 @@ const SalesManagerDashboard = () => {
                             <span className="sa-cell-title">{property.Address || property.address || 'N/A'}</span>
                           </div>
                         </td>
-                        <td>{property.Type || property.type || 'N/A'}</td>
+                        <td>
+                          <div className="sa-cell-main">
+                            <span className="sa-cell-title">{property.Type || property.type || 'N/A'}</span>
+                            {property.BuildingType || property.buildingType ? (
+                              <span className="sa-cell-sub">({property.BuildingType || property.buildingType})</span>
+                            ) : null}
+                          </div>
+                        </td>
                         <td>
                           <span className={`sa-status-pill ${(property.Status || property.status || 'unknown').toLowerCase()}`}>
                             {property.Status || property.status || 'Unknown'}
                       </span>
                     </td>
+                        <td>
+                          <div className="sa-cell-main">
+                            <span className="sa-cell-title">{property.PropertyType || property.propertyType || 'N/A'}</span>
+                          </div>
+                        </td>
                         <td>{property.Tenant || property.tenant || 'No tenant'}</td>
                         <td>{property.Rent || property.rent ? `${property.Rent || property.rent} XOF/month` : 'N/A'}</td>
                         <td>
@@ -1391,6 +1418,7 @@ const SalesManagerDashboard = () => {
                             className="sa-action-button"
                             onClick={() => {
                               setEditingProperty(property);
+                              setShowBuildingType((property.Type || property.type) === 'Apartment');
                               setShowEditPropertyModal(true);
                             }}
                             title="Edit Property"
@@ -1403,7 +1431,7 @@ const SalesManagerDashboard = () => {
                   })
               ) : (
                 <tr>
-                    <td colSpan={8} className="sa-table-empty">No properties found. Create your first property to get started.</td>
+                    <td colSpan={9} className="sa-table-empty">No properties found. Create your first property to get started.</td>
                 </tr>
               )}
             </tbody>
@@ -3053,15 +3081,44 @@ const SalesManagerDashboard = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="create-type">Type *</label>
-                    <select name="type" id="create-type" required>
-                      <option value="">Select Type</option>
+                    <label htmlFor="create-type">Building Type *</label>
+                    <select 
+                      name="type" 
+                      id="create-type" 
+                      required
+                      onChange={(e) => setShowBuildingType(e.target.value === 'Apartment')}
+                    >
+                      <option value="">Select Building Type</option>
                       <option value="Apartment">Apartment</option>
                       <option value="House">House</option>
                       <option value="Condo">Condo</option>
                       <option value="Studio">Studio</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="create-property-type">Property Type (For Sale or Rent) *</label>
+                    <select name="propertyType" id="create-property-type" required>
+                      <option value="">Select Property Type</option>
+                      <option value="For Sale">For Sale</option>
+                      <option value="For Rent">For Rent</option>
+                    </select>
+                  </div>
+                  {showBuildingType && (
+                    <div className="form-group">
+                      <label htmlFor="create-building-type">Building Type (if Apartment) *</label>
+                      <select name="buildingType" id="create-building-type" required>
+                        <option value="">Select Building Type</option>
+                        <option value="High-rise">High-rise</option>
+                        <option value="Low-rise">Low-rise</option>
+                        <option value="Duplex">Duplex</option>
+                        <option value="Townhouse">Townhouse</option>
+                        <option value="Penthouse">Penthouse</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-row">
@@ -3196,15 +3253,44 @@ const SalesManagerDashboard = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="edit-type">Type</label>
-                    <select name="type" id="edit-type" defaultValue={editingProperty.Type || editingProperty.type || ''}>
-                      <option value="">Select Type</option>
+                    <label htmlFor="edit-type">Building Type</label>
+                    <select 
+                      name="type" 
+                      id="edit-type" 
+                      defaultValue={editingProperty.Type || editingProperty.type || ''}
+                      onChange={(e) => setShowBuildingType(e.target.value === 'Apartment')}
+                    >
+                      <option value="">Select Building Type</option>
                       <option value="Apartment">Apartment</option>
                       <option value="House">House</option>
                       <option value="Condo">Condo</option>
                       <option value="Studio">Studio</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-property-type">Property Type (For Sale or Rent)</label>
+                    <select name="propertyType" id="edit-property-type" defaultValue={editingProperty.PropertyType || editingProperty.propertyType || ''}>
+                      <option value="">Select Property Type</option>
+                      <option value="For Sale">For Sale</option>
+                      <option value="For Rent">For Rent</option>
+                    </select>
+                  </div>
+                  {(showBuildingType || (editingProperty.Type || editingProperty.type) === 'Apartment') && (
+                    <div className="form-group">
+                      <label htmlFor="edit-building-type">Building Type (if Apartment)</label>
+                      <select name="buildingType" id="edit-building-type" defaultValue={editingProperty.BuildingType || editingProperty.buildingType || ''}>
+                        <option value="">Select Building Type</option>
+                        <option value="High-rise">High-rise</option>
+                        <option value="Low-rise">Low-rise</option>
+                        <option value="Duplex">Duplex</option>
+                        <option value="Townhouse">Townhouse</option>
+                        <option value="Penthouse">Penthouse</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-row">

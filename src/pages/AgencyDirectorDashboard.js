@@ -1642,6 +1642,7 @@ const AgencyDirectorDashboard = () => {
               <th>Address</th>
               <th>Company</th>
               <th>Type</th>
+              <th>Property Type</th>
               <th>Rent</th>
               <th>Tenant</th>
               <th>Status</th>
@@ -1656,7 +1657,15 @@ const AgencyDirectorDashboard = () => {
                   <span className="sa-cell-title">{property.Address || property.address}</span>
                 </td>
                 <td>{property.Company || property.company}</td>
-                <td>{property.Type || property.type}</td>
+                <td>
+                  <div className="sa-cell-main">
+                    <span className="sa-cell-title">{property.Type || property.type}</span>
+                    {property.BuildingType || property.buildingType ? (
+                      <span className="sa-cell-sub">({property.BuildingType || property.buildingType})</span>
+                    ) : null}
+                  </div>
+                </td>
+                <td>{property.PropertyType || property.propertyType || 'N/A'}</td>
                 <td>{(property.Rent || property.rent || 0).toLocaleString()} FCFA</td>
                 <td>{property.Tenant || property.tenant || 'N/A'}</td>
                 <td>
@@ -1672,7 +1681,7 @@ const AgencyDirectorDashboard = () => {
             ))}
             {filteredProperties.length === 0 && (
               <tr>
-                <td colSpan={8} className="sa-table-empty">No properties found</td>
+                <td colSpan={9} className="sa-table-empty">No properties found</td>
               </tr>
             )}
           </tbody>
@@ -3010,6 +3019,7 @@ const AgencyDirectorDashboard = () => {
               <th>No</th>
               <th>Address</th>
               <th>Type</th>
+              <th>Property Type</th>
               <th>Rent</th>
               <th>Units</th>
               <th>Tenant</th>
@@ -3034,7 +3044,15 @@ const AgencyDirectorDashboard = () => {
                     </span>
                   )}
                 </td>
-                <td>{property.type || property.Type || 'N/A'}</td>
+                <td>
+                  <div className="sa-cell-main">
+                    <span className="sa-cell-title">{property.type || property.Type || 'N/A'}</span>
+                    {property.buildingType || property.BuildingType ? (
+                      <span className="sa-cell-sub">({property.buildingType || property.BuildingType})</span>
+                    ) : null}
+                  </div>
+                </td>
+                <td>{property.propertyType || property.PropertyType || 'N/A'}</td>
                 <td>{(property.rent || property.Rent || 0).toLocaleString()} FCFA</td>
                 <td>
                   {totalUnits > 0 ? (
@@ -3102,7 +3120,7 @@ const AgencyDirectorDashboard = () => {
             })}
             {filteredProperties.length === 0 && (
               <tr>
-                <td colSpan={8} className="sa-table-empty">No properties found</td>
+                <td colSpan={9} className="sa-table-empty">No properties found</td>
               </tr>
             )}
           </tbody>
