@@ -7,6 +7,33 @@ export const accountingService = {
     return await apiRequest(url);
   },
 
+  // Cashier APIs
+  getCashierAccounts: async () => {
+    const url = buildApiUrl('/api/accounting/cashier/accounts');
+    return await apiRequest(url);
+  },
+
+  getCashierTransactions: async () => {
+    const url = buildApiUrl('/api/accounting/cashier/transactions');
+    return await apiRequest(url);
+  },
+
+  createCashierAccount: async (accountData) => {
+    const url = buildApiUrl('/api/accounting/cashier/accounts');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(accountData),
+    });
+  },
+
+  createCashierTransaction: async (transactionData) => {
+    const url = buildApiUrl('/api/accounting/cashier/transactions');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(transactionData),
+    });
+  },
+
   // Tenant Payments APIs
   getTenantPayments: async (filters = {}) => {
     let url = buildApiUrl('/api/accounting/tenant-payments');
