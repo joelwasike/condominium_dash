@@ -190,13 +190,13 @@ const SalesManagerDashboard = () => {
   const isLoadingUsersRef = useRef(false);
   const messagesEndRef = useRef(null);
 
-  const addNotification = (message, type = 'info') => {
+  const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 3000);
-  };
+  }, []);
 
   // Load data from API
   const loadData = async () => {
@@ -321,7 +321,8 @@ const SalesManagerDashboard = () => {
         setChatMessages([]);
       }
     }
-  }, [addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // addNotification is stable, no need to include
 
   // Load users for messaging (from same company)
   const loadUsers = useCallback(async () => {
@@ -511,7 +512,8 @@ const SalesManagerDashboard = () => {
     } finally {
       isLoadingUsersRef.current = false;
     }
-  }, [loadChatForUser, addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadChatForUser]); // addNotification is stable, no need to include
 
   // Load data on component mount
   useEffect(() => {

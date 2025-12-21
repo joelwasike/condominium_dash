@@ -144,13 +144,13 @@ const AccountingDashboard = () => {
   const isLoadingUsersRef = useRef(false);
   const messagesEndRef = useRef(null);
 
-  const addNotification = (message, type = 'info') => {
+  const addNotification = useCallback((message, type = 'info') => {
     const id = Date.now();
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 3000);
-  };
+  }, []);
 
   const tabs = useMemo(
     () => [
@@ -185,7 +185,8 @@ const AccountingDashboard = () => {
       console.error('Failed to load expenses:', error);
       addNotification('Failed to load expenses', 'error');
     }
-  }, [expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter, addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter]); // addNotification is stable, no need to include
 
   // Load data from APIs
   const loadData = async () => {
@@ -241,7 +242,8 @@ const AccountingDashboard = () => {
     if (activeTab === 'expenses') {
       loadExpenses();
     }
-  }, [activeTab, loadExpenses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter]); // Only reload when tab or filters change
 
   // Load cashier data
   const loadCashierData = useCallback(async () => {
@@ -256,13 +258,15 @@ const AccountingDashboard = () => {
       console.error('Error loading cashier data:', error);
       addNotification('Failed to load cashier data', 'error');
     }
-  }, [addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // addNotification is stable, no need to include
 
   useEffect(() => {
     if (activeTab === 'cashier') {
       loadCashierData();
     }
-  }, [activeTab, loadCashierData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]); // Only reload when tab changes, not when loadCashierData changes
 
   // Load tenants data
   const loadTenants = useCallback(async () => {
@@ -274,13 +278,15 @@ const AccountingDashboard = () => {
       addNotification('Failed to load tenants', 'error');
       setTenants([]);
     }
-  }, [addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // addNotification is stable, no need to include
 
   useEffect(() => {
     if (activeTab === 'tenants') {
       loadTenants();
     }
-  }, [activeTab, loadTenants]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]); // Only reload when tab changes, not when loadTenants changes
 
   // Load deposits data
   const loadDeposits = useCallback(async () => {
@@ -356,7 +362,8 @@ const AccountingDashboard = () => {
       addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
       setChatMessages([]);
     }
-  }, [addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // addNotification is stable, no need to include
 
   // Load users for messaging
   const loadUsers = useCallback(async () => {
@@ -509,7 +516,8 @@ const AccountingDashboard = () => {
     } finally {
       isLoadingUsersRef.current = false;
     }
-  }, [loadChatForUser, addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadChatForUser]); // addNotification is stable, no need to include
 
   // Load advertisements when advertisements or overview tab is active
   useEffect(() => {

@@ -99,13 +99,13 @@ const TenantDashboard = () => {
     []
   );
 
-  const addNotification = (message, type = 'info') => {
+  const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 3000);
-  };
+  }, []);
 
   const loadData = async () => {
     try {
@@ -217,7 +217,8 @@ const TenantDashboard = () => {
       addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
       setChatMessages([]);
     }
-  }, [addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // addNotification is stable, no need to include
 
   // Load users for messaging (from same company)
   const loadUsers = useCallback(async () => {
@@ -380,7 +381,8 @@ const TenantDashboard = () => {
     } finally {
       isLoadingUsersRef.current = false;
     }
-  }, [loadChatForUser, addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadChatForUser]); // addNotification is stable, no need to include
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
