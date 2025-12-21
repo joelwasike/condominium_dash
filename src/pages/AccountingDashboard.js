@@ -22,6 +22,7 @@ import './AccountingDashboard.css';
 const AccountingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCashPaymentModal, setShowCashPaymentModal] = useState(false);
   const [showLandlordPaymentModal, setShowLandlordPaymentModal] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [calculatedAmount, setCalculatedAmount] = useState(null);
@@ -42,6 +43,9 @@ const AccountingDashboard = () => {
   const [advertisements, setAdvertisements] = useState([]);
   const [landlords, setLandlords] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const [selectedTenantForPayment, setSelectedTenantForPayment] = useState(null);
+  const [selectedLandlord, setSelectedLandlord] = useState(null);
+  const [landlordProperties, setLandlordProperties] = useState(null);
   const carouselIntervalRef = useRef(null);
   
   // Reports state
@@ -1522,6 +1526,7 @@ const AccountingDashboard = () => {
                     <th>Outstanding Amount</th>
                     <th>Last Payment</th>
                     <th>Next Payment Due</th>
+              <th className="table-menu">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1569,6 +1574,17 @@ const AccountingDashboard = () => {
                           {tenant.NextPaymentDue || tenant.nextPaymentDue
                             ? new Date(tenant.NextPaymentDue || tenant.nextPaymentDue).toLocaleDateString()
                             : 'N/A'}
+              </td>
+                        <td>
+                          <button
+                            className="sa-primary-cta"
+                            onClick={() => {
+                              setSelectedTenantForPayment(tenant);
+                              setShowCashPaymentModal(true);
+                            }}
+                          >
+                            Record Cash Payment
+                          </button>
               </td>
             </tr>
                     );
@@ -3835,6 +3851,151 @@ const AccountingDashboard = () => {
         </div>
       )}
 
+      {/* Cash Payment Modal (from Tenants tab) */}
+      {showCashPaymentModal && selectedTenantForPayment && (
+        <div className="modal-overlay" onClick={() => setShowCashPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Record Cash Payment</h3>
+              <button className="modal-close" onClick={() => setShowCashPaymentModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!selectedTenantForPayment) return;
+                  try {
+                    setLoading(true);
+                    const formData = new FormData(e.target);
+                    const amount = parseFloat(formData.get('amount'));
+                    const chargeType = formData.get('chargeType') || 'Rent';
+                    const reference = formData.get('reference') || '';
+
+                    const tenantName =
+                      selectedTenantForPayment.TenantName ||
+                      selectedTenantForPayment.tenantName ||
+                      '';
+                    const propertyName =
+                      selectedTenantForPayment.Property ||
+                      selectedTenantForPayment.property ||
+                      '';
+
+                    const paymentData = {
+                      tenant: tenantName,
+                      property: propertyName,
+                      amount,
+                      method: 'Cash',
+                      chargeType,
+                      reference,
+                      status: 'Approved', // cash payments are immediately approved and counted in totals
+                    };
+
+                    const newPayment = await accountingService.recordTenantPayment(paymentData);
+
+                    // Refresh local data so totals and tables are up to date
+                    try {
+                      const [overview, tenantPaymentsData, tenantsData] = await Promise.all([
+                        accountingService.getOverview(),
+                        accountingService.getTenantPayments(),
+                        accountingService.getTenantsWithPaymentStatus(),
+                      ]);
+                      setOverviewData(overview);
+                      setTenantPayments(Array.isArray(tenantPaymentsData) ? tenantPaymentsData : []);
+                      setTenants(Array.isArray(tenantsData) ? tenantsData : []);
+                    } catch (refreshError) {
+                      console.error('Error refreshing data after cash payment:', refreshError);
+                    }
+
+                    addNotification('Cash payment recorded successfully!', 'success');
+                    setShowCashPaymentModal(false);
+                    setSelectedTenantForPayment(null);
+                    e.target.reset();
+                  } catch (error) {
+                    console.error('Error recording cash payment:', error);
+                    addNotification('Failed to record cash payment. Please try again.', 'error');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                <div className="form-group">
+                  <label>Tenant</label>
+                  <input
+                    type="text"
+                    value={
+                      selectedTenantForPayment.TenantName ||
+                      selectedTenantForPayment.tenantName ||
+                      'N/A'
+                    }
+                    readOnly
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Property</label>
+                  <input
+                    type="text"
+                    value={
+                      selectedTenantForPayment.Property ||
+                      selectedTenantForPayment.property ||
+                      'N/A'
+                    }
+                    readOnly
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Payment Method</label>
+                  <input type="text" value="Cash" readOnly />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cashAmount">Amount</label>
+                  <input
+                    type="number"
+                    id="cashAmount"
+                    name="amount"
+                    step="0.01"
+                    required
+                    placeholder="Enter cash amount received"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cashChargeType">Charge Type</label>
+                  <select id="cashChargeType" name="chargeType" required>
+                    <option value="Rent">Rent</option>
+                    <option value="Deposit">Deposit</option>
+                    <option value="Late Fee">Late Fee</option>
+                    <option value="Maintenance">Maintenance</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cashReference">Reference (optional)</label>
+                  <input
+                    type="text"
+                    id="cashReference"
+                    name="reference"
+                    placeholder="Receipt number or internal reference"
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="action-button secondary"
+                    onClick={() => {
+                      setShowCashPaymentModal(false);
+                      setSelectedTenantForPayment(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Recording...' : 'Record Cash Payment'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Payment Approval Modal */}
       {showApprovalModal && selectedPayment && (
         <div className="modal-overlay" onClick={() => setShowApprovalModal(false)}>
@@ -3915,6 +4076,8 @@ const AccountingDashboard = () => {
                   e.target.reset();
                   setSelectedBuilding('');
                   setCalculatedAmount(null);
+                  setSelectedLandlord(null);
+                  setLandlordProperties(null);
                 } catch (error) {
                   console.error('Error recording landlord payment:', error);
                   addNotification('Failed to record landlord payment. Please try again.', 'error');
@@ -3924,17 +4087,184 @@ const AccountingDashboard = () => {
               }}>
                 <div className="form-group">
                   <label htmlFor="landlord">Landlord Name *</label>
-                  <select name="landlord" required>
+                  <select 
+                    name="landlord" 
+                    required
+                    onChange={async (e) => {
+                      const landlordId = e.target.value;
+                      if (landlordId) {
+                        const landlord = landlords.find(l => (l.id || l.ID).toString() === landlordId);
+                        setSelectedLandlord(landlord);
+                        try {
+                          setLoading(true);
+                          const data = await accountingService.getLandlordProperties(landlordId);
+                          setLandlordProperties(data);
+                          // Reset building selection when landlord changes
+                          setSelectedBuilding('');
+                          setCalculatedAmount(null);
+                          const buildingSelect = e.target.form?.querySelector('select[name="building"]');
+                          if (buildingSelect) buildingSelect.value = '';
+                          const netAmountInput = e.target.form?.querySelector('input[name="netAmount"]');
+                          if (netAmountInput) netAmountInput.value = '';
+                        } catch (error) {
+                          console.error('Error loading landlord properties:', error);
+                          addNotification('Failed to load landlord properties', 'error');
+                          setLandlordProperties(null);
+                        } finally {
+                          setLoading(false);
+                        }
+                      } else {
+                        setSelectedLandlord(null);
+                        setLandlordProperties(null);
+                        setSelectedBuilding('');
+                        setCalculatedAmount(null);
+                      }
+                    }}
+                  >
                     <option value="">Select Landlord</option>
                     {landlords.map((landlord) => (
-                      <option key={landlord.id || landlord.ID} value={landlord.name || landlord.Name}>
+                      <option key={landlord.id || landlord.ID} value={landlord.id || landlord.ID}>
                         {landlord.name || landlord.Name} {landlord.email ? `(${landlord.email || landlord.Email})` : ''}
                       </option>
                     ))}
                   </select>
                 </div>
+
+                {/* Show preferred payment method when landlord is selected */}
+                {selectedLandlord && landlordProperties && (
                 <div className="form-group">
-                  <label htmlFor="building">Building *</label>
+                    <label>Preferred Payment Method</label>
+                    <div style={{
+                      padding: '12px',
+                      backgroundColor: '#f0f9ff',
+                      border: '1px solid #bae6fd',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      color: '#0c4a6e',
+                      fontWeight: '500',
+                      textTransform: 'capitalize'
+                    }}>
+                      {landlordProperties.landlord?.preferredPaymentMethod || 'mobile_money'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Show properties when landlord is selected */}
+                {selectedLandlord && landlordProperties && landlordProperties.properties && landlordProperties.properties.length > 0 && (
+                  <div className="form-group">
+                    <label>Properties & Income Details</label>
+                    <div style={{
+                      maxHeight: '400px',
+                      overflowY: 'auto',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      padding: '12px'
+                    }}>
+                      {landlordProperties.properties.map((property, index) => (
+                        <div 
+                          key={property.property.ID || index}
+                          style={{
+                            marginBottom: '16px',
+                            padding: '12px',
+                            backgroundColor: property.availableAmount > 0 ? '#f0fdf4' : '#f9fafb',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            cursor: property.availableAmount > 0 ? 'pointer' : 'default'
+                          }}
+                          onClick={() => {
+                            if (property.availableAmount > 0) {
+                              setSelectedBuilding(property.property.Address);
+                              const buildingSelect = document.querySelector('select[name="building"]');
+                              if (buildingSelect) buildingSelect.value = property.property.Address;
+                              const netAmountInput = document.querySelector('input[name="netAmount"]');
+                              if (netAmountInput) netAmountInput.value = property.availableAmount.toFixed(2);
+                              setCalculatedAmount({
+                                totalRentCollected: property.totalRentCollected,
+                                commission: property.commission,
+                                netAmount: property.netAmount,
+                                alreadyPaid: property.alreadyPaid,
+                                availableNetAmount: property.availableAmount,
+                                tenantsPaidCount: property.tenantsPaidCount
+                              });
+                            }
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                            <div>
+                              <div style={{ fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
+                                {property.property.Address}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                {property.property.Type} {property.property.BuildingType ? `(${property.property.BuildingType})` : ''}
+                                {property.totalUnits > 0 && ` • ${property.occupiedUnits}/${property.totalUnits} units occupied`}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: '600', color: property.availableAmount > 0 ? '#059669' : '#6b7280' }}>
+                                {property.availableAmount.toFixed(2)} XOF
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                Available
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <span>Total Rent Collected:</span>
+                              <span style={{ fontWeight: '500' }}>{property.totalRentCollected.toFixed(2)} XOF</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <span>Tenants Paid ({property.tenantsPaidCount}):</span>
+                              <span style={{ fontWeight: '500' }}>{property.tenantsPaidCount} payment(s)</span>
+                            </div>
+                            {property.tenantsPaid && property.tenantsPaid.length > 0 && (
+                              <div style={{ marginTop: '8px', paddingLeft: '8px', borderLeft: '2px solid #d1d5db' }}>
+                                {property.tenantsPaid.map((payment, pIdx) => (
+                                  <div key={pIdx} style={{ marginBottom: '4px', fontSize: '0.7rem' }}>
+                                    • {payment.tenantName}: {payment.amount.toFixed(2)} XOF ({new Date(payment.date).toLocaleDateString()})
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', marginBottom: '4px' }}>
+                              <span>Commission (10%):</span>
+                              <span style={{ fontWeight: '500', color: '#dc2626' }}>-{property.commission.toFixed(2)} XOF</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <span>Net Amount:</span>
+                              <span style={{ fontWeight: '500' }}>{property.netAmount.toFixed(2)} XOF</span>
+                            </div>
+                            {property.alreadyPaid > 0 && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', color: '#f59e0b' }}>
+                                <span>Already Paid:</span>
+                                <span style={{ fontWeight: '500' }}>-{property.alreadyPaid.toFixed(2)} XOF</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedLandlord && landlordProperties && (!landlordProperties.properties || landlordProperties.properties.length === 0) && (
+                  <div className="form-group">
+                    <div style={{
+                      padding: '12px',
+                      backgroundColor: '#fef3c7',
+                      border: '1px solid #fbbf24',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      color: '#92400e'
+                    }}>
+                      No properties found for this landlord.
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label htmlFor="building">Building/Property *</label>
                   <select 
                     name="building" 
                     required
@@ -3970,12 +4300,22 @@ const AccountingDashboard = () => {
                       }
                     }}
                   >
-                    <option value="">Select Building</option>
+                    <option value="">Select Building/Property</option>
+                    {landlordProperties && landlordProperties.properties ? (
+                      landlordProperties.properties.map((property) => (
+                        <option key={property.property.ID} value={property.property.Address}>
+                          {property.property.Address} - {property.availableAmount.toFixed(2)} XOF available
+                        </option>
+                      ))
+                    ) : (
+                      <>
                     <option value="123 Main St">123 Main St</option>
                     <option value="456 Oak Ave">456 Oak Ave</option>
                     <option value="789 Pine Ln">789 Pine Ln</option>
                     <option value="321 Elm St">321 Elm St</option>
                     <option value="654 Maple Dr">654 Maple Dr</option>
+                      </>
+                    )}
                   </select>
                   {calculatedAmount && calculatedAmount.availableNetAmount > 0 && (
                     <div style={{
@@ -4091,13 +4431,15 @@ const AccountingDashboard = () => {
                 try {
                   setLoading(true);
                   const formData = new FormData(e.target);
+                  const accountId = formData.get('accountId');
                   const expenseData = {
                     scope: formData.get('scope'),
                     building: formData.get('scope') === 'SAAF IMMO' ? '-' : formData.get('building'),
                     category: formData.get('category'),
                     amount: parseFloat(formData.get('amount')),
                     date: formData.get('date'),
-                    notes: formData.get('notes')
+                    notes: formData.get('notes'),
+                    accountId: accountId ? parseInt(accountId) : null
                   };
                   
                   // Call the backend API
@@ -4105,6 +4447,21 @@ const AccountingDashboard = () => {
                   
                   // Update local state with the response from backend
                   setExpenses(prev => [newExpense, ...prev]);
+                  
+                  // Reload cashier accounts if account was selected (to reflect balance change)
+                  if (accountId) {
+                    try {
+                      const [accounts, transactions] = await Promise.all([
+                        accountingService.getCashierAccounts().catch(() => []),
+                        accountingService.getCashierTransactions().catch(() => [])
+                      ]);
+                      setCashierAccounts(Array.isArray(accounts) ? accounts : []);
+                      setCashierTransactions(Array.isArray(transactions) ? transactions : []);
+                    } catch (error) {
+                      console.error('Error reloading cashier data:', error);
+                    }
+                  }
+                  
                   addNotification('Expense added successfully!', 'success');
                   setShowExpenseModal(false);
                   
@@ -4153,6 +4510,20 @@ const AccountingDashboard = () => {
                 <div className="form-group">
                   <label>Date</label>
                   <input type="date" name="date" required />
+                </div>
+                <div className="form-group">
+                  <label>Cashier Account (to deduct from)</label>
+                  <select name="accountId">
+                    <option value="">No deduction (manual entry)</option>
+                    {cashierAccounts.filter(acc => acc.IsActive !== false && acc.isActive !== false).map(account => (
+                      <option key={account.ID || account.id} value={account.ID || account.id}>
+                        {account.Name || account.name} - {(account.Balance || account.balance || 0).toFixed(2)} {account.Currency || account.currency || 'XOF'}
+                      </option>
+                    ))}
+                  </select>
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Select a cashier account to automatically deduct the expense amount from its balance. If no account is selected, the expense will be recorded without affecting any account balance.
+                  </small>
                 </div>
                 <div className="form-group">
                   <label>Notes</label>

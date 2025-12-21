@@ -142,6 +142,12 @@ export const accountingService = {
     return await apiRequest(url);
   },
 
+  // Get landlord properties with income calculations
+  getLandlordProperties: async (landlordId) => {
+    const url = buildApiUrl(`/api/accounting/landlords/properties?landlordId=${landlordId}`);
+    return await apiRequest(url);
+  },
+
   // Calculate available payment amount for a building
   calculateBuildingPaymentAmount: async (building) => {
     const url = buildApiUrl(`/api/accounting/landlord-payments/calculate-amount?building=${encodeURIComponent(building)}`);
