@@ -126,6 +126,43 @@ export const profileService = {
     });
     if (!response.ok) throw new Error('Failed to change password');
     return response.json();
+  },
+
+  // Upload profile picture (uses token to identify user)
+  uploadProfilePicture: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = localStorage.getItem('token');
+    const headers = {};
+    
+    if (token) {
+      const tokenStr = String(token).trim();
+      const sanitizedToken = tokenStr
+        .split('')
+        .map(char => {
+          const code = char.charCodeAt(0);
+          return (code >= 32 && code <= 126) ? char : '';
+        })
+        .join('');
+      
+      if (sanitizedToken && sanitizedToken.length > 0) {
+        headers['Authorization'] = sanitizedToken;
+      }
+    }
+
+    const response = await fetch(`${PROFILE_BASE_URL}/picture`, {
+      method: 'POST',
+      headers: headers,
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to upload profile picture');
+    }
+    
+    return response.json();
   }
 };
 

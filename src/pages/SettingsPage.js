@@ -52,7 +52,7 @@ const SettingsPage = () => {
         company: profile.company || '',
         role: profile.role || '',
         status: profile.status || '',
-        profilePicture: profile.profilePicture || profile.profile_picture || ''
+        profilePicture: profile.profilePictureURL || profile.profilePicture || profile.profile_picture || ''
       });
       // Store user ID for potential future use
       if (profile.id) {
@@ -99,23 +99,18 @@ const SettingsPage = () => {
 
     setUploadingPicture(true);
     try {
-      // Upload to Cloudinary
-      const result = await cloudinaryService.uploadFile(file, 'profile-pictures');
+      // Upload to server
+      const result = await profileService.uploadProfilePicture(file);
       
-      if (result.success) {
-        // Update profile with the new picture URL using generic profile service (works for all dashboards)
-        await profileService.updateProfile({
-          profilePicture: result.url
-        });
-        
+      if (result.profilePictureURL) {
         setProfileForm(prev => ({
           ...prev,
-          profilePicture: result.url
+          profilePicture: result.profilePictureURL
         }));
         
         addNotification('Profile picture updated successfully', 'success');
       } else {
-        addNotification(result.error || 'Failed to upload picture', 'error');
+        addNotification('Failed to upload picture', 'error');
       }
     } catch (error) {
       console.error('Error uploading profile picture:', error);
