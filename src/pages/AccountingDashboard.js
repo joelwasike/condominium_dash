@@ -18,6 +18,7 @@ import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
 import '../components/RoleLayout.css';
 import './AccountingDashboard.css';
+import jsPDF from 'jspdf';
 
 const AccountingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -31,6 +32,9 @@ const AccountingDashboard = () => {
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showViewExpenseModal, setShowViewExpenseModal] = useState(false);
+  const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState(null);
   const [loading, setLoading] = useState(false);
   
   // API Data States
@@ -622,6 +626,136 @@ const AccountingDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Print expense receipt as PDF matching BON DE CAISSE template
+  const printExpenseReceipt = (expense) => {
+    if (!expense) return;
+
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    let yPos = 20;
+
+    // Helper function to convert number to words in French
+    const numberToWords = (num) => {
+      const ones = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+      const tens = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+      
+      if (num === 0) return 'zéro';
+      if (num < 20) return ones[num];
+      if (num < 100) {
+        const ten = Math.floor(num / 10);
+        const one = num % 10;
+        if (ten === 7 || ten === 9) {
+          return tens[ten] + '-' + ones[10 + one];
+        }
+        return tens[ten] + (one > 0 ? '-' + ones[one] : '');
+      }
+      if (num < 1000) {
+        const hundred = Math.floor(num / 100);
+        const remainder = num % 100;
+        return ones[hundred] + ' cent' + (remainder > 0 ? ' ' + numberToWords(remainder) : '');
+      }
+      return num.toString(); // Simplified for larger numbers
+    };
+
+    // Header - Logo and Title
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('sili', 20, yPos);
+    pdf.setFontSize(20);
+    pdf.text('SAAF IMMO', 20, yPos + 8);
+    
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('BON DE CAISSE SAAF IMMO', pageWidth - 20, yPos, { align: 'right' });
+    
+    yPos += 25;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('B.F.F.', pageWidth - 20, yPos, { align: 'right' });
+    
+    yPos += 20;
+    
+    // Request details section
+    pdf.setFontSize(11);
+    pdf.text('Demande de sortie de caisse présentée par Mr / Mlle / Mme', 20, yPos);
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(20, yPos + 3, pageWidth - 20, yPos + 3);
+    
+    yPos += 12;
+    pdf.text('Noms et prénoms :', 20, yPos);
+    pdf.line(60, yPos - 3, pageWidth - 20, yPos - 3);
+    
+    yPos += 12;
+    pdf.text('Motif :', 20, yPos);
+    pdf.line(40, yPos - 3, pageWidth - 20, yPos - 3);
+    yPos += 8;
+    pdf.line(20, yPos - 3, pageWidth - 20, yPos - 3);
+    
+    yPos += 15;
+    
+    // Amount section
+    pdf.text('La somme de', 20, yPos);
+    pdf.text('(en lettre) :', 20, yPos + 6);
+    const amount = expense.Amount || expense.amount || 0;
+    const amountWords = numberToWords(Math.floor(amount)) + ' francs CFA';
+    pdf.line(50, yPos - 3, pageWidth - 20, yPos - 3);
+    pdf.text(amountWords, 55, yPos);
+    
+    yPos += 12;
+    pdf.text('(en chiffre) :', 20, yPos);
+    pdf.line(50, yPos - 3, pageWidth - 60, yPos - 3);
+    pdf.text(amount.toFixed(2) + ' CFA', 55, yPos);
+    
+    yPos += 25;
+    
+    // Date and signatures section
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    pdf.text(`Fait à Abidjan, le ${dateStr}`, 20, yPos);
+    
+    yPos = pageHeight - 50;
+    
+    // Signature labels
+    pdf.setFontSize(10);
+    pdf.text('Caisse', 20, yPos);
+    pdf.text('Direction financière', pageWidth / 2 - 30, yPos, { align: 'center' });
+    pdf.text('Bénéficiaire', pageWidth - 20, yPos, { align: 'right' });
+    
+    yPos += 20;
+    pdf.line(20, yPos, 60, yPos);
+    pdf.line(pageWidth / 2 - 50, yPos, pageWidth / 2 + 10, yPos);
+    pdf.line(pageWidth - 60, yPos, pageWidth - 20, yPos);
+    
+    // Footer - Contact information
+    yPos = pageHeight - 25;
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Abidjan, Cocody Angré, 8e tranche, Immeuble King Déco, 4e étage, carrefour La Prière. Ilot 43, lot 664.', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+    pdf.text('Tel : 00 225 07 04 77 51 79 / 00 225 07 04 77 51 77', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+    pdf.text('RCCM : CI-ABJ-2018-B-21320', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+    pdf.text('N°CC : 1843184R', pageWidth / 2, yPos, { align: 'center' });
+    
+    // Expense details (can be added as notes)
+    if (expense.Notes || expense.notes) {
+      yPos = 120;
+      pdf.setFontSize(9);
+      pdf.text('Détails:', 20, yPos);
+      yPos += 6;
+      pdf.setFontSize(8);
+      const notes = pdf.splitTextToSize(expense.Notes || expense.notes, pageWidth - 40);
+      pdf.text(notes, 20, yPos);
+    }
+    
+    // Save PDF
+    const fileName = `bon-de-caisse-${expense.ID || expense.id || Date.now()}.pdf`;
+    pdf.save(fileName);
+    addNotification('Expense receipt generated successfully', 'success');
   };
 
   const transferToLandlord = async (paymentId) => {
@@ -2837,9 +2971,61 @@ const AccountingDashboard = () => {
                       </td>
                   <td className="table-menu">
                     <div className="sa-row-actions">
-                      <button className="table-action-button view">View</button>
-                      <button className="table-action-button edit">Edit</button>
-                      <button className="table-action-button delete">Delete</button>
+                      <button 
+                        className="table-action-button view"
+                        onClick={() => {
+                          setSelectedExpense(exp);
+                          setShowViewExpenseModal(true);
+                        }}
+                      >
+                        View
+                      </button>
+                      <button 
+                        className="table-action-button edit"
+                        onClick={() => {
+                          setSelectedExpense(exp);
+                          setShowEditExpenseModal(true);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        className="table-action-button delete"
+                        onClick={async () => {
+                          if (window.confirm('Are you sure you want to delete this expense? This action cannot be undone.')) {
+                            try {
+                              setLoading(true);
+                              await accountingService.deleteExpense(exp.ID || exp.id);
+                              addNotification('Expense deleted successfully', 'success');
+                              await loadExpenses();
+                              // Refresh overview to update balances
+                              try {
+                                const overview = await accountingService.getOverview();
+                                setOverviewData(overview);
+                              } catch (err) {
+                                console.error('Error refreshing overview:', err);
+                              }
+                            } catch (error) {
+                              console.error('Error deleting expense:', error);
+                              addNotification(error.message || 'Failed to delete expense', 'error');
+                            } finally {
+                              setLoading(false);
+                            }
+                          }
+                        }}
+                      >
+                        Delete
+                      </button>
+                      <button 
+                        className="table-action-button"
+                        onClick={() => {
+                          setSelectedExpense(exp);
+                          printExpenseReceipt(exp);
+                        }}
+                        style={{ backgroundColor: '#3b82f6', color: 'white', marginLeft: '4px' }}
+                      >
+                        Print
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -4277,6 +4463,7 @@ const AccountingDashboard = () => {
                     name="building" 
                     required
                     value={selectedBuilding}
+                    disabled={!selectedLandlord || !landlordProperties || !landlordProperties.properties || landlordProperties.properties.length === 0}
                     onChange={async (e) => {
                       const building = e.target.value;
                       setSelectedBuilding(building);
@@ -4308,23 +4495,26 @@ const AccountingDashboard = () => {
                       }
                     }}
                   >
-                    <option value="">Select Building/Property</option>
-                    {landlordProperties && landlordProperties.properties ? (
+                    <option value="">
+                      {!selectedLandlord 
+                        ? 'Select a landlord first' 
+                        : (!landlordProperties || !landlordProperties.properties || landlordProperties.properties.length === 0)
+                        ? 'No properties found for this landlord'
+                        : 'Select Building/Property'}
+                    </option>
+                    {landlordProperties && landlordProperties.properties && landlordProperties.properties.length > 0 ? (
                       landlordProperties.properties.map((property) => (
                         <option key={property.property.ID} value={property.property.Address}>
                           {property.property.Address} - {property.availableAmount.toFixed(2)} XOF available
                         </option>
                       ))
-                    ) : (
-                      <>
-                    <option value="123 Main St">123 Main St</option>
-                    <option value="456 Oak Ave">456 Oak Ave</option>
-                    <option value="789 Pine Ln">789 Pine Ln</option>
-                    <option value="321 Elm St">321 Elm St</option>
-                    <option value="654 Maple Dr">654 Maple Dr</option>
-                      </>
-                    )}
+                    ) : null}
                   </select>
+                  {!selectedLandlord && (
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                      Please select a landlord first to see their properties.
+                    </small>
+                  )}
                   {calculatedAmount && calculatedAmount.availableNetAmount > 0 && (
                     <div style={{
                       marginTop: '8px',
@@ -4543,6 +4733,167 @@ const AccountingDashboard = () => {
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
                     {loading ? 'Adding...' : 'Add Expense'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Expense Modal */}
+      {showViewExpenseModal && selectedExpense && (
+        <div className="modal-overlay" onClick={() => setShowViewExpenseModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>View Expense</h3>
+              <button className="modal-close" onClick={() => setShowViewExpenseModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Date</label>
+                <div>{selectedExpense.Date ? new Date(selectedExpense.Date).toLocaleDateString() : (selectedExpense.date ? new Date(selectedExpense.date).toLocaleDateString() : 'N/A')}</div>
+              </div>
+              <div className="form-group">
+                <label>Scope</label>
+                <div>{selectedExpense.Scope || selectedExpense.scope || 'N/A'}</div>
+              </div>
+              <div className="form-group">
+                <label>Building</label>
+                <div>{selectedExpense.Building || selectedExpense.building || 'N/A'}</div>
+              </div>
+              <div className="form-group">
+                <label>Category</label>
+                <div>{selectedExpense.Category || selectedExpense.category || 'N/A'}</div>
+              </div>
+              <div className="form-group">
+                <label>Amount</label>
+                <div>{(selectedExpense.Amount || selectedExpense.amount || 0).toFixed(2)} XOF</div>
+              </div>
+              <div className="form-group">
+                <label>Notes</label>
+                <div>{selectedExpense.Notes || selectedExpense.notes || 'N/A'}</div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="action-button secondary" onClick={() => setShowViewExpenseModal(false)}>
+                  Close
+                </button>
+                <button 
+                  type="button" 
+                  className="action-button primary" 
+                  onClick={() => {
+                    setShowViewExpenseModal(false);
+                    setShowEditExpenseModal(true);
+                  }}
+                >
+                  Edit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Expense Modal */}
+      {showEditExpenseModal && selectedExpense && (
+        <div className="modal-overlay" onClick={() => setShowEditExpenseModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Expense</h3>
+              <button className="modal-close" onClick={() => {
+                setShowEditExpenseModal(false);
+                setSelectedExpense(null);
+              }}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  setLoading(true);
+                  const formData = new FormData(e.target);
+                  const expenseData = {
+                    scope: formData.get('scope'),
+                    building: formData.get('scope') === 'SAAF IMMO' ? '-' : formData.get('building'),
+                    category: formData.get('category'),
+                    amount: parseFloat(formData.get('amount')),
+                    date: formData.get('date'),
+                    notes: formData.get('notes')
+                  };
+                  
+                  await accountingService.updateExpense(selectedExpense.ID || selectedExpense.id, expenseData);
+                  addNotification('Expense updated successfully!', 'success');
+                  setShowEditExpenseModal(false);
+                  setSelectedExpense(null);
+                  await loadExpenses();
+                  // Refresh overview to update balances
+                  try {
+                    const overview = await accountingService.getOverview();
+                    setOverviewData(overview);
+                  } catch (err) {
+                    console.error('Error refreshing overview:', err);
+                  }
+                } catch (error) {
+                  console.error('Error updating expense:', error);
+                  addNotification('Failed to update expense. Please try again.', 'error');
+                } finally {
+                  setLoading(false);
+                }
+              }}>
+                <div className="form-group">
+                  <label>Scope</label>
+                  <select name="scope" defaultValue={selectedExpense.Scope || selectedExpense.scope} required>
+                    <option value="">Select Scope</option>
+                    <option value="Building">Building</option>
+                    <option value="SAAF IMMO">SAAF IMMO</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Building (if Building scope)</label>
+                  <select name="building" defaultValue={selectedExpense.Building || selectedExpense.building}>
+                    <option value="">Select Building</option>
+                    <option value="123 Main St">123 Main St</option>
+                    <option value="456 Oak Ave">456 Oak Ave</option>
+                    <option value="789 Pine Ln">789 Pine Ln</option>
+                    <option value="321 Elm St">321 Elm St</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Category</label>
+                  <select name="category" defaultValue={selectedExpense.Category || selectedExpense.category} required>
+                    <option value="">Select Category</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Taxes">Taxes</option>
+                    <option value="Software">Software</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Amount</label>
+                  <input type="number" name="amount" step="0.01" defaultValue={selectedExpense.Amount || selectedExpense.amount} required />
+                </div>
+                <div className="form-group">
+                  <label>Date</label>
+                  <input 
+                    type="date" 
+                    name="date" 
+                    defaultValue={selectedExpense.Date ? new Date(selectedExpense.Date).toISOString().split('T')[0] : (selectedExpense.date ? new Date(selectedExpense.date).toISOString().split('T')[0] : '')} 
+                    required 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Notes</label>
+                  <input type="text" name="notes" defaultValue={selectedExpense.Notes || selectedExpense.notes || ''} placeholder="Optional" />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => {
+                    setShowEditExpenseModal(false);
+                    setSelectedExpense(null);
+                  }}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Updating...' : 'Update Expense'}
                   </button>
                 </div>
               </form>

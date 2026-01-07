@@ -209,6 +209,11 @@ export const accountingService = {
     });
   },
 
+  getExpense: async (expenseId) => {
+    const url = buildApiUrl(`/api/accounting/expenses/${expenseId}`);
+    return await apiRequest(url);
+  },
+
   updateExpense: async (expenseId, expenseData) => {
     const url = buildApiUrl(`/api/accounting/expenses/${expenseId}`);
     return await apiRequest(url, {

@@ -744,9 +744,12 @@ const SalesManagerDashboard = () => {
       return;
     }
     
+    const unitNumber = formData.get('unitNumber')?.trim();
+    
     const tenantData = {
       name: `${firstName} ${lastName}`,
       property: property,
+      unitNumber: unitNumber || null,
       email: email,
       phone: phone,
       amount: parseFloat(rent),
@@ -1349,13 +1352,6 @@ const SalesManagerDashboard = () => {
               <h3>Properties</h3>
               <p>Manage all properties and their occupancy status.</p>
             </div>
-            <button 
-              className="sa-primary-cta"
-              onClick={() => setShowCreatePropertyModal(true)}
-            >
-              <Plus size={16} />
-              Create Property
-            </button>
           </div>
           <div className="sa-table-wrapper">
             <table className="sa-table">
@@ -1465,6 +1461,15 @@ const SalesManagerDashboard = () => {
           <div>
             <h2>Property Management</h2>
             <p>{owners.length} owners found</p>
+          </div>
+          <div className="sa-clients-header-right">
+            <button 
+              className="sa-primary-cta"
+              onClick={() => setShowCreatePropertyModal(true)}
+            >
+              <Plus size={16} />
+              Add Property
+            </button>
           </div>
         </div>
 
@@ -2731,14 +2736,30 @@ const SalesManagerDashboard = () => {
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="property">Property</label>
-                      <select name="property" required>
+                      <select name="property" id="property" required onChange={(e) => {
+                        const selectedProperty = properties.find(p => (p.Address || p.address) === e.target.value);
+                        if (selectedProperty) {
+                          const units = selectedProperty.Units || selectedProperty.units || 1;
+                          const unitSelect = document.getElementById('unitNumber');
+                          if (unitSelect) {
+                            unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
+                            for (let i = 1; i <= units; i++) {
+                              const option = document.createElement('option');
+                              option.value = i;
+                              option.textContent = `Unit ${i}`;
+                              unitSelect.appendChild(option);
+                            }
+                          }
+                        }
+                      }}>
                         <option value="">Select Property</option>
                         {properties.length > 0 ? (
                           properties.map(property => {
                             const propertyId = property.ID || property.id;
                             const address = property.Address || property.address || 'Unnamed Property';
                             const type = property.Type || property.type || '';
-                            const displayText = type ? `${address} - ${type}` : address;
+                            const units = property.Units || property.units || 1;
+                            const displayText = type ? `${address} - ${type} (${units} units)` : `${address} (${units} units)`;
                             return (
                               <option key={propertyId || `property-${address}`} value={address}>
                                 {displayText}
@@ -2750,6 +2771,18 @@ const SalesManagerDashboard = () => {
                         )}
                       </select>
                     </div>
+                    <div className="form-group">
+                      <label htmlFor="unitNumber">Unit Number</label>
+                      <select name="unitNumber" id="unitNumber" required>
+                        <option value="">Select Property First</option>
+                      </select>
+                      <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                        Select which unit/apartment the tenant will occupy
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="rent">Monthly Rent</label>
                       <input type="number" name="rent" step="0.01" required placeholder="0.00" />
