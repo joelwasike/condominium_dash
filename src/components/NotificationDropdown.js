@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Bell, X, Check, Settings } from 'lucide-react';
 import { t } from '../utils/i18n';
 import { notificationService } from '../services/notificationService';

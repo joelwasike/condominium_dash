@@ -1405,9 +1405,9 @@ const LandlordDashboard = () => {
                   />
                 </div>
               </div>
-                </div>
+            </div>
                 
-            {paymentHistory && paymentHistory.payouts && paymentHistory.payouts.length > 0 && (
+            {paymentHistory && paymentHistory.payouts && paymentHistory.payouts.length > 0 ? (
               <>
                 <div className="sa-section-card">
                   <div className="sa-section-header">
@@ -1416,54 +1416,53 @@ const LandlordDashboard = () => {
                       <p>Net payments after commission</p>
                     </div>
                   </div>
-                    <div className="sa-table-wrapper">
-                      <table className="sa-table">
-                        <thead>
-                          <tr>
-                            <th>No</th>
-                            <th>Date</th>
-                            <th>Landlord</th>
-                            <th>Building</th>
-                            <th>Net Amount</th>
-                            <th>Commission</th>
-                            <th>Status</th>
+                  <div className="sa-table-wrapper">
+                    <table className="sa-table">
+                      <thead>
+                        <tr>
+                          <th>No</th>
+                          <th>Date</th>
+                          <th>Landlord</th>
+                          <th>Building</th>
+                          <th>Net Amount</th>
+                          <th>Commission</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paymentHistory.payouts.map((payout, index) => (
+                          <tr key={payout.id || payout.ID || `payout-${index}`}>
+                            <td>{index + 1}</td>
+                            <td>{new Date(payout.date || payout.Date).toLocaleDateString()}</td>
+                            <td className="sa-cell-main">
+                              <span className="sa-cell-title">{payout.landlord || payout.Landlord || 'Unknown'}</span>
+                            </td>
+                            <td>{payout.building || payout.Building || 'Unknown'}</td>
+                            <td>{(payout.netAmount || payout.NetAmount || 0).toLocaleString()} XOF</td>
+                            <td>{(payout.commission || payout.Commission || 0).toLocaleString()} XOF</td>
+                            <td>
+                              <span className={`sa-status-pill ${(payout.status || payout.Status || 'pending').toLowerCase()}`}>
+                                {payout.status || payout.Status || 'Pending'}
+                              </span>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {paymentHistory.payouts.map((payout, index) => (
-                            <tr key={payout.id || payout.ID || `payout-${index}`}>
-                              <td>{index + 1}</td>
-                              <td>{new Date(payout.date || payout.Date).toLocaleDateString()}</td>
-                              <td className="sa-cell-main">
-                                <span className="sa-cell-title">{payout.landlord || payout.Landlord || 'Unknown'}</span>
-                              </td>
-                              <td>{payout.building || payout.Building || 'Unknown'}</td>
-                              <td>{(payout.netAmount || payout.NetAmount || 0).toLocaleString()} XOF</td>
-                              <td>{(payout.commission || payout.Commission || 0).toLocaleString()} XOF</td>
-                              <td>
-                                <span className={`sa-status-pill ${(payout.status || payout.Status || 'pending').toLowerCase()}`}>
-                                  {payout.status || payout.Status || 'Pending'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                )}
+                </div>
               </>
             ) : (
-              <div className="sa-table-empty" style={{ padding: '40px', textAlign: 'center' }}>
-                No payment history found
+              <div className="sa-section-card">
+                <div className="sa-table-empty">No payouts found</div>
               </div>
             )}
-        </div>
-        )}
           </div>
+        )}
+      </div>
     );
   };
-      
+
   const renderRentalManagement = () => (
     <div className="sa-overview-page">
       <div className="sa-overview-metrics" style={{ width: '100%' }}>

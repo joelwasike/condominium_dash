@@ -2602,6 +2602,7 @@ const AgencyDirectorDashboard = () => {
       </div>
     </div>
   );
+  };
 
   // Render messaging/chat page
   const renderMessages = () => (
@@ -3539,114 +3540,116 @@ const AgencyDirectorDashboard = () => {
     </div>
   );
 
-  const renderSubscription = () => (
-    <div className="sa-clients-page">
-      <div className="sa-clients-header">
-        <div>
-          <h2>Subscription Renewal</h2>
-          <p>Renew your white-label subscription</p>
-        </div>
-      </div>
-
-      <div className="sa-section-card" style={{ marginTop: '20px' }}>
-        <div className="sa-section-header">
+  const renderSubscription = () => {
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header">
           <div>
-            <h3>Subscription Renewal</h3>
-            <p>
-              {subscriptionInfo?.subscriptionStatus === 'expired'
-                ? 'Your subscription has expired. Renew now to reactivate your agency account.'
-                : subscriptionInfo?.subscriptionStatus === 'completed'
-                ? 'Your subscription is active. You can renew in advance if needed.'
-                : 'Manage your subscription status and renew when necessary.'}
-            </p>
-            {subscriptionInfo && (
-              <p style={{ marginTop: '4px', fontSize: '0.9rem', color: '#6b7280' }}>
-                Current status:{' '}
-                <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>
-                  {subscriptionInfo.subscriptionStatus || 'unknown'}
-                </span>
-              </p>
-            )}
+            <h2>Subscription Renewal</h2>
+            <p>Renew your white-label subscription</p>
           </div>
-          <button
-            className="sa-primary-cta"
-            onClick={() => setShowSubscriptionModal(true)}
-            style={{ marginTop: '12px' }}
-          >
-            <CreditCard size={16} />
-            Renew Subscription
-          </button>
         </div>
-      </div>
 
-      <Modal isOpen={showSubscriptionModal} onClose={() => setShowSubscriptionModal(false)} title="Pay Subscription">
-        <form onSubmit={subscriptionType === 'monthly' ? handlePaySubscription : handlePayAnnualSubscription} className="sa-form">
-          <div className="sa-form-group">
-            <label>Subscription Type *</label>
-            <select
-              value={subscriptionType}
-              onChange={(e) => setSubscriptionType(e.target.value)}
-              required
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <div>
+              <h3>Subscription Renewal</h3>
+              <p>
+                {subscriptionInfo?.subscriptionStatus === 'expired'
+                  ? 'Your subscription has expired. Renew now to reactivate your agency account.'
+                  : subscriptionInfo?.subscriptionStatus === 'completed'
+                  ? 'Your subscription is active. You can renew in advance if needed.'
+                  : 'Manage your subscription status and renew when necessary.'}
+              </p>
+              {subscriptionInfo && (
+                <p style={{ marginTop: '4px', fontSize: '0.9rem', color: '#6b7280' }}>
+                  Current status:{' '}
+                  <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>
+                    {subscriptionInfo.subscriptionStatus || 'unknown'}
+                  </span>
+                </p>
+              )}
+            </div>
+            <button
+              className="sa-primary-cta"
+              onClick={() => setShowSubscriptionModal(true)}
+              style={{ marginTop: '12px' }}
             >
-              <option value="monthly">Monthly</option>
-              <option value="annual">Annual</option>
-            </select>
-          </div>
-          <div className="sa-form-group">
-            <label>Amount *</label>
-            <input
-              type="number"
-              step="0.01"
-              value={subscriptionForm.amount}
-              onChange={(e) => setSubscriptionForm({...subscriptionForm, amount: e.target.value})}
-              required
-              placeholder={subscriptionType === 'annual' ? "12000.00" : "299.99"}
-            />
-          </div>
-          <div className="sa-form-group">
-            <label>Currency *</label>
-            <select
-              value={subscriptionForm.currency}
-              onChange={(e) => setSubscriptionForm({...subscriptionForm, currency: e.target.value})}
-              required
-            >
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-              <option value="FCFA">FCFA</option>
-            </select>
-          </div>
-          <div className="sa-form-group">
-            <label>Reference *</label>
-            <input
-              type="text"
-              value={subscriptionForm.reference}
-              onChange={(e) => setSubscriptionForm({...subscriptionForm, reference: e.target.value})}
-              required
-              placeholder={subscriptionType === 'annual' ? "ANNUAL-2024-001" : "PAY-2024-001"}
-            />
-          </div>
-          <div className="sa-form-group">
-            <label>Status *</label>
-            <select
-              value={subscriptionForm.status}
-              onChange={(e) => setSubscriptionForm({...subscriptionForm, status: e.target.value})}
-              required
-            >
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="failed">Failed</option>
-            </select>
-          </div>
-          <div className="sa-form-actions">
-            <button type="button" className="sa-outline-button" onClick={() => setShowSubscriptionModal(false)}>Cancel</button>
-            <button type="submit" className="sa-primary-cta">
-              Process {subscriptionType === 'annual' ? 'Annual' : 'Monthly'} Payment
+              <CreditCard size={16} />
+              Renew Subscription
             </button>
           </div>
-        </form>
-      </Modal>
-    </div>
-  );
+        </div>
+
+        <Modal isOpen={showSubscriptionModal} onClose={() => setShowSubscriptionModal(false)} title="Pay Subscription">
+          <form onSubmit={subscriptionType === 'monthly' ? handlePaySubscription : handlePayAnnualSubscription} className="sa-form">
+            <div className="sa-form-group">
+              <label>Subscription Type *</label>
+              <select
+                value={subscriptionType}
+                onChange={(e) => setSubscriptionType(e.target.value)}
+                required
+              >
+                <option value="monthly">Monthly</option>
+                <option value="annual">Annual</option>
+              </select>
+            </div>
+            <div className="sa-form-group">
+              <label>Amount *</label>
+              <input
+                type="number"
+                step="0.01"
+                value={subscriptionForm.amount}
+                onChange={(e) => setSubscriptionForm({...subscriptionForm, amount: e.target.value})}
+                required
+                placeholder={subscriptionType === 'annual' ? "12000.00" : "299.99"}
+              />
+            </div>
+            <div className="sa-form-group">
+              <label>Currency *</label>
+              <select
+                value={subscriptionForm.currency}
+                onChange={(e) => setSubscriptionForm({...subscriptionForm, currency: e.target.value})}
+                required
+              >
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="FCFA">FCFA</option>
+              </select>
+            </div>
+            <div className="sa-form-group">
+              <label>Reference *</label>
+              <input
+                type="text"
+                value={subscriptionForm.reference}
+                onChange={(e) => setSubscriptionForm({...subscriptionForm, reference: e.target.value})}
+                required
+                placeholder={subscriptionType === 'annual' ? "ANNUAL-2024-001" : "PAY-2024-001"}
+              />
+            </div>
+            <div className="sa-form-group">
+              <label>Status *</label>
+              <select
+                value={subscriptionForm.status}
+                onChange={(e) => setSubscriptionForm({...subscriptionForm, status: e.target.value})}
+                required
+              >
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+            <div className="sa-form-actions">
+              <button type="button" className="sa-outline-button" onClick={() => setShowSubscriptionModal(false)}>Cancel</button>
+              <button type="submit" className="sa-primary-cta">
+                Process {subscriptionType === 'annual' ? 'Annual' : 'Monthly'} Payment
+              </button>
+            </div>
+          </form>
+        </Modal>
+      </div>
+    );
+  };
 
   const renderOwners = () => {
     // Filter owners by search text

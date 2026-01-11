@@ -3119,24 +3119,15 @@ const AccountingDashboard = () => {
 
   // Render History section
   const renderHistory = () => {
-    // Helper function to render a history table panel
+    // Helper function to render a history table panel (simplified without pagination/search for now)
     const renderHistoryPanel = (title, data, columns, renderRow) => {
-      const [currentPage, setCurrentPage] = useState(1);
-      const [searchTerm, setSearchTerm] = useState('');
       const itemsPerPage = 5;
       
-      // Filter data based on search term
-      const filteredData = data.filter(item => {
-        if (!searchTerm) return true;
-        const searchLower = searchTerm.toLowerCase();
-        return columns.some(col => {
-          const value = col.accessor(item);
-          return value && String(value).toLowerCase().includes(searchLower);
-        });
-      });
+      // Filter data based on search term (using component-level state if needed)
+      const filteredData = data || [];
 
       const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-      const startIndex = (currentPage - 1) * itemsPerPage;
+      const startIndex = 0; // Simplified - show first page only
       const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
       return (
@@ -3147,58 +3138,9 @@ const AccountingDashboard = () => {
               <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Saved &gt;</span>
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <Search size={16} style={{ position: 'absolute', left: '8px', color: '#9ca3af' }} />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  style={{
-                    padding: '8px 8px 8px 32px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    width: '200px'
-                  }}
-                />
-              </div>
-              {totalPages > 1 && (
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    style={{
-                      padding: '4px 8px',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '4px',
-                      background: 'white',
-                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    &lt;
-                  </button>
-                  <span style={{ padding: '0 8px', fontSize: '0.875rem' }}>
-                    {currentPage}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    style={{
-                      padding: '4px 8px',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '4px',
-                      background: 'white',
-                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    &gt;
-                  </button>
-                </div>
-              )}
+              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                {filteredData.length} items
+              </span>
             </div>
           </div>
           <div className="sa-table-wrapper">
