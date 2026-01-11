@@ -644,5 +644,26 @@ export const agencyDirectorService = {
     if (!response.ok) throw new Error('Failed to fetch advertisements');
     return parseJson(response);
   },
+
+  // Analytics endpoints
+  getAnalyticsIndicators: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/analytics/indicators`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch analytics indicators');
+    return parseJson(response);
+  },
+
+  getYearlyComparison: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/analytics/yearly-comparison`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch yearly comparison');
+    return parseJson(response);
+  },
 };
 

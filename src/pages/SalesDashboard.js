@@ -1430,7 +1430,7 @@ const SalesDashboard = () => {
                   <input 
                     id="add-price"
                     name="price" 
-                    placeholder="e.g., $1,200/month" 
+                    placeholder="e.g., 1,200 XOF/month" 
                     required 
                   />
                 </div>

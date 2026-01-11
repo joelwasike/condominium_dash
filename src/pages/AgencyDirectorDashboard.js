@@ -34,6 +34,7 @@ import { isDemoMode, getAgencyDirectorDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import Modal from '../components/Modal';
 import SettingsPage from './SettingsPage';
+import AnalyticsPage from './AnalyticsPage';
 import '../components/RoleLayout.css';
 import '../pages/TechnicianDashboard.css';
 import './SuperAdminDashboard.css';
@@ -138,6 +139,11 @@ const AgencyDirectorDashboard = () => {
     endDate: '',
     month: ''
   });
+  
+  // New Analytics state
+  const [analyticsIndicators, setAnalyticsIndicators] = useState(null);
+  const [yearlyComparison, setYearlyComparison] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // Tenants state
   const [tenants, setTenants] = useState([]);
@@ -584,6 +590,24 @@ const AgencyDirectorDashboard = () => {
     }
   }, [reportFilters]);
 
+  // Load new analytics indicators and yearly comparison
+  const loadNewAnalyticsData = useCallback(async () => {
+    try {
+      setAnalyticsLoading(true);
+      const [indicators, yearly] = await Promise.all([
+        agencyDirectorService.getAnalyticsIndicators().catch(() => null),
+        agencyDirectorService.getYearlyComparison().catch(() => null)
+      ]);
+      setAnalyticsIndicators(indicators);
+      setYearlyComparison(yearly);
+    } catch (error) {
+      console.error('Error loading new analytics data:', error);
+      addNotification('Failed to load analytics data', 'error');
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [addNotification]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -610,8 +634,9 @@ const AgencyDirectorDashboard = () => {
   useEffect(() => {
     if (activeTab === 'analytics') {
       loadAnalyticsData();
+      loadNewAnalyticsData();
     }
-  }, [activeTab, loadAnalyticsData]);
+  }, [activeTab, loadAnalyticsData, loadNewAnalyticsData]);
 
   // Load advertisements when advertisements tab is active or overview is active
   useEffect(() => {
@@ -2376,7 +2401,20 @@ const AgencyDirectorDashboard = () => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
 
   // Render Analytics/Reports page
-  const renderAnalytics = () => (
+  const renderAnalytics = () => {
+    // Use new comprehensive analytics page if data is available
+    if (analyticsIndicators && yearlyComparison) {
+      return (
+        <AnalyticsPage 
+          indicators={analyticsIndicators}
+          yearlyComparison={yearlyComparison}
+          loading={analyticsLoading}
+        />
+      );
+    }
+
+    // Fallback to old analytics page
+    return (
     <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
@@ -3505,33 +3543,12 @@ const AgencyDirectorDashboard = () => {
     <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
-          <h2>Subscription Management</h2>
-          <p>Manage your white-label subscription payments and renewals</p>
+          <h2>Subscription Renewal</h2>
+          <p>Renew your white-label subscription</p>
         </div>
       </div>
 
       <div className="sa-section-card" style={{ marginTop: '20px' }}>
-        <div className="sa-section-header">
-          <div>
-            <h3>Subscription Payment</h3>
-            <p>Pay for your white-label monthly or annual subscription.</p>
-            {subscriptionInfo && (
-              <p style={{ marginTop: '4px', fontSize: '0.9rem', color: '#6b7280' }}>
-                Current status:{' '}
-                <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>
-                  {subscriptionInfo.subscriptionStatus || 'unknown'}
-                </span>
-              </p>
-            )}
-          </div>
-          <button className="sa-primary-cta" onClick={() => setShowSubscriptionModal(true)} style={{ marginTop: '12px' }}>
-            <CreditCard size={16} />
-            Pay Subscription
-          </button>
-        </div>
-      </div>
-
-      <div className="sa-section-card" style={{ marginTop: '24px' }}>
         <div className="sa-section-header">
           <div>
             <h3>Subscription Renewal</h3>

@@ -47,7 +47,7 @@ const SystemDashboard = () => {
           <div className="stat-content">
             <h3>Total Collected Revenue</h3>
             <p>This month</p>
-            <span className="stat-value">$245,600</span>
+            <span className="stat-value">—</span>
           </div>
         </div>
         <div className="stat-card">
@@ -118,8 +118,8 @@ const SystemDashboard = () => {
           <p>Automatically calculate net payouts to landlords after commission deduction</p>
           <div className="card-stats">
             <span>Processed: 45 this month</span>
-            <span>Total Amount: $125,400</span>
-            <span>Commission Deducted: $13,900</span>
+            <span>Total Amount: —</span>
+            <span>Commission Deducted: —</span>
           </div>
           <div className="card-actions">
             <button className="action-button primary">
@@ -138,7 +138,7 @@ const SystemDashboard = () => {
           <p>Automatically deduct company commission from collected payments</p>
           <div className="card-stats">
             <span>Deductions: 156 this month</span>
-            <span>Total Commission: $24,560</span>
+            <span>Total Commission: —</span>
             <span>Average Rate: 10%</span>
           </div>
           <div className="card-actions">
@@ -244,7 +244,7 @@ const SystemDashboard = () => {
           </div>
           <div className="alert-content">
             <h4>Pending Payment Alert</h4>
-            <p>3 tenants have overdue payments totaling $5,400</p>
+            <p>Some tenants have overdue payments</p>
             <span className="alert-timestamp">4 hours ago</span>
           </div>
           <div className="alert-actions">
@@ -300,11 +300,11 @@ const SystemDashboard = () => {
 
         <div className="kpi-card">
           <h4>Total Collected Revenue</h4>
-          <div className="kpi-value">$245,600</div>
-          <div className="kpi-trend positive">+8.2% from last month</div>
+          <div className="kpi-value">—</div>
+          <div className="kpi-trend">—</div>
           <div className="kpi-details">
-            <span>This Month: $245,600</span>
-            <span>Last Month: $227,000</span>
+            <span>This Month: —</span>
+            <span>Last Month: —</span>
           </div>
         </div>
 

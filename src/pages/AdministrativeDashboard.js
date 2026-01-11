@@ -13,7 +13,10 @@ import {
   Download,
   Plus,
   MessageCircle,
-  Megaphone
+  Megaphone,
+  ArrowUp,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -46,6 +49,10 @@ const AdministrativeDashboard = () => {
   const [advertisements, setAdvertisements] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
+  const [clients, setClients] = useState([]); // Clients for pending approval table
+  const [properties, setProperties] = useState([]); // Properties for statistics
+  const [visits, setVisits] = useState([]); // Visits data
+  const [negotiations, setNegotiations] = useState([]); // Negotiations data
   
   // Filter states
   const [documentStatusFilter, setDocumentStatusFilter] = useState('');
@@ -257,6 +264,10 @@ const AdministrativeDashboard = () => {
         setReminders([]);
         setLeases(demoData.contracts);
         setPendingPaymentFollowUps([]);
+        setClients([]);
+        setProperties([]);
+        setVisits([]);
+        setNegotiations([]);
         setLoading(false);
         return;
       }
@@ -269,7 +280,11 @@ const AdministrativeDashboard = () => {
         debtsData,
         remindersData,
         leasesData,
-        paymentFollowUpsData
+        paymentFollowUpsData,
+        clientsData,
+        propertiesData,
+        visitsData,
+        negotiationsData
       ] = await Promise.all([
         adminService.getOverview().catch(() => null),
         adminService.getInbox().catch(() => ({ items: [] })),
@@ -286,7 +301,11 @@ const AdministrativeDashboard = () => {
         adminService.getLeases({
           status: leaseStatusFilter || undefined,
         }).catch(() => []),
-        adminService.getPendingPaymentFollowUps().catch(() => [])
+        adminService.getPendingPaymentFollowUps().catch(() => []),
+        adminService.getClients().catch(() => []),
+        adminService.getProperties().catch(() => []),
+        adminService.getVisits().catch(() => []),
+        adminService.getNegotiations().catch(() => [])
       ]);
       
       setOverviewData(overview);
@@ -297,6 +316,10 @@ const AdministrativeDashboard = () => {
       setReminders(Array.isArray(remindersData) ? remindersData : []);
       setLeases(Array.isArray(leasesData) ? leasesData : []);
       setPendingPaymentFollowUps(Array.isArray(paymentFollowUpsData) ? paymentFollowUpsData : []);
+      setClients(Array.isArray(clientsData) ? clientsData : []);
+      setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      setVisits(Array.isArray(visitsData) ? visitsData : []);
+      setNegotiations(Array.isArray(negotiationsData) ? negotiationsData : []);
     } catch (error) {
       console.error('Error loading admin data:', error);
       if (!isDemoMode()) {
@@ -536,180 +559,251 @@ const AdministrativeDashboard = () => {
     }
 
     const stats = overviewData || {};
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    const userName = currentUser.name || currentUser.Name || 'Administrator';
+    
+    // Calculate statistics from loaded data
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Number of clients this month
+    const clientsThisMonth = clients.filter(client => {
+      const regDate = client.registrationDate || client.RegistrationDate || client.createdAt || client.CreatedAt;
+      if (!regDate) return false;
+      const date = new Date(regDate);
+      return date >= currentMonthStart;
+    }).length;
+    
+    // Number of vacant apartments
+    const vacantApartments = properties.filter(prop => {
+      const status = (prop.Status || prop.status || '').toLowerCase();
+      return status === 'vacant';
+    }).length;
+    
+    // Transfer requests (prospects converted to clients this month)
+    const transferRequests = stats.transferRequests || stats.prospectsConverted || clientsThisMonth;
+    
+    // Number of visits this month
+    const visitsThisMonth = visits.filter(visit => {
+      const visitDate = visit.Date || visit.date || visit.createdAt || visit.CreatedAt;
+      if (!visitDate) return false;
+      const date = new Date(visitDate);
+      return date >= currentMonthStart;
+    }).length;
+    
+    // Lease contracts
+    const leaseContractsCount = leases.length || stats.leaseContracts || 0;
+    
+    // Number of negotiations
+    const negotiationsCount = negotiations.length || stats.negotiations || 0;
+    
+    // Property ratings (percentage change - placeholder)
+    const propertyRatingsChange = stats.propertyRatingsChange || 14.2;
+    
+    // Number of occupied apartments
+    const occupiedApartments = properties.filter(prop => {
+      const status = (prop.Status || prop.status || '').toLowerCase();
+      return status === 'occupied';
+    }).length;
+    
+    // Clients pending approval
+    const pendingClients = clients.filter(client => {
+      const status = (client.ApplicationStatus || client.applicationStatus || client.status || '').toLowerCase();
+      return status === 'pending';
+    });
+    
+    // Calculate percentage change (placeholder - would come from API)
+    const percentageChange = 14.2;
     
     return (
       <div className="sa-overview-page">
-        <div className="sa-overview-top">
-          <div className="sa-overview-chart-card">
-            <div className="sa-card-header">
-              <h2>Administrative Dashboard</h2>
-              <span className="sa-card-subtitle">Welcome, {userName}!</span>
-            </div>
-            <div className="sa-mini-legend">
-              <span className="sa-legend-item sa-legend-expected">Documents Processed</span>
-              <span className="sa-legend-item sa-legend-current">Approval Rate</span>
-            </div>
-            <div className="sa-chart-placeholder">
-              <div className="sa-chart-line sa-chart-line-expected" />
-              <div className="sa-chart-line sa-chart-line-current" />
-            </div>
-            <div className="sa-chart-footer">
-              <span>Jan</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-              <span>Jun</span>
+        <div className="sa-overview-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '24px' }}>
+          {/* Number of Clients - Blue Card */}
+          <div className="sa-metric-card sa-metric-primary" style={{ backgroundColor: '#3b82f6', color: '#fff' }}>
+            <p className="sa-metric-label" style={{ color: '#fff', opacity: 0.9 }}>Number of Clients</p>
+            <p className="sa-metric-period" style={{ color: '#fff', opacity: 0.8 }}>This Month</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ color: '#fff', fontSize: '2rem', fontWeight: 'bold' }}>
+                {stats.numberOfClients || clientsThisMonth || 0}
+              </p>
+              <ArrowUp size={20} style={{ color: '#fff', opacity: 0.8 }} />
             </div>
           </div>
 
-          <div className="sa-overview-metrics">
-            <div className="sa-metric-card sa-metric-primary">
-              <p className="sa-metric-label">Files Received</p>
-              <p className="sa-metric-period">Total documents</p>
-              <p className="sa-metric-value">{stats.totalFilesReceived || 0}</p>
+          {/* Number of Vacant Apartments - Blue Card */}
+          <div className="sa-metric-card sa-metric-primary" style={{ backgroundColor: '#3b82f6', color: '#fff' }}>
+            <p className="sa-metric-label" style={{ color: '#fff', opacity: 0.9 }}>Number of Vacant Apartments</p>
+            <p className="sa-metric-period" style={{ color: '#fff', opacity: 0.8 }}>This Month</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ color: '#fff', fontSize: '2rem', fontWeight: 'bold' }}>
+                {stats.vacantApartments || vacantApartments || 0}
+              </p>
+              <ArrowUp size={20} style={{ color: '#fff', opacity: 0.8 }} />
             </div>
-            <div className="sa-metric-card">
-              <p className="sa-metric-label">Files Approved</p>
-              <p className="sa-metric-period">Approved documents</p>
-              <p className="sa-metric-value">{stats.filesApproved || 0}</p>
-            </div>
-            <div className="sa-metric-card">
-              <p className="sa-metric-label">Pending Review</p>
-              <p className="sa-metric-number">{stats.filesPending || 0}</p>
-            </div>
-            <div className="sa-metric-card">
-              <p className="sa-metric-label">Files Rejected</p>
-              <p className="sa-metric-number">{stats.filesRejected || 0}</p>
-            </div>
-            {/* Advertisements Display - Replacing Banner Card */}
-            {advertisements.length > 0 ? (
-              <div style={{
-                gridColumn: 'span 2',
-                minHeight: '400px',
-                padding: '32px',
-                backgroundColor: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '24px',
-                overflowX: 'auto'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  gap: '24px',
-                  flexWrap: 'nowrap',
-                  overflowX: 'auto',
-                  paddingBottom: '16px',
-                  width: '100%'
-                }}>
-                  {advertisements.map((ad, index) => {
-                    const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-                    const fullImageUrl = imageUrl 
-                      ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                      : null;
+          </div>
 
-                    return (
-                      <div 
-                        key={`ad-${ad.ID || ad.id || index}`}
-                        style={{
-                          minWidth: '350px',
-                          maxWidth: '450px',
-                          padding: '20px',
-                          backgroundColor: '#f9fafb',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          flexShrink: 0
-                        }}
-                      >
-                        {fullImageUrl && (
-                          <img 
-                            src={fullImageUrl} 
-                            alt={ad.Title || ad.title || 'Advertisement'} 
-                            style={{
-                              width: '100%',
-                              height: 'auto',
-                              maxHeight: '250px',
-                              objectFit: 'contain',
-                              borderRadius: '8px',
-                              marginBottom: '16px'
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        )}
-                        <h3 style={{ 
-                          margin: '0 0 8px 0', 
-                          fontSize: '1.1rem', 
-                          color: '#1f2937',
-                          fontWeight: '600'
-                        }}>
-                          {ad.Title || ad.title || 'Untitled Advertisement'}
-                        </h3>
-                        <p style={{ 
-                          margin: '0 0 12px 0', 
-                          fontSize: '0.9rem', 
-                          color: '#6b7280',
-                          lineHeight: '1.5'
-                        }}>
-                          {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
-                        </p>
-                        {ad.CreatedAt && (
-                          <span style={{ 
-                            fontSize: '0.8rem', 
-                            color: '#9ca3af'
-                          }}>
-                            Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+          {/* Transfer Requests - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Transfer Requests</p>
+            <p className="sa-metric-period">Prospects Converted into Clients This Month</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {stats.transferRequests || transferRequests || 0}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>+{percentageChange}%</span>
+                <TrendingUp size={16} />
               </div>
-            ) : (
-              <div className="sa-banner-card">
-                <div className="sa-banner-text">
-                  <h3>Document Management</h3>
-                  <p>
-                    Track document verification, automation, and administrative tasks all in one place.
-                  </p>
-                </div>
+            </div>
+          </div>
+
+          {/* Number of Visits - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Number of Visits</p>
+            <p className="sa-metric-period">This Month</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {stats.numberOfVisits || visitsThisMonth || 0}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>+{percentageChange}%</span>
+                <TrendingUp size={16} />
               </div>
-            )}
+            </div>
+          </div>
+
+          {/* Lease Contracts - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Lease Contracts</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {stats.leaseContracts || leaseContractsCount || 0}
+              </p>
+              <ArrowUp size={20} style={{ color: '#6b7280' }} />
+            </div>
+          </div>
+
+          {/* Number of Negotiations - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Number of Negotiations</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {stats.negotiations || negotiationsCount || 0}
+              </p>
+              <ArrowUp size={20} style={{ color: '#6b7280' }} />
+            </div>
+          </div>
+
+          {/* Property Ratings - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Property Ratings</p>
+            <p className="sa-metric-period">Compared to Last Month</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {stats.propertyRatings || '—'}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>+{propertyRatingsChange}%</span>
+                <TrendingUp size={16} />
+              </div>
+            </div>
+          </div>
+
+          {/* Number of Occupied Apartments - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Number of Occupied Apartments</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {stats.occupiedApartments || occupiedApartments || 0}
+              </p>
+            </div>
           </div>
         </div>
 
+        {/* Clients Pending Approval Table */}
         <div className="sa-section-card" style={{ marginTop: '24px' }}>
           <div className="sa-section-header">
-            <h3>Quick Actions</h3>
-            <p>Manage your administrative operations and view key metrics.</p>
+            <h3>Clients Pending Approval</h3>
           </div>
-          <div style={{ padding: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('inbox')}>
-                <p className="sa-metric-label">Average Approval Time</p>
-                <p className="sa-metric-value">{stats.averageApprovalTimeHours ? `${stats.averageApprovalTimeHours.toFixed(1)}h` : '0h'}</p>
-              </div>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('reminders')}>
-                <p className="sa-metric-label">Pending Follow-ups</p>
-                <p className="sa-metric-value">{stats.pendingFollowUpCount || 0}</p>
-              </div>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('utilities')}>
-                <p className="sa-metric-label">Utility Documents</p>
-                <p className="sa-metric-value">{stats.utilityDocumentsSent || 0}</p>
-              </div>
+          {loading ? (
+            <div className="sa-table-empty">Loading clients...</div>
+          ) : pendingClients.length === 0 ? (
+            <div className="sa-table-empty">No clients pending approval</div>
+          ) : (
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Plan</th>
+                    <th>Registration Date</th>
+                    <th>Application Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingClients.map((client, index) => (
+                    <tr key={client.id || client.ID || `client-${index}`}>
+                      <td>
+                        <div className="sa-cell-main">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              backgroundColor: '#e5e7eb',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#6b7280',
+                              fontWeight: '600',
+                              fontSize: '0.875rem'
+                            }}>
+                              {(client.name || client.Name || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <span className="sa-cell-title">{client.name || client.Name || 'Unknown'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{client.plan || client.Plan || 'N/A'}</td>
+                      <td>
+                        {client.registrationDate || client.RegistrationDate || client.createdAt || client.CreatedAt
+                          ? new Date(client.registrationDate || client.RegistrationDate || client.createdAt || client.CreatedAt).toLocaleDateString('en-GB')
+                          : 'N/A'}
+                      </td>
+                      <td>
+                        <span className={`sa-status-pill ${(client.ApplicationStatus || client.applicationStatus || client.status || 'pending').toLowerCase()}`}>
+                          {client.ApplicationStatus || client.applicationStatus || client.status || 'Pending'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="sa-row-actions">
+                          <button
+                            className="sa-icon-button"
+                            onClick={() => addNotification('Edit client functionality coming soon', 'info')}
+                            title="Edit"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            className="sa-icon-button"
+                            onClick={() => {
+                              if (window.confirm('Are you sure you want to delete this client?')) {
+                                addNotification('Delete client functionality coming soon', 'info');
+                              }
+                            }}
+                            title="Delete"
+                            style={{ color: '#ef4444' }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
+          )}
         </div>
-
       </div>
     );
   };
@@ -1682,7 +1776,7 @@ const AdministrativeDashboard = () => {
           </div>
           <div className="form-group">
             <label htmlFor="lease-rent">Monthly Rent</label>
-            <input type="number" id="lease-rent" name="rent" min="0" step="0.01" placeholder="$0.00" required />
+            <input type="number" id="lease-rent" name="rent" min="0" step="0.01" placeholder="0.00 XOF" required />
           </div>
           <div className="modal-footer">
             <button type="button" className="action-button secondary" onClick={() => setShowLeaseModal(false)}>

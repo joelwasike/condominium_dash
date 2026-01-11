@@ -108,6 +108,18 @@ const SettingsPage = () => {
           profilePicture: result.profilePictureURL
         }));
         
+        // Update localStorage user object with the new profile picture URL
+        try {
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const user = JSON.parse(storedUser);
+            user.profilePictureURL = result.profilePictureURL;
+            localStorage.setItem('user', JSON.stringify(user));
+          }
+        } catch (error) {
+          console.error('Error updating localStorage:', error);
+        }
+        
         addNotification('Profile picture updated successfully', 'success');
       } else {
         addNotification('Failed to upload picture', 'error');

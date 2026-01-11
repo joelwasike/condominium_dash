@@ -8,10 +8,10 @@ const Dashboard = () => {
   const statsData = [
     {
       title: 'Total Transacted',
-      value: '$1,871,841',
+      value: '1,871,841 XOF',
       trend: '+59.3%',
       trendType: 'positive',
-      subtitle: 'You made an extra $3,081,595 this year',
+      subtitle: 'You made an extra 3,081,595 XOF this year',
       color: '#3b82f6'
     },
     {
@@ -181,7 +181,7 @@ const Dashboard = () => {
         
         <div className="income-chart">
           <h3>This Week Statistics</h3>
-          <div className="income-total">$439,321</div>
+          <div className="income-total">439,321 XOF</div>
           
           <div className="bar-chart">
             {weeklyData.map((data, index) => (

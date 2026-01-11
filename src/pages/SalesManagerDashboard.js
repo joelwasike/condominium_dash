@@ -1443,8 +1443,10 @@ const SalesManagerDashboard = () => {
   // Property Management - Owners and their properties
   const renderPropertyManagement = () => {
     const getOwnerId = (owner) => owner.id || owner.ID;
-    const getPropertyOwnerId = (property) =>
-      property.LandlordID || property.landlordId || property.landlordID;
+    const getPropertyOwnerId = (property) => {
+      // Check all possible field name variations
+      return property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
+    };
 
     const ownersWithProperties = owners.map((owner) => {
       const ownerId = getOwnerId(owner);
@@ -1453,6 +1455,12 @@ const SalesManagerDashboard = () => {
         return landlordId && ownerId && String(landlordId) === String(ownerId);
       });
       return { owner, properties: ownedProperties };
+    });
+
+    // Properties without an owner assigned
+    const unassignedProperties = properties.filter((property) => {
+      const landlordId = getPropertyOwnerId(property);
+      return !landlordId;
     });
 
     return (
@@ -1582,6 +1590,56 @@ const SalesManagerDashboard = () => {
             </table>
           </div>
         </div>
+
+        {/* Unassigned Properties Section */}
+        {unassignedProperties.length > 0 && (
+          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+            <div className="sa-section-header">
+              <div>
+                <h3>Properties Without Owner</h3>
+                <p>{unassignedProperties.length} properties not yet assigned to an owner</p>
+              </div>
+            </div>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Address</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Rent</th>
+                    <th>Bedrooms</th>
+                    <th>Bathrooms</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unassignedProperties.map((property, index) => (
+                    <tr key={`unassigned-${property.ID || property.id || index}`}>
+                      <td>{index + 1}</td>
+                      <td className="sa-cell-main">
+                        <span className="sa-cell-title">{property.Address || property.address || 'N/A'}</span>
+                      </td>
+                      <td>{property.Type || property.type || 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${(property.Status || property.status || 'unknown').toLowerCase()}`}>
+                          {property.Status || property.status || 'Unknown'}
+                        </span>
+                      </td>
+                      <td>
+                        {typeof (property.Rent || property.rent) === 'number'
+                          ? (property.Rent || property.rent).toLocaleString()
+                          : property.Rent || property.rent || 'N/A'}
+                      </td>
+                      <td>{property.Bedrooms || property.bedrooms || 0}</td>
+                      <td>{property.Bathrooms || property.bathrooms || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -3174,7 +3232,7 @@ const SalesManagerDashboard = () => {
                       step="0.01"
                       min="0"
                       required
-                      placeholder="1500.00"
+                      placeholder="0.00"
                     />
                   </div>
                 </div>
@@ -3346,7 +3404,7 @@ const SalesManagerDashboard = () => {
                       step="0.01"
                       min="0"
                       defaultValue={editingProperty.Rent || editingProperty.rent || ''}
-                      placeholder="1500.00"
+                      placeholder="0.00"
                     />
                   </div>
                 </div>

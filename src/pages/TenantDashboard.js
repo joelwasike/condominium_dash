@@ -8,7 +8,6 @@ import {
   Camera,
   Upload,
   X,
-  CreditCard,
   Smartphone,
   Banknote,
   Download,
@@ -49,7 +48,6 @@ const TenantDashboard = () => {
     reason: '',
     terminationDate: '',
     comments: '',
-    securityDepositRefundMethod: '',
     inventoryCheckDate: ''
   });
   const [showTransferPaymentModal, setShowTransferPaymentModal] = useState(false);
@@ -62,16 +60,6 @@ const TenantDashboard = () => {
     entryDate: '',
     reason: ''
   });
-  const [showDepositPaymentModal, setShowDepositPaymentModal] = useState(false);
-  const [depositPaymentForm, setDepositPaymentForm] = useState({
-    property: '',
-    tenantType: 'individual',
-    monthlyRent: '',
-    paymentMethod: 'mobile_money',
-    reference: '',
-    notes: ''
-  });
-  const [depositStatus, setDepositStatus] = useState([]);
   const [loading, setLoading] = useState(false);
   const [overviewData, setOverviewData] = useState(null);
   const [leaseInfo, setLeaseInfo] = useState(null);
@@ -508,7 +496,7 @@ const TenantDashboard = () => {
       
       addNotification('Lease termination request submitted successfully!', 'success');
       
-      setTerminateLeaseForm({ reason: '', terminationDate: '', comments: '', securityDepositRefundMethod: '', inventoryCheckDate: '' });
+      setTerminateLeaseForm({ reason: '', terminationDate: '', comments: '', inventoryCheckDate: '' });
       setShowTerminateLeaseModal(false);
     } catch (error) {
       console.error('Error submitting lease termination request:', error);
@@ -661,10 +649,10 @@ Thank you for your payment!
     }
 
     const data = overviewData || {
-      lease: { property: 'Apartment 4B, 123 Main St', endDate: '2024-12-31' },
-      nextRentDue: { amount: 1500, date: '2024-11-01' },
+      lease: { property: '', endDate: '' },
+      nextRentDue: { amount: null, date: '' },
       openMaintenanceTickets: 0,
-      tenant: 'Tenant'
+      tenant: ''
     };
 
     return (
@@ -698,7 +686,7 @@ Thank you for your payment!
               <p className="sa-metric-label">Next Rent Due</p>
               <p className="sa-metric-period">Due: {data.nextRentDue?.date || '2024-11-01'}</p>
               <p className="sa-metric-value">
-                {data.nextRentDue?.amount || 1500} XOF
+                {data.nextRentDue?.amount ? `${data.nextRentDue.amount} XOF` : 'N/A'}
               </p>
             </div>
             <div className="sa-metric-card">
@@ -766,26 +754,6 @@ Thank you for your payment!
           >
             <UserPlus size={18} />
             Transfer Payment Request
-          </button>
-          <button 
-            className="sa-primary-cta" 
-            onClick={() => {
-              const property = leaseInfo?.property || leaseInfo?.address || '';
-              setDepositPaymentForm({
-                property: property,
-                tenantType: 'individual',
-                monthlyRent: leaseInfo?.rent || '',
-                paymentMethod: 'mobile_money',
-                reference: '',
-                notes: ''
-              });
-              setShowDepositPaymentModal(true);
-            }} 
-            disabled={loading}
-            style={{ backgroundColor: '#10b981' }}
-          >
-            <CreditCard size={18} />
-            Pay Security Deposit
           </button>
         </div>
       </div>
@@ -1426,24 +1394,6 @@ Thank you for your payment!
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="securityDepositRefundMethod">Security Deposit Refund Payment Method *</label>
-                  <select
-                    id="securityDepositRefundMethod"
-                    value={terminateLeaseForm.securityDepositRefundMethod}
-                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, securityDepositRefundMethod: e.target.value }))}
-                    required
-                  >
-                    <option value="">Select payment method for refund</option>
-                    <option value="mobile_money">Mobile Money</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="cash">Cash</option>
-                  </select>
-                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                    Select how you would like to receive your security deposit refund.
-                  </small>
-                </div>
-
-                <div className="form-group">
                   <label htmlFor="inventoryCheckDate">Inventory Check Date *</label>
                   <input
                     type="date"
@@ -1607,155 +1557,6 @@ Thank you for your payment!
         </div>
       )}
 
-      {/* Security Deposit Payment Modal */}
-      {showDepositPaymentModal && (
-        <div className="modal-overlay" onClick={() => setShowDepositPaymentModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Pay Security Deposit</h3>
-              <button className="modal-close" onClick={() => setShowDepositPaymentModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  setLoading(true);
-                  const calculatedAmount = parseFloat(depositPaymentForm.monthlyRent) * 
-                    (depositPaymentForm.tenantType === 'company' ? 3 : 
-                     depositPaymentForm.property.toLowerCase().includes('house') || 
-                     depositPaymentForm.property.toLowerCase().includes('villa') ? 5 : 2);
-                  
-                  await tenantService.paySecurityDeposit({
-                    ...depositPaymentForm,
-                    monthlyRent: parseFloat(depositPaymentForm.monthlyRent),
-                    leaseId: leaseInfo?.leaseId || leaseInfo?.id
-                  });
-                  
-                  addNotification(`Security deposit payment submitted: ${calculatedAmount.toFixed(2)} XOF. Awaiting approval.`, 'success');
-                  setShowDepositPaymentModal(false);
-                  setDepositPaymentForm({
-                    property: '',
-                    tenantType: 'individual',
-                    monthlyRent: '',
-                    paymentMethod: 'mobile_money',
-                    reference: '',
-                    notes: ''
-                  });
-                  // Reload deposit status
-                  try {
-                    const deposits = await tenantService.getSecurityDeposit();
-                    setDepositStatus(Array.isArray(deposits) ? deposits : []);
-                  } catch (err) {
-                    console.error('Error loading deposit status:', err);
-                  }
-                } catch (error) {
-                  console.error('Error submitting deposit payment:', error);
-                  addNotification(error.message || 'Failed to submit deposit payment', 'error');
-                } finally {
-                  setLoading(false);
-                }
-              }}>
-                <div className="form-group">
-                  <label htmlFor="depositProperty">Property *</label>
-                  <input
-                    type="text"
-                    id="depositProperty"
-                    value={depositPaymentForm.property}
-                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, property: e.target.value})}
-                    required
-                    placeholder="e.g., Apartment 4B or House 123"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="depositTenantType">Tenant Type *</label>
-                  <select
-                    id="depositTenantType"
-                    value={depositPaymentForm.tenantType}
-                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, tenantType: e.target.value})}
-                    required
-                  >
-                    <option value="individual">Individual</option>
-                    <option value="company">Company</option>
-                  </select>
-                  <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>
-                    {depositPaymentForm.tenantType === 'company' 
-                      ? 'Company: 3 months deposit for apartments, 5 months for houses'
-                      : 'Individual: 2 months deposit for apartments, 5 months for houses'}
-                  </small>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="depositMonthlyRent">Monthly Rent (XOF) *</label>
-                  <input
-                    type="number"
-                    id="depositMonthlyRent"
-                    step="0.01"
-                    value={depositPaymentForm.monthlyRent}
-                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, monthlyRent: e.target.value})}
-                    required
-                    placeholder="0.00"
-                  />
-                  {depositPaymentForm.monthlyRent && (
-                    <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>
-                      Deposit Amount: {
-                        (parseFloat(depositPaymentForm.monthlyRent) * 
-                        (depositPaymentForm.tenantType === 'company' ? 3 : 
-                         depositPaymentForm.property.toLowerCase().includes('house') || 
-                         depositPaymentForm.property.toLowerCase().includes('villa') ? 5 : 2)
-                        ).toFixed(2)
-                      } XOF
-                    </small>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="depositPaymentMethod">Payment Method *</label>
-                  <select
-                    id="depositPaymentMethod"
-                    value={depositPaymentForm.paymentMethod}
-                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, paymentMethod: e.target.value})}
-                    required
-                  >
-                    <option value="mobile_money">Mobile Money</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="depositReference">Reference</label>
-                  <input
-                    type="text"
-                    id="depositReference"
-                    value={depositPaymentForm.reference}
-                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, reference: e.target.value})}
-                    placeholder="Payment reference number"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="depositNotes">Notes</label>
-                  <textarea
-                    id="depositNotes"
-                    value={depositPaymentForm.notes}
-                    onChange={(e) => setDepositPaymentForm({...depositPaymentForm, notes: e.target.value})}
-                    placeholder="Additional notes"
-                    rows="3"
-                  />
-                </div>
-
-                <div className="modal-footer">
-                  <button type="button" className="action-button secondary" onClick={() => setShowDepositPaymentModal(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="action-button primary" disabled={loading}>
-                    {loading ? 'Submitting...' : 'Submit Payment'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

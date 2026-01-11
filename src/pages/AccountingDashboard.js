@@ -9,7 +9,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { DollarSign, TrendingUp, Building, Receipt, Download, Search, CreditCard, User, FileText, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2 } from 'lucide-react';
+import { DollarSign, TrendingUp, Building, Receipt, Download, Search, CreditCard, User, FileText, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2, Clock } from 'lucide-react';
 import { accountingService } from '../services/accountingService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
@@ -51,6 +51,20 @@ const AccountingDashboard = () => {
   const [selectedLandlord, setSelectedLandlord] = useState(null);
   const [landlordProperties, setLandlordProperties] = useState(null);
   const carouselIntervalRef = useRef(null);
+  
+  // History state
+  const [historyPayments, setHistoryPayments] = useState([]);
+  const [historyCanceledPayments, setHistoryCanceledPayments] = useState([]);
+  const [historyUnpaidRents, setHistoryUnpaidRents] = useState([]);
+  const [historyPendingPayments, setHistoryPendingPayments] = useState([]);
+  const [historyExpenses, setHistoryExpenses] = useState([]);
+  const [historyExpensesByProperty, setHistoryExpensesByProperty] = useState([]);
+  const [historyWireTransfers, setHistoryWireTransfers] = useState([]);
+  const [historyFinancialDocuments, setHistoryFinancialDocuments] = useState([]);
+  
+  // History pagination and search state
+  const [historyPagination, setHistoryPagination] = useState({});
+  const [historySearch, setHistorySearch] = useState({});
   
   // Reports state
   const [selectedReportType, setSelectedReportType] = useState('payments-by-period');
@@ -165,7 +179,7 @@ const AccountingDashboard = () => {
       { id: 'reports', label: 'Reports', icon: Receipt },
       { id: 'expenses', label: 'Expenses', icon: FileText },
       { id: 'tenants', label: 'Tenants', icon: User },
-      { id: 'deposits', label: 'Deposits', icon: CreditCard },
+      { id: 'history', label: 'History', icon: Clock },
       { id: 'cashier', label: 'Cashier', icon: Wallet },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
@@ -3040,6 +3054,385 @@ const AccountingDashboard = () => {
     );
   };
 
+  // Load History Data
+  const loadHistoryData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      if (isDemoMode()) {
+        // Use demo data filtered for history
+        const demoData = getAccountingDemoData();
+        setHistoryPayments(demoData.tenantPayments?.filter(p => p.Status === 'Approved' || p.Status === 'Validated') || []);
+        setHistoryCanceledPayments(demoData.tenantPayments?.filter(p => p.Status === 'Canceled' || p.Status === 'Cancelled') || []);
+        setHistoryUnpaidRents([]);
+        setHistoryPendingPayments(demoData.tenantPayments?.filter(p => p.Status === 'Pending') || []);
+        setHistoryExpenses(demoData.expenses || []);
+        setHistoryExpensesByProperty(demoData.expenses || []);
+        setHistoryWireTransfers(demoData.landlordPayments || []);
+        setHistoryFinancialDocuments(demoData.landlordPayments || []);
+        setLoading(false);
+        return;
+      }
+
+      // Load all history data from APIs
+      const [tenantPaymentsData, landlordPaymentsData, expensesData] = await Promise.all([
+        accountingService.getTenantPayments().catch(() => []),
+        accountingService.getLandlordPayments().catch(() => []),
+        accountingService.getExpenses({}).catch(() => [])
+      ]);
+
+      // Filter payments by status
+      const allPayments = Array.isArray(tenantPaymentsData) ? tenantPaymentsData : [];
+      setHistoryPayments(allPayments.filter(p => (p.Status || p.status) === 'Approved' || (p.Status || p.status) === 'Validated'));
+      setHistoryCanceledPayments(allPayments.filter(p => (p.Status || p.status) === 'Canceled' || (p.Status || p.status) === 'Cancelled'));
+      setHistoryPendingPayments(allPayments.filter(p => (p.Status || p.status) === 'Pending'));
+      
+      // Get unpaid rents (payments with status 'Unpaid' or 'Overdue')
+      setHistoryUnpaidRents(allPayments.filter(p => {
+        const status = (p.Status || p.status || '').toLowerCase();
+        return status === 'unpaid' || status === 'overdue' || status === 'overdoe';
+      }));
+
+      // Expenses
+      const allExpenses = Array.isArray(expensesData) ? expensesData : [];
+      setHistoryExpenses(allExpenses);
+      setHistoryExpensesByProperty(allExpenses);
+
+      // Wire transfers (landlord payments)
+      const allLandlordPayments = Array.isArray(landlordPaymentsData) ? landlordPaymentsData : [];
+      setHistoryWireTransfers(allLandlordPayments);
+      setHistoryFinancialDocuments(allLandlordPayments);
+    } catch (error) {
+      console.error('Failed to load history data:', error);
+      addNotification('Failed to load history data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addNotification]);
+
+  // Load history data when history tab is active
+  useEffect(() => {
+    if (activeTab === 'history') {
+      loadHistoryData();
+    }
+  }, [activeTab, loadHistoryData]);
+
+  // Render History section
+  const renderHistory = () => {
+    // Helper function to render a history table panel
+    const renderHistoryPanel = (title, data, columns, renderRow) => {
+      const [currentPage, setCurrentPage] = useState(1);
+      const [searchTerm, setSearchTerm] = useState('');
+      const itemsPerPage = 5;
+      
+      // Filter data based on search term
+      const filteredData = data.filter(item => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        return columns.some(col => {
+          const value = col.accessor(item);
+          return value && String(value).toLowerCase().includes(searchLower);
+        });
+      });
+
+      const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+      return (
+        <div className="sa-section-card" style={{ marginBottom: '20px' }}>
+          <div className="sa-section-header">
+            <div>
+              <h3>{title}</h3>
+              <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Saved &gt;</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Search size={16} style={{ position: 'absolute', left: '8px', color: '#9ca3af' }} />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    padding: '8px 8px 8px 32px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    width: '200px'
+                  }}
+                />
+              </div>
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: '4px 8px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '4px',
+                      background: 'white',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    &lt;
+                  </button>
+                  <span style={{ padding: '0 8px', fontSize: '0.875rem' }}>
+                    {currentPage}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: '4px 8px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '4px',
+                      background: 'white',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    &gt;
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  {columns.map((col, idx) => (
+                    <th key={idx}>{col.header}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedData.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length} className="sa-table-empty">No data found</td>
+                  </tr>
+                ) : (
+                  paginatedData.map((item, idx) => renderRow(item, idx))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div style={{ padding: '20px' }}>
+        {/* Payment History */}
+        {renderHistoryPanel(
+          'Payment History',
+          historyPayments,
+          [
+            { header: 'Date', accessor: (p) => p.Date || p.date },
+            { header: 'Tenant', accessor: (p) => p.Tenant || p.tenant },
+            { header: 'Property', accessor: (p) => p.Property || p.property },
+            { header: 'Rent Period', accessor: () => 'Mars' },
+            { header: 'Status', accessor: (p) => p.Status || p.status }
+          ],
+          (payment, idx) => (
+            <tr key={payment.ID || payment.id || idx}>
+              <td>{payment.Date ? new Date(payment.Date).toLocaleDateString('fr-FR') : (payment.date ? new Date(payment.date).toLocaleDateString('fr-FR') : 'N/A')}</td>
+              <td>{payment.Tenant || payment.tenant || 'N/A'}</td>
+              <td>{payment.Property || payment.property || 'N/A'}</td>
+              <td>Mars</td>
+              <td>
+                <span style={{
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  fontSize: '0.75rem'
+                }}>
+                  {(payment.Status || payment.status || '').includes('Valid') ? 'Validated' : 'Approved'}
+                </span>
+              </td>
+            </tr>
+          )
+        )}
+
+        {/* Canceled Payments History */}
+        {renderHistoryPanel(
+          'Canceled Payments History',
+          historyCanceledPayments,
+          [
+            { header: 'Date', accessor: (p) => p.Date || p.date },
+            { header: 'Tenant', accessor: (p) => p.Tenant || p.tenant },
+            { header: 'Amount Canceled', accessor: (p) => p.Amount || p.amount }
+          ],
+          (payment, idx) => (
+            <tr key={payment.ID || payment.id || idx}>
+              <td>{payment.Date ? new Date(payment.Date).toLocaleDateString('fr-FR') : (payment.date ? new Date(payment.date).toLocaleDateString('fr-FR') : 'N/A')}</td>
+              <td>{payment.Tenant || payment.tenant || 'N/A'}</td>
+              <td>{(payment.Amount || payment.amount || 0).toLocaleString('fr-FR')} XOF</td>
+            </tr>
+          )
+        )}
+
+        {/* Unpaid Rents History */}
+        {renderHistoryPanel(
+          'Unpaid Rents History',
+          historyUnpaidRents,
+          [
+            { header: 'Tenant', accessor: (p) => p.Tenant || p.tenant },
+            { header: 'Property', accessor: (p) => p.Property || p.property },
+            { header: 'Unpaid Amount', accessor: (p) => p.Amount || p.amount },
+            { header: 'Status', accessor: (p) => p.Status || p.status }
+          ],
+          (payment, idx) => {
+            const status = (payment.Status || payment.status || '').toLowerCase();
+            const statusColor = status === 'overdue' || status === 'overdoe' ? '#f59e0b' : '#ef4444';
+            const statusText = status === 'overdue' || status === 'overdoe' ? 'Overdue' : 'Unpaid';
+            return (
+              <tr key={payment.ID || payment.id || idx}>
+                <td>{payment.Tenant || payment.tenant || 'N/A'}</td>
+                <td>{payment.Property || payment.property || 'N/A'}</td>
+                <td>{(payment.Amount || payment.amount || 0).toLocaleString('fr-FR')} XOF</td>
+                <td>
+                  <span style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: statusColor,
+                    color: 'white',
+                    fontSize: '0.75rem'
+                  }}>
+                    {statusText}
+                  </span>
+                </td>
+              </tr>
+            );
+          }
+        )}
+
+        {/* Pending Payments History */}
+        {renderHistoryPanel(
+          'Pending Payments History',
+          historyPendingPayments,
+          [
+            { header: 'Date', accessor: (p) => p.Date || p.date },
+            { header: 'Tenant', accessor: (p) => p.Tenant || p.tenant },
+            { header: 'Property', accessor: (p) => p.Property || p.property },
+            { header: 'Amount Due', accessor: (p) => p.Amount || p.amount },
+            { header: 'Received', accessor: () => '0' }
+          ],
+          (payment, idx) => (
+            <tr key={payment.ID || payment.id || idx}>
+              <td>{payment.Date ? new Date(payment.Date).toLocaleDateString('fr-FR') : (payment.date ? new Date(payment.date).toLocaleDateString('fr-FR') : 'N/A')}</td>
+              <td>{payment.Tenant || payment.tenant || 'N/A'}</td>
+              <td>{payment.Property || payment.property || 'N/A'}</td>
+              <td>{(payment.Amount || payment.amount || 0).toLocaleString('fr-FR')} XOF</td>
+              <td>0</td>
+            </tr>
+          )
+        )}
+
+        {/* Expense History */}
+        {renderHistoryPanel(
+          'Expense History',
+          historyExpenses,
+          [
+            { header: 'Date', accessor: (e) => e.Date || e.date },
+            { header: 'Property', accessor: (e) => e.Building || e.building },
+            { header: 'Description', accessor: (e) => e.Notes || e.notes },
+            { header: 'Type', accessor: (e) => e.Category || e.category },
+            { header: 'Amount', accessor: (e) => e.Amount || e.amount }
+          ],
+          (expense, idx) => (
+            <tr key={expense.ID || expense.id || idx}>
+              <td>{expense.Date ? new Date(expense.Date).toLocaleDateString('fr-FR') : (expense.date ? new Date(expense.date).toLocaleDateString('fr-FR') : 'N/A')}</td>
+              <td>{expense.Building || expense.building || 'N/A'}</td>
+              <td>{expense.Notes || expense.notes || 'N/A'}</td>
+              <td>{expense.Category || expense.category || 'N/A'}</td>
+              <td>{((expense.Amount || expense.amount || 0) / 1000).toFixed(3).replace('.', ',')} CFA</td>
+            </tr>
+          )
+        )}
+
+        {/* Expenses by Property History */}
+        {renderHistoryPanel(
+          'Expenses by Property History',
+          historyExpensesByProperty,
+          [
+            { header: 'Date', accessor: (e) => e.Date || e.date },
+            { header: 'Property', accessor: (e) => e.Building || e.building },
+            { header: 'Expense', accessor: (e) => e.Notes || e.notes },
+            { header: 'Amount', accessor: (e) => e.Amount || e.amount }
+          ],
+          (expense, idx) => (
+            <tr key={expense.ID || expense.id || idx}>
+              <td>{expense.Date ? new Date(expense.Date).toLocaleDateString('fr-FR') : (expense.date ? new Date(expense.date).toLocaleDateString('fr-FR') : 'N/A')}</td>
+              <td>{expense.Building || expense.building || 'N/A'}</td>
+              <td>{expense.Notes || expense.notes || 'N/A'}</td>
+              <td>{((expense.Amount || expense.amount || 0) / 1000).toFixed(3).replace('.', ',')} CFA</td>
+            </tr>
+          )
+        )}
+
+        {/* Wire Transfers to Owners History */}
+        {renderHistoryPanel(
+          'Wire Transfers to Owners History',
+          historyWireTransfers,
+          [
+            { header: 'Date', accessor: (p) => p.Date || p.date },
+            { header: 'Type', accessor: () => 'Receipt' },
+            { header: 'Tenant/Owner', accessor: (p) => p.Landlord || p.landlord },
+            { header: 'Status', accessor: (p) => p.Status || p.status }
+          ],
+          (payment, idx) => {
+            const status = (payment.Status || payment.status || '').toLowerCase();
+            const statusColor = status === 'paid' || status === 'validated' || status === 'validee' ? '#10b981' : '#f59e0b';
+            return (
+              <tr key={payment.ID || payment.id || idx}>
+                <td>{payment.Date ? new Date(payment.Date).toLocaleDateString('fr-FR') : (payment.date ? new Date(payment.date).toLocaleDateString('fr-FR') : 'N/A')}</td>
+                <td>Receipt</td>
+                <td>{payment.Landlord || payment.landlord || 'N/A'}</td>
+                <td>
+                  <span style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: statusColor,
+                    color: 'white',
+                    fontSize: '0.75rem'
+                  }}>
+                    {payment.Status || payment.status || 'N/A'}
+                  </span>
+                </td>
+              </tr>
+            );
+          }
+        )}
+
+        {/* Financial Documents History */}
+        {renderHistoryPanel(
+          'Financial Documents History',
+          historyFinancialDocuments,
+          [
+            { header: 'Date', accessor: (p) => p.Date || p.date },
+            { header: 'Owner', accessor: (p) => p.Landlord || p.landlord },
+            { header: 'Property', accessor: (p) => p.Building || p.building },
+            { header: 'Net Amount', accessor: (p) => p.NetAmount || p.netAmount }
+          ],
+          (payment, idx) => (
+            <tr key={payment.ID || payment.id || idx}>
+              <td>{payment.Date ? new Date(payment.Date).toLocaleDateString('fr-FR') : (payment.date ? new Date(payment.date).toLocaleDateString('fr-FR') : 'N/A')}</td>
+              <td>{payment.Landlord || payment.landlord || 'N/A'}</td>
+              <td>{payment.Building || payment.building || 'N/A'}</td>
+              <td>{((payment.NetAmount || payment.netAmount || 0) / 1000).toFixed(3).replace('.', ',')} CFA</td>
+            </tr>
+          )
+        )}
+      </div>
+    );
+  };
+
   // Render Cashier section
   const renderCashier = () => {
     // Calculate total balance across all accounts
@@ -3425,8 +3818,6 @@ const AccountingDashboard = () => {
                       onChange={(e) => setCashierAccountForm({...cashierAccountForm, currency: e.target.value})}
                     >
                       <option value="XOF">XOF</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
                     </select>
                   </div>
 
@@ -3893,6 +4284,8 @@ const AccountingDashboard = () => {
         return renderExpenses();
       case 'tenants':
         return renderTenants();
+      case 'history':
+        return renderHistory();
       case 'deposits':
         return renderDeposits();
       case 'cashier':

@@ -169,4 +169,28 @@ export const adminService = {
     const url = buildApiUrl('/api/admin/advertisements');
     return await apiRequest(url);
   },
+
+  // Get clients (for pending approval)
+  getClients: async () => {
+    const url = buildApiUrl('/api/admin/clients');
+    return await apiRequest(url);
+  },
+
+  // Get properties (for statistics)
+  getProperties: async () => {
+    const url = buildApiUrl('/api/admin/properties');
+    return await apiRequest(url);
+  },
+
+  // Get visits
+  getVisits: async () => {
+    const url = buildApiUrl('/api/admin/visits');
+    return await apiRequest(url);
+  },
+
+  // Get negotiations
+  getNegotiations: async () => {
+    const url = buildApiUrl('/api/admin/negotiations');
+    return await apiRequest(url);
+  },
 };

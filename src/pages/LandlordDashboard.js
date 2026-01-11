@@ -106,7 +106,7 @@ const LandlordDashboard = () => {
   const [expensePropertyFilter, setExpensePropertyFilter] = useState('');
   const [expenseStartDate, setExpenseStartDate] = useState('');
   const [expenseEndDate, setExpenseEndDate] = useState('');
-  const [paymentSubTab, setPaymentSubTab] = useState('all');
+  const [paymentSubTab, setPaymentSubTab] = useState('net');
 
   const handleKycUpload = (files, userRole) => {
     console.log('KYC files uploaded:', files, 'for role:', userRole);
@@ -743,7 +743,6 @@ const LandlordDashboard = () => {
       { id: 'expenses', label: 'Expenses', icon: FileText },
       { id: 'works', label: 'Works & Claims', icon: Wrench },
       { id: 'documents', label: 'Documents', icon: FileText },
-      { id: 'inventory', label: 'Inventory', icon: Package },
       { id: 'tracking', label: 'Business Tracking', icon: BarChart3 },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messaging', icon: MessageCircle },
@@ -1070,12 +1069,6 @@ const LandlordDashboard = () => {
         <div>
           <h2>Property Management</h2>
           <p>{properties.length} properties found</p>
-      </div>
-        <div className="sa-clients-header-right">
-          <button className="sa-primary-cta" onClick={() => setShowPropertyModal(true)} disabled={loading}>
-            <Plus size={16} />
-          Add New Property
-        </button>
         </div>
       </div>
               
@@ -1152,18 +1145,15 @@ const LandlordDashboard = () => {
               <th>No</th>
               <th>Tenant Name</th>
               <th>Property</th>
-              <th>Email</th>
-              <th>Phone</th>
               <th>Rent Amount</th>
               <th>Status</th>
-              <th>Last Payment</th>
               <th />
             </tr>
           </thead>
           <tbody>
             {tenants.length === 0 ? (
               <tr>
-                <td colSpan={9} className="sa-table-empty">No tenants found</td>
+                <td colSpan={6} className="sa-table-empty">No tenants found</td>
               </tr>
             ) : (
               tenants.map((tenant, index) => (
@@ -1173,18 +1163,11 @@ const LandlordDashboard = () => {
                     <span className="sa-cell-title">{tenant.name || tenant.Name || 'N/A'}</span>
                   </td>
                   <td>{tenant.property || tenant.Property || 'N/A'}</td>
-                  <td>{tenant.email || tenant.Email || 'N/A'}</td>
-                  <td>{tenant.phone || tenant.Phone || 'N/A'}</td>
                   <td>{(tenant.amount || tenant.Amount || 0).toLocaleString()} XOF</td>
                   <td>
                     <span className={`sa-status-pill ${(tenant.status || tenant.Status || 'active').toLowerCase().replace(' ', '-')}`}>
                       {tenant.status || tenant.Status || 'Active'}
                     </span>
-                  </td>
-                  <td>
-                    {tenant.lastPayment || tenant.LastPayment 
-                      ? new Date(tenant.lastPayment || tenant.LastPayment).toLocaleDateString()
-                      : 'N/A'}
                   </td>
                   <td className="sa-row-actions">
                     <button className="sa-icon-button" title="View">👁️</button>
@@ -1279,16 +1262,10 @@ const LandlordDashboard = () => {
     return (
       <div className="sa-transactions-page">
         <div className="sa-transactions-header">
-      <h2>Payments & Cash Flow Management</h2>
+      <h2>Rent Repayments (Agency to Landlord)</h2>
         </div>
         
         <div className="sa-transactions-tabs">
-          <button 
-            className={`sa-subtab-button ${paymentSubTab === 'all' ? 'active' : ''}`}
-            onClick={() => setPaymentSubTab('all')}
-          >
-            All Payments
-          </button>
           <button 
             className={`sa-subtab-button ${paymentSubTab === 'net' ? 'active' : ''}`}
             onClick={() => {
@@ -1308,68 +1285,6 @@ const LandlordDashboard = () => {
             Payment History
           </button>
         </div>
-
-        {paymentSubTab === 'all' && (
-          <div className="sa-clients-page">
-            <div className="sa-clients-header">
-              <div>
-                <h2>All Payments</h2>
-                <p>{payments.length} payment transactions found</p>
-              </div>
-              <div className="sa-clients-header-right">
-                <button className="sa-primary-cta" onClick={() => setShowReceiptModal(true)} disabled={loading}>
-                  <Receipt size={16} />
-          Generate Receipt
-        </button>
-              </div>
-      </div>
-      
-            <div className="sa-table-wrapper">
-              <table className="sa-table">
-              <thead>
-                <tr>
-                    <th>No</th>
-                  <th>Date</th>
-                  <th>Property</th>
-                  <th>Tenant</th>
-                  <th>Amount</th>
-                  <th>Method</th>
-                  <th>Status</th>
-                    <th />
-                </tr>
-              </thead>
-              <tbody>
-                  {payments.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="sa-table-empty">No payment transactions found</td>
-                    </tr>
-                  ) : (
-                    payments.map((payment, index) => (
-                      <tr key={payment.ID || payment.id || `payment-${index}`}>
-                        <td>{index + 1}</td>
-                        <td>{new Date(payment.Date || payment.date || payment.CreatedAt || payment.createdAt).toLocaleDateString()}</td>
-                        <td className="sa-cell-main">
-                          <span className="sa-cell-title">{payment.Property || payment.property || 'Unknown'}</span>
-                  </td>
-                        <td>{payment.Tenant || payment.tenant || 'Unknown'}</td>
-                        <td>{payment.Amount || payment.amount ? (payment.Amount || payment.amount).toLocaleString() : 0} XOF</td>
-                        <td>{payment.Method || payment.method || 'Unknown'}</td>
-                        <td>
-                          <span className={`sa-status-pill ${(payment.Status || payment.status || 'pending').toLowerCase()}`}>
-                            {payment.Status || payment.status || 'Pending'}
-                    </span>
-                  </td>
-                        <td className="sa-row-actions">
-                          <button className="sa-icon-button" onClick={() => setShowReceiptModal(true)} title="Receipt">🧾</button>
-                  </td>
-                  </tr>
-                    ))
-                  )}
-              </tbody>
-            </table>
-          </div>
-    </div>
-        )}
 
         {paymentSubTab === 'net' && (
           <div className="sa-clients-page">
@@ -1492,59 +1407,15 @@ const LandlordDashboard = () => {
               </div>
                 </div>
                 
-            {paymentHistory && (
+            {paymentHistory && paymentHistory.payouts && paymentHistory.payouts.length > 0 && (
               <>
-                {paymentHistory.rentPayments && paymentHistory.rentPayments.length > 0 && (
-                  <div className="sa-section-card" style={{ marginBottom: '24px' }}>
-                    <div className="sa-section-header">
-                      <div>
-                        <h3>Rent Payments</h3>
-                        <p>Collected rent payments</p>
-                </div>
-          </div>
-                    <div className="sa-table-wrapper">
-                      <table className="sa-table">
-                        <thead>
-                          <tr>
-                            <th>No</th>
-                            <th>Date</th>
-                            <th>Tenant</th>
-                            <th>Property</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {paymentHistory.rentPayments.map((payment, index) => (
-                            <tr key={payment.id || payment.ID || `rent-${index}`}>
-                              <td>{index + 1}</td>
-                              <td>{new Date(payment.date || payment.Date).toLocaleDateString()}</td>
-                              <td className="sa-cell-main">
-                                <span className="sa-cell-title">{payment.tenant || payment.Tenant || 'Unknown'}</span>
-                              </td>
-                              <td>{payment.property || payment.Property || 'Unknown'}</td>
-                              <td>{(payment.amount || payment.Amount || 0).toLocaleString()} XOF</td>
-                              <td>
-                                <span className={`sa-status-pill ${(payment.status || payment.Status || 'pending').toLowerCase()}`}>
-                                  {payment.status || payment.Status || 'Pending'}
-                                </span>
-                  </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-        </div>
-          </div>
-                )}
-
-                {paymentHistory.payouts && paymentHistory.payouts.length > 0 && (
-                  <div className="sa-section-card">
-                    <div className="sa-section-header">
-                      <div>
-                        <h3>Payouts</h3>
-                        <p>Net payments after commission</p>
-          </div>
-        </div>
+                <div className="sa-section-card">
+                  <div className="sa-section-header">
+                    <div>
+                      <h3>Payouts</h3>
+                      <p>Net payments after commission</p>
+                    </div>
+                  </div>
                     <div className="sa-table-wrapper">
                       <table className="sa-table">
                         <thead>
@@ -1578,10 +1449,14 @@ const LandlordDashboard = () => {
                           ))}
                         </tbody>
                       </table>
-          </div>
-          </div>
+                    </div>
+                  </div>
                 )}
               </>
+            ) : (
+              <div className="sa-table-empty" style={{ padding: '40px', textAlign: 'center' }}>
+                No payment history found
+              </div>
             )}
         </div>
         )}
@@ -2326,8 +2201,6 @@ const LandlordDashboard = () => {
         return renderWorksAndClaims();
       case 'documents':
         return renderDocuments();
-      case 'inventory':
-        return renderInventory();
       case 'tracking':
         return renderBusinessTracking();
       case 'advertisements':
@@ -2411,58 +2284,6 @@ const LandlordDashboard = () => {
           onUpload={handleContractUpload}
           onClose={() => setShowContractModal(false)}
         />
-      </Modal>
-
-      {/* Add Property Modal */}
-      <Modal
-        isOpen={showPropertyModal}
-        onClose={() => setShowPropertyModal(false)}
-        title="Add New Property"
-        size="lg"
-      >
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          const formData = new FormData(e.target);
-          const propertyData = {
-            address: formData.get('address'),
-            type: formData.get('type'),
-            bedrooms: parseInt(formData.get('bedrooms')),
-            bathrooms: parseFloat(formData.get('bathrooms')),
-            rent: parseFloat(formData.get('rent')),
-            landlordId: 1 // Default landlord ID
-          };
-          handleAddProperty(propertyData);
-        }}>
-          <div className="form-group">
-            <label>Address</label>
-            <input type="text" name="address" required />
-          </div>
-          <div className="form-group">
-            <label>Property Type</label>
-            <select name="type" required>
-              <option value="apartment">Apartment</option>
-              <option value="house">House</option>
-              <option value="condo">Condo</option>
-              <option value="studio">Studio</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Bedrooms</label>
-            <input type="number" name="bedrooms" min="0" required />
-          </div>
-          <div className="form-group">
-            <label>Bathrooms</label>
-            <input type="number" name="bathrooms" min="0" step="0.5" required />
-          </div>
-          <div className="form-group">
-            <label>Monthly Rent (XOF)</label>
-            <input type="number" name="rent" min="0" step="0.01" required />
-          </div>
-          <div className="modal-actions">
-            <button type="button" onClick={() => setShowPropertyModal(false)}>Cancel</button>
-            <button type="submit" disabled={loading}>Add Property</button>
-          </div>
-        </form>
       </Modal>
 
       {/* Create Work Order Modal */}
