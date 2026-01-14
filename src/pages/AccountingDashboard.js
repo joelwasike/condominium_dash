@@ -936,8 +936,8 @@ const AccountingDashboard = () => {
                       padding: '8px 12px'
                     }}
                     formatter={(value, name) => {
-                      if (name === 'collections') return [`${value.toLocaleString()} XOF`, 'Collections'];
-                      if (name === 'expenses') return [`${value.toLocaleString()} XOF`, 'Expenses'];
+                      if (name === 'collections') return [`${value.toLocaleString()} XOF`, t('accounting.collections')];
+                      if (name === 'expenses') return [`${value.toLocaleString()} XOF`, t('accounting.expenses')];
                       return value;
                     }}
                   />
@@ -953,7 +953,7 @@ const AccountingDashboard = () => {
                     fill="url(#colorCollections)"
                     dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
                     activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    name="Collections"
+                    name={t('accounting.collections')}
                   />
                   <Area
                     type="natural"
@@ -2073,10 +2073,10 @@ const AccountingDashboard = () => {
 
                   <div className="modal-footer">
                     <button type="button" className="action-button secondary" onClick={() => setShowDepositPaymentModal(false)}>
-                      Cancel
+                      {t('accounting.cancel')}
                     </button>
                     <button type="submit" className="action-button primary" disabled={loading}>
-                      {loading ? 'Recording...' : 'Record Payment'}
+                      {loading ? t('accounting.recording') : t('accounting.recordPayment')}
                     </button>
                   </div>
                 </form>
@@ -2185,7 +2185,7 @@ const AccountingDashboard = () => {
 
                   <div className="modal-footer">
                     <button type="button" className="action-button secondary" onClick={() => setShowDepositRefundModal(false)}>
-                      Cancel
+                      {t('accounting.cancel')}
                     </button>
                     <button type="submit" className="action-button primary" disabled={loading}>
                       {loading ? 'Processing...' : 'Process Refund'}
@@ -2202,15 +2202,15 @@ const AccountingDashboard = () => {
 
   const renderReports = () => {
     const reportTypes = [
-      { value: 'payments-by-period', label: 'Payments by Period' },
-      { value: 'commissions-by-period', label: 'Commissions by Period' },
-      { value: 'refunds', label: 'Refunds Report' },
-      { value: 'payments-by-building', label: 'Payments by Building' },
-      { value: 'payments-by-tenant', label: 'Payments by Tenant' },
-      { value: 'expenses-by-period', label: 'Expenses by Period' },
-      { value: 'collections-by-period', label: 'Collections by Period' },
-      { value: 'building-performance', label: 'Building Performance' },
-      { value: 'payment-status', label: 'Payment Status Breakdown' }
+      { value: 'payments-by-period', label: t('accounting.paymentsByPeriod') },
+      { value: 'commissions-by-period', label: t('accounting.commissionsByPeriod') },
+      { value: 'refunds', label: t('accounting.refundsReport') },
+      { value: 'payments-by-building', label: t('accounting.paymentsByBuilding') },
+      { value: 'payments-by-tenant', label: t('accounting.paymentsByTenant') },
+      { value: 'expenses-by-period', label: t('accounting.expensesByPeriod') },
+      { value: 'collections-by-period', label: t('accounting.collectionsByPeriod') },
+      { value: 'building-performance', label: t('accounting.buildingPerformance') },
+      { value: 'payment-status', label: t('accounting.paymentStatusBreakdown') }
     ];
 
     return (
@@ -3215,12 +3215,12 @@ const AccountingDashboard = () => {
 
         {/* Canceled Payments History */}
         {renderHistoryPanel(
-          'Canceled Payments History',
+          t('accounting.canceledPaymentsHistory'),
           historyCanceledPayments,
           [
             { header: 'Date', accessor: (p) => p.Date || p.date },
             { header: 'Tenant', accessor: (p) => p.Tenant || p.tenant },
-            { header: 'Amount Canceled', accessor: (p) => p.Amount || p.amount }
+            { header: t('accounting.amountCanceled'), accessor: (p) => p.Amount || p.amount }
           ],
           (payment, idx) => (
             <tr key={payment.ID || payment.id || idx}>
@@ -3625,7 +3625,7 @@ const AccountingDashboard = () => {
                 textAlign: 'center', 
                 color: '#9ca3af' 
               }}>
-                No cashier accounts found. Click "Add Account" to create one.
+                {t('accounting.noCashierAccounts')}
               </div>
             )}
           </div>
@@ -3708,7 +3708,7 @@ const AccountingDashboard = () => {
                   try {
                     setLoading(true);
                     await accountingService.createCashierAccount(cashierAccountForm);
-                    addNotification('Cashier account created successfully!', 'success');
+                    addNotification(t('accounting.cashierAccountCreated'), 'success');
                     setShowCashierAccountModal(false);
                     setCashierAccountForm({
                       name: '',
@@ -3788,7 +3788,7 @@ const AccountingDashboard = () => {
 
                   <div className="modal-footer">
                     <button type="button" className="action-button secondary" onClick={() => setShowCashierAccountModal(false)}>
-                      Cancel
+                      {t('accounting.cancel')}
                     </button>
                     <button type="submit" className="action-button primary" disabled={loading}>
                       {loading ? 'Creating...' : 'Create Account'}
@@ -3933,7 +3933,7 @@ const AccountingDashboard = () => {
 
                   <div className="modal-footer">
                     <button type="button" className="action-button secondary" onClick={() => setShowCashierTransactionModal(false)}>
-                      Cancel
+                      {t('accounting.cancel')}
                     </button>
                     <button type="submit" className="action-button primary" disabled={loading}>
                       {loading ? 'Processing...' : 'Create Transaction'}
@@ -4380,10 +4380,10 @@ const AccountingDashboard = () => {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="action-button secondary" onClick={() => setShowPaymentModal(false)}>
-                    Cancel
+                    {t('accounting.cancel')}
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
-                    {loading ? 'Recording...' : 'Record Payment'}
+                    {loading ? t('accounting.recording') : t('accounting.recordPayment')}
                   </button>
                 </div>
               </form>
@@ -4525,10 +4525,10 @@ const AccountingDashboard = () => {
                       setSelectedTenantForPayment(null);
                     }}
                   >
-                    Cancel
+                    {t('accounting.cancel')}
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
-                    {loading ? 'Recording...' : 'Record Cash Payment'}
+                    {loading ? t('accounting.recording') : t('accounting.recordCashPayment')}
                   </button>
                 </div>
               </form>
@@ -4950,10 +4950,10 @@ const AccountingDashboard = () => {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="action-button secondary" onClick={() => setShowLandlordPaymentModal(false)}>
-                    Cancel
+                    {t('accounting.cancel')}
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
-                    {loading ? 'Recording...' : 'Record Payment'}
+                    {loading ? t('accounting.recording') : t('accounting.recordPayment')}
                   </button>
                 </div>
               </form>
@@ -5076,10 +5076,10 @@ const AccountingDashboard = () => {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="action-button secondary" onClick={() => setShowExpenseModal(false)}>
-                    Cancel
+                    {t('accounting.cancel')}
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
-                    {loading ? 'Adding...' : 'Add Expense'}
+                    {loading ? t('accounting.adding') : t('accounting.addExpense')}
                   </button>
                 </div>
               </form>
