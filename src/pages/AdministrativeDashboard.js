@@ -16,7 +16,9 @@ import {
   Megaphone,
   ArrowUp,
   Edit,
-  Trash2
+  Trash2,
+  ArrowRightLeft,
+  X
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -27,6 +29,7 @@ import { adminService } from '../services/adminService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAdministrativeDemoData } from '../utils/demoData';
+import { t, getLanguage } from '../utils/i18n';
 
 const AdministrativeDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -53,6 +56,9 @@ const AdministrativeDashboard = () => {
   const [properties, setProperties] = useState([]); // Properties for statistics
   const [visits, setVisits] = useState([]); // Visits data
   const [negotiations, setNegotiations] = useState([]); // Negotiations data
+  const [transfers, setTransfers] = useState([]); // Transfer requests
+  const [transferTab, setTransferTab] = useState('pending'); // 'approved', 'pending', 'rejected'
+  const [leaseTab, setLeaseTab] = useState('active'); // 'active', 'pending', 'expired'
   
   // Filter states
   const [documentStatusFilter, setDocumentStatusFilter] = useState('');
@@ -284,7 +290,8 @@ const AdministrativeDashboard = () => {
         clientsData,
         propertiesData,
         visitsData,
-        negotiationsData
+        negotiationsData,
+        transfersData
       ] = await Promise.all([
         adminService.getOverview().catch(() => null),
         adminService.getInbox().catch(() => ({ items: [] })),
@@ -305,7 +312,8 @@ const AdministrativeDashboard = () => {
         adminService.getClients().catch(() => []),
         adminService.getProperties().catch(() => []),
         adminService.getVisits().catch(() => []),
-        adminService.getNegotiations().catch(() => [])
+        adminService.getNegotiations().catch(() => []),
+        adminService.getTransfers().catch(() => [])
       ]);
       
       setOverviewData(overview);
@@ -320,6 +328,7 @@ const AdministrativeDashboard = () => {
       setProperties(Array.isArray(propertiesData) ? propertiesData : []);
       setVisits(Array.isArray(visitsData) ? visitsData : []);
       setNegotiations(Array.isArray(negotiationsData) ? negotiationsData : []);
+      setTransfers(Array.isArray(transfersData) ? transfersData : []);
     } catch (error) {
       console.error('Error loading admin data:', error);
       if (!isDemoMode()) {
@@ -334,6 +343,40 @@ const AdministrativeDashboard = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Reload transfers when tab changes
+  useEffect(() => {
+    if (activeTab === 'transfers') {
+      const loadTransfers = async () => {
+        try {
+          const status = transferTab === 'pending' ? 'Pending' : transferTab === 'approved' ? 'Approved' : 'Rejected';
+          const transfersData = await adminService.getTransfers({ status });
+          setTransfers(Array.isArray(transfersData) ? transfersData : []);
+        } catch (error) {
+          console.error('Error loading transfers:', error);
+          setTransfers([]);
+        }
+      };
+      loadTransfers();
+    }
+  }, [transferTab, activeTab]);
+
+  // Reload leases when tab changes
+  useEffect(() => {
+    if (activeTab === 'leases') {
+      const loadLeases = async () => {
+        try {
+          const status = leaseTab === 'active' ? 'Active' : leaseTab === 'pending' ? 'Pending' : 'Expired';
+          const leasesData = await adminService.getLeases({ status });
+          setLeases(Array.isArray(leasesData) ? leasesData : []);
+        } catch (error) {
+          console.error('Error loading leases:', error);
+          setLeases([]);
+        }
+      };
+      loadLeases();
+    }
+  }, [leaseTab, activeTab]);
 
   // Load advertisements when advertisements or overview tab is active
   useEffect(() => {
@@ -353,12 +396,8 @@ const AdministrativeDashboard = () => {
   const tabs = useMemo(
     () => [
       { id: 'overview', label: 'Overview', icon: FileText },
-      { id: 'inbox', label: 'Inbox', icon: Mail },
-      { id: 'documents', label: 'Documents', icon: FileText },
-      { id: 'utilities', label: 'CIE/SODECI Transfers', icon: Send },
-      { id: 'debt', label: 'Debt Collection', icon: DollarSign },
-      { id: 'reminders', label: 'Reminders', icon: Bell },
       { id: 'leases', label: 'Leases', icon: FileText },
+      { id: 'transfers', label: 'Transfers', icon: ArrowRightLeft },
       { id: 'automation', label: 'Automation & Reports', icon: TrendingUp },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
@@ -1255,114 +1294,154 @@ const AdministrativeDashboard = () => {
     </div>
   );
 
-  const renderLeases = () => (
-    <div className="sa-section-card">
-      <div className="sa-section-header">
-        <div>
-          <h3>Lease Agreements</h3>
-          <p>Generate and manage lease contracts for approved tenants</p>
-        </div>
-        <button className="sa-primary-cta" onClick={() => setShowLeaseModal(true)} disabled={loading}>
-          <Plus size={18} />
-          Create Lease
-        </button>
-      </div>
-      
-      <div className="sa-filters-section">
-        <select 
-          className="sa-filter-select"
-          value={leaseStatusFilter}
-          onChange={(e) => setLeaseStatusFilter(e.target.value)}
-        >
-          <option value="">All Status</option>
-          <option value="Active">Active</option>
-          <option value="Pending">Pending</option>
-          <option value="Expired">Expired</option>
-        </select>
-      </div>
+  const renderLeases = () => {
+    // Filter leases by selected tab
+    const filteredLeases = leases.filter(lease => {
+      const status = (lease.status || lease.Status || 'Active').toLowerCase();
+      if (leaseTab === 'active') return status === 'active';
+      if (leaseTab === 'expired') return status === 'expired';
+      return status === 'pending' || status === 'draft';
+    });
 
-      {leases.length === 0 ? (
-        <div className="sa-table-empty">No leases created yet</div>
-      ) : (
-        <div className="sa-table-wrapper">
-          <table className="sa-table">
-            <thead>
-              <tr>
-                <th>Tenant</th>
-                <th>Property</th>
-                <th>Term</th>
-                <th>Rent</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {leases.map(lease => (
-                <tr key={lease.id}>
-                  <td>
-                    <div className="sa-cell-main">
-                      <span className="sa-cell-title">{lease.tenant}</span>
-                      <span className="sa-cell-sub">{lease.email || '—'}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="sa-cell-main">
-                      <span className="sa-cell-title">{lease.property}</span>
-                      <span className="sa-cell-sub">{lease.unit || lease.city || '—'}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="sa-cell-main">
-                      <span className="sa-cell-title">
-                        {lease.startDate} - {lease.endDate}
-                      </span>
-                      <span className="sa-cell-sub">{lease.duration || '1 year'}</span>
-                    </div>
-                  </td>
-                  <td>{lease.rent}</td>
-                  <td>
-                    <span className={`sa-status-pill ${(lease.status || 'active').toLowerCase()}`}>
-                      {lease.status || 'Active'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="sa-row-actions">
-                      <button
-                        className="table-action-button view"
-                        onClick={() => addNotification('Lease opened', 'info')}
-                      >
-                        View
-                      </button>
-                      {lease.status === 'Pending' && (
-                        <button
-                          className="table-action-button edit"
-                          onClick={() => handleGenerateLeaseDocument(lease.id)}
-                        >
-                          Generate
-                        </button>
-                      )}
-                      <button
-                        className="table-action-button edit"
-                        onClick={() => addNotification('Lease downloaded', 'success')}
-                      >
-                        Download
-                      </button>
-                      <button
-                        className="table-action-button delete"
-                        onClick={() => addNotification('Lease termination initiated', 'warning')}
-                      >
-                        Terminate
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>Lease Agreements</h3>
+            <p>Generate and manage lease contracts for approved tenants</p>
+          </div>
+          <button className="sa-primary-cta" onClick={() => setShowLeaseModal(true)} disabled={loading}>
+            <Plus size={18} />
+            Create Lease
+          </button>
         </div>
-      )}
-    </div>
-  );
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
+          <button
+            onClick={() => setLeaseTab('active')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              background: 'transparent',
+              color: leaseTab === 'active' ? '#7c3aed' : '#6b7280',
+              borderBottom: leaseTab === 'active' ? '2px solid #7c3aed' : '2px solid transparent',
+              cursor: 'pointer',
+              fontWeight: leaseTab === 'active' ? '600' : '400',
+              marginBottom: '-2px'
+            }}
+          >
+            ACTIVE
+          </button>
+          <button
+            onClick={() => setLeaseTab('pending')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              background: 'transparent',
+              color: leaseTab === 'pending' ? '#7c3aed' : '#6b7280',
+              borderBottom: leaseTab === 'pending' ? '2px solid #7c3aed' : '2px solid transparent',
+              cursor: 'pointer',
+              fontWeight: leaseTab === 'pending' ? '600' : '400',
+              marginBottom: '-2px'
+            }}
+          >
+            PENDING
+          </button>
+          <button
+            onClick={() => setLeaseTab('expired')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              background: 'transparent',
+              color: leaseTab === 'expired' ? '#7c3aed' : '#6b7280',
+              borderBottom: leaseTab === 'expired' ? '2px solid #7c3aed' : '2px solid transparent',
+              cursor: 'pointer',
+              fontWeight: leaseTab === 'expired' ? '600' : '400',
+              marginBottom: '-2px',
+              position: 'relative'
+            }}
+          >
+            EXPIRED
+            <span style={{ position: 'absolute', bottom: '-20px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.7rem', color: '#9ca3af', fontWeight: 'normal' }}>
+              add new demand
+            </span>
+          </button>
+        </div>
+
+        {filteredLeases.length === 0 ? (
+          <div className="sa-table-empty">No {leaseTab} leases found</div>
+        ) : (
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Contract Title</th>
+                  <th>Lease Type</th>
+                  <th>Landlord</th>
+                  <th>Tenant</th>
+                  <th>Documents</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLeases.map(lease => {
+                  const contractTitle = lease.contractTitle || lease.ContractTitle || `Contract N°${String(lease.id || lease.ID || '').padStart(4, '0')}`;
+                  const leaseType = lease.leaseType || lease.LeaseType || 'Residential';
+                  const landlord = lease.landlord || lease.Landlord || 'N/A';
+                  const tenant = lease.tenant || lease.Tenant || 'N/A';
+                  const documentURL = lease.documentURL || lease.DocumentURL;
+                  
+                  return (
+                    <tr key={lease.id || lease.ID}>
+                      <td>{contractTitle}</td>
+                      <td>{leaseType}</td>
+                      <td>{landlord}</td>
+                      <td>{tenant}</td>
+                      <td>
+                        <div className="sa-row-actions" style={{ gap: '8px' }}>
+                          {documentURL ? (
+                            <>
+                              <button
+                                className="table-action-button view"
+                                onClick={() => window.open(documentURL, '_blank')}
+                                style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #16a34a', padding: '6px 12px' }}
+                              >
+                                View
+                              </button>
+                              <button
+                                className="table-action-button edit"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = documentURL;
+                                  link.download = `${contractTitle}.pdf`;
+                                  link.click();
+                                }}
+                                style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', padding: '6px 12px' }}
+                              >
+                                Download
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="table-action-button edit"
+                              onClick={() => handleGenerateLeaseDocument(lease.id || lease.ID)}
+                              style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', padding: '6px 12px' }}
+                            >
+                              Generate
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderAutomation = () => (
     <div className="sa-section-card">
@@ -1658,22 +1737,210 @@ const AdministrativeDashboard = () => {
     );
   };
 
+  const handleApproveTransfer = async (id) => {
+    try {
+      setLoading(true);
+      await adminService.approveTransfer(id);
+      addNotification('Transfer request approved successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error approving transfer:', error);
+      addNotification(error.message || 'Failed to approve transfer request', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectTransfer = async (id) => {
+    const reason = window.prompt('Please provide a reason for rejection:');
+    if (!reason || reason.trim() === '') {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await adminService.rejectTransfer(id, reason);
+      addNotification('Transfer request rejected', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error rejecting transfer:', error);
+      addNotification(error.message || 'Failed to reject transfer request', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderTransfers = () => {
+    // Filter transfers by selected tab
+    const filteredTransfers = transfers.filter(transfer => {
+      const status = (transfer.status || transfer.Status || 'Pending').toLowerCase();
+      if (transferTab === 'approved') return status === 'approved';
+      if (transferTab === 'rejected') return status === 'rejected';
+      return status === 'pending';
+    });
+
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h2>Transfer Requests</h2>
+            <p>Review and approve payment/ownership transfer requests from tenants</p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
+          <button
+            onClick={() => setTransferTab('approved')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              background: 'transparent',
+              color: transferTab === 'approved' ? '#7c3aed' : '#6b7280',
+              borderBottom: transferTab === 'approved' ? '2px solid #7c3aed' : '2px solid transparent',
+              cursor: 'pointer',
+              fontWeight: transferTab === 'approved' ? '600' : '400',
+              marginBottom: '-2px'
+            }}
+          >
+            APPROVED CLIENTS
+          </button>
+          <button
+            onClick={() => setTransferTab('pending')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              background: 'transparent',
+              color: transferTab === 'pending' ? '#7c3aed' : '#6b7280',
+              borderBottom: transferTab === 'pending' ? '2px solid #7c3aed' : '2px solid transparent',
+              cursor: 'pointer',
+              fontWeight: transferTab === 'pending' ? '600' : '400',
+              marginBottom: '-2px'
+            }}
+          >
+            PENDING CLIENTS
+          </button>
+          <button
+            onClick={() => setTransferTab('rejected')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              background: 'transparent',
+              color: transferTab === 'rejected' ? '#7c3aed' : '#6b7280',
+              borderBottom: transferTab === 'rejected' ? '2px solid #7c3aed' : '2px solid transparent',
+              cursor: 'pointer',
+              fontWeight: transferTab === 'rejected' ? '600' : '400',
+              marginBottom: '-2px'
+            }}
+          >
+            REJECTED CLIENTS
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="sa-table-empty">Loading transfer requests...</div>
+        ) : filteredTransfers.length === 0 ? (
+          <div className="sa-table-empty">No {transferTab} transfer requests found</div>
+        ) : (
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Properties</th>
+                  <th>Current Client</th>
+                  <th>New Client</th>
+                  <th>Files</th>
+                  <th>Request Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTransfers.map((transfer, index) => {
+                  const transferId = transfer.id || transfer.ID || transfer.transferId;
+                  const status = transfer.status || transfer.Status || 'Pending';
+                  const isPending = status.toLowerCase() === 'pending';
+                  const currentClient = transfer.currentClient || transfer.Tenant || transfer.tenant || 'N/A';
+                  const currentClientYears = transfer.currentClientYears || 5;
+                  const newClient = transfer.newClient || transfer.RecipientName || transfer.recipientName || 'N/A';
+                  const files = transfer.files || transfer.Files || [];
+                  const requestDate = transfer.requestDate || transfer.createdAt || transfer.CreatedAt;
+                  
+                  return (
+                    <tr key={transferId || `transfer-${index}`}>
+                      <td>{transfer.property || transfer.Property || 'N/A'}</td>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{currentClient}</span>
+                          <span className="sa-cell-sub">Client for {currentClientYears} years</span>
+                        </div>
+                      </td>
+                      <td>{newClient}</td>
+                      <td>
+                        {files && files.length > 0 ? (
+                          <button
+                            className="table-action-button view"
+                            onClick={() => {
+                              // Open files modal or view files
+                              addNotification('Viewing files...', 'info');
+                            }}
+                            style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #16a34a' }}
+                          >
+                            View
+                          </button>
+                        ) : (
+                          <span style={{ color: '#9ca3af' }}>—</span>
+                        )}
+                      </td>
+                      <td>
+                        {requestDate
+                          ? new Date(requestDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+                          : 'N/A'}
+                      </td>
+                      <td>
+                        {isPending ? (
+                          <div className="sa-row-actions" style={{ gap: '8px' }}>
+                            <button
+                              className="table-action-button edit"
+                              onClick={() => handleApproveTransfer(transferId)}
+                              disabled={loading}
+                              style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', padding: '6px 12px' }}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              className="table-action-button delete"
+                              onClick={() => handleRejectTransfer(transferId)}
+                              disabled={loading}
+                              style={{ backgroundColor: '#dc2626', color: 'white', border: 'none', padding: '6px 12px' }}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                            {status === 'Approved' ? '✓ Approved' : status === 'Rejected' ? '✗ Rejected' : status}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = (currentTab = activeTab) => {
     switch (currentTab) {
       case 'overview':
         return renderOverview();
-      case 'inbox':
-        return renderInbox();
-      case 'documents':
-        return renderDocuments();
-      case 'utilities':
-        return renderUtilities();
-      case 'debt':
-        return renderDebt();
-      case 'reminders':
-        return renderReminders();
       case 'leases':
         return renderLeases();
+      case 'transfers':
+        return renderTransfers();
       case 'automation':
         return renderAutomation();
       case 'advertisements':
@@ -1737,11 +2004,14 @@ const AdministrativeDashboard = () => {
             e.preventDefault();
             const formData = new FormData(e.target);
             const newLease = {
+              contractTitle: formData.get('contractTitle') || undefined,
               tenant: formData.get('tenant'),
               property: formData.get('property'),
+              landlord: formData.get('landlord'),
+              leaseType: formData.get('leaseType'),
               startDate: formData.get('start'),
               endDate: formData.get('end'),
-              rent: formData.get('rent'),
+              rent: parseFloat(formData.get('rent')),
               status: 'Pending'
             };
             adminService.createLease(newLease).then(() => {
@@ -1756,12 +2026,37 @@ const AdministrativeDashboard = () => {
         >
           <div className="form-row">
             <div className="form-group">
+              <label htmlFor="lease-contract-title">Contract Title (Optional)</label>
+              <input type="text" id="lease-contract-title" name="contractTitle" placeholder="Contract N°0024" />
+            </div>
+            <div className="form-group">
+              <label htmlFor="lease-type">Lease Type</label>
+              <select id="lease-type" name="leaseType" required>
+                <option value="">Select Type</option>
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Seasonnier">Seasonnier</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
               <label htmlFor="lease-tenant">Tenant</label>
               <input type="text" id="lease-tenant" name="tenant" placeholder="Tenant name" required />
             </div>
             <div className="form-group">
+              <label htmlFor="lease-landlord">Landlord</label>
+              <input type="text" id="lease-landlord" name="landlord" placeholder="Landlord name" required />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
               <label htmlFor="lease-property">Property</label>
               <input type="text" id="lease-property" name="property" placeholder="Property address" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="lease-rent">Monthly Rent</label>
+              <input type="number" id="lease-rent" name="rent" min="0" step="0.01" placeholder="0.00 XOF" required />
             </div>
           </div>
           <div className="form-row">
@@ -1773,10 +2068,6 @@ const AdministrativeDashboard = () => {
               <label htmlFor="lease-end">End Date</label>
               <input type="date" id="lease-end" name="end" required />
             </div>
-          </div>
-          <div className="form-group">
-            <label htmlFor="lease-rent">Monthly Rent</label>
-            <input type="number" id="lease-rent" name="rent" min="0" step="0.01" placeholder="0.00 XOF" required />
           </div>
           <div className="modal-footer">
             <button type="button" className="action-button secondary" onClick={() => setShowLeaseModal(false)}>

@@ -138,4 +138,33 @@ export const technicianService = {
   getAdvertisements: async () => {
     return apiRequest(buildApiUrl('/api/technician/advertisements'));
   },
+
+  // Technician Contacts Management
+  getTechnicianContacts: async () => {
+    return apiRequest(buildApiUrl('/api/technician/technician-contacts'), {
+      method: 'GET',
+    });
+  },
+
+  createTechnicianContact: async (contactData) => {
+    return apiRequest(buildApiUrl('/api/technician/technician-contacts'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contactData),
+    });
+  },
+
+  updateTechnicianContact: async (id, contactData) => {
+    return apiRequest(buildApiUrl(`/api/technician/technician-contacts/${id}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contactData),
+    });
+  },
+
+  deleteTechnicianContact: async (id) => {
+    return apiRequest(buildApiUrl(`/api/technician/technician-contacts/${id}`), {
+      method: 'DELETE',
+    });
+  },
 };

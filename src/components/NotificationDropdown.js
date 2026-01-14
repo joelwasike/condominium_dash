@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Bell, X, Check, Settings } from 'lucide-react';
-import { t } from '../utils/i18n';
+import { t, getLanguage } from '../utils/i18n';
 import { notificationService } from '../services/notificationService';
 import './NotificationDropdown.css';
 
@@ -8,7 +8,17 @@ const NotificationDropdown = ({ userId: propUserId }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [language, setLanguage] = useState(getLanguage());
   const dropdownRef = useRef(null);
+  
+  // Listen for language changes to trigger re-render
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      setLanguage(getLanguage());
+    };
+    window.addEventListener('languageChange', handleLanguageChange);
+    return () => window.removeEventListener('languageChange', handleLanguageChange);
+  }, []);
 
   // Get userId from localStorage if not provided as prop
   const userId = useMemo(() => {

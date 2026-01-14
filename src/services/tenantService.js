@@ -125,5 +125,11 @@ export const tenantService = {
   getSecurityDeposit: async () => {
     const url = buildApiUrl('/api/tenant/deposits');
     return await apiRequest(url);
+  },
+
+  // Get technician contacts
+  getTechnicianContacts: async () => {
+    const url = buildApiUrl('/api/tenant/technician-contacts');
+    return await apiRequest(url);
   }
 };

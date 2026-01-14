@@ -12,7 +12,8 @@ import {
   FileText,
   TrendingUp,
   UserCheck,
-  Megaphone
+  Megaphone,
+  ArrowUp
 } from 'lucide-react';
 import {
   LineChart,
@@ -35,6 +36,7 @@ import RoleLayout from '../components/RoleLayout';
 import Modal from '../components/Modal';
 import SettingsPage from './SettingsPage';
 import AnalyticsPage from './AnalyticsPage';
+import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 import '../pages/TechnicianDashboard.css';
 import './SuperAdminDashboard.css';
@@ -55,6 +57,7 @@ const AgencyDirectorDashboard = () => {
   const [accountingData, setAccountingData] = useState(null);
   const [landlordPayments, setLandlordPayments] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
+  const [selectedAccountingView, setSelectedAccountingView] = useState('landlord-payments'); // 'landlord-payments', 'expenses', 'revenue', etc.
 
   // Auto-slide carousel for advertisements on overview page
   useEffect(() => {
@@ -99,7 +102,8 @@ const AgencyDirectorDashboard = () => {
     status: 'Vacant',
     units: [] 
   });
-  const [ownerForm, setOwnerForm] = useState({ name: '', email: '', phone: '', password: '' });
+  const [ownerForm, setOwnerForm] = useState({ name: '', email: '', phone: '', password: '', document: null });
+  const [ownerDocumentPreview, setOwnerDocumentPreview] = useState(null);
   
   // Messaging states
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -129,6 +133,8 @@ const AgencyDirectorDashboard = () => {
   const [expensesPerBuilding, setExpensesPerBuilding] = useState({});
   const [expensesPerOwner, setExpensesPerOwner] = useState({});
   const [internalExpenses, setInternalExpenses] = useState([]);
+  const [allExpenses, setAllExpenses] = useState([]);
+  const [revenueData, setRevenueData] = useState([]);
   const [commissionsData, setCommissionsData] = useState({});
   const [allBuildingsReport, setAllBuildingsReport] = useState([]);
   const [unpaidRentReport, setUnpaidRentReport] = useState(null);
@@ -865,7 +871,8 @@ const AgencyDirectorDashboard = () => {
   // Owner management handlers
   const handleOpenAddOwner = () => {
     setEditingOwner(null);
-    setOwnerForm({ name: '', email: '', phone: '', password: '' });
+    setOwnerForm({ name: '', email: '', phone: '', password: '', document: null });
+    setOwnerDocumentPreview(null);
     setShowOwnerModal(true);
   };
 
@@ -875,26 +882,73 @@ const AgencyDirectorDashboard = () => {
       name: owner.name || owner.Name || '',
       email: owner.email || owner.Email || '',
       phone: owner.phone || owner.Phone || '',
-      password: '' // Password is not pre-filled for security
+      password: '', // Password is not pre-filled for security
+      document: null
     });
+    setOwnerDocumentPreview(owner.document || owner.Document || null);
     setShowOwnerModal(true);
+  };
+  
+  const handleOwnerDocumentChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setOwnerForm({ ...ownerForm, document: file });
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setOwnerDocumentPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmitOwner = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true);
+      
+      // Upload document if provided
+      let documentUrl = null;
+      if (ownerForm.document) {
+        const { cloudinaryService } = await import('../services/cloudinaryService');
+        const uploadResult = await cloudinaryService.uploadFile(ownerForm.document, 'real-estate-owners');
+        if (uploadResult.success) {
+          documentUrl = uploadResult.url;
+        } else {
+          addNotification('Failed to upload document. Please try again.', 'error');
+          setLoading(false);
+          return;
+        }
+      }
+      
+      const ownerData = {
+        ...ownerForm,
+        document: documentUrl || undefined
+      };
+      
       if (editingOwner) {
-        await agencyDirectorService.updateOwner(editingOwner.id || editingOwner.ID, ownerForm);
+        await agencyDirectorService.updateOwner(editingOwner.id || editingOwner.ID, ownerData);
         addNotification('Owner updated successfully!', 'success');
       } else {
-        await agencyDirectorService.createOwner(ownerForm);
+        await agencyDirectorService.createOwner(ownerData);
         addNotification('Owner created successfully!', 'success');
       }
+      
+      // Reset form and close modal
+      setOwnerForm({ name: '', email: '', phone: '', password: '', document: null });
+      setOwnerDocumentPreview(null);
+      setEditingOwner(null);
       setShowOwnerModal(false);
-      await loadData();
+      
+      // Reload owners data
+      const ownersData = await agencyDirectorService.getOwners().catch(() => []);
+      setOwners(Array.isArray(ownersData) ? ownersData : []);
+      
+      setLoading(false);
     } catch (error) {
       console.error('Error saving owner:', error);
       addNotification(error.message || (editingOwner ? 'Failed to update owner' : 'Failed to create owner'), 'error');
+      setLoading(false);
     }
   };
 
@@ -1024,320 +1078,182 @@ const AgencyDirectorDashboard = () => {
       return <div className="sa-table-empty">Loading overview data...</div>;
     }
 
-    const data = overviewData || {};
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    const userName = currentUser.name || currentUser.Name || 'Agency Director';
-
-    // Calculate chart data
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const currentRent = data.totalRentCollected || 0;
-    const currentOccupancy = data.overallOccupancyRate || 0;
-    const chartData = months.map((month, index) => ({
-      month,
-      rent: Math.round(currentRent * (0.7 + (index * 0.05))),
-      occupancy: Math.round(currentOccupancy * (0.85 + (index * 0.025)))
-    }));
+    const stats = overviewData || {};
+    
+    // Calculate statistics from loaded data
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Number of properties
+    const totalProperties = properties.length || stats.totalProperties || stats.totalManagedApartments || 0;
+    
+    // Number of vacant apartments
+    const vacantApartments = properties.filter(prop => {
+      const status = (prop.Status || prop.status || '').toLowerCase();
+      return status === 'vacant';
+    }).length;
+    
+    // Number of occupied apartments
+    const occupiedApartments = properties.filter(prop => {
+      const status = (prop.Status || prop.status || '').toLowerCase();
+      return status === 'occupied';
+    }).length;
+    
+    // Total rent collected
+    const totalRentCollected = stats.totalRentCollected || 0;
+    
+    // Overall occupancy rate
+    const overallOccupancyRate = stats.overallOccupancyRate || (totalProperties > 0 ? (occupiedApartments / totalProperties * 100).toFixed(1) : 0);
+    
+    // Active tenants
+    const activeTenants = stats.numberOfActiveTenants || stats.activeTenants || 0;
+    
+    // Total unpaid rent
+    const totalUnpaidRent = stats.totalUnpaidRent || 0;
+    
+    // Calculate percentage change (placeholder)
+    const percentageChange = 14.2;
 
     return (
     <div className="sa-overview-page">
-        <div className="sa-overview-top">
-          <div className="sa-overview-chart-card">
-            <div className="sa-card-header">
-              <h2>Agency Director Dashboard</h2>
-              <span className="sa-card-subtitle">Welcome, {userName}!</span>
-            </div>
-            <div className="sa-mini-legend">
-              <span className="sa-legend-item sa-legend-expected">Rent Collected (XOF)</span>
-              <span className="sa-legend-item sa-legend-current">Occupancy Rate (%)</span>
-            </div>
-            <div style={{ width: '100%', height: '200px', marginTop: '20px' }}>
-              <ResponsiveContainer>
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
-                >
-                  <defs>
-                    <linearGradient id="colorRent" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorOccupancy" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                  <XAxis 
-                    dataKey="month" 
-                    stroke="#6b7280" 
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#e5e7eb' }}
-                  />
-                  <YAxis 
-                    yAxisId="left" 
-                    stroke="#6b7280" 
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#e5e7eb' }}
-                  />
-                  <YAxis 
-                    yAxisId="right" 
-                    orientation="right" 
-                    stroke="#6b7280" 
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#e5e7eb' }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                      padding: '8px 12px'
-                    }}
-                    formatter={(value, name) => {
-                      if (name === 'rent') return [`${value.toLocaleString()} XOF`, 'Rent Collected'];
-                      if (name === 'occupancy') return [`${value}%`, 'Occupancy Rate'];
-                      return value;
-                    }}
-                  />
-                  <Legend 
-                    wrapperStyle={{ paddingTop: '10px' }}
-                    iconType="line"
-                  />
-                  <Area
-                    yAxisId="left"
-                    type="natural"
-                    dataKey="rent"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    fill="url(#colorRent)"
-                    dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
-                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    name="Rent Collected"
-                  />
-                  <Area
-                    yAxisId="right"
-                    type="natural"
-                    dataKey="occupancy"
-                    stroke="#10b981"
-                    strokeWidth={3}
-                    fill="url(#colorOccupancy)"
-                    dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
-                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    name="Occupancy Rate"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+        <div className="sa-overview-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '24px' }}>
+          {/* Total Rent Collected - Blue Card */}
+          <div className="sa-metric-card sa-metric-primary" style={{ backgroundColor: '#3b82f6', color: '#fff' }}>
+            <p className="sa-metric-label" style={{ color: '#fff', opacity: 0.9 }}>Total Rent Collected</p>
+            <p className="sa-metric-period" style={{ color: '#fff', opacity: 0.8 }}>This Month</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ color: '#fff', fontSize: '2rem', fontWeight: 'bold' }}>
+                {totalRentCollected.toLocaleString()} XOF
+              </p>
+              <ArrowUp size={20} style={{ color: '#fff', opacity: 0.8 }} />
             </div>
           </div>
 
-          <div className="sa-overview-metrics">
-        <div className="sa-metric-card sa-metric-primary">
-              <p className="sa-metric-label">Total Rent Collected</p>
-              <p className="sa-metric-period">This Month</p>
-          <p className="sa-metric-value">
-                {(data.totalRentCollected || 0).toLocaleString()} XOF
-          </p>
+          {/* Overall Occupancy Rate - Blue Card */}
+          <div className="sa-metric-card sa-metric-primary" style={{ backgroundColor: '#3b82f6', color: '#fff' }}>
+            <p className="sa-metric-label" style={{ color: '#fff', opacity: 0.9 }}>Overall Occupancy Rate</p>
+            <p className="sa-metric-period" style={{ color: '#fff', opacity: 0.8 }}>Current</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ color: '#fff', fontSize: '2rem', fontWeight: 'bold' }}>
+                {typeof overallOccupancyRate === 'number' ? overallOccupancyRate.toFixed(1) : overallOccupancyRate}%
+              </p>
+              <ArrowUp size={20} style={{ color: '#fff', opacity: 0.8 }} />
         </div>
-        <div className="sa-metric-card">
-              <p className="sa-metric-label">Overall Occupancy Rate</p>
-          <p className="sa-metric-number">
-                {data.overallOccupancyRate ? `${data.overallOccupancyRate.toFixed(1)}%` : '0%'}
-          </p>
         </div>
+
+          {/* Active Tenants - White Card */}
         <div className="sa-metric-card">
               <p className="sa-metric-label">Active Tenants</p>
-              <p className="sa-metric-value">
-                {data.numberOfActiveTenants || data.activeTenants || 0}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {activeTenants}
           </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>+{percentageChange}%</span>
+                <TrendingUp size={16} />
         </div>
+            </div>
+          </div>
+
+          {/* Total Managed Apartments - White Card */}
         <div className="sa-metric-card">
               <p className="sa-metric-label">Total Managed Apartments</p>
-              <p className="sa-metric-number">
-                {data.totalManagedApartments || data.totalProperties || properties.length || 0}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {totalProperties}
               </p>
+              <ArrowUp size={20} style={{ color: '#6b7280' }} />
             </div>
-            {/* Advertisements Display - Replacing Banner Card */}
-            {advertisements.length > 0 ? (
-              <div style={{
-                gridColumn: 'span 2',
-                minHeight: '400px',
-                padding: '32px',
-                backgroundColor: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '24px',
-                overflow: 'hidden',
-                position: 'relative'
-              }}>
-                <h3 style={{
-                  margin: '0 0 20px 0',
-                  fontSize: '1.5rem',
-                  fontWeight: '600',
-                  color: '#1f2937'
-                }}>
-                  Advertisements
-                </h3>
-                <div style={{
-                  position: 'relative',
-                  overflow: 'hidden',
-                  flex: 1
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    transform: `translateX(-${currentAdIndex * 100}%)`,
-                    transition: 'transform 0.5s ease-in-out',
-                    width: `${advertisements.length * 100}%`
-                  }}>
-                    {advertisements.map((ad, index) => {
-                    const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-                    const fullImageUrl = imageUrl 
-                      ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                      : null;
+          </div>
 
-                    return (
-                      <div 
-                        key={`ad-${ad.ID || ad.id || index}`}
-                        style={{
-                          width: `${100 / advertisements.length}%`,
-                          padding: '20px',
-                          backgroundColor: '#f9fafb',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          flexShrink: 0
-                        }}
-                      >
-                        {fullImageUrl && (
-                          <img 
-                            src={fullImageUrl} 
-                            alt={ad.Title || ad.title || 'Advertisement'} 
-                            style={{
-                              width: '100%',
-                              height: 'auto',
-                              maxHeight: '250px',
-                              objectFit: 'contain',
-                              borderRadius: '8px',
-                              marginBottom: '16px'
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        )}
-                        <h3 style={{ 
-                          margin: '0 0 8px 0', 
-                          fontSize: '1.1rem', 
-                          color: '#1f2937',
-                          fontWeight: '600'
-                        }}>
-                          {ad.Title || ad.title || 'Untitled Advertisement'}
-                        </h3>
-                        <p style={{ 
-                          margin: '0 0 12px 0', 
-                          fontSize: '0.9rem', 
-                          color: '#6b7280',
-                          lineHeight: '1.5'
-                        }}>
-                          {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
-                        </p>
-                        {ad.CreatedAt && (
-                          <span style={{ 
-                            fontSize: '0.8rem', 
-                            color: '#9ca3af'
-                          }}>
-                            Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
-                          </span>
-                        )}
+          {/* Vacant Apartments - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Vacant Apartments</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {vacantApartments}
+              </p>
+              <ArrowUp size={20} style={{ color: '#6b7280' }} />
                       </div>
-                    );
-                  })}
                   </div>
                   
-                  {/* Carousel Indicators */}
-                  {advertisements.length > 1 && (
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '16px',
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)'
-                    }}>
-                      {advertisements.map((_, index) => (
-                        <button
-                          key={`indicator-${index}`}
-                          onClick={() => {
-                            setCurrentAdIndex(index);
-                            if (carouselIntervalRef.current) {
-                              clearInterval(carouselIntervalRef.current);
-                            }
-                            carouselIntervalRef.current = setInterval(() => {
-                              setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
-                            }, 5000);
-                          }}
-                          style={{
-                            width: index === currentAdIndex ? '24px' : '8px',
-                            height: '8px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: index === currentAdIndex ? '#3b82f6' : '#d1d5db',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease'
-                          }}
-                        />
-                      ))}
+          {/* Occupied Apartments - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Occupied Apartments</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {occupiedApartments}
+              </p>
+              <ArrowUp size={20} style={{ color: '#6b7280' }} />
                     </div>
-                  )}
                 </div>
-              </div>
-            ) : (
-              <div className="sa-banner-card">
-                <div className="sa-banner-text">
-                  <h3>Agency Management</h3>
-                  <p>
-                    Manage your properties, tenants, and financial operations all in one place.
+
+          {/* Total Unpaid Rent - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Unpaid Rent</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold', color: '#dc2626' }}>
+                {totalUnpaidRent.toLocaleString()} XOF
                   </p>
                 </div>
               </div>
-            )}
+
+          {/* Quick Stats - White Card */}
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Quick Stats</p>
+            <p className="sa-metric-period">Overview</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <p className="sa-metric-value" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                {users.length || 0}
+              </p>
+              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Users</span>
+            </div>
           </div>
         </div>
 
+        {/* Properties Overview Table */}
         <div className="sa-section-card" style={{ marginTop: '24px' }}>
           <div className="sa-section-header">
-            <h3>Quick Actions</h3>
-            <p>Manage your agency operations and view key metrics.</p>
+            <h3>Properties Overview</h3>
           </div>
-          <div style={{ padding: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('management')}>
-                <p className="sa-metric-label">Total Unpaid Rent</p>
-                <p className="sa-metric-value" style={{ color: '#dc2626' }}>
-                  {(data.totalUnpaidRent || 0).toLocaleString()} FCFA
-                </p>
+          {loading ? (
+            <div className="sa-table-empty">Loading properties...</div>
+          ) : properties.length === 0 ? (
+            <div className="sa-table-empty">No properties found</div>
+          ) : (
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Property</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Rent</th>
+                    <th>Tenant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {properties.slice(0, 10).map((property, index) => (
+                    <tr key={property.id || property.ID || `property-${index}`}>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{property.address || property.Address || property.name || 'N/A'}</span>
               </div>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('accounting')}>
-                <p className="sa-metric-label">Reimbursements to Owners</p>
-          <p className="sa-metric-value">
-                  {(data.totalReimbursementsToOwners || 0).toLocaleString()} FCFA
-          </p>
+                      </td>
+                      <td>{property.type || property.Type || 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${(property.Status || property.status || 'vacant').toLowerCase()}`}>
+                          {property.Status || property.status || 'Vacant'}
+                        </span>
+                      </td>
+                      <td>{property.rent || property.Rent ? `${(property.rent || property.Rent).toLocaleString()} XOF` : 'N/A'}</td>
+                      <td>{property.tenant || property.Tenant || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
         </div>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('accounting')}>
-                <p className="sa-metric-label">Agency Commissions</p>
-                <p className="sa-metric-value">
-                  {(data.totalAgencyCommissions || data.agencyCommissionsCurrentMonth || 0).toLocaleString()} FCFA
-          </p>
-        </div>
-            </div>
-        </div>
+          )}
       </div>
     </div>
   );
@@ -1889,13 +1805,21 @@ const AgencyDirectorDashboard = () => {
           <p>Revenue, expenses, and profit metrics</p>
         </div>
         <div className="sa-overview-metrics" style={{ width: '100%' }}>
-          <div className="sa-metric-card sa-metric-primary">
+          <div 
+            className="sa-metric-card sa-metric-primary" 
+            style={{ cursor: 'pointer', border: selectedAccountingView === 'total-revenue' ? '2px solid #3b82f6' : '1px solid #e5e7eb' }}
+            onClick={() => setSelectedAccountingView('total-revenue')}
+          >
             <p className="sa-metric-label">Total Revenue</p>
             <p className="sa-metric-value">
               {(financialData?.totalRevenue || 0).toLocaleString()} FCFA
             </p>
           </div>
-          <div className="sa-metric-card">
+          <div 
+            className="sa-metric-card" 
+            style={{ cursor: 'pointer', border: selectedAccountingView === 'total-expenses' ? '2px solid #3b82f6' : '1px solid #e5e7eb' }}
+            onClick={() => setSelectedAccountingView('total-expenses')}
+          >
             <p className="sa-metric-label">Total Expenses</p>
             <p className="sa-metric-value">
               {(financialData?.totalExpenses || 0).toLocaleString()} FCFA
@@ -1907,7 +1831,11 @@ const AgencyDirectorDashboard = () => {
               {(financialData?.netProfit || 0).toLocaleString()} FCFA
             </p>
           </div>
-          <div className="sa-metric-card">
+          <div 
+            className="sa-metric-card" 
+            style={{ cursor: 'pointer', border: selectedAccountingView === 'total-collections' ? '2px solid #3b82f6' : '1px solid #e5e7eb' }}
+            onClick={() => setSelectedAccountingView('total-collections')}
+          >
             <p className="sa-metric-label">Total Collections</p>
             <p className="sa-metric-value">
               {(financialData?.totalCollections || 0).toLocaleString()} FCFA
@@ -1934,6 +1862,79 @@ const AgencyDirectorDashboard = () => {
           <p>Manage landlord payment approvals</p>
         </div>
         <div className="sa-table-wrapper">
+          {selectedAccountingView === 'total-expenses' ? (
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Building</th>
+                  <th>Owner</th>
+                  <th>Date</th>
+                  <th>Category</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allExpenses.length > 0 ? allExpenses.map((expense, index) => (
+                  <tr key={`expense-${index}`}>
+                    <td>{index + 1}</td>
+                    <td>{expense.description || expense.Description || expense.reason || expense.Reason || 'N/A'}</td>
+                    <td>{(expense.amount || expense.Amount || 0).toLocaleString()} FCFA</td>
+                    <td>{expense.building || expense.Building || 'N/A'}</td>
+                    <td>{expense.owner || expense.Owner || 'N/A'}</td>
+                    <td>
+                      {expense.date || expense.Date
+                        ? new Date(expense.date || expense.Date).toLocaleDateString()
+                        : 'N/A'}
+                    </td>
+                    <td>{expense.category || expense.Category || 'General'}</td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={7} className="sa-table-empty">No expenses found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : selectedAccountingView === 'revenue' || selectedAccountingView === 'collections' ? (
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Source</th>
+                  <th>Amount</th>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(revenueData) && revenueData.length > 0 ? revenueData.map((item, index) => (
+                  <tr key={`revenue-${index}`}>
+                    <td>{index + 1}</td>
+                    <td>{item.source || item.Source || item.tenant || item.Tenant || 'N/A'}</td>
+                    <td>{(item.amount || item.Amount || 0).toLocaleString()} FCFA</td>
+                    <td>
+                      {item.date || item.Date
+                        ? new Date(item.date || item.Date).toLocaleDateString()
+                        : 'N/A'}
+                    </td>
+                    <td>{item.type || item.Type || 'Rent'}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(item.status || item.Status || 'completed').toLowerCase()}`}>
+                        {item.status || item.Status || 'Completed'}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="sa-table-empty">No revenue/collection records found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : selectedAccountingView === 'landlord-payments' ? (
           <table className="sa-table">
             <thead>
               <tr>
@@ -1998,6 +1999,13 @@ const AgencyDirectorDashboard = () => {
               )}
             </tbody>
           </table>
+          ) : (
+            <div className="sa-table-empty">
+              {selectedAccountingView === 'profit' && 'Profit is calculated as Revenue minus Expenses. View Revenue and Expenses for detailed breakdown.'}
+              {selectedAccountingView === 'commission' && 'No commission records available. Commission is calculated from landlord payments.'}
+              {selectedAccountingView === 'pending' && 'No pending payment records available.'}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -4015,9 +4023,35 @@ const AgencyDirectorDashboard = () => {
               placeholder={editingOwner ? 'Leave blank to keep current password' : ''}
             />
           </div>
+          <div className="sa-form-group">
+            <label>Document {!editingOwner ? '(Optional)' : ''}</label>
+            <input 
+              type="file" 
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={handleOwnerDocumentChange}
+            />
+            {ownerDocumentPreview && (
+              <div style={{ marginTop: '8px' }}>
+                {ownerDocumentPreview.startsWith('data:') ? (
+                  <img src={ownerDocumentPreview} alt="Document preview" style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px' }} />
+                ) : (
+                  <a href={ownerDocumentPreview} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                    View Current Document
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
           <div className="sa-form-actions">
-            <button type="button" className="sa-outline-button" onClick={() => setShowOwnerModal(false)}>Cancel</button>
-            <button type="submit" className="sa-primary-cta">{editingOwner ? 'Update' : 'Create'} Owner</button>
+            <button type="button" className="sa-outline-button" onClick={() => {
+              setShowOwnerModal(false);
+              setOwnerForm({ name: '', email: '', phone: '', password: '', document: null });
+              setOwnerDocumentPreview(null);
+              setEditingOwner(null);
+            }}>Cancel</button>
+            <button type="submit" className="sa-primary-cta" disabled={loading}>
+              {loading ? 'Saving...' : (editingOwner ? 'Update' : 'Create') + ' Owner'}
+            </button>
           </div>
         </form>
       </Modal>

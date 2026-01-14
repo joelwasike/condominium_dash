@@ -23,6 +23,7 @@ import ContractUpload from '../components/ContractUpload';
 import ReportSubmission from '../components/ReportSubmission';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
+import { t, getLanguage } from '../utils/i18n';
 import './LandlordDashboard.css';
 import './SalesManagerDashboard.css';
 import '../components/RoleLayout.css';
@@ -733,22 +734,33 @@ const LandlordDashboard = () => {
     addNotification('Financial report generated and downloaded!', 'success');
   };
 
+  // State to force re-render when language changes
+  const [language, setLanguage] = useState(getLanguage());
+  
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      setLanguage(getLanguage());
+    };
+    window.addEventListener('languageChange', handleLanguageChange);
+    return () => window.removeEventListener('languageChange', handleLanguageChange);
+  }, []);
+
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: 'Overview', icon: Home },
-      { id: 'properties', label: 'Property & Asset', icon: Home },
-      { id: 'tenants', label: 'Tenants', icon: Users },
-      { id: 'payments', label: 'Payments & Cash Flow', icon: DollarSign },
-      { id: 'rents', label: 'Rents Tracking', icon: DollarSign },
-      { id: 'expenses', label: 'Expenses', icon: FileText },
-      { id: 'works', label: 'Works & Claims', icon: Wrench },
-      { id: 'documents', label: 'Documents', icon: FileText },
-      { id: 'tracking', label: 'Business Tracking', icon: BarChart3 },
-      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
-      { id: 'chat', label: 'Messaging', icon: MessageCircle },
-      { id: 'settings', label: 'Profile Settings', icon: Settings }
+      { id: 'overview', label: t('nav.overview'), icon: Home },
+      { id: 'properties', label: t('nav.propertyAsset'), icon: Home },
+      { id: 'tenants', label: t('nav.tenants'), icon: Users },
+      { id: 'payments', label: t('nav.paymentsCashFlow'), icon: DollarSign },
+      { id: 'rents', label: t('nav.rentsTracking'), icon: DollarSign },
+      { id: 'expenses', label: t('nav.expenses'), icon: FileText },
+      { id: 'works', label: t('nav.worksClaims'), icon: Wrench },
+      { id: 'documents', label: t('nav.documents'), icon: FileText },
+      { id: 'tracking', label: t('nav.businessTracking'), icon: BarChart3 },
+      { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
+      { id: 'chat', label: t('nav.messaging'), icon: MessageCircle },
+      { id: 'settings', label: t('nav.profileSettings'), icon: Settings }
     ],
-    []
+    [language]
   );
 
   const renderOverview = () => {

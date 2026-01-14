@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import NotificationDropdown from './NotificationDropdown';
 import ProfileDropdown from './ProfileDropdown';
 import LanguageSelector from './LanguageSelector';
-import { t } from '../utils/i18n';
+import { t, getLanguage } from '../utils/i18n';
 import './RoleLayout.css';
 
 const roleLabels = {
@@ -130,7 +130,7 @@ const RoleLayout = ({
     }
   };
 
-  const userProfile = useMemo(() => {
+  const [userProfile, setUserProfile] = useState(() => {
     try {
       const stored = localStorage.getItem('user');
       return stored ? JSON.parse(stored) : null;
@@ -138,6 +138,44 @@ const RoleLayout = ({
       console.error('Error parsing stored user:', error);
       return null;
     }
+  });
+
+  // Update userProfile when localStorage changes (e.g., profile picture upload)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      // Handle cross-tab storage events
+      if (e && e.key === 'user') {
+        try {
+          const updated = JSON.parse(e.newValue || '{}');
+          setUserProfile(updated);
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+    };
+
+    const handleCustomUpdate = () => {
+      // Handle custom event for same-tab updates
+      try {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          const updated = JSON.parse(stored);
+          setUserProfile(updated);
+        }
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+      }
+    };
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+    // Listen for custom event (from same tab)
+    window.addEventListener('userProfileUpdated', handleCustomUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userProfileUpdated', handleCustomUpdate);
+    };
   }, []);
 
   const roleLabel = userProfile?.role ? (roleLabels[userProfile.role] || userProfile.role) : 'User';

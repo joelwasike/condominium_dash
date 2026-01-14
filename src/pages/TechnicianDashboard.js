@@ -15,7 +15,10 @@ import {
   Plus,
   Filter,
   Search,
-  Megaphone
+  Megaphone,
+  Phone,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { technicianService } from '../services/technicianService';
 import { messagingService } from '../services/messagingService';
@@ -25,6 +28,7 @@ import './TechnicianDashboard.css';
 import './SuperAdminDashboard.css';
 import SettingsPage from './SettingsPage';
 import RoleLayout from '../components/RoleLayout';
+import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 
 const TechnicianDashboard = () => {
@@ -51,6 +55,19 @@ const TechnicianDashboard = () => {
   const [showPhotoUploadModal, setShowPhotoUploadModal] = useState(false);
   const [selectedInspectionForPhoto, setSelectedInspectionForPhoto] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
+  const [showMaintenanceViewModal, setShowMaintenanceViewModal] = useState(false);
+  const [selectedMaintenanceRequest, setSelectedMaintenanceRequest] = useState(null);
+  const [technicianContacts, setTechnicianContacts] = useState([]);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    category: '',
+    phone: '',
+    email: '',
+    address: '',
+    description: ''
+  });
   
   // Filter states
   
@@ -99,15 +116,33 @@ const TechnicianDashboard = () => {
         return;
       }
       
-      const [overview, inspection, task] = await Promise.all([
-        technicianService.getOverview(),
-        technicianService.listInspections(),
-        technicianService.listTasks(),
+      const [overview, inspection, task, maintenanceRequests, contacts] = await Promise.all([
+        technicianService.getOverview().catch(() => null),
+        technicianService.listInspections().catch(() => []),
+        technicianService.listTasks().catch(() => []),
+        technicianService.listMaintenanceRequests().catch(() => []),
+        technicianService.getTechnicianContacts().catch(() => [])
       ]);
       
       setOverviewData(overview);
       setInspections(Array.isArray(inspection) ? inspection : []);
       setTasks(Array.isArray(task) ? task : []);
+      
+      // Handle maintenance requests - could be array or object with maintenanceRequests property
+      if (maintenanceRequests) {
+        if (Array.isArray(maintenanceRequests)) {
+          setRequests(maintenanceRequests);
+        } else if (maintenanceRequests.maintenanceRequests && Array.isArray(maintenanceRequests.maintenanceRequests)) {
+          setRequests(maintenanceRequests.maintenanceRequests);
+        } else {
+          setRequests([]);
+        }
+      } else {
+        setRequests([]);
+      }
+      
+      // Set technician contacts
+      setTechnicianContacts(Array.isArray(contacts) ? contacts : []);
     } catch (error) {
       console.error('Error loading technician data:', error);
       if (!isDemoMode()) {
@@ -568,7 +603,9 @@ const TechnicianDashboard = () => {
     () => [
       { id: 'overview', label: 'Overview', icon: Building },
       { id: 'inspections', label: 'Inspections', icon: CheckCircle },
+      { id: 'maintenance', label: 'Maintenance', icon: Wrench },
       { id: 'tasks', label: 'Tasks', icon: Calendar },
+      { id: 'technician-contacts', label: 'Technician Contacts', icon: Phone },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Settings', icon: Settings }
@@ -928,24 +965,26 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {[].length === 0 ? (
+            {requests.length === 0 ? (
               <tr>
                   <td colSpan={11} className="sa-table-empty">
                   No maintenance requests found
                 </td>
               </tr>
             ) : (
-                [].map((maintenance, index) => {
+                requests.map((maintenance, index) => {
                   const maintenanceId = maintenance.id || maintenance.ID;
                   const property = maintenance.property || maintenance.Property;
-                  const issue = maintenance.issue || maintenance.Issue;
+                  const issue = maintenance.title || maintenance.Title || maintenance.issue || maintenance.Issue || 'Maintenance Request';
+                  const description = maintenance.description || maintenance.Description || '';
                   const priority = (maintenance.priority || maintenance.Priority || 'normal').toLowerCase();
                   const status = maintenance.status || maintenance.Status || 'Pending';
-                  const assigned = maintenance.assigned || maintenance.Assigned || 'Unassigned';
+                  const assigned = maintenance.assigned || maintenance.Assigned || maintenance.assignedTo || maintenance.AssignedTo || 'Unassigned';
                   const date = maintenance.date || maintenance.Date || maintenance.createdAt || maintenance.CreatedAt;
                   const estimatedHours = maintenance.estimatedHours || maintenance.EstimatedHours || 0;
                   const estimatedCost = maintenance.estimatedCost || maintenance.EstimatedCost || 0;
                   const quoteGenerated = maintenance.quoteGenerated || maintenance.QuoteGenerated || false;
+                  const photos = maintenance.photos || maintenance.Photos || maintenance.photoURLs || maintenance.PhotoURLs || [];
                   
                   return (
                     <tr key={maintenanceId}>
@@ -954,7 +993,19 @@ const TechnicianDashboard = () => {
                         <span className="sa-cell-title">{property}</span>
                       </td>
                       <td>
-                        <span className="sa-cell-title">{issue}</span>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{issue}</span>
+                          {description && (
+                            <span className="sa-cell-sub" style={{ fontSize: '0.75rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {description}
+                            </span>
+                          )}
+                          {photos && Array.isArray(photos) && photos.length > 0 && (
+                            <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#2563eb', marginTop: '4px' }}>
+                              📷 {photos.length} photo{photos.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
                   </td>
                   <td>
                         <span className={`sa-status-pill ${priority}`}>
@@ -976,6 +1027,16 @@ const TechnicianDashboard = () => {
                         </span>
                       </td>
                       <td className="sa-row-actions">
+                        <button 
+                          className="sa-icon-button" 
+                          onClick={() => {
+                            setSelectedMaintenanceRequest(maintenance);
+                            setShowMaintenanceViewModal(true);
+                          }} 
+                          title="View Details"
+                        >
+                          👁️
+                        </button>
                         <button className="sa-icon-button" onClick={() => handleUpdateMaintenance(maintenance)} title="Edit">✏️</button>
                         {!quoteGenerated && (
                           <button className="sa-icon-button" onClick={() => handleSubmitQuote(maintenance)} title="Generate Quote" style={{ color: '#16a34a', marginLeft: '8px' }}>💰</button>
@@ -1591,14 +1652,172 @@ const TechnicianDashboard = () => {
   );
   };
 
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const contactId = selectedContact?.ID || selectedContact?.id;
+      if (contactId) {
+        await technicianService.updateTechnicianContact(contactId, contactForm);
+        addNotification('Contact updated successfully', 'success');
+      } else {
+        await technicianService.createTechnicianContact(contactForm);
+        addNotification('Contact added successfully', 'success');
+      }
+      setShowContactModal(false);
+      setSelectedContact(null);
+      setContactForm({ name: '', category: '', phone: '', email: '', address: '', description: '' });
+      loadData();
+    } catch (error) {
+      console.error('Error saving contact:', error);
+      addNotification(error.message || 'Failed to save contact', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteContact = async (contactId) => {
+    if (!window.confirm('Are you sure you want to delete this contact?')) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await technicianService.deleteTechnicianContact(contactId);
+      addNotification('Contact deleted successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      addNotification(error.message || 'Failed to delete contact', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditContact = (contact) => {
+    setSelectedContact(contact);
+    setContactForm({
+      name: contact.Name || contact.name || '',
+      category: contact.Category || contact.category || '',
+      phone: contact.Phone || contact.phone || '',
+      email: contact.Email || contact.email || '',
+      address: contact.Address || contact.address || '',
+      description: contact.Description || contact.description || ''
+    });
+    setShowContactModal(true);
+  };
+
+  const renderTechnicianContacts = () => {
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h2>Technician Contacts Management</h2>
+            <p>Add and manage technician contacts (plumbers, electricians, etc.) for tenants</p>
+          </div>
+          <button 
+            className="sa-primary-cta" 
+            onClick={() => {
+              setSelectedContact(null);
+              setContactForm({ name: '', category: '', phone: '', email: '', address: '', description: '' });
+              setShowContactModal(true);
+            }} 
+            disabled={loading}
+          >
+            <Plus size={18} />
+            Add Contact
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="sa-table-empty">Loading contacts...</div>
+        ) : technicianContacts.length === 0 ? (
+          <div className="sa-table-empty">No technician contacts added yet</div>
+        ) : (
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Address</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {technicianContacts.map((contact, index) => {
+                  const contactId = contact.ID || contact.id;
+                  return (
+                    <tr key={contactId}>
+                      <td>{index + 1}</td>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{contact.Name || contact.name || 'N/A'}</span>
+                          {contact.Description && (
+                            <span className="sa-cell-sub">{contact.Description || contact.description}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          backgroundColor: '#f3f4f6',
+                          color: '#6b7280',
+                          fontSize: '0.75rem',
+                          textTransform: 'capitalize'
+                        }}>
+                          {contact.Category || contact.category || 'N/A'}
+                        </span>
+                      </td>
+                      <td>{contact.Phone || contact.phone || 'N/A'}</td>
+                      <td>{contact.Email || contact.email || 'N/A'}</td>
+                      <td>{contact.Address || contact.address || 'N/A'}</td>
+                      <td>
+                        <div className="sa-row-actions">
+                          <button
+                            className="table-action-button edit"
+                            onClick={() => handleEditContact(contact)}
+                            title="Edit Contact"
+                          >
+                            <Edit size={14} />
+                            Edit
+                          </button>
+                          <button
+                            className="table-action-button delete"
+                            onClick={() => handleDeleteContact(contactId)}
+                            title="Delete Contact"
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
         return renderOverview();
       case 'inspections':
         return renderInspections();
+      case 'maintenance':
+        return renderMaintenance();
       case 'tasks':
         return renderTasks();
+      case 'technician-contacts':
+        return renderTechnicianContacts();
       case 'advertisements':
         return renderAdvertisements();
       case 'chat':
@@ -1962,6 +2181,252 @@ const TechnicianDashboard = () => {
                     disabled={loading || !photoFile}
                   >
                     {loading ? 'Uploading...' : 'Upload Photo'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Maintenance Request View Modal */}
+      {showMaintenanceViewModal && selectedMaintenanceRequest && (
+        <div className="modal-overlay" onClick={() => setShowMaintenanceViewModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-header">
+              <h3>Maintenance Request Details</h3>
+              <button className="modal-close" onClick={() => setShowMaintenanceViewModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Title/Issue</label>
+                  <p style={{ margin: 0, color: '#1f2937' }}>
+                    {selectedMaintenanceRequest.Title || selectedMaintenanceRequest.title || selectedMaintenanceRequest.Issue || selectedMaintenanceRequest.issue || 'N/A'}
+                  </p>
+                </div>
+
+                <div>
+                  <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Description</label>
+                  <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>
+                    {selectedMaintenanceRequest.Description || selectedMaintenanceRequest.description || 'No description provided'}
+                  </p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Priority</label>
+                    <span className={`sa-status-pill ${(selectedMaintenanceRequest.Priority || selectedMaintenanceRequest.priority || 'medium').toLowerCase()}`}>
+                      {selectedMaintenanceRequest.Priority || selectedMaintenanceRequest.priority || 'Medium'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label>
+                    <span className={`sa-status-pill ${(selectedMaintenanceRequest.Status || selectedMaintenanceRequest.status || 'pending').toLowerCase().replace(' ', '-')}`}>
+                      {selectedMaintenanceRequest.Status || selectedMaintenanceRequest.status || 'Pending'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
+                    <p style={{ margin: 0, color: '#1f2937' }}>
+                      {selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt
+                        ? new Date(selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt).toLocaleDateString()
+                        : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {(selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property) && (
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Property</label>
+                    <p style={{ margin: 0, color: '#1f2937' }}>
+                      {selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property}
+                    </p>
+                  </div>
+                )}
+
+                {(selectedMaintenanceRequest.Tenant || selectedMaintenanceRequest.tenant) && (
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Tenant</label>
+                    <p style={{ margin: 0, color: '#1f2937' }}>
+                      {selectedMaintenanceRequest.Tenant || selectedMaintenanceRequest.tenant}
+                    </p>
+                  </div>
+                )}
+
+                {/* Photos Section */}
+                {(() => {
+                  let photos = [];
+                  if (selectedMaintenanceRequest.Photos) {
+                    photos = Array.isArray(selectedMaintenanceRequest.Photos) 
+                      ? selectedMaintenanceRequest.Photos 
+                      : (typeof selectedMaintenanceRequest.Photos === 'string' ? JSON.parse(selectedMaintenanceRequest.Photos || '[]') : []);
+                  } else if (selectedMaintenanceRequest.photos) {
+                    photos = Array.isArray(selectedMaintenanceRequest.photos) 
+                      ? selectedMaintenanceRequest.photos 
+                      : (typeof selectedMaintenanceRequest.photos === 'string' ? JSON.parse(selectedMaintenanceRequest.photos || '[]') : []);
+                  } else if (selectedMaintenanceRequest.PhotoURLs) {
+                    photos = Array.isArray(selectedMaintenanceRequest.PhotoURLs) 
+                      ? selectedMaintenanceRequest.PhotoURLs 
+                      : (typeof selectedMaintenanceRequest.PhotoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.PhotoURLs || '[]') : []);
+                  } else if (selectedMaintenanceRequest.photoURLs) {
+                    photos = Array.isArray(selectedMaintenanceRequest.photoURLs) 
+                      ? selectedMaintenanceRequest.photoURLs 
+                      : (typeof selectedMaintenanceRequest.photoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.photoURLs || '[]') : []);
+                  }
+
+                  return photos.length > 0 ? (
+                    <div>
+                      <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Photos ({photos.length})</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+                        {photos.map((photoUrl, index) => (
+                          <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
+                            <img 
+                              src={photoUrl} 
+                              alt={`Maintenance photo ${index + 1}`}
+                              style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => window.open(photoUrl, '_blank')}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af;">Image not available</div>';
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="action-button secondary" 
+                onClick={() => setShowMaintenanceViewModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Technician Contact Modal */}
+      {showContactModal && (
+        <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{selectedContact ? 'Edit Technician Contact' : 'Add Technician Contact'}</h3>
+              <button className="modal-close" onClick={() => setShowContactModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleContactSubmit} className="modal-form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="contactName">Name *</label>
+                    <input
+                      type="text"
+                      id="contactName"
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g., John's Plumbing"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="contactCategory">Category *</label>
+                    <select
+                      id="contactCategory"
+                      value={contactForm.category}
+                      onChange={(e) => setContactForm(prev => ({ ...prev, category: e.target.value }))}
+                      required
+                    >
+                      <option value="">Select category</option>
+                      <option value="plumber">Plumber</option>
+                      <option value="electrician">Electrician</option>
+                      <option value="carpenter">Carpenter</option>
+                      <option value="painter">Painter</option>
+                      <option value="hvac">HVAC Technician</option>
+                      <option value="locksmith">Locksmith</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="contactPhone">Phone Number *</label>
+                    <input
+                      type="tel"
+                      id="contactPhone"
+                      value={contactForm.phone}
+                      onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="+225 07 12 34 56 78"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="contactEmail">Email</label>
+                    <input
+                      type="email"
+                      id="contactEmail"
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="contact@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="contactAddress">Address</label>
+                  <input
+                    type="text"
+                    id="contactAddress"
+                    value={contactForm.address}
+                    onChange={(e) => setContactForm(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="123 Main Street, City"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="contactDescription">Description/Notes</label>
+                  <textarea
+                    id="contactDescription"
+                    value={contactForm.description}
+                    onChange={(e) => setContactForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Additional information about this technician..."
+                    rows="3"
+                  />
+                </div>
+
+                <div className="modal-footer">
+                  <button 
+                    type="button" 
+                    className="action-button secondary" 
+                    onClick={() => {
+                      setShowContactModal(false);
+                      setSelectedContact(null);
+                      setContactForm({ name: '', category: '', phone: '', email: '', address: '', description: '' });
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="action-button primary" 
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : (selectedContact ? 'Update Contact' : 'Add Contact')}
                   </button>
                 </div>
               </form>

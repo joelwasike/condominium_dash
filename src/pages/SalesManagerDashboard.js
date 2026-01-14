@@ -10,6 +10,7 @@ import { API_CONFIG } from '../config/api';
 import { isDemoMode, getSalesManagerDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
+import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 import './SalesManagerDashboard.css';
 

@@ -16,14 +16,18 @@ import {
   MessageCircle,
   Megaphone,
   FileX,
-  UserPlus
+  UserPlus,
+  Phone,
+  Copy
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
+import { t, getLanguage } from '../utils/i18n';
 import { tenantService } from '../services/tenantService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getTenantDemoData } from '../utils/demoData';
+import { cloudinaryService } from '../services/cloudinaryService';
 import '../components/RoleLayout.css';
 import './SalesManagerDashboard.css';
 
@@ -48,7 +52,8 @@ const TenantDashboard = () => {
     reason: '',
     terminationDate: '',
     comments: '',
-    inventoryCheckDate: ''
+    inventoryCheckDate: '',
+    securityDepositRefundMethod: ''
   });
   const [showTransferPaymentModal, setShowTransferPaymentModal] = useState(false);
   const [transferPaymentForm, setTransferPaymentForm] = useState({
@@ -66,6 +71,9 @@ const TenantDashboard = () => {
   const [payments, setPayments] = useState([]);
   const [maintenanceRequests, setMaintenanceRequests] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
+  const [showMaintenanceViewModal, setShowMaintenanceViewModal] = useState(false);
+  const [selectedMaintenanceRequest, setSelectedMaintenanceRequest] = useState(null);
+  const [technicianContacts, setTechnicianContacts] = useState([]);
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -75,16 +83,28 @@ const TenantDashboard = () => {
   const isLoadingUsersRef = useRef(false);
   const messagesEndRef = useRef(null);
 
+  // State to force re-render when language changes
+  const [language, setLanguage] = useState(getLanguage());
+  
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      setLanguage(getLanguage());
+    };
+    window.addEventListener('languageChange', handleLanguageChange);
+    return () => window.removeEventListener('languageChange', handleLanguageChange);
+  }, []);
+
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: 'Overview', icon: Home },
-      { id: 'payments', label: 'Payments', icon: DollarSign },
-      { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
-      { id: 'chat', label: 'Messages', icon: MessageCircle },
-      { id: 'settings', label: 'Profile Settings', icon: Settings }
+      { id: 'overview', label: t('nav.overview'), icon: Home },
+      { id: 'payments', label: t('nav.payments'), icon: DollarSign },
+      { id: 'maintenance', label: t('technician.maintenance'), icon: Wrench },
+      { id: 'technician-contacts', label: 'Technician Contacts', icon: Phone },
+      { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
+      { id: 'chat', label: t('nav.messages'), icon: MessageCircle },
+      { id: 'settings', label: t('nav.profileSettings'), icon: Settings }
     ],
-    []
+    [language]
   );
 
   const addNotification = useCallback((message, type = 'info') => {
@@ -442,23 +462,78 @@ const TenantDashboard = () => {
 
     try {
       setLoading(true);
+      
+      // Get property from leaseInfo or overviewData
+      let property = 'Apartment 4B, 123 Main St';
+      if (leaseInfo && leaseInfo.property) {
+        property = leaseInfo.property;
+      } else if (overviewData) {
+        if (overviewData.lease && overviewData.lease.property) {
+          property = overviewData.lease.property;
+        } else if (overviewData.property) {
+          property = overviewData.property;
+        }
+      }
+      
+      // Get tenant name
+      let tenantName = 'Current Tenant';
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          tenantName = user.name || user.Name || tenantName;
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+      if (overviewData && overviewData.tenant) {
+        tenantName = overviewData.tenant;
+      }
+      
+      // Upload photos to Cloudinary first
+      let photoUrls = [];
+      if (maintenanceForm.photos && maintenanceForm.photos.length > 0) {
+        addNotification('Uploading photos...', 'info');
+        const uploadResults = await cloudinaryService.uploadMultipleFiles(
+          maintenanceForm.photos.map(photo => photo.file),
+          'real-estate-maintenance'
+        );
+        
+        // Filter successful uploads
+        photoUrls = uploadResults
+          .filter(result => result.success)
+          .map(result => result.url);
+        
+        if (uploadResults.some(result => !result.success)) {
+          addNotification('Some photos failed to upload, but request will be submitted', 'warning');
+        }
+      }
+      
       const maintenanceData = {
-        property: 'Apartment 4B, 123 Main St',
+        property: property,
         title: maintenanceForm.title,
         description: maintenanceForm.description,
         priority: maintenanceForm.priority,
-        tenant: 'Current Tenant'
+        tenant: tenantName,
+        photos: photoUrls // Send array of photo URLs (empty array if no photos)
       };
 
       const newRequest = await tenantService.createMaintenance(maintenanceData);
       setMaintenanceRequests(prev => [newRequest, ...prev]);
       addNotification('Maintenance request submitted successfully!', 'success');
 
+      // Clean up object URLs
+      maintenanceForm.photos.forEach(photo => {
+        if (photo.preview && photo.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(photo.preview);
+        }
+      });
+
       setMaintenanceForm({ title: '', description: '', priority: 'medium', photos: [] });
       setShowMaintenanceModal(false);
     } catch (error) {
       console.error('Error submitting maintenance request:', error);
-      addNotification('Failed to submit maintenance request', 'error');
+      addNotification(error.message || 'Failed to submit maintenance request', 'error');
     } finally {
       setLoading(false);
     }
@@ -466,7 +541,22 @@ const TenantDashboard = () => {
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
-    const newPhotos = files.map(file => ({
+    const maxPhotos = 5;
+    const currentPhotoCount = maintenanceForm.photos.length;
+    const remainingSlots = maxPhotos - currentPhotoCount;
+    
+    if (remainingSlots <= 0) {
+      addNotification(`Maximum ${maxPhotos} photos allowed`, 'warning');
+      e.target.value = ''; // Reset input
+      return;
+    }
+    
+    const filesToAdd = files.slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      addNotification(`Only ${remainingSlots} more photo(s) can be added (max ${maxPhotos})`, 'warning');
+    }
+    
+    const newPhotos = filesToAdd.map(file => ({
       id: Date.now() + Math.random(),
       file: file,
       name: file.name,
@@ -477,6 +567,8 @@ const TenantDashboard = () => {
       ...prev,
       photos: [...prev.photos, ...newPhotos]
     }));
+    
+    e.target.value = ''; // Reset input to allow selecting same file again
   };
 
   const removePhoto = (photoId) => {
@@ -496,7 +588,7 @@ const TenantDashboard = () => {
       
       addNotification('Lease termination request submitted successfully!', 'success');
       
-      setTerminateLeaseForm({ reason: '', terminationDate: '', comments: '', inventoryCheckDate: '' });
+      setTerminateLeaseForm({ reason: '', terminationDate: '', comments: '', inventoryCheckDate: '', securityDepositRefundMethod: '' });
       setShowTerminateLeaseModal(false);
     } catch (error) {
       console.error('Error submitting lease termination request:', error);
@@ -512,13 +604,57 @@ const TenantDashboard = () => {
     try {
       setLoading(true);
       
-      // Get property from leaseInfo if available
-      const property = leaseInfo?.property || leaseInfo?.address || '';
+      // Get property from leaseInfo, overviewData, or use fallback
+      let property = '';
+      if (leaseInfo && leaseInfo.property) {
+        property = leaseInfo.property;
+      } else if (leaseInfo && leaseInfo.address) {
+        property = leaseInfo.address;
+      } else if (overviewData) {
+        if (overviewData.lease && overviewData.lease.property) {
+          property = overviewData.lease.property;
+        } else if (overviewData.property) {
+          property = overviewData.property;
+        } else if (overviewData.lease && overviewData.lease.address) {
+          property = overviewData.lease.address;
+        }
+      }
       
-      await tenantService.transferPaymentRequest({
-        ...transferPaymentForm,
-        property: property
-      });
+      // Validate required fields according to backend API
+      if (!property || property.trim() === '') {
+        addNotification('Property information is required. Please ensure you have an active lease.', 'error');
+        setLoading(false);
+        return;
+      }
+      
+      if (!transferPaymentForm.recipientIdCard || transferPaymentForm.recipientIdCard.trim() === '') {
+        addNotification('Recipient ID Card Number is required', 'error');
+        setLoading(false);
+        return;
+      }
+      
+      if (!transferPaymentForm.entryDate || transferPaymentForm.entryDate.trim() === '') {
+        addNotification('Recipient Entry Date is required', 'error');
+        setLoading(false);
+        return;
+      }
+      
+      // Prepare transfer data according to backend API requirements
+      const transferData = {
+        property: property.trim(),
+        recipientIdCard: transferPaymentForm.recipientIdCard.trim(),
+        entryDate: transferPaymentForm.entryDate,
+        // Optional fields (may be used by backend for notifications or records)
+        recipientName: transferPaymentForm.recipientName.trim(),
+        recipientEmail: transferPaymentForm.recipientEmail.trim(),
+        recipientPhone: transferPaymentForm.recipientPhone.trim(),
+        relationship: transferPaymentForm.relationship,
+        reason: transferPaymentForm.reason.trim()
+      };
+      
+      console.log('Submitting transfer request with data:', transferData);
+      
+      await tenantService.transferPaymentRequest(transferData);
       
       addNotification('Payment transfer request submitted successfully!', 'success');
       
@@ -574,12 +710,19 @@ const TenantDashboard = () => {
         }
       }
       
-      // Backend expects Tenant and Property with capital letters based on error message
+      // Backend expects lowercase field names and "Mobile Money" as method value
+      // Validate payment method
+      if (paymentForm.paymentMethod !== 'Mobile Money') {
+        addNotification('Payment method must be Mobile Money', 'error');
+        setLoading(false);
+        return;
+      }
+
       const paymentData = {
-        Tenant: tenantName,
-        Property: property,
+        tenant: tenantName,
+        property: property,
         amount: parseFloat(paymentForm.amount),
-        method: paymentForm.paymentMethod,
+        method: paymentForm.paymentMethod, // Must be "Mobile Money"
         chargeType: 'rent',
         reference: paymentForm.reference
       };
@@ -748,7 +891,18 @@ Thank you for your payment!
           </button>
           <button 
             className="sa-primary-cta" 
-            onClick={() => setShowTransferPaymentModal(true)} 
+            onClick={async () => {
+              // Ensure leaseInfo is loaded before opening modal
+              if (!leaseInfo && !isDemoMode()) {
+                try {
+                  const lease = await tenantService.getLeaseInfo();
+                  setLeaseInfo(lease);
+                } catch (error) {
+                  console.error('Error loading lease info:', error);
+                }
+              }
+              setShowTransferPaymentModal(true);
+            }} 
             disabled={loading}
             style={{ backgroundColor: '#3b82f6' }}
           >
@@ -884,7 +1038,10 @@ Thank you for your payment!
                     <div className="table-actions">
                       <button
                         className="table-action-button view"
-                        onClick={() => addNotification('Viewing maintenance request details', 'info')}
+                        onClick={() => {
+                          setSelectedMaintenanceRequest(request);
+                          setShowMaintenanceViewModal(true);
+                        }}
                       >
                         View
                       </button>
@@ -1107,6 +1264,186 @@ Thank you for your payment!
     );
   };
 
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      addNotification('Phone number copied to clipboard!', 'success');
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        addNotification('Phone number copied to clipboard!', 'success');
+      } catch (err) {
+        addNotification('Failed to copy phone number', 'error');
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  const renderTechnicianContacts = () => {
+    // Group contacts by category
+    const groupedContacts = technicianContacts.reduce((acc, contact) => {
+      const category = contact.Category || contact.category || 'other';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(contact);
+      return acc;
+    }, {});
+
+    const categoryLabels = {
+      plumber: 'Plumbers',
+      electrician: 'Electricians',
+      carpenter: 'Carpenters',
+      painter: 'Painters',
+      hvac: 'HVAC Technicians',
+      locksmith: 'Locksmiths',
+      other: 'Other Technicians'
+    };
+
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h2>Technician Contacts</h2>
+            <p>Find and contact technicians for your maintenance needs</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="sa-table-empty">Loading technician contacts...</div>
+        ) : technicianContacts.length === 0 ? (
+          <div className="sa-table-empty">No technician contacts available</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginTop: '24px' }}>
+            {Object.entries(groupedContacts).map(([category, contacts]) => (
+              <div key={category}>
+                <h3 style={{ marginBottom: '16px', color: '#1f2937', fontSize: '1.25rem', fontWeight: '600' }}>
+                  {categoryLabels[category] || category.charAt(0).toUpperCase() + category.slice(1)}
+                </h3>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+                  gap: '16px' 
+                }}>
+                  {contacts.map((contact) => {
+                    const contactId = contact.ID || contact.id;
+                    const name = contact.Name || contact.name || 'Unknown';
+                    const phone = contact.Phone || contact.phone || '';
+                    const email = contact.Email || contact.email || '';
+                    const address = contact.Address || contact.address || '';
+                    const description = contact.Description || contact.description || '';
+                    const categoryName = contact.Category || contact.category || '';
+
+                    return (
+                      <div 
+                        key={contactId} 
+                        style={{
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          padding: '20px',
+                          backgroundColor: '#ffffff',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                          transition: 'box-shadow 0.2s',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)'}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <h4 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem', fontWeight: '600' }}>
+                            {name}
+                          </h4>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            backgroundColor: '#f3f4f6',
+                            color: '#6b7280',
+                            fontSize: '0.75rem',
+                            textTransform: 'capitalize'
+                          }}>
+                            {categoryName}
+                          </span>
+                        </div>
+
+                        {phone && (
+                          <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Phone size={16} color="#6b7280" />
+                            <span style={{ color: '#374151', flex: 1 }}>{phone}</span>
+                            <button
+                              onClick={() => copyToClipboard(phone)}
+                              style={{
+                                padding: '6px 10px',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                backgroundColor: '#ffffff',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '0.875rem',
+                                color: '#374151',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#f9fafb';
+                                e.currentTarget.style.borderColor = '#9ca3af';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#ffffff';
+                                e.currentTarget.style.borderColor = '#d1d5db';
+                              }}
+                              title="Copy phone number"
+                            >
+                              <Copy size={14} />
+                              Copy
+                            </button>
+                          </div>
+                        )}
+
+                        {email && (
+                          <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Email:</span>
+                            <a 
+                              href={`mailto:${email}`}
+                              style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.875rem' }}
+                            >
+                              {email}
+                            </a>
+                          </div>
+                        )}
+
+                        {address && (
+                          <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                            <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Address:</span>
+                            <span style={{ color: '#374151', fontSize: '0.875rem', flex: 1 }}>{address}</span>
+                          </div>
+                        )}
+
+                        {description && (
+                          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem', lineHeight: '1.5' }}>
+                              {description}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -1115,6 +1452,8 @@ Thank you for your payment!
         return renderPayments();
       case 'maintenance':
         return renderMaintenance();
+      case 'technician-contacts':
+        return renderTechnicianContacts();
       case 'advertisements':
         return renderAdvertisements();
       case 'chat':
@@ -1308,7 +1647,7 @@ Thank you for your payment!
                       required
                     >
                       <option value="">Select payment method</option>
-                      <option value="mobile_money">Mobile Money</option>
+                      <option value="Mobile Money">Mobile Money</option>
                     </select>
                   </div>
                 </div>
@@ -1391,6 +1730,25 @@ Thank you for your payment!
                     placeholder="Provide any additional details about your termination request..."
                     rows="4"
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="securityDepositRefundMethod">Security Deposit Refund Method *</label>
+                  <select
+                    id="securityDepositRefundMethod"
+                    value={terminateLeaseForm.securityDepositRefundMethod}
+                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, securityDepositRefundMethod: e.target.value }))}
+                    required
+                  >
+                    <option value="">Select refund method</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="cash">Cash</option>
+                    <option value="check">Check</option>
+                  </select>
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    How would you like to receive your security deposit refund?
+                  </small>
                 </div>
 
                 <div className="form-group">
@@ -1552,6 +1910,132 @@ Thank you for your payment!
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Maintenance Request View Modal */}
+      {showMaintenanceViewModal && selectedMaintenanceRequest && (
+        <div className="modal-overlay" onClick={() => setShowMaintenanceViewModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-header">
+              <h3>Maintenance Request Details</h3>
+              <button className="modal-close" onClick={() => setShowMaintenanceViewModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Title</label>
+                  <p style={{ margin: 0, color: '#1f2937' }}>
+                    {selectedMaintenanceRequest.Title || selectedMaintenanceRequest.title || selectedMaintenanceRequest.Issue || 'N/A'}
+                  </p>
+                </div>
+
+                <div>
+                  <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Description</label>
+                  <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>
+                    {selectedMaintenanceRequest.Description || selectedMaintenanceRequest.description || 'No description provided'}
+                  </p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Priority</label>
+                    <span className={`sa-status-pill ${(selectedMaintenanceRequest.Priority || selectedMaintenanceRequest.priority || 'medium').toLowerCase()}`}>
+                      {selectedMaintenanceRequest.Priority || selectedMaintenanceRequest.priority || 'Medium'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label>
+                    <span className={`sa-status-pill ${(selectedMaintenanceRequest.Status || selectedMaintenanceRequest.status || 'pending').toLowerCase().replace(' ', '-')}`}>
+                      {selectedMaintenanceRequest.Status || selectedMaintenanceRequest.status || 'Pending'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
+                    <p style={{ margin: 0, color: '#1f2937' }}>
+                      {selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt
+                        ? new Date(selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt).toLocaleDateString()
+                        : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {(selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property) && (
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Property</label>
+                    <p style={{ margin: 0, color: '#1f2937' }}>
+                      {selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property}
+                    </p>
+                  </div>
+                )}
+
+                {/* Photos Section */}
+                {(selectedMaintenanceRequest.Photos || selectedMaintenanceRequest.photos || selectedMaintenanceRequest.PhotoURLs || selectedMaintenanceRequest.photoURLs) && (
+                  <div>
+                    <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Photos</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+                      {(() => {
+                        let photos = [];
+                        try {
+                          if (selectedMaintenanceRequest.Photos) {
+                            photos = Array.isArray(selectedMaintenanceRequest.Photos) 
+                              ? selectedMaintenanceRequest.Photos 
+                              : (typeof selectedMaintenanceRequest.Photos === 'string' ? JSON.parse(selectedMaintenanceRequest.Photos || '[]') : []);
+                          } else if (selectedMaintenanceRequest.photos) {
+                            photos = Array.isArray(selectedMaintenanceRequest.photos) 
+                              ? selectedMaintenanceRequest.photos 
+                              : (typeof selectedMaintenanceRequest.photos === 'string' ? JSON.parse(selectedMaintenanceRequest.photos || '[]') : []);
+                          } else if (selectedMaintenanceRequest.PhotoURLs) {
+                            photos = Array.isArray(selectedMaintenanceRequest.PhotoURLs) 
+                              ? selectedMaintenanceRequest.PhotoURLs 
+                              : (typeof selectedMaintenanceRequest.PhotoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.PhotoURLs || '[]') : []);
+                          } else if (selectedMaintenanceRequest.photoURLs) {
+                            photos = Array.isArray(selectedMaintenanceRequest.photoURLs) 
+                              ? selectedMaintenanceRequest.photoURLs 
+                              : (typeof selectedMaintenanceRequest.photoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.photoURLs || '[]') : []);
+                          }
+                        } catch (error) {
+                          console.error('Error parsing photos:', error);
+                          photos = [];
+                        }
+
+                        return photos.length > 0 ? photos.map((photoUrl, index) => (
+                          <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
+                            <img 
+                              src={photoUrl} 
+                              alt={`Maintenance photo ${index + 1}`}
+                              style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => window.open(photoUrl, '_blank')}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af;">Image not available</div>';
+                              }}
+                            />
+                          </div>
+                        )) : null;
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="action-button secondary" 
+                onClick={() => setShowMaintenanceViewModal(false)}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

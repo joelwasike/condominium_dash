@@ -193,4 +193,34 @@ export const adminService = {
     const url = buildApiUrl('/api/admin/negotiations');
     return await apiRequest(url);
   },
+
+  // Transfer Requests (Payment/Ownership Transfers)
+  getTransfers: async (filters = {}) => {
+    let url = buildApiUrl('/api/admin/transfers');
+    const queryParams = new URLSearchParams();
+    
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.type) queryParams.append('type', filters.type);
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+    
+    return await apiRequest(url);
+  },
+
+  approveTransfer: async (id) => {
+    const url = buildApiUrl(`/api/admin/transfers/${id}/approve`);
+    return await apiRequest(url, {
+      method: 'POST',
+    });
+  },
+
+  rejectTransfer: async (id, reason) => {
+    const url = buildApiUrl(`/api/admin/transfers/${id}/reject`);
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
 };

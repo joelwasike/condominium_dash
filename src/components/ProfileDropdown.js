@@ -1,13 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UserCircle, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { t } from '../utils/i18n';
+import { t, getLanguage } from '../utils/i18n';
 import './ProfileDropdown.css';
 
 const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [language, setLanguage] = useState(getLanguage());
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  
+  // Listen for language changes to trigger re-render
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      setLanguage(getLanguage());
+    };
+    window.addEventListener('languageChange', handleLanguageChange);
+    return () => window.removeEventListener('languageChange', handleLanguageChange);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {

@@ -115,6 +115,8 @@ const SettingsPage = () => {
             const user = JSON.parse(storedUser);
             user.profilePictureURL = result.profilePictureURL;
             localStorage.setItem('user', JSON.stringify(user));
+            // Dispatch custom event to notify other components (e.g., RoleLayout) of the update
+            window.dispatchEvent(new CustomEvent('userProfileUpdated'));
           }
         } catch (error) {
           console.error('Error updating localStorage:', error);

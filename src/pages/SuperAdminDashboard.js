@@ -17,6 +17,7 @@ import { API_CONFIG } from '../config/api';
 import { isDemoMode, getSuperAdminDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import Modal from '../components/Modal';
+import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 import './SuperAdminDashboard.css';
 import '../pages/TechnicianDashboard.css';

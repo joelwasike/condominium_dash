@@ -14,20 +14,34 @@ const LanguageSelector = () => {
 
   useEffect(() => {
     const handleLanguageChange = (event) => {
-      setCurrentLang(event.detail);
+      const newLang = event.detail || getLanguage();
+      setCurrentLang(newLang);
       setIsOpen(false);
     };
 
+    // Listen for language change events
     window.addEventListener('languageChange', handleLanguageChange);
-    return () => window.removeEventListener('languageChange', handleLanguageChange);
-  }, []);
+    
+    // Also check localStorage periodically in case it was changed elsewhere
+    const interval = setInterval(() => {
+      const storedLang = getLanguage();
+      if (storedLang !== currentLang) {
+        setCurrentLang(storedLang);
+      }
+    }, 500);
+
+    return () => {
+      window.removeEventListener('languageChange', handleLanguageChange);
+      clearInterval(interval);
+    };
+  }, [currentLang]);
 
   const handleLanguageSelect = (langCode) => {
     setLanguage(langCode);
     setCurrentLang(langCode);
     setIsOpen(false);
-    // Reload page to apply language changes (or use React context for reactive updates)
-    window.location.reload();
+    // Dispatch event to trigger re-renders in components using translations
+    window.dispatchEvent(new CustomEvent('languageChange', { detail: langCode }));
   };
 
   const currentLanguage = languages.find(lang => lang.code === currentLang) || languages[0];

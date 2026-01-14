@@ -1,18 +1,11 @@
 import React, { useMemo } from 'react';
 import {
-  LineChart,
-  Line,
-  Area,
-  AreaChart,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  ComposedChart
+  ResponsiveContainer
 } from 'recharts';
 import { TrendingUp, TrendingDown, Award, AlertTriangle } from 'lucide-react';
 
@@ -21,16 +14,16 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
   const financialOverviewData = useMemo(() => {
     if (!yearlyComparison?.yearlyData) return [];
     const sortedYears = yearlyComparison.sortedYears || [];
-    return sortedYears.map(year => {
-      const data = yearlyComparison.yearlyData[year];
-      return {
-        year: year.toString(),
-        revenue: data?.annualRevenue || 0,
-        commissions: data?.annualCommissions || 0,
-        expenses: data?.annualExpenses || 0,
-        netIncome: data?.annualNetResult || 0
-      };
-    });
+    // Use the most recent year's data for pie chart
+    const latestYear = sortedYears[sortedYears.length - 1];
+    const data = yearlyComparison.yearlyData[latestYear] || {};
+    
+    return [
+      { name: 'Revenue', value: data?.annualRevenue || 0 },
+      { name: 'Commissions', value: data?.annualCommissions || 0 },
+      { name: 'Expenses', value: data?.annualExpenses || 0 },
+      { name: 'Net Income', value: data?.annualNetResult || 0 }
+    ].filter(item => item.value > 0);
   }, [yearlyComparison]);
 
   const netProfitData = useMemo(() => {
@@ -39,10 +32,10 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
     return sortedYears.map(year => {
       const data = yearlyComparison.yearlyData[year];
       return {
-        year: year.toString(),
-        profit: data?.annualNetResult || 0
+        name: year.toString(),
+        value: data?.annualNetResult || 0
       };
-    });
+    }).filter(item => item.value !== 0);
   }, [yearlyComparison]);
 
   const commissionData = useMemo(() => {
@@ -51,11 +44,10 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
     return sortedYears.map(year => {
       const data = yearlyComparison.yearlyData[year];
       return {
-        year: year.toString(),
-        commissions: data?.annualCommissions || 0,
-        commissionRate: data?.commissionRate || 0
+        name: year.toString(),
+        value: data?.annualCommissions || 0
       };
-    });
+    }).filter(item => item.value > 0);
   }, [yearlyComparison]);
 
   const expenseData = useMemo(() => {
@@ -64,44 +56,46 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
     return sortedYears.map(year => {
       const data = yearlyComparison.yearlyData[year];
       return {
-        year: year.toString(),
-        expenses: data?.annualExpenses || 0,
-        expenseRatio: data?.annualRevenue > 0 ? (data.annualExpenses / data.annualRevenue * 100) : 0
+        name: year.toString(),
+        value: data?.annualExpenses || 0
       };
-    });
+    }).filter(item => item.value > 0);
   }, [yearlyComparison]);
 
   const top5ProfitableBuildings = useMemo(() => {
     if (!indicators?.profitability?.top5MostProfitable) return [];
     return indicators.profitability.top5MostProfitable.map(b => ({
-      name: b.Address || b.address || 'N/A',
+      name: (b.Address || b.address || 'N/A').substring(0, 20),
       value: b.NetIncome || b.netIncome || 0
-    }));
+    })).filter(item => item.value > 0);
   }, [indicators]);
 
   const top5ExpensiveBuildings = useMemo(() => {
     if (!indicators?.expensesControl?.mostExpensiveBuildings) return [];
     return indicators.expensesControl.mostExpensiveBuildings.map(b => ({
-      name: b.Address || b.address || 'N/A',
+      name: (b.Address || b.address || 'N/A').substring(0, 20),
       value: b.Amount || b.amount || 0
-    }));
+    })).filter(item => item.value > 0);
   }, [indicators]);
 
   const top5RegularTenants = useMemo(() => {
     if (!indicators?.decisionMaking?.top5MostRegularTenants) return [];
     return indicators.decisionMaking.top5MostRegularTenants.map(t => ({
-      name: t.TenantName || t.tenantName || 'N/A',
+      name: (t.TenantName || t.tenantName || 'N/A').substring(0, 20),
       value: t.OnTimeRate || t.onTimeRate || 0
-    }));
+    })).filter(item => item.value > 0);
   }, [indicators]);
 
   const top5AtRiskTenants = useMemo(() => {
     if (!indicators?.decisionMaking?.top5TenantsAtRisk) return [];
     return indicators.decisionMaking.top5TenantsAtRisk.map(t => ({
-      name: t.TenantName || t.tenantName || 'N/A',
+      name: (t.TenantName || t.tenantName || 'N/A').substring(0, 20),
       value: t.OnTimeRate || t.onTimeRate || 0
-    }));
+    })).filter(item => item.value > 0);
   }, [indicators]);
+
+  // Color palette for pie charts
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
 
   if (loading) {
     return (
@@ -219,27 +213,24 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
           </div>
           <div style={{ width: '100%', height: '300px', padding: '20px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={financialOverviewData}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis />
+              <PieChart>
+                <Pie
+                  data={financialOverviewData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {financialOverviewData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip formatter={(value) => `${value.toLocaleString()} XOF`} />
                 <Legend />
-                <Area type="monotone" dataKey="revenue" stroke="#10b981" fillOpacity={1} fill="url(#colorRevenue)" name="Revenue" />
-                <Area type="monotone" dataKey="expenses" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" name="Expenses" />
-                <Area type="monotone" dataKey="commissions" stroke="#f59e0b" fillOpacity={0.6} fill="#f59e0b" name="Commissions" />
-                <Area type="monotone" dataKey="netIncome" stroke="#3b82f6" fillOpacity={0.6} fill="#3b82f6" name="Net Income" />
-              </AreaChart>
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -252,13 +243,24 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
           </div>
           <div style={{ width: '100%', height: '300px', padding: '20px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={netProfitData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis />
+              <PieChart>
+                <Pie
+                  data={netProfitData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {netProfitData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip formatter={(value) => `${value.toLocaleString()} XOF`} />
-                <Bar dataKey="profit" fill="#10b981" name="Net Profit" />
-              </BarChart>
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
           </div>
           <div style={{ padding: '15px', fontSize: '12px', borderTop: '1px solid #e5e7eb' }}>
@@ -270,7 +272,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
             </p>
             <p style={{ margin: '5px 0' }}>
               Profit Change: {netProfitData.length >= 2 ? 
-                (((netProfitData[netProfitData.length - 1].profit - netProfitData[0].profit) / Math.abs(netProfitData[0].profit || 1)) * 100).toFixed(1) 
+                (((netProfitData[netProfitData.length - 1].value - netProfitData[0].value) / Math.abs(netProfitData[0].value || 1)) * 100).toFixed(1) 
                 : 0}%
             </p>
           </div>
@@ -327,21 +329,24 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
           </div>
           <div style={{ width: '100%', height: '300px', padding: '20px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={commissionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip 
-                  formatter={(value, name) => {
-                    if (name === 'commissionRate') return `${value.toFixed(1)}%`;
-                    return `${value.toLocaleString()} XOF`;
-                  }}
-                />
+              <PieChart>
+                <Pie
+                  data={commissionData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {commissionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => `${value.toLocaleString()} XOF`} />
                 <Legend />
-                <Bar yAxisId="left" dataKey="commissions" fill="#f59e0b" name="Commissions" />
-                <Line yAxisId="right" type="monotone" dataKey="commissionRate" stroke="#10b981" strokeWidth={2} name="% of Revenue" />
-              </ComposedChart>
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -354,13 +359,24 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
           </div>
           <div style={{ width: '100%', height: '300px', padding: '20px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={expenseData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis />
+              <PieChart>
+                <Pie
+                  data={expenseData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {expenseData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip formatter={(value) => `${value.toLocaleString()} XOF`} />
-                <Bar dataKey="expenses" fill="#ef4444" name="Expenses" />
-              </BarChart>
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -451,13 +467,24 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
           </div>
           <div style={{ width: '100%', height: '250px', padding: '20px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={top5ProfitableBuildings} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={100} />
+              <PieChart>
+                <Pie
+                  data={top5ProfitableBuildings}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {top5ProfitableBuildings.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip formatter={(value) => `${value.toLocaleString()} XOF`} />
-                <Bar dataKey="value" fill="#10b981" />
-              </BarChart>
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -470,13 +497,24 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
           </div>
           <div style={{ width: '100%', height: '250px', padding: '20px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={top5ExpensiveBuildings} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={100} />
+              <PieChart>
+                <Pie
+                  data={top5ExpensiveBuildings}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {top5ExpensiveBuildings.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip formatter={(value) => `${value.toLocaleString()} XOF`} />
-                <Bar dataKey="value" fill="#ef4444" />
-              </BarChart>
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -533,20 +571,27 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
             </div>
           </div>
 
-          {/* Combined Chart */}
+          {/* Combined Chart - Yearly Breakdown */}
           <div>
             <ResponsiveContainer width="100%" height={400}>
-              <ComposedChart data={financialOverviewData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis />
+              <PieChart>
+                <Pie
+                  data={financialOverviewData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {financialOverviewData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip formatter={(value) => `${value.toLocaleString()} XOF`} />
                 <Legend />
-                <Bar dataKey="revenue" fill="#3b82f6" name="Revenue" />
-                <Bar dataKey="commissions" fill="#f59e0b" name="Commissions" />
-                <Bar dataKey="expenses" fill="#ef4444" name="Expenses" />
-                <Line type="monotone" dataKey="netIncome" stroke="#10b981" strokeWidth={3} name="Net Income" />
-              </ComposedChart>
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>

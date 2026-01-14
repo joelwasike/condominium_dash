@@ -16,6 +16,7 @@ import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAccountingDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
+import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 import './AccountingDashboard.css';
 import jsPDF from 'jspdf';
@@ -170,22 +171,33 @@ const AccountingDashboard = () => {
     }, 3000);
   }, []);
 
+  // State to force re-render when language changes
+  const [language, setLanguage] = useState(getLanguage());
+  
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      setLanguage(getLanguage());
+    };
+    window.addEventListener('languageChange', handleLanguageChange);
+    return () => window.removeEventListener('languageChange', handleLanguageChange);
+  }, []);
+
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: 'Overview', icon: DollarSign },
-      { id: 'collections', label: 'Collections', icon: TrendingUp },
-      { id: 'payments', label: 'Landlord Payments', icon: Building },
-      { id: 'tenant-payments', label: 'Tenant Payments', icon: CreditCard },
-      { id: 'reports', label: 'Reports', icon: Receipt },
-      { id: 'expenses', label: 'Expenses', icon: FileText },
-      { id: 'tenants', label: 'Tenants', icon: User },
-      { id: 'history', label: 'History', icon: Clock },
-      { id: 'cashier', label: 'Cashier', icon: Wallet },
-      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
-      { id: 'chat', label: 'Messages', icon: MessageCircle },
-      { id: 'settings', label: 'Profile Settings', icon: Settings }
+      { id: 'overview', label: t('nav.overview'), icon: DollarSign },
+      { id: 'collections', label: t('nav.collections'), icon: TrendingUp },
+      { id: 'payments', label: t('nav.landlordPayments'), icon: Building },
+      { id: 'tenant-payments', label: t('nav.tenantPayments'), icon: CreditCard },
+      { id: 'reports', label: t('nav.reports'), icon: Receipt },
+      { id: 'expenses', label: t('nav.expenses'), icon: FileText },
+      { id: 'tenants', label: t('nav.tenants'), icon: User },
+      { id: 'history', label: t('nav.history'), icon: Clock },
+      { id: 'cashier', label: t('nav.cashier'), icon: Wallet },
+      { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
+      { id: 'chat', label: t('nav.messages'), icon: MessageCircle },
+      { id: 'settings', label: t('nav.profileSettings'), icon: Settings }
     ],
-    []
+    [language]
   );
 
   // Load expenses with filters
@@ -960,27 +972,27 @@ const AccountingDashboard = () => {
 
           <div className="sa-overview-metrics">
             <div className="sa-metric-card sa-metric-primary">
-              <p className="sa-metric-label">Total Available Balance</p>
+              <p className="sa-metric-label">{t('accounting.cashBalance')}</p>
               <p className="sa-metric-period">Current balance</p>
               <p className="sa-metric-value">
                 {overviewData ? `${(overviewData.totalAvailableBalance || overviewData.globalBalance || 0).toFixed(2)} XOF` : '0 XOF'}
               </p>
             </div>
             <div className="sa-metric-card">
-              <p className="sa-metric-label">Total Collected This Month</p>
+              <p className="sa-metric-label">{t('accounting.totalRevenue')} ({t('dashboard.thisMonth')})</p>
               <p className="sa-metric-period">{currentMonth}</p>
               <p className="sa-metric-value">
                 {overviewData ? `${(overviewData.totalCollectedThisMonth || 0).toFixed(2)} XOF` : '0 XOF'}
               </p>
             </div>
             <div className="sa-metric-card">
-              <p className="sa-metric-label">Total Transferred to Landlords</p>
+              <p className="sa-metric-label">{t('nav.landlordPayments')}</p>
               <p className="sa-metric-number">
                 {overviewData ? `${(overviewData.totalTransferredToLandlords || 0).toFixed(2)} XOF` : '0 XOF'}
               </p>
             </div>
             <div className="sa-metric-card">
-              <p className="sa-metric-label">Company Commission Earned</p>
+              <p className="sa-metric-label">{t('accounting.commission')}</p>
               <p className="sa-metric-number">
                 {overviewData ? `${(overviewData.totalCompanyCommissionEarned || 0).toFixed(2)} XOF` : '0 XOF'}
               </p>
@@ -1147,13 +1159,13 @@ const AccountingDashboard = () => {
           <div style={{ padding: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('tenant-payments')}>
-                <p className="sa-metric-label">Pending Rent Amount</p>
+                <p className="sa-metric-label">{t('accounting.pendingPayments')}</p>
                 <p className="sa-metric-value" style={{ color: '#dc2626' }}>
                   {overviewData ? `${(overviewData.pendingRentAmount || 0).toFixed(2)} XOF` : '0 XOF'}
                 </p>
               </div>
               <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('expenses')}>
-                <p className="sa-metric-label">Total Expenses This Month</p>
+                <p className="sa-metric-label">{t('accounting.totalExpenses')} ({t('dashboard.thisMonth')})</p>
                 <p className="sa-metric-value">
                   {overviewData ? `${(overviewData.totalExpensesThisMonth || 0).toFixed(2)} XOF` : '0 XOF'}
                 </p>
@@ -1246,7 +1258,7 @@ const AccountingDashboard = () => {
                   <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
                   <td className="table-menu">
                     <div className="sa-row-actions">
-                      <button className="table-action-button view">View</button>
+                      <button className="table-action-button view">{t('common.view')}</button>
                       <button className="table-action-button edit">Receipt</button>
                     </div>
                   </td>
@@ -1272,7 +1284,7 @@ const AccountingDashboard = () => {
           disabled={loading}
         >
           <Plus size={18} />
-          Record Payment
+          {t('accounting.recordPayment')}
         </button>
       </div>
 
@@ -1333,7 +1345,7 @@ const AccountingDashboard = () => {
                   </td>
                   <td className="table-menu">
                     <div className="sa-row-actions">
-                      <button className="table-action-button view">View</button>
+                      <button className="table-action-button view">{t('common.view')}</button>
                       <button className="table-action-button edit" onClick={() => transferToLandlord(payment.ID)} title="Automatic Transfer">
                         Transfer
                       </button>
@@ -1739,7 +1751,7 @@ const AccountingDashboard = () => {
                               setShowCashPaymentModal(true);
                             }}
                           >
-                            Record Cash Payment
+                            {t('accounting.recordCashPayment')}
                           </button>
               </td>
             </tr>
@@ -2855,7 +2867,7 @@ const AccountingDashboard = () => {
           disabled={loading}
         >
           <Plus size={18} />
-          Add Expense
+          {t('accounting.addExpense')}
         </button>
           </div>
         </div>
