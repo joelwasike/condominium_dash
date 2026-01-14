@@ -1141,7 +1141,7 @@ const AccountingDashboard = () => {
             ) : (
               <div className="sa-banner-card">
                 <div className="sa-banner-text">
-                  <h3>Financial Management</h3>
+                  <h3>{t('accounting.financialManagement')}</h3>
                   <p>
                     Manage payments, expenses, and financial operations all in one place.
                   </p>
@@ -1153,7 +1153,7 @@ const AccountingDashboard = () => {
 
         <div className="sa-section-card" style={{ marginTop: '24px' }}>
           <div className="sa-section-header">
-            <h3>Quick Actions</h3>
+            <h3>{t('accounting.quickActions')}</h3>
             <p>Manage your financial operations and view key metrics.</p>
           </div>
           <div style={{ padding: '20px' }}>
@@ -1603,7 +1603,7 @@ const AccountingDashboard = () => {
       <div className="sa-section-header">
         <div>
               <h2>Tenants Management</h2>
-              <p>View all tenants and their payment status</p>
+              <p>{t('accounting.viewAllTenants')}</p>
         </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
@@ -1938,7 +1938,7 @@ const AccountingDashboard = () => {
           <div className="modal-overlay" onClick={() => setShowDepositPaymentModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>Record Security Deposit Payment</h3>
+                <h3>{t('accounting.recordSecurityDepositPayment')}</h3>
                 <button className="modal-close" onClick={() => setShowDepositPaymentModal(false)}>×</button>
               </div>
               <div className="modal-body">
@@ -2090,7 +2090,7 @@ const AccountingDashboard = () => {
           <div className="modal-overlay" onClick={() => setShowDepositRefundModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>Process Security Deposit Refund</h3>
+                <h3>{t('accounting.processSecurityDepositRefund')}</h3>
                 <button className="modal-close" onClick={() => setShowDepositRefundModal(false)}>×</button>
               </div>
               <div className="modal-body">
@@ -3634,7 +3634,7 @@ const AccountingDashboard = () => {
           <div className="sa-section-card" style={{ marginTop: '24px' }}>
             <div className="sa-section-header">
               <div>
-                <h3>Recent Transactions</h3>
+                <h3>{t('accounting.recentTransactions')}</h3>
                 <p>View recent cashier transactions</p>
               </div>
             </div>
@@ -3699,7 +3699,7 @@ const AccountingDashboard = () => {
           <div className="modal-overlay" onClick={() => setShowCashierAccountModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>Add Cashier Account</h3>
+                <h3>{t('accounting.addCashierAccount')}</h3>
                 <button className="modal-close" onClick={() => setShowCashierAccountModal(false)}>×</button>
               </div>
               <div className="modal-body">
@@ -3805,7 +3805,7 @@ const AccountingDashboard = () => {
           <div className="modal-overlay" onClick={() => setShowCashierTransactionModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>Add Transaction</h3>
+                <h3>{t('accounting.addTransaction')}</h3>
                 <button className="modal-close" onClick={() => setShowCashierTransactionModal(false)}>×</button>
               </div>
               <div className="modal-body">
@@ -4307,7 +4307,7 @@ const AccountingDashboard = () => {
         <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Record New Payment</h3>
+              <h3>{t('accounting.recordNewPayment')}</h3>
               <button className="modal-close" onClick={() => setShowPaymentModal(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -4542,7 +4542,7 @@ const AccountingDashboard = () => {
         <div className="modal-overlay" onClick={() => setShowApprovalModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Confirm Payment Approval</h3>
+              <h3>{t('accounting.confirmPaymentApproval')}</h3>
               <button className="modal-close" onClick={() => setShowApprovalModal(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -5146,7 +5146,7 @@ const AccountingDashboard = () => {
         <div className="modal-overlay" onClick={() => setShowEditExpenseModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Edit Expense</h3>
+              <h3>{t('accounting.editExpense')}</h3>
               <button className="modal-close" onClick={() => {
                 setShowEditExpenseModal(false);
                 setSelectedExpense(null);

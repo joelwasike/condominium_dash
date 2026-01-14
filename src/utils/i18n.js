@@ -180,6 +180,17 @@ const translations = {
     'accounting.paymentsByPeriod': 'Payments by Period',
     'accounting.commissionsByPeriod': 'Commissions by Period',
     'accounting.refundsReport': 'Refunds Report',
+    'accounting.financialManagement': 'Financial Management',
+    'accounting.quickActions': 'Quick Actions',
+    'accounting.viewAllTenants': 'View all tenants and their payment status',
+    'accounting.recordSecurityDepositPayment': 'Record Security Deposit Payment',
+    'accounting.processSecurityDepositRefund': 'Process Security Deposit Refund',
+    'accounting.addTransaction': 'Add Transaction',
+    'accounting.recentTransactions': 'Recent Transactions',
+    'accounting.addCashierAccount': 'Add Cashier Account',
+    'accounting.recordNewPayment': 'Record New Payment',
+    'accounting.confirmPaymentApproval': 'Confirm Payment Approval',
+    'accounting.editExpense': 'Edit Expense',
     
     // Landlord
     'landlord.myProperties': 'My Properties',
@@ -492,6 +503,17 @@ const translations = {
     'accounting.paymentsByPeriod': 'Paiements par Période',
     'accounting.commissionsByPeriod': 'Commissions par Période',
     'accounting.refundsReport': 'Rapport de Remboursements',
+    'accounting.financialManagement': 'Gestion Financière',
+    'accounting.quickActions': 'Actions Rapides',
+    'accounting.viewAllTenants': 'Voir tous les locataires et leur statut de paiement',
+    'accounting.recordSecurityDepositPayment': 'Enregistrer le Paiement de Dépôt de Garantie',
+    'accounting.processSecurityDepositRefund': 'Traiter le Remboursement de Dépôt de Garantie',
+    'accounting.addTransaction': 'Ajouter une Transaction',
+    'accounting.recentTransactions': 'Transactions Récentes',
+    'accounting.addCashierAccount': 'Ajouter un Compte de Caisse',
+    'accounting.recordNewPayment': 'Enregistrer un Nouveau Paiement',
+    'accounting.confirmPaymentApproval': 'Confirmer l\'Approbation du Paiement',
+    'accounting.editExpense': 'Modifier la Dépense',
     
     // Landlord
     'landlord.myProperties': 'Mes Propriétés',
@@ -641,14 +663,23 @@ export const setLanguage = (lang) => {
 // Translate function
 export const t = (key, lang = null) => {
   const currentLang = lang || getLanguage();
+  const langTranslations = translations[currentLang] || translations['en'];
+  
+  // First, try to find the key directly (flat structure)
+  if (langTranslations && langTranslations[key]) {
+    return langTranslations[key];
+  }
+  
+  // If not found, try nested structure (for backwards compatibility)
   const keys = key.split('.');
-  let value = translations[currentLang];
+  let value = langTranslations;
   
   for (const k of keys) {
     if (value && typeof value === 'object') {
       value = value[k];
     } else {
-      return key; // Return key if translation not found
+      // If nested lookup fails, return the key
+      return key;
     }
   }
   
