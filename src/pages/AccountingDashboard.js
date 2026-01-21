@@ -23,7 +23,7 @@ import jsPDF from 'jspdf';
 
 const AccountingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [showCashPaymentModal, setShowCashPaymentModal] = useState(false);
+  // Removed tenant cash payment modal; tenants tab is now read-only list
   const [showLandlordPaymentModal, setShowLandlordPaymentModal] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [calculatedAmount, setCalculatedAmount] = useState(null);
@@ -1760,17 +1760,7 @@ const AccountingDashboard = () => {
                             ? new Date(tenant.NextPaymentDue || tenant.nextPaymentDue).toLocaleDateString()
                             : 'N/A'}
               </td>
-                        <td>
-                          <button
-                            className="sa-primary-cta"
-                            onClick={() => {
-                              setSelectedTenantForPayment(tenant);
-                              setShowCashPaymentModal(true);
-                            }}
-                          >
-                            {t('accounting.recordCashPayment')}
-                          </button>
-              </td>
+                        <td />
             </tr>
                     );
                   })}
