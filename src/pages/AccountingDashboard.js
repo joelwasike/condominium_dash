@@ -23,7 +23,6 @@ import jsPDF from 'jspdf';
 
 const AccountingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCashPaymentModal, setShowCashPaymentModal] = useState(false);
   const [showLandlordPaymentModal, setShowLandlordPaymentModal] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState('');
@@ -133,6 +132,16 @@ const AccountingDashboard = () => {
     refundMethod: 'mobile_money',
     refundAccount: '',
     notes: ''
+  });
+
+  // Collections manual payment state
+  const [showCollectionPaymentModal, setShowCollectionPaymentModal] = useState(false);
+  const [collectionPaymentForm, setCollectionPaymentForm] = useState({
+    building: '',
+    landlord: '',
+    amount: '',
+    paymentType: 'rent', // 'rent', 'deposit', 'sale'
+    status: 'Collected',
   });
 
   // Auto-slide carousel for advertisements on overview page
@@ -1185,6 +1194,14 @@ const AccountingDashboard = () => {
           <h2>Real-time Collections Tracking</h2>
           <p>Track rent and deposit payments per building</p>
         </div>
+        <button
+          className="sa-primary-cta"
+          onClick={() => setShowCollectionPaymentModal(true)}
+          disabled={loading}
+        >
+          <Plus size={18} />
+          {t('accounting.recordPayment')}
+        </button>
       </div>
 
       <div className="sa-filters-section">
@@ -1934,7 +1951,7 @@ const AccountingDashboard = () => {
         </div>
 
         {/* Deposit Payment Modal */}
-        {showDepositPaymentModal && (
+      {showDepositPaymentModal && (
           <div className="modal-overlay" onClick={() => setShowDepositPaymentModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
@@ -2560,6 +2577,147 @@ const AccountingDashboard = () => {
                 </tbody>
               </table>
             </div>
+        </div>
+      )}
+
+      {/* Collections - Manual Payment Modal */}
+      {showCollectionPaymentModal && (
+        <div className="modal-overlay" onClick={() => setShowCollectionPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Record a payment</h3>
+              <button className="modal-close" onClick={() => setShowCollectionPaymentModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    setLoading(true);
+                    const payload = {
+                      building: collectionPaymentForm.building,
+                      landlord: collectionPaymentForm.landlord,
+                      amount: parseFloat(collectionPaymentForm.amount || '0'),
+                      chargeType:
+                        collectionPaymentForm.paymentType === 'rent'
+                          ? 'Rent'
+                          : collectionPaymentForm.paymentType === 'deposit'
+                          ? 'Deposit'
+                          : 'Sale',
+                      status: collectionPaymentForm.status || 'Collected',
+                    };
+
+                    const created = await accountingService.recordCollection(payload);
+                    addNotification('Payment recorded successfully in collections!', 'success');
+
+                    // Optimistically update collections list
+                    setCollections((prev) => [created, ...prev]);
+
+                    // Reset form and close modal
+                    setCollectionPaymentForm({
+                      building: '',
+                      landlord: '',
+                      amount: '',
+                      paymentType: 'rent',
+                      status: 'Collected',
+                    });
+                    setShowCollectionPaymentModal(false);
+                  } catch (error) {
+                    console.error('Error recording collection payment:', error);
+                    addNotification(error.message || 'Failed to record payment', 'error');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                <div className="form-group">
+                  <label htmlFor="collectionBuilding">Building / Property *</label>
+                  <input
+                    id="collectionBuilding"
+                    type="text"
+                    value={collectionPaymentForm.building}
+                    onChange={(e) =>
+                      setCollectionPaymentForm({
+                        ...collectionPaymentForm,
+                        building: e.target.value,
+                      })
+                    }
+                    required
+                    placeholder="e.g., 123 Main St, Apartment 4B"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="collectionLandlord">Landlord *</label>
+                  <input
+                    id="collectionLandlord"
+                    type="text"
+                    value={collectionPaymentForm.landlord}
+                    onChange={(e) =>
+                      setCollectionPaymentForm({
+                        ...collectionPaymentForm,
+                        landlord: e.target.value,
+                      })
+                    }
+                    required
+                    placeholder="Enter landlord name"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="collectionAmount">Amount (XOF) *</label>
+                  <input
+                    id="collectionAmount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={collectionPaymentForm.amount}
+                    onChange={(e) =>
+                      setCollectionPaymentForm({
+                        ...collectionPaymentForm,
+                        amount: e.target.value,
+                      })
+                    }
+                    required
+                    placeholder="Enter payment amount"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="collectionPaymentType">Payment type *</label>
+                  <select
+                    id="collectionPaymentType"
+                    value={collectionPaymentForm.paymentType}
+                    onChange={(e) =>
+                      setCollectionPaymentForm({
+                        ...collectionPaymentForm,
+                        paymentType: e.target.value,
+                      })
+                    }
+                    required
+                  >
+                    <option value="rent">Rent payment</option>
+                    <option value="deposit">Deposit payment</option>
+                    <option value="sale">Register a sale</option>
+                  </select>
+                </div>
+
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowCollectionPaymentModal(false)}
+                    disabled={loading}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button type="submit" className="btn-primary" disabled={loading}>
+                    {loading ? t('common.saving') : t('common.save')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -4301,96 +4459,6 @@ const AccountingDashboard = () => {
           </div>
         ))}
       </div>
-
-      {/* Payment Recording Modal */}
-      {showPaymentModal && (
-        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{t('accounting.recordNewPayment')}</h3>
-              <button className="modal-close" onClick={() => setShowPaymentModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  setLoading(true);
-                  const formData = new FormData(e.target);
-                  const paymentData = {
-                    tenant: formData.get('tenant'),
-                    property: formData.get('property'),
-                    amount: parseFloat(formData.get('amount')),
-                    method: formData.get('method'),
-                    chargeType: formData.get('chargeType') || 'Rent'
-                  };
-                  
-                  // Call the backend API
-                  const newPayment = await accountingService.recordTenantPayment(paymentData);
-                  
-                  // Update local state with the response from backend
-                  setTenantPayments(prev => [newPayment, ...prev]);
-                  addNotification('Payment recorded successfully!', 'success');
-                  setShowPaymentModal(false);
-                  
-                  // Reset form
-                  e.target.reset();
-                } catch (error) {
-                  console.error('Error recording payment:', error);
-                  addNotification('Failed to record payment. Please try again.', 'error');
-                } finally {
-                  setLoading(false);
-                }
-              }}>
-                <div className="form-group">
-                  <label htmlFor="tenant">Tenant Name</label>
-                  <input type="text" name="tenant" required placeholder="Enter tenant name" />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="property">Property</label>
-                  <select name="property" required>
-                    <option value="">Select Property</option>
-                    <option value="123 Main St">123 Main St</option>
-                    <option value="456 Oak Ave">456 Oak Ave</option>
-                    <option value="789 Pine Ln">789 Pine Ln</option>
-                    <option value="321 Elm St">321 Elm St</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="amount">Amount</label>
-                  <input type="number" name="amount" step="0.01" required placeholder="Enter amount" />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="method">Payment Method</label>
-                  <select name="method" required>
-                    <option value="">Select Method</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Mobile Money">Mobile Money</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="chargeType">Charge Type</label>
-                  <select name="chargeType" required>
-                    <option value="">Select Charge</option>
-                    <option value="Rent">Rent</option>
-                    <option value="Deposit">Deposit</option>
-                    <option value="Late Fee">Late Fee</option>
-                    <option value="Maintenance">Maintenance</option>
-                  </select>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="action-button secondary" onClick={() => setShowPaymentModal(false)}>
-                    {t('accounting.cancel')}
-                  </button>
-                  <button type="submit" className="action-button primary" disabled={loading}>
-                    {loading ? t('accounting.recording') : t('accounting.recordPayment')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Cash Payment Modal (from Tenants tab) */}
       {showCashPaymentModal && selectedTenantForPayment && (
