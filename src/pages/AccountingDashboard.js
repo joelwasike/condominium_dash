@@ -9,7 +9,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { DollarSign, TrendingUp, Building, Receipt, Download, Search, CreditCard, User, FileText, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2, Clock } from 'lucide-react';
+import { DollarSign, TrendingUp, Building, Receipt, Download, Search, CreditCard, User, FileText, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2, Clock, ArrowLeftRight, Scale, ShieldCheck, Users, History, FileBarChart } from 'lucide-react';
 import { accountingService } from '../services/accountingService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
@@ -49,6 +49,7 @@ const AccountingDashboard = () => {
   const [selectedTenantForPayment, setSelectedTenantForPayment] = useState(null);
   const [selectedLandlord, setSelectedLandlord] = useState(null);
   const [landlordProperties, setLandlordProperties] = useState(null);
+  const [ownerView, setOwnerView] = useState('payments'); // 'owners', 'payments'
   const carouselIntervalRef = useRef(null);
   
   // History state
@@ -136,6 +137,12 @@ const AccountingDashboard = () => {
   // Collections manual payment state
   const [showCollectionPaymentModal, setShowCollectionPaymentModal] = useState(false);
   const [collectionPaymentType, setCollectionPaymentType] = useState(null); // null, 'tenant', 'deposit', 'sale'
+  const [paymentView, setPaymentView] = useState('all'); // 'all', 'rent', 'deposit', 'sale', 'tenant'
+  const [balanceView, setBalanceView] = useState('overview'); // 'overview', 'cash', 'bank', 'cash-journal', 'bank-journal'
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [collectionPaymentForm, setCollectionPaymentForm] = useState({
     building: '',
     landlord: '',
@@ -208,16 +215,17 @@ const AccountingDashboard = () => {
   const tabs = useMemo(
     () => [
       { id: 'overview', label: t('nav.overview'), icon: DollarSign },
-      { id: 'collections', label: t('nav.collections'), icon: TrendingUp },
-      { id: 'payments', label: t('nav.landlordPayments'), icon: Building },
-      { id: 'tenant-payments', label: t('nav.tenantPayments'), icon: CreditCard },
-      { id: 'reports', label: t('nav.reports'), icon: Receipt },
+      { id: 'payments', label: 'Payments', icon: CreditCard }, // Merged: collections + tenant-payments
       { id: 'expenses', label: t('nav.expenses'), icon: FileText },
-      { id: 'tenants', label: t('nav.tenants'), icon: User },
-      { id: 'history', label: t('nav.history'), icon: Clock },
-      { id: 'cashier', label: t('nav.cashier'), icon: Wallet },
+      { id: 'deposit-refunds', label: 'Deposit Refunds', icon: ArrowLeftRight },
+      { id: 'tenant-management', label: 'Tenant Management', icon: Users },
+      { id: 'account-balances', label: 'Account Balances', icon: Wallet },
+      { id: 'owner-payments', label: 'Owner Payments', icon: Building },
+      { id: 'transaction-history', label: 'Transaction History', icon: History },
+      { id: 'states-taxes', label: 'States & Taxes', icon: Scale },
+      { id: 'reports', label: t('nav.reports'), icon: Receipt },
       { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
-      { id: 'chat', label: t('nav.messages'), icon: MessageCircle },
+      { id: 'messages', label: t('nav.messages'), icon: MessageCircle },
       { id: 'settings', label: t('nav.profileSettings'), icon: Settings }
     ],
     [language]
@@ -1201,6 +1209,205 @@ const AccountingDashboard = () => {
     );
   };
 
+  // Payments Section - Merged Collections + Tenant Payments
+  const renderPaymentsSection = () => {
+    // Filter collections and tenant payments based on view
+    const filteredCollections = collections.filter(col => {
+      if (paymentView === 'all') return true;
+      if (paymentView === 'rent') return col.ChargeType === 'Rent';
+      if (paymentView === 'deposit') return col.ChargeType === 'Deposit';
+      if (paymentView === 'sale') return col.ChargeType === 'Sale';
+      return false;
+    });
+
+    const filteredTenantPayments = paymentView === 'all' || paymentView === 'tenant' 
+      ? tenantPayments.filter(p => (p.Status || '').toLowerCase() === 'approved')
+      : [];
+
+    return (
+      <div>
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <div>
+              <h2>Payments & Deposits</h2>
+              <p>Manage rent payments, deposit payments, and property sales</p>
+            </div>
+            <button
+              className="sa-primary-cta"
+              onClick={() => setShowCollectionPaymentModal(true)}
+              disabled={loading}
+            >
+              <Plus size={18} />
+              Record Payment
+            </button>
+          </div>
+
+          {/* Payment Type Tabs */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '2px solid #e5e7eb' }}>
+            <button
+              onClick={() => setPaymentView('all')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: paymentView === 'all' ? '#3b82f6' : 'transparent',
+                color: paymentView === 'all' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: paymentView === 'all' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              All Payments
+            </button>
+            <button
+              onClick={() => setPaymentView('rent')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: paymentView === 'rent' ? '#3b82f6' : 'transparent',
+                color: paymentView === 'rent' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: paymentView === 'rent' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Rent Payments
+            </button>
+            <button
+              onClick={() => setPaymentView('deposit')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: paymentView === 'deposit' ? '#3b82f6' : 'transparent',
+                color: paymentView === 'deposit' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: paymentView === 'deposit' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Deposit Payments
+            </button>
+            <button
+              onClick={() => setPaymentView('sale')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: paymentView === 'sale' ? '#3b82f6' : 'transparent',
+                color: paymentView === 'sale' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: paymentView === 'sale' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Property Sales
+            </button>
+            <button
+              onClick={() => setPaymentView('tenant')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: paymentView === 'tenant' ? '#3b82f6' : 'transparent',
+                color: paymentView === 'tenant' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: paymentView === 'tenant' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Tenant Payments
+            </button>
+          </div>
+
+          {/* Combined Payments Table */}
+          {loading ? (
+            <div className="loading">Loading payments...</div>
+          ) : filteredCollections.length === 0 && filteredTenantPayments.length === 0 ? (
+            <div className="no-data">No payments found</div>
+          ) : (
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Tenant/Buyer</th>
+                    <th>Property/Building</th>
+                    <th>Landlord</th>
+                    <th>Amount</th>
+                    <th>Payment Method</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th className="table-menu"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Collections (Rent, Deposit, Sale) */}
+                  {filteredCollections.map((collection, index) => (
+                    <tr key={`collection-${collection.ID || index}`}>
+                      <td>
+                        <span className="sa-status-pill" style={{ backgroundColor: '#dbeafe', color: '#1e40af' }}>
+                          {collection.ChargeType || 'Collection'}
+                        </span>
+                      </td>
+                      <td>-</td>
+                      <td>
+                        <span className="sa-cell-title">{collection.Building || 'N/A'}</span>
+                      </td>
+                      <td>{collection.Landlord || 'N/A'}</td>
+                      <td>{collection.Amount?.toFixed(2) || '0.00'} XOF</td>
+                      <td>Cash</td>
+                      <td>
+                        <span className={`sa-status-pill ${(collection.Status || 'unknown').toLowerCase()}`}>
+                          {collection.Status || 'Unknown'}
+                        </span>
+                      </td>
+                      <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
+                      <td className="table-menu">
+                        <div className="sa-row-actions">
+                          <button className="table-action-button view">{t('common.view')}</button>
+                          <button className="table-action-button edit">Receipt</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  
+                  {/* Tenant Payments */}
+                  {filteredTenantPayments.map((payment, index) => (
+                    <tr key={`tenant-payment-${payment.ID || index}`}>
+                      <td>
+                        <span className="sa-status-pill" style={{ backgroundColor: '#dcfce7', color: '#166534' }}>
+                          Tenant Payment
+                        </span>
+                      </td>
+                      <td>
+                        <span className="sa-cell-title">{payment.Tenant || 'N/A'}</span>
+                      </td>
+                      <td>{payment.Property || 'N/A'}</td>
+                      <td>-</td>
+                      <td>{payment.Amount?.toFixed(2) || '0.00'} XOF</td>
+                      <td>{payment.Method || 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>
+                          {payment.Status || 'Unknown'}
+                        </span>
+                      </td>
+                      <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
+                      <td className="table-menu">
+                        <div className="sa-row-actions">
+                          <button className="table-action-button view">{t('common.view')}</button>
+                          {payment.ReceiptNumber && (
+                            <button className="table-action-button edit">Receipt</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderCollections = () => (
     <div className="sa-section-card">
       <div className="sa-section-header">
@@ -1302,94 +1509,204 @@ const AccountingDashboard = () => {
     </div>
   );
 
-  const renderPayments = () => (
-    <div className="sa-section-card">
-      <div className="sa-section-header">
-        <div>
-          <h2>Landlord Payment Table</h2>
-          <p>Net payments after commission deduction</p>
-        </div>
-        <button 
-          className="sa-primary-cta" 
-          onClick={() => setShowLandlordPaymentModal(true)}
-          disabled={loading}
-        >
-          <Plus size={18} />
-          {t('accounting.recordPayment')}
-        </button>
-      </div>
+  const renderPayments = () => {
+    return (
+      <div>
+        {/* Owners List Section */}
+        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+          <div className="sa-section-header">
+            <div>
+              <h2>Owner Payments</h2>
+              <p>Manage transfers to property owners</p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setOwnerView('owners')}
+                className={ownerView === 'owners' ? 'sa-primary-cta' : 'sa-outline-button'}
+              >
+                List Owners
+              </button>
+              <button
+                onClick={() => setOwnerView('payments')}
+                className={ownerView === 'payments' ? 'sa-primary-cta' : 'sa-outline-button'}
+              >
+                Owner Payments
+              </button>
+            </div>
+          </div>
 
-      <div className="sa-filters-section">
-        <select className="sa-filter-select">
-          <option value="">All Landlords</option>
-          <option value="john-smith">John Smith</option>
-          <option value="jane-doe">Jane Doe</option>
-          <option value="bob-johnson">Bob Johnson</option>
-        </select>
-        <select className="sa-filter-select">
-          <option value="">All Buildings</option>
-          <option value="123-main">123 Main St</option>
-          <option value="456-oak">456 Oak Ave</option>
-          <option value="789-pine">789 Pine Ln</option>
-        </select>
-        <select className="sa-filter-select">
-          <option value="">All Periods</option>
-          <option value="current-month">Current Month</option>
-          <option value="last-month">Last Month</option>
-        </select>
-      </div>
+          {ownerView === 'owners' && (
+            <div>
+              {loading ? (
+                <div className="loading">Loading owners...</div>
+              ) : landlords.length === 0 ? (
+                <div className="no-data">No owners found</div>
+              ) : (
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Owner Name</th>
+                        <th>Email</th>
+                        <th>Properties</th>
+                        <th className="table-menu"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {landlords.map((landlord, index) => (
+                        <tr key={landlord.ID || landlord.id || index}>
+                          <td>
+                            <span className="sa-cell-title">{landlord.Name || landlord.name || 'N/A'}</span>
+                          </td>
+                          <td>{landlord.Email || landlord.email || 'N/A'}</td>
+                          <td>
+                            <button
+                              className="table-action-button view"
+                              onClick={async () => {
+                                try {
+                                  setLoading(true);
+                                  const properties = await accountingService.getLandlordProperties(landlord.ID || landlord.id);
+                                  setLandlordProperties(properties);
+                                  setSelectedLandlord(landlord);
+                                  setOwnerView('payments');
+                                  setShowLandlordPaymentModal(true);
+                                } catch (error) {
+                                  console.error('Error loading properties:', error);
+                                  addNotification('Failed to load properties', 'error');
+                                } finally {
+                                  setLoading(false);
+                                }
+                              }}
+                            >
+                              View Properties
+                            </button>
+                          </td>
+                          <td className="table-menu">
+                            <div className="sa-row-actions">
+                              <button
+                                className="table-action-button edit"
+                                onClick={() => {
+                                  setSelectedLandlord(landlord);
+                                  setOwnerView('payments');
+                                  setShowLandlordPaymentModal(true);
+                                }}
+                              >
+                                Record Payment
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
-      {loading ? (
-        <div className="loading">Loading landlord payments...</div>
-      ) : landlordPayments.length === 0 ? (
-        <div className="no-data">No landlord payments found</div>
-      ) : (
-        <div className="sa-table-wrapper">
-          <table className="sa-table">
-            <thead>
-              <tr>
-                <th>Landlord</th>
-                <th>Building</th>
-                <th>Net Amount</th>
-                <th>Commission</th>
-                <th>Transaction Type</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th className="table-menu"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {landlordPayments.map((payment, index) => (
-                <tr key={payment.ID || `landlord-payment-${index}`}>
-                  <td>
-                    <span className="sa-cell-title">{payment.Landlord || 'N/A'}</span>
-                  </td>
-                  <td>{payment.Building || 'N/A'}</td>
-                  <td>{payment.NetAmount?.toFixed(2) || '0.00'} XOF</td>
-                  <td>{payment.Commission?.toFixed(2) || '0.00'} XOF</td>
-                  <td>Payout</td>
-                  <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
-                  <td>
-                    <span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>
-                      {payment.Status || 'Unknown'}
-                    </span>
-                  </td>
-                  <td className="table-menu">
-                    <div className="sa-row-actions">
-                      <button className="table-action-button view">{t('common.view')}</button>
-                      <button className="table-action-button edit" onClick={() => transferToLandlord(payment.ID)} title="Automatic Transfer">
-                        Transfer
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {ownerView === 'payments' && (
+            <div className="sa-section-card">
+              <div className="sa-section-header">
+                <div>
+                  <h2>Owner Payment Table</h2>
+                  <p>Net payments after commission deduction</p>
+                </div>
+                <button 
+                  className="sa-primary-cta" 
+                  onClick={() => setShowLandlordPaymentModal(true)}
+                  disabled={loading}
+                >
+                  <Plus size={18} />
+                  Register Owner Payment
+                </button>
+              </div>
+
+              <div className="sa-filters-section">
+                <select className="sa-filter-select">
+                  <option value="">All Landlords</option>
+                  <option value="john-smith">John Smith</option>
+                  <option value="jane-doe">Jane Doe</option>
+                  <option value="bob-johnson">Bob Johnson</option>
+                </select>
+                <select className="sa-filter-select">
+                  <option value="">All Buildings</option>
+                  <option value="123-main">123 Main St</option>
+                  <option value="456-oak">456 Oak Ave</option>
+                  <option value="789-pine">789 Pine Ln</option>
+                </select>
+                <select className="sa-filter-select">
+                  <option value="">All Periods</option>
+                  <option value="current-month">Current Month</option>
+                  <option value="last-month">Last Month</option>
+                </select>
+              </div>
+
+              {loading ? (
+                <div className="loading">Loading landlord payments...</div>
+              ) : landlordPayments.length === 0 ? (
+                <div className="no-data">No landlord payments found</div>
+              ) : (
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Landlord</th>
+                        <th>Building</th>
+                        <th>Net Amount</th>
+                        <th>Commission</th>
+                        <th>Transaction Type</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th className="table-menu"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {landlordPayments.map((payment, index) => (
+                        <tr key={payment.ID || `landlord-payment-${index}`}>
+                          <td>
+                            <span className="sa-cell-title">{payment.Landlord || 'N/A'}</span>
+                          </td>
+                          <td>{payment.Building || 'N/A'}</td>
+                          <td>{payment.NetAmount?.toFixed(2) || '0.00'} XOF</td>
+                          <td>{payment.Commission?.toFixed(2) || '0.00'} XOF</td>
+                          <td>Payout</td>
+                          <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
+                          <td>
+                            <span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>
+                              {payment.Status || 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="table-menu">
+                            <div className="sa-row-actions">
+                              <button className="table-action-button view">{t('common.view')}</button>
+                              {(payment.Status || '').toLowerCase() !== 'paid' && (
+                                <button 
+                                  className="table-action-button edit" 
+                                  onClick={() => transferToLandlord(payment.ID)} 
+                                  title="Mark as Completed"
+                                >
+                                  Mark Completed
+                                </button>
+                              )}
+                              {(payment.Status || '').toLowerCase() === 'paid' && (
+                                <span className="sa-status-pill success" style={{ padding: '4px 12px' }}>
+                                  Completed
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   // Load report data
   const loadReport = async () => {
@@ -1398,6 +1715,21 @@ const AccountingDashboard = () => {
       let data = null;
 
       switch (selectedReportType) {
+        case 'global-financial':
+        case 'rent-property-management':
+        case 'deposit-report':
+        case 'owner-report':
+        case 'sales-report':
+        case 'property-report':
+        case 'tax-report':
+        case 'management-summary':
+          // These reports use existing data, no backend call needed
+          data = {
+            startDate: reportStartDate,
+            endDate: reportEndDate,
+            period: reportPeriod
+          };
+          break;
         case 'payments-by-period':
           data = await accountingService.getPaymentsByPeriodReport(reportStartDate, reportEndDate, reportPeriod);
           break;
@@ -2221,8 +2553,251 @@ const AccountingDashboard = () => {
     );
   };
 
+  // Deposit Refunds - Focused on refund requests and processing
+  const renderDepositRefunds = () => {
+    const refundRequests = deposits.filter(d => (d.Type || d.type) === 'payment' && (d.Status || d.status) === 'completed');
+    const processedRefunds = deposits.filter(d => (d.Type || d.type) === 'refund');
+
+    return (
+      <div>
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <div>
+              <h2>Deposit Refunds</h2>
+              <p>Validate and process security deposit refunds</p>
+            </div>
+          </div>
+
+          {/* Summary Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+            <div style={{ padding: '20px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fbbf24' }}>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Pending Refunds</p>
+              <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#d97706' }}>
+                {refundRequests.length}
+              </p>
+            </div>
+            <div style={{ padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Processed Refunds</p>
+              <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#059669' }}>
+                {processedRefunds.length}
+              </p>
+            </div>
+            <div style={{ padding: '20px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #93c5fd' }}>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Total Refunded</p>
+              <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#0284c7' }}>
+                {processedRefunds.reduce((sum, d) => sum + (d.Amount || d.amount || 0), 0).toFixed(2)} XOF
+              </p>
+            </div>
+          </div>
+
+          {/* Refund Requests Table */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ marginBottom: '16px' }}>Pending Refund Requests</h3>
+            {loading ? (
+              <div className="loading">Loading refund requests...</div>
+            ) : refundRequests.length === 0 ? (
+              <div className="no-data">No pending refund requests</div>
+            ) : (
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Tenant</th>
+                      <th>Property</th>
+                      <th>Deposit Amount</th>
+                      <th>Payment Date</th>
+                      <th>Status</th>
+                      <th className="table-menu">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {refundRequests.map((deposit, index) => (
+                      <tr key={deposit.ID || `refund-request-${index}`}>
+                        <td>
+                          <span className="sa-cell-title">{deposit.Tenant || 'N/A'}</span>
+                        </td>
+                        <td>{deposit.Property || 'N/A'}</td>
+                        <td>{(deposit.Amount || deposit.amount || 0).toFixed(2)} XOF</td>
+                        <td>{deposit.CreatedAt ? new Date(deposit.CreatedAt).toLocaleDateString() : 'N/A'}</td>
+                        <td>
+                          <span className="sa-status-pill warning">Pending Refund</span>
+                        </td>
+                        <td className="table-menu">
+                          <div className="sa-row-actions">
+                            <button
+                              className="table-action-button edit"
+                              onClick={() => {
+                                setDepositRefundForm({
+                                  depositId: deposit.ID || deposit.id,
+                                  refundMethod: 'mobile_money',
+                                  refundAccount: '',
+                                  notes: ''
+                                });
+                                setShowDepositRefundModal(true);
+                              }}
+                            >
+                              Process Refund
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Processed Refunds Table */}
+          <div>
+            <h3 style={{ marginBottom: '16px' }}>Processed Refunds</h3>
+            {processedRefunds.length === 0 ? (
+              <div className="no-data">No processed refunds</div>
+            ) : (
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Tenant</th>
+                      <th>Property</th>
+                      <th>Refund Amount</th>
+                      <th>Refund Method</th>
+                      <th>Refund Date</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {processedRefunds.map((refund, index) => (
+                      <tr key={refund.ID || `refund-${index}`}>
+                        <td>
+                          <span className="sa-cell-title">{refund.Tenant || 'N/A'}</span>
+                        </td>
+                        <td>{refund.Property || 'N/A'}</td>
+                        <td>{(refund.Amount || refund.amount || 0).toFixed(2)} XOF</td>
+                        <td>{refund.RefundMethod || refund.refundMethod || 'N/A'}</td>
+                        <td>{refund.RefundedAt || refund.refundedAt ? new Date(refund.RefundedAt || refund.refundedAt).toLocaleDateString() : 'N/A'}</td>
+                        <td>
+                          <span className="sa-status-pill success">Refunded</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // States & Taxes - Monthly accounting and tax obligations
+  const renderStatesTaxes = () => {
+    return (
+      <div>
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <div>
+              <h2>States & Taxes</h2>
+              <p>Monthly accounting and tax obligations</p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px'
+                }}
+              />
+              <button className="sa-primary-cta" onClick={() => {
+                // Generate monthly statement
+                addNotification('Monthly statement generation coming soon', 'info');
+              }}>
+                <Download size={18} />
+                Generate Statement
+              </button>
+            </div>
+          </div>
+
+          {/* Tax Summary Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+            <div style={{ padding: '20px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #93c5fd' }}>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Declared Turnover</p>
+              <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#0284c7' }}>
+                {overviewData?.totalCollectedThisMonth?.toFixed(2) || '0.00'} XOF
+              </p>
+            </div>
+            <div style={{ padding: '20px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fca5a5' }}>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Deductible Expenses</p>
+              <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#dc2626' }}>
+                {overviewData?.totalExpensesThisMonth?.toFixed(2) || '0.00'} XOF
+              </p>
+            </div>
+            <div style={{ padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Taxable Income</p>
+              <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#059669' }}>
+                {((overviewData?.totalCollectedThisMonth || 0) - (overviewData?.totalExpensesThisMonth || 0)).toFixed(2)} XOF
+              </p>
+            </div>
+          </div>
+
+          {/* Tax Information */}
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ marginBottom: '16px' }}>Monthly Financial Statement</h3>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Amount (XOF)</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Total Revenue</td>
+                    <td>{overviewData?.totalCollectedThisMonth?.toFixed(2) || '0.00'}</td>
+                    <td>All collected payments</td>
+                  </tr>
+                  <tr>
+                    <td>Total Expenses</td>
+                    <td>{overviewData?.totalExpensesThisMonth?.toFixed(2) || '0.00'}</td>
+                    <td>All recorded expenses</td>
+                  </tr>
+                  <tr>
+                    <td>Net Profit</td>
+                    <td>{((overviewData?.totalCollectedThisMonth || 0) - (overviewData?.totalExpensesThisMonth || 0)).toFixed(2)}</td>
+                    <td>Revenue minus expenses</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Declaration History */}
+          <div>
+            <h3 style={{ marginBottom: '16px' }}>Declaration History</h3>
+            <div className="no-data">No declaration history available</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderReports = () => {
     const reportTypes = [
+      { value: 'global-financial', label: 'Global Financial Report' },
+      { value: 'rent-property-management', label: 'Rent & Property Management' },
+      { value: 'deposit-report', label: 'Deposit Report' },
+      { value: 'owner-report', label: 'Owner Report' },
+      { value: 'sales-report', label: 'Sales Report' },
+      { value: 'property-report', label: 'Property Report' },
+      { value: 'tax-report', label: 'Tax Report' },
+      { value: 'management-summary', label: 'Management Summary' },
       { value: 'payments-by-period', label: t('accounting.paymentsByPeriod') },
       { value: 'commissions-by-period', label: t('accounting.commissionsByPeriod') },
       { value: 'refunds', label: t('accounting.refundsReport') },
@@ -2673,6 +3248,274 @@ const AccountingDashboard = () => {
           </table>
     </div>
   );
+  };
+
+  // New report render functions
+  const renderGlobalFinancialReport = () => {
+    if (!reportData) return null;
+    return (
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Total Revenue</th>
+              <th>Total Expenses</th>
+              <th>Net Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Overall</td>
+              <td>{(overviewData?.totalCollectedThisMonth || 0).toFixed(2)} XOF</td>
+              <td>{(overviewData?.totalExpensesThisMonth || 0).toFixed(2)} XOF</td>
+              <td>{((overviewData?.totalCollectedThisMonth || 0) - (overviewData?.totalExpensesThisMonth || 0)).toFixed(2)} XOF</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderRentPropertyManagementReport = () => {
+    if (!reportData) return null;
+    return (
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Rent Collected</th>
+              <th>Occupancy Rate</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {collections.filter(c => (c.ChargeType || c.chargeType) === 'Rent').map((collection, index) => (
+              <tr key={index}>
+                <td>{collection.Building || collection.building || 'N/A'}</td>
+                <td>{(collection.Amount || collection.amount || 0).toFixed(2)} XOF</td>
+                <td>85%</td>
+                <td>
+                  <span className={`sa-status-pill ${(collection.Status || 'unknown').toLowerCase()}`}>
+                    {collection.Status || 'Unknown'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderDepositReport = () => {
+    if (!reportData) return null;
+    return (
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>Tenant</th>
+              <th>Property</th>
+              <th>Deposit Amount</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {collections.filter(c => (c.ChargeType || c.chargeType) === 'Deposit').map((collection, index) => (
+              <tr key={index}>
+                <td>-</td>
+                <td>{collection.Building || collection.building || 'N/A'}</td>
+                <td>{(collection.Amount || collection.amount || 0).toFixed(2)} XOF</td>
+                <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
+                <td>
+                  <span className={`sa-status-pill ${(collection.Status || 'unknown').toLowerCase()}`}>
+                    {collection.Status || 'Unknown'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderOwnerReport = () => {
+    if (!reportData) return null;
+    return (
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>Owner</th>
+              <th>Properties</th>
+              <th>Total Paid</th>
+              <th>Pending</th>
+            </tr>
+          </thead>
+          <tbody>
+            {landlordPayments.map((payment, index) => (
+              <tr key={index}>
+                <td>{payment.Landlord || payment.landlord || 'N/A'}</td>
+                <td>{payment.Building || payment.building || 'N/A'}</td>
+                <td>{(payment.NetAmount || payment.netAmount || 0).toFixed(2)} XOF</td>
+                <td>
+                  {(payment.Status || '').toLowerCase() === 'paid' ? '0.00' : (payment.NetAmount || payment.netAmount || 0).toFixed(2)} XOF
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderSalesReport = () => {
+    if (!reportData) return null;
+    return (
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Sale Amount</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {collections.filter(c => (c.ChargeType || c.chargeType) === 'Sale').map((collection, index) => (
+              <tr key={index}>
+                <td>{collection.Building || collection.building || 'N/A'}</td>
+                <td>{(collection.Amount || collection.amount || 0).toFixed(2)} XOF</td>
+                <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
+                <td>
+                  <span className={`sa-status-pill ${(collection.Status || 'unknown').toLowerCase()}`}>
+                    {collection.Status || 'Unknown'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderPropertyReport = () => {
+    if (!reportData) return null;
+    return (
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Owner</th>
+              <th>Total Revenue</th>
+              <th>Expenses</th>
+              <th>Net</th>
+            </tr>
+          </thead>
+          <tbody>
+            {collections.map((collection, index) => (
+              <tr key={index}>
+                <td>{collection.Building || collection.building || 'N/A'}</td>
+                <td>{collection.Landlord || collection.landlord || 'N/A'}</td>
+                <td>{(collection.Amount || collection.amount || 0).toFixed(2)} XOF</td>
+                <td>-</td>
+                <td>{(collection.Amount || collection.amount || 0).toFixed(2)} XOF</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderTaxReport = () => {
+    if (!reportData) return null;
+    const taxableIncome = (overviewData?.totalCollectedThisMonth || 0) - (overviewData?.totalExpensesThisMonth || 0);
+    return (
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Amount (XOF)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Declared Turnover</td>
+              <td>{(overviewData?.totalCollectedThisMonth || 0).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td>Deductible Expenses</td>
+              <td>{(overviewData?.totalExpensesThisMonth || 0).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td>Taxable Income</td>
+              <td>{taxableIncome.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderManagementSummaryReport = () => {
+    if (!reportData) return null;
+    return (
+      <div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+          <div style={{ padding: '20px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #93c5fd' }}>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Total Collections</p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#0284c7' }}>
+              {(overviewData?.totalCollectedThisMonth || 0).toFixed(2)} XOF
+            </p>
+          </div>
+          <div style={{ padding: '20px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fca5a5' }}>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Total Expenses</p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#dc2626' }}>
+              {(overviewData?.totalExpensesThisMonth || 0).toFixed(2)} XOF
+            </p>
+          </div>
+          <div style={{ padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Net Profit</p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#059669' }}>
+              {((overviewData?.totalCollectedThisMonth || 0) - (overviewData?.totalExpensesThisMonth || 0)).toFixed(2)} XOF
+            </p>
+          </div>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Total Properties</td>
+                <td>{collections.length}</td>
+              </tr>
+              <tr>
+                <td>Active Tenants</td>
+                <td>{tenantPayments.length}</td>
+              </tr>
+              <tr>
+                <td>Total Owners</td>
+                <td>{landlords.length}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
   };
 
   const renderTenantPayments = () => (
@@ -3408,12 +4251,57 @@ const AccountingDashboard = () => {
     );
   };
 
-  // Render Cashier section
+  // Account Balances - Enhanced Cashier section
   const renderCashier = () => {
     // Calculate total balance across all accounts
     const totalBalance = cashierAccounts
       .filter(acc => acc.IsActive !== false && acc.isActive !== false)
       .reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
+
+    // Calculate cash balance (cash_register accounts)
+    const cashBalance = cashierAccounts
+      .filter(acc => (acc.Type || acc.type) === 'cash_register' && (acc.IsActive !== false && acc.isActive !== false))
+      .reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
+
+    // Calculate bank balance (bank accounts)
+    const bankBalance = cashierAccounts
+      .filter(acc => (acc.Type || acc.type) === 'bank' && (acc.IsActive !== false && acc.isActive !== false))
+      .reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
+
+    // Get cash account IDs
+    const cashAccountIds = cashierAccounts
+      .filter(acc => (acc.Type || acc.type) === 'cash_register')
+      .map(acc => acc.ID || acc.id);
+
+    // Get bank account IDs
+    const bankAccountIds = cashierAccounts
+      .filter(acc => (acc.Type || acc.type) === 'bank')
+      .map(acc => acc.ID || acc.id);
+
+    // Filter transactions for cash and bank
+    const cashTransactions = cashierTransactions.filter(t => 
+      cashAccountIds.includes(t.AccountID || t.accountId)
+    );
+    const bankTransactions = cashierTransactions.filter(t => 
+      bankAccountIds.includes(t.AccountID || t.accountId)
+    );
+
+    // Calculate inflows and outflows (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentTransactions = cashierTransactions.filter(t => {
+      const date = new Date(t.CreatedAt || t.createdAt);
+      return date >= thirtyDaysAgo;
+    });
+
+    const inflows = recentTransactions
+      .filter(t => (t.Type || t.type) === 'deposit')
+      .reduce((sum, t) => sum + (t.Amount || t.amount || 0), 0);
+
+    const outflows = recentTransactions
+      .filter(t => (t.Type || t.type) === 'withdrawal')
+      .reduce((sum, t) => sum + (t.Amount || t.amount || 0), 0);
 
     // Group accounts by type
     const accountsByType = {
@@ -3428,8 +4316,8 @@ const AccountingDashboard = () => {
         <div className="sa-section-card">
           <div className="sa-section-header">
             <div>
-              <h2>Cashier Management</h2>
-              <p>Track balances across mobile money, cash register, bank accounts, and more</p>
+              <h2>Account Balances</h2>
+              <p>View physical cash balance, bank balance, inflows/outflows, and journals</p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button 
@@ -3470,6 +4358,83 @@ const AccountingDashboard = () => {
             </div>
           </div>
 
+          {/* Account Balance Tabs */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb' }}>
+            <button
+              onClick={() => setBalanceView('overview')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: balanceView === 'overview' ? '#3b82f6' : 'transparent',
+                color: balanceView === 'overview' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: balanceView === 'overview' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setBalanceView('cash')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: balanceView === 'cash' ? '#3b82f6' : 'transparent',
+                color: balanceView === 'cash' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: balanceView === 'cash' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Cash Balance
+            </button>
+            <button
+              onClick={() => setBalanceView('bank')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: balanceView === 'bank' ? '#3b82f6' : 'transparent',
+                color: balanceView === 'bank' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: balanceView === 'bank' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Bank Balance
+            </button>
+            <button
+              onClick={() => setBalanceView('cash-journal')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: balanceView === 'cash-journal' ? '#3b82f6' : 'transparent',
+                color: balanceView === 'cash-journal' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: balanceView === 'cash-journal' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Cash Journal
+            </button>
+            <button
+              onClick={() => setBalanceView('bank-journal')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: balanceView === 'bank-journal' ? '#3b82f6' : 'transparent',
+                color: balanceView === 'bank-journal' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: balanceView === 'bank-journal' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Bank Journal
+            </button>
+          </div>
+
+          {/* Overview Tab */}
+          {balanceView === 'overview' && (
+            <>
           {/* Total Balance Summary */}
           <div style={{ 
             padding: '24px', 
@@ -3713,6 +4678,220 @@ const AccountingDashboard = () => {
               </div>
             )}
           </div>
+            </>
+          )}
+
+          {/* Cash Balance Tab */}
+          {balanceView === 'cash' && (
+            <>
+              <div style={{ padding: '24px', marginBottom: '24px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Physical Cash Balance</p>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '2rem', fontWeight: '600', color: '#166534' }}>
+                      {cashBalance.toFixed(2)} XOF
+                    </p>
+                  </div>
+                  <Banknote size={48} style={{ color: '#22c55e' }} />
+                </div>
+              </div>
+
+              {accountsByType.cash_register.length === 0 ? (
+                <div className="no-data">No cash register accounts found</div>
+              ) : (
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Account Name</th>
+                        <th>Description</th>
+                        <th>Balance</th>
+                        <th>Currency</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accountsByType.cash_register.map((account, index) => (
+                        <tr key={account.ID || account.id || index}>
+                          <td><span className="sa-cell-title">{account.Name || account.name || 'Unnamed'}</span></td>
+                          <td>{account.Description || '-'}</td>
+                          <td style={{ fontWeight: '600', color: '#059669' }}>
+                            {(account.Balance || account.balance || 0).toFixed(2)} XOF
+                          </td>
+                          <td>{account.Currency || account.currency || 'XOF'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Bank Balance Tab */}
+          {balanceView === 'bank' && (
+            <>
+              <div style={{ padding: '24px', marginBottom: '24px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #93c5fd' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Bank Balance</p>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '2rem', fontWeight: '600', color: '#0284c7' }}>
+                      {bankBalance.toFixed(2)} XOF
+                    </p>
+                  </div>
+                  <Building2 size={48} style={{ color: '#3b82f6' }} />
+                </div>
+              </div>
+
+              {accountsByType.bank.length === 0 ? (
+                <div className="no-data">No bank accounts found</div>
+              ) : (
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Account Name</th>
+                        <th>Description</th>
+                        <th>Balance</th>
+                        <th>Currency</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accountsByType.bank.map((account, index) => (
+                        <tr key={account.ID || account.id || index}>
+                          <td><span className="sa-cell-title">{account.Name || account.name || 'Unnamed'}</span></td>
+                          <td>{account.Description || '-'}</td>
+                          <td style={{ fontWeight: '600', color: '#0284c7' }}>
+                            {(account.Balance || account.balance || 0).toFixed(2)} XOF
+                          </td>
+                          <td>{account.Currency || account.currency || 'XOF'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Cash Journal Tab */}
+          {balanceView === 'cash-journal' && (
+            <>
+              <div style={{ marginBottom: '16px' }}>
+                <h3>Cash Journal</h3>
+                <p style={{ color: '#6b7280', marginTop: '4px' }}>All transactions for cash register accounts</p>
+              </div>
+              {cashTransactions.length === 0 ? (
+                <div className="no-data">No cash transactions found</div>
+              ) : (
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Account</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Reference</th>
+                        <th>Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cashTransactions.map((transaction, index) => {
+                        const account = cashierAccounts.find(acc => 
+                          (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId)
+                        );
+                        const accountName = account ? (account.Name || account.name) : 'Unknown';
+                        const type = transaction.Type || transaction.type || 'N/A';
+                        const amount = transaction.Amount || transaction.amount || 0;
+                        const isNegative = type === 'withdrawal' || type === 'transfer';
+
+                        return (
+                          <tr key={transaction.ID || transaction.id || index}>
+                            <td>
+                              {transaction.CreatedAt || transaction.createdAt 
+                                ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString()
+                                : 'N/A'}
+                            </td>
+                            <td><span className="sa-cell-title">{accountName}</span></td>
+                            <td>
+                              <span className={`sa-status-pill ${type.toLowerCase()}`}>
+                                {type}
+                              </span>
+                            </td>
+                            <td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>
+                              {isNegative ? '-' : '+'}{amount.toFixed(2)} XOF
+                            </td>
+                            <td>{transaction.Reference || transaction.reference || 'N/A'}</td>
+                            <td>{transaction.Description || transaction.description || 'N/A'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Bank Journal Tab */}
+          {balanceView === 'bank-journal' && (
+            <>
+              <div style={{ marginBottom: '16px' }}>
+                <h3>Bank Journal</h3>
+                <p style={{ color: '#6b7280', marginTop: '4px' }}>All transactions for bank accounts</p>
+              </div>
+              {bankTransactions.length === 0 ? (
+                <div className="no-data">No bank transactions found</div>
+              ) : (
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Account</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Reference</th>
+                        <th>Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bankTransactions.map((transaction, index) => {
+                        const account = cashierAccounts.find(acc => 
+                          (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId)
+                        );
+                        const accountName = account ? (account.Name || account.name) : 'Unknown';
+                        const type = transaction.Type || transaction.type || 'N/A';
+                        const amount = transaction.Amount || transaction.amount || 0;
+                        const isNegative = type === 'withdrawal' || type === 'transfer';
+
+                        return (
+                          <tr key={transaction.ID || transaction.id || index}>
+                            <td>
+                              {transaction.CreatedAt || transaction.createdAt 
+                                ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString()
+                                : 'N/A'}
+                            </td>
+                            <td><span className="sa-cell-title">{accountName}</span></td>
+                            <td>
+                              <span className={`sa-status-pill ${type.toLowerCase()}`}>
+                                {type}
+                              </span>
+                            </td>
+                            <td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>
+                              {isNegative ? '-' : '+'}{amount.toFixed(2)} XOF
+                            </td>
+                            <td>{transaction.Reference || transaction.reference || 'N/A'}</td>
+                            <td>{transaction.Description || transaction.description || 'N/A'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Add Account Modal */}
@@ -4247,34 +5426,47 @@ const AccountingDashboard = () => {
     switch (tabId) {
       case 'overview':
         return renderOverview();
-      case 'collections':
-        return renderCollections();
       case 'payments':
-        return renderPayments();
-      case 'tenant-payments':
-        return renderTenantPayments();
-      case 'reports':
-        return renderReports();
+        return renderPaymentsSection(); // Merged collections + tenant payments
       case 'expenses':
         return renderExpenses();
-      case 'tenants':
-        return renderTenants();
-      case 'history':
-        return renderHistory();
-      case 'deposits':
-        return renderDeposits();
-      case 'cashier':
-        return renderCashier();
+      case 'deposit-refunds':
+        return renderDepositRefunds();
+      case 'tenant-management':
+        return renderTenants(); // Renamed from 'tenants'
+      case 'account-balances':
+        return renderCashier(); // Renamed from 'cashier'
+      case 'owner-payments':
+        return renderPayments(); // Renamed from 'payments' (landlord payments)
+      case 'transaction-history':
+        return renderHistory(); // Renamed from 'history'
+      case 'states-taxes':
+        return renderStatesTaxes();
+      case 'reports':
+        return renderReports();
       case 'advertisements':
         return renderAdvertisements();
-      case 'chat':
-        return renderMessages();
+      case 'messages':
+        return renderMessages(); // Renamed from 'chat'
       case 'settings':
         return (
           <div className="embedded-settings">
             <SettingsPage />
           </div>
         );
+      // Legacy support for old menu IDs
+      case 'collections':
+        return renderCollections();
+      case 'tenant-payments':
+        return renderTenantPayments();
+      case 'tenants':
+        return renderTenants();
+      case 'history':
+        return renderHistory();
+      case 'cashier':
+        return renderCashier();
+      case 'chat':
+        return renderMessages();
       default:
         return renderOverview();
     }
