@@ -257,14 +257,15 @@ const AccountingDashboard = () => {
         return;
       }
       
-      const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary, landlordsData] = await Promise.all([
+      const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary, landlordsData, tenantsData] = await Promise.all([
         accountingService.getOverview(),
         accountingService.getTenantPayments(),
         accountingService.getLandlordPayments(),
         accountingService.getCollections(),
         accountingService.getExpenses({}),
         accountingService.getMonthlySummary(),
-        accountingService.getLandlords().catch(() => [])
+        accountingService.getLandlords().catch(() => []),
+        accountingService.getTenantsWithPaymentStatus().catch(() => [])
       ]);
 
       setOverviewData(overview);
@@ -274,6 +275,7 @@ const AccountingDashboard = () => {
       setExpenses(expensesData);
       setMonthlySummary(summary);
       setLandlords(Array.isArray(landlordsData) ? landlordsData : []);
+      setTenants(Array.isArray(tenantsData) ? tenantsData : []);
       
       console.log('Accounting data loaded successfully:', { overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary });
     } catch (error) {
@@ -3566,7 +3568,7 @@ const AccountingDashboard = () => {
               </tr>
               <tr>
                 <td>Active Tenants</td>
-                <td>{tenantPayments.length}</td>
+                <td>{overviewData?.activeTenants || overviewData?.numberOfActiveTenants || tenants.length}</td>
               </tr>
               <tr>
                 <td>Total Owners</td>

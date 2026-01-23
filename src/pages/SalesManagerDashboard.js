@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { TrendingUp, Users, AlertTriangle, Building, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
 import ContractUpload from '../components/ContractUpload';
@@ -159,6 +169,9 @@ const SalesManagerDashboard = () => {
     }
   }, [activeTab, advertisements.length]);
   const [loading, setLoading] = useState(false);
+  
+  // Property form state
+  const [selectedPropertyType, setSelectedPropertyType] = useState('');
   
   // Filter states
   const [clientStatusFilter, setClientStatusFilter] = useState('');
@@ -920,6 +933,7 @@ const SalesManagerDashboard = () => {
       buildingType: formData.get('buildingType')?.trim() || null,
       status: formData.get('status')?.trim(),
       rent: formData.get('rent') ? parseFloat(formData.get('rent')) : undefined,
+      unitNumber: formData.get('unitNumber')?.trim(),
       bedrooms: formData.get('bedrooms') ? parseInt(formData.get('bedrooms')) : undefined,
       bathrooms: formData.get('bathrooms') ? parseFloat(formData.get('bathrooms')) : undefined,
       urgency: formData.get('urgency')?.trim() || 'normal',
@@ -928,8 +942,8 @@ const SalesManagerDashboard = () => {
     };
 
     // Validate required fields
-    if (!propertyData.address || !propertyData.type || !propertyData.propertyType || !propertyData.status || !propertyData.rent) {
-      addNotification('Please fill in all required fields (Address, Type, Property Type, Status, Rent)', 'error');
+    if (!propertyData.address || !propertyData.type || !propertyData.propertyType || !propertyData.status || !propertyData.rent || !propertyData.unitNumber) {
+      addNotification('Please fill in all required fields (Address, Type, Property Type, Status, Unit Number, ' + (propertyData.propertyType === 'For Sale' ? 'Total Price' : 'Monthly Rent') + ')', 'error');
       return;
     }
 
@@ -950,6 +964,7 @@ const SalesManagerDashboard = () => {
       await salesManagerService.createProperty(propertyData);
       addNotification('Property created successfully', 'success');
       setShowCreatePropertyModal(false);
+      setSelectedPropertyType('');
       await loadData();
     } catch (error) {
       console.error('Error creating property:', error);
@@ -976,6 +991,7 @@ const SalesManagerDashboard = () => {
     }
     if (formData.get('status')) updateData.status = formData.get('status').trim();
     if (formData.get('rent')) updateData.rent = parseFloat(formData.get('rent'));
+    if (formData.get('unitNumber')) updateData.unitNumber = formData.get('unitNumber').trim();
     if (formData.get('bedrooms')) updateData.bedrooms = parseInt(formData.get('bedrooms'));
     if (formData.get('bathrooms')) updateData.bathrooms = parseFloat(formData.get('bathrooms'));
     if (formData.get('urgency')) updateData.urgency = formData.get('urgency').trim();
@@ -997,6 +1013,7 @@ const SalesManagerDashboard = () => {
       addNotification('Property updated successfully', 'success');
       setShowEditPropertyModal(false);
       setEditingProperty(null);
+      setSelectedPropertyType('');
       await loadData();
     } catch (error) {
       console.error('Error updating property:', error);
@@ -1026,12 +1043,39 @@ const SalesManagerDashboard = () => {
       unpaidAmount: 0,
     };
 
-    // Use enhanced fields if available, fallback to legacy
-    const occupancyRate = data.globalOccupancyRate || data.occupancyRate || 0;
-    const activeTenants = data.totalActiveTenants || data.activeClients || 0;
-    const unpaidCount = data.numberOfUnpaidAccounts || data.unpaidCount || 0;
-    const unpaidAmount = data.totalUnpaidRentAmount || data.unpaidAmount || 0;
+    // Calculate actual metrics from loaded data
+    const totalPropertiesCount = properties.length || data.totalProperties || 0;
+    const occupiedCount = properties.filter(p => (p.status || p.Status || '').toLowerCase() === 'occupied').length || data.occupiedProperties || 0;
+    const vacantCount = properties.filter(p => (p.status || p.Status || '').toLowerCase() === 'vacant').length || data.vacantProperties || 0;
+    const actualOccupancyRate = totalPropertiesCount > 0 ? (occupiedCount / totalPropertiesCount * 100) : (data.globalOccupancyRate || data.occupancyRate || 0);
+    
+    // Use enhanced fields if available, fallback to legacy, then fallback to calculated values
+    const occupancyRate = data.globalOccupancyRate || data.occupancyRate || actualOccupancyRate;
+    const activeTenants = data.totalActiveTenants || data.activeClients || clients.filter(c => (c.status || c.Status || '').toLowerCase() === 'active').length || 0;
+    const unpaidCount = data.numberOfUnpaidAccounts || data.unpaidCount || unpaidRents.length || 0;
+    const unpaidAmount = data.totalUnpaidRentAmount || data.unpaidAmount || unpaidRents.reduce((sum, r) => sum + (r.amount || r.Amount || 0), 0) || 0;
+    
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+    // Use historical data from backend if available, otherwise calculate from current data
+    let chartData = [];
+    if (data.historicalData && Array.isArray(data.historicalData) && data.historicalData.length > 0) {
+      chartData = data.historicalData;
+    } else {
+      // Fallback: Calculate historical occupancy data for the last 6 months
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthName = monthDate.toLocaleString('default', { month: 'short' });
+        
+        // Use current occupancy rate for all months (fallback)
+        chartData.push({
+          month: monthName,
+          occupancyRate: Math.round(actualOccupancyRate * 10) / 10,
+          activeTenants: activeTenants
+        });
+      }
+    }
 
     return (
       <div className="sa-overview-page">
@@ -1045,23 +1089,86 @@ const SalesManagerDashboard = () => {
               <span className="sa-legend-item sa-legend-expected">Occupancy Rate (%)</span>
               <span className="sa-legend-item sa-legend-current">Active Tenants</span>
             </div>
-            <div className="sa-chart-placeholder">
-              <div className="sa-chart-line sa-chart-line-expected" />
-              <div className="sa-chart-line sa-chart-line-current" />
-          </div>
-            <div className="sa-chart-footer">
-              <span>Jan</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-              <span>Jun</span>
-              <span>Jul</span>
-              <span>Aug</span>
-              <span>Sep</span>
-              <span>Oct</span>
-              <span>Nov</span>
-              <span>Dec</span>
+            <div style={{ width: '100%', height: '200px', marginTop: '20px' }}>
+              <ResponsiveContainer>
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
+                >
+                  <defs>
+                    <linearGradient id="colorOccupancy" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorTenants" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                    label={{ value: 'Occupancy %', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                    label={{ value: 'Tenants', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      padding: '8px 12px'
+                    }}
+                    formatter={(value, name) => {
+                      if (name === 'occupancyRate') return [`${value.toFixed(1)}%`, 'Occupancy Rate'];
+                      if (name === 'activeTenants') return [value, 'Active Tenants'];
+                      return value;
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '10px' }}
+                    iconType="line"
+                  />
+                  <Area
+                    yAxisId="left"
+                    type="natural"
+                    dataKey="occupancyRate"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    fill="url(#colorOccupancy)"
+                    dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
+                    name="Occupancy Rate (%)"
+                  />
+                  <Area
+                    yAxisId="right"
+                    type="natural"
+                    dataKey="activeTenants"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    fill="url(#colorTenants)"
+                    dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
+                    name="Active Tenants"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
             </div>
 
@@ -1070,29 +1177,45 @@ const SalesManagerDashboard = () => {
               <p className="sa-metric-label">Total Unpaid Amount</p>
               <p className="sa-metric-period">Outstanding Balance</p>
               <p className="sa-metric-value">
-                {unpaidAmount.toLocaleString()} XOF
+                {unpaidAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} XOF
               </p>
           </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Active Tenants</p>
               <p className="sa-metric-number">
                 {activeTenants}
-                <span className="sa-metric-trend positive">+1.5%</span>
               </p>
             </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Occupancy Rate</p>
               <p className="sa-metric-value">
-                {occupancyRate.toFixed(0)}%
+                {occupancyRate.toFixed(1)}%
               </p>
             </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Unpaid Accounts</p>
               <p className="sa-metric-number">
                 {unpaidCount}
-                <span className="sa-metric-trend negative">-1.5%</span>
               </p>
           </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Total Properties</p>
+              <p className="sa-metric-number">
+                {totalPropertiesCount}
+              </p>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Occupied Properties</p>
+              <p className="sa-metric-number">
+                {occupiedCount}
+              </p>
+            </div>
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Vacant Properties</p>
+              <p className="sa-metric-number">
+                {vacantCount}
+              </p>
+            </div>
             {/* Advertisements Display - Replacing Banner Card */}
             {advertisements.length > 0 ? (
               <div style={{
@@ -1418,6 +1541,7 @@ const SalesManagerDashboard = () => {
                             onClick={() => {
                               setEditingProperty(property);
                               setShowBuildingType((property.Type || property.type) === 'Apartment');
+                              setSelectedPropertyType(property.PropertyType || property.propertyType || '');
                               setShowEditPropertyModal(true);
                             }}
                             title="Edit Property"
@@ -3155,11 +3279,17 @@ const SalesManagerDashboard = () => {
 
       {/* Create Property Modal */}
       {showCreatePropertyModal && (
-        <div className="modal-overlay" onClick={() => setShowCreatePropertyModal(false)}>
+        <div className="modal-overlay" onClick={() => {
+          setShowCreatePropertyModal(false);
+          setSelectedPropertyType('');
+        }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Create Property</h3>
-              <button className="modal-close" onClick={() => setShowCreatePropertyModal(false)}>×</button>
+              <button className="modal-close" onClick={() => {
+                setShowCreatePropertyModal(false);
+                setSelectedPropertyType('');
+              }}>×</button>
             </div>
             <div className="modal-body">
               <form onSubmit={handleCreateProperty}>
@@ -3194,7 +3324,12 @@ const SalesManagerDashboard = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="create-property-type">Property Type (For Sale or Rent) *</label>
-                    <select name="propertyType" id="create-property-type" required>
+                    <select 
+                      name="propertyType" 
+                      id="create-property-type" 
+                      required
+                      onChange={(e) => setSelectedPropertyType(e.target.value)}
+                    >
                       <option value="">Select Property Type</option>
                       <option value="For Sale">For Sale</option>
                       <option value="For Rent">For Rent</option>
@@ -3225,7 +3360,22 @@ const SalesManagerDashboard = () => {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label htmlFor="create-rent">Monthly Rent (XOF) *</label>
+                    <label htmlFor="create-unit-number">Unit Number *</label>
+                    <input
+                      type="text"
+                      name="unitNumber"
+                      id="create-unit-number"
+                      required
+                      placeholder="e.g., Unit 101, Apt 4B"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="create-rent">
+                      {selectedPropertyType === 'For Sale' ? 'Total Price (XOF)' : 'Monthly Rent (XOF)'} *
+                    </label>
                     <input
                       type="number"
                       name="rent"
@@ -3324,6 +3474,7 @@ const SalesManagerDashboard = () => {
         <div className="modal-overlay" onClick={() => {
           setShowEditPropertyModal(false);
           setEditingProperty(null);
+          setSelectedPropertyType('');
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -3331,6 +3482,7 @@ const SalesManagerDashboard = () => {
               <button className="modal-close" onClick={() => {
                 setShowEditPropertyModal(false);
                 setEditingProperty(null);
+                setSelectedPropertyType('');
               }}>×</button>
             </div>
             <div className="modal-body">
@@ -3366,7 +3518,12 @@ const SalesManagerDashboard = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="edit-property-type">Property Type (For Sale or Rent)</label>
-                    <select name="propertyType" id="edit-property-type" defaultValue={editingProperty.PropertyType || editingProperty.propertyType || ''}>
+                    <select 
+                      name="propertyType" 
+                      id="edit-property-type" 
+                      defaultValue={editingProperty.PropertyType || editingProperty.propertyType || ''}
+                      onChange={(e) => setSelectedPropertyType(e.target.value)}
+                    >
                       <option value="">Select Property Type</option>
                       <option value="For Sale">For Sale</option>
                       <option value="For Rent">For Rent</option>
@@ -3397,7 +3554,22 @@ const SalesManagerDashboard = () => {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label htmlFor="edit-rent">Monthly Rent (XOF)</label>
+                    <label htmlFor="edit-unit-number">Unit Number</label>
+                    <input
+                      type="text"
+                      name="unitNumber"
+                      id="edit-unit-number"
+                      defaultValue={editingProperty.UnitNumber || editingProperty.unitNumber || ''}
+                      placeholder="e.g., Unit 101, Apt 4B"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-rent">
+                      {(selectedPropertyType || editingProperty.PropertyType || editingProperty.propertyType) === 'For Sale' ? 'Total Price (XOF)' : 'Monthly Rent (XOF)'}
+                    </label>
                     <input
                       type="number"
                       name="rent"
