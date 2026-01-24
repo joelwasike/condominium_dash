@@ -127,10 +127,8 @@ const SalesManagerDashboard = () => {
   const [showTenantCreationModal, setShowTenantCreationModal] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
-  const [newTenantData, setNewTenantData] = useState(null);
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Documents
   const [excelFile, setExcelFile] = useState(null);
   const [importMode, setImportMode] = useState('manual'); // 'manual' or 'excel'
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -783,74 +781,40 @@ const SalesManagerDashboard = () => {
       moveInDate: moveInDate,
     };
     
-        try {
-          setLoading(true);
-          console.log('Creating tenant with data:', tenantData);
-          const newClient = await salesManagerService.createClient(tenantData);
-          console.log('Created tenant response:', newClient);
-          
-          // Check if password is returned in the response
-          if (newClient.user && newClient.user.password) {
-            setPasswordData({
-              type: 'single',
-              user: newClient.user,
-              client: newClient.client || newClient
-            });
-            setShowPasswordModal(true);
-          }
-          
-          setNewTenantData({ ...tenantData, id: newClient.client?.id || newClient.id, documents: uploadedDocuments });
-          setCurrentStep(2); // Move to document upload step
-          addNotification(`Tenant "${tenantData.name}" created successfully!`, 'success');
-        } catch (error) {
-          console.error('Failed to create tenant:', error);
-          addNotification(`Failed to create tenant: ${error.message || 'Unknown error'}`, 'error');
-        } finally {
-          setLoading(false);
-        }
-  };
-
-  const finalizeTenantCreation = async () => {
-    if (newTenantData) {
-      try {
-        setLoading(true);
-        
-        // Prepare document URLs for backend
-        const documentUrls = uploadedDocuments.map(doc => ({
-          type: doc.type,
-          name: doc.name,
-          url: doc.url,
-          publicId: doc.publicId,
-          size: doc.size,
-          uploadedAt: doc.uploadedAt,
-          details: doc.details || null
-        }));
-
-        // TODO: Send document URLs to backend when endpoint is created
-        // const clientUpdateData = {
-        //   ...newTenantData,
-        //   documents: documentUrls
-        // };
-
-            // Reload data to get updated client list
-            console.log('Reloading data after tenant creation...');
-            await loadData();
-        
-        addNotification(`Tenant "${newTenantData.name}" created successfully with ${documentUrls.length} document(s)!`, 'success');
-        
-        // Reset states
-        setShowTenantCreationModal(false);
-        setNewTenantData(null);
-        setUploadedDocuments([]);
-        setCurrentStep(1);
-      } catch (error) {
-        console.error('Failed to finalize tenant creation:', error);
-        addNotification('Failed to finalize tenant creation', 'error');
-      } finally {
-        setLoading(false);
+    try {
+      setLoading(true);
+      console.log('Creating tenant with data:', tenantData);
+      const newClient = await salesManagerService.createClient(tenantData);
+      console.log('Created tenant response:', newClient);
+      
+      // Check if password is returned in the response
+      if (newClient.user && newClient.user.password) {
+        setPasswordData({
+          type: 'single',
+          user: newClient.user,
+          client: newClient.client || newClient
+        });
+        setShowPasswordModal(true);
       }
+      
+      // Reload data to get updated client list
+      await loadData();
+      
+      // Reset form and close modal
+      setShowTenantCreationModal(false);
+      setUploadedDocuments([]);
+      e.target.reset();
+      
+      addNotification(`Tenant "${tenantData.name}" created successfully!`, 'success');
+    } catch (error) {
+      console.error('Failed to create tenant:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+      addNotification(`Failed to create tenant: ${errorMessage}`, 'error');
+    } finally {
+      setLoading(false);
     }
   };
+
 
   const removeDocument = (index) => {
     setUploadedDocuments(prev => prev.filter((_, i) => i !== index));
@@ -2789,52 +2753,46 @@ const SalesManagerDashboard = () => {
       {showTenantCreationModal && (
         <div className="modal-overlay" onClick={() => {
           setShowTenantCreationModal(false);
-          setCurrentStep(1);
-          setNewTenantData(null);
           setUploadedDocuments([]);
           setExcelFile(null);
           setImportMode('manual');
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{currentStep === 1 ? (importMode === 'excel' ? 'Import Tenants from File' : 'Create New Tenant - Basic Information') : 'Create New Tenant - Upload Documents'}</h3>
+              <h3>{importMode === 'excel' ? 'Import Tenants from File' : 'Create New Tenant'}</h3>
               <button className="modal-close" onClick={() => {
                 setShowTenantCreationModal(false);
-                setCurrentStep(1);
-                setNewTenantData(null);
                 setUploadedDocuments([]);
                 setExcelFile(null);
                 setImportMode('manual');
               }}>×</button>
             </div>
             <div className="modal-body">
-              {currentStep === 1 ? (
-                <>
-                  {/* Import Mode Selection */}
-                  <div className="import-mode-selector" style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <button
-                        type="button"
-                        className={`action-button ${importMode === 'manual' ? 'primary' : 'secondary'}`}
-                        onClick={() => setImportMode('manual')}
-                        style={{ flex: 1 }}
-                      >
-                        <UserPlus size={18} />
-                        Add Single Tenant
-                      </button>
-                      <button
-                        type="button"
-                        className={`action-button ${importMode === 'excel' ? 'primary' : 'secondary'}`}
-                        onClick={() => setImportMode('excel')}
-                        style={{ flex: 1 }}
-                      >
-                        <FileSpreadsheet size={18} />
-                        Import from File
-                      </button>
-                    </div>
-                  </div>
+              {/* Import Mode Selection */}
+              <div className="import-mode-selector" style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className={`action-button ${importMode === 'manual' ? 'primary' : 'secondary'}`}
+                    onClick={() => setImportMode('manual')}
+                    style={{ flex: 1 }}
+                  >
+                    <UserPlus size={18} />
+                    Add Single Tenant
+                  </button>
+                  <button
+                    type="button"
+                    className={`action-button ${importMode === 'excel' ? 'primary' : 'secondary'}`}
+                    onClick={() => setImportMode('excel')}
+                    style={{ flex: 1 }}
+                  >
+                    <FileSpreadsheet size={18} />
+                    Import from File
+                  </button>
+                </div>
+              </div>
 
-                  {importMode === 'excel' ? (
+              {importMode === 'excel' ? (
                     <div className="excel-upload-section">
                       <div style={{ marginBottom: '16px' }}>
                         <h4 style={{ marginBottom: '8px' }}>Upload File</h4>
@@ -2988,79 +2946,91 @@ const SalesManagerDashboard = () => {
                       <label htmlFor="rent">Monthly Rent</label>
                       <input type="number" name="rent" step="0.01" required placeholder="0.00" />
                     </div>
+                    <div className="form-group">
+                      <label htmlFor="moveInDate">Move-in Date</label>
+                      <input type="date" name="moveInDate" required />
+                    </div>
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="moveInDate">Move-in Date</label>
-                    <input type="date" name="moveInDate" required />
-                  </div>
+                  {/* Document Upload Section */}
+                  <div className="document-upload-section" style={{ marginTop: '24px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
+                    <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600' }}>Upload Documents (Optional)</h4>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '16px' }}>
+                      You can upload KYC documents and lease contract now or later
+                    </p>
 
-                  <div className="modal-footer">
-                    <button type="button" className="action-button secondary" onClick={() => {
-                      setShowTenantCreationModal(false);
-                      setCurrentStep(1);
-                    }}>
-                      Cancel
-                    </button>
-                    <button type="submit" className="action-button primary" disabled={loading}>
-                      {loading ? 'Creating Tenant...' : 'Next: Upload Documents'}
-                    </button>
-                  </div>
-                </form>
-                  )}
-                </>
-              ) : (
-                <div className="document-upload-step">
-                  <div className="tenant-summary">
-                    <h4>Tenant Information:</h4>
-                    <p><strong>Name:</strong> {newTenantData?.name}</p>
-                    <p><strong>Email:</strong> {newTenantData?.email}</p>
-                    <p><strong>Property:</strong> {newTenantData?.property}</p>
-                    <p><strong>Rent:</strong> {newTenantData?.amount?.toFixed(2)} XOF</p>
-                  </div>
-
-                  <div className="document-upload-section">
-                    <h4>Upload Required Documents</h4>
-                    <p>Please upload the tenant's KYC documents and lease contract</p>
-
-                    <div className="upload-buttons">
-                      <button className="action-button primary" onClick={() => setShowKycModal(true)}>
-                        <Upload size={20} />
+                    <div className="upload-buttons" style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                      <button 
+                        type="button"
+                        className="action-button secondary" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowKycModal(true);
+                        }}
+                      >
+                        <Upload size={18} />
                         Upload KYC Documents
                       </button>
-                      <button className="action-button primary" onClick={() => setShowContractModal(true)}>
-                        <FileText size={20} />
+                      <button 
+                        type="button"
+                        className="action-button secondary" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowContractModal(true);
+                        }}
+                      >
+                        <FileText size={18} />
                         Upload Lease Contract
                       </button>
                     </div>
 
                     {uploadedDocuments.length > 0 && (
                       <div className="uploaded-documents-list">
-                        <h5>Uploaded Documents:</h5>
+                        <h5 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '8px' }}>Uploaded Documents:</h5>
                         {uploadedDocuments.map((doc, index) => (
-                          <div key={index} className="document-item">
-                            <FileText size={16} />
-                            <div className="document-info">
-                              <span className="document-name">{doc.type}: {doc.name || doc.details?.contractType || 'Contract'}</span>
+                          <div key={index} className="document-item" style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            padding: '8px', 
+                            background: '#fff', 
+                            borderRadius: '8px',
+                            marginBottom: '8px'
+                          }}>
+                            <FileText size={16} color="#6b7280" />
+                            <div className="document-info" style={{ flex: 1 }}>
+                              <span className="document-name" style={{ fontSize: '0.875rem', display: 'block' }}>
+                                {doc.type}: {doc.name || doc.details?.contractType || 'Contract'}
+                              </span>
                               {doc.url && (
                                 <a 
                                   href={doc.url} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="document-link"
+                                  style={{ fontSize: '0.75rem', color: '#2563eb' }}
                                 >
                                   View Document
                                 </a>
                               )}
-                              {doc.size && (
-                                <span className="document-size">({(doc.size / 1024).toFixed(1)} KB)</span>
-                              )}
                             </div>
                             <button 
+                              type="button"
                               className="remove-doc-button"
-                              onClick={() => removeDocument(index)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                removeDocument(index);
+                              }}
+                              style={{ 
+                                background: 'none', 
+                                border: 'none', 
+                                cursor: 'pointer',
+                                padding: '4px',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
                             >
-                              <X size={16} />
+                              <X size={16} color="#ef4444" />
                             </button>
                           </div>
                         ))}
@@ -3069,20 +3039,18 @@ const SalesManagerDashboard = () => {
                   </div>
 
                   <div className="modal-footer">
-                    <button type="button" className="action-button secondary" onClick={() => setCurrentStep(1)}>
-                      Back
+                    <button type="button" className="action-button secondary" onClick={() => {
+                      setShowTenantCreationModal(false);
+                      setUploadedDocuments([]);
+                    }}>
+                      Cancel
                     </button>
-                    <button 
-                      type="button" 
-                      className="action-button primary" 
-                      onClick={finalizeTenantCreation}
-                      disabled={loading}
-                    >
-                      {loading ? 'Finalizing...' : 'Create Tenant Account'}
+                    <button type="submit" className="action-button primary" disabled={loading}>
+                      {loading ? 'Creating Tenant...' : 'Create Tenant'}
                     </button>
                   </div>
-                </div>
-              )}
+                </form>
+                  )}
             </div>
           </div>
         </div>
