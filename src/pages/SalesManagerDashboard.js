@@ -2909,6 +2909,13 @@ const SalesManagerDashboard = () => {
                               unitSelect.appendChild(option);
                             }
                           }
+                          
+                          // Auto-fill rent field with property's rent value
+                          const rentInput = document.getElementsByName('rent')[0];
+                          if (rentInput) {
+                            const propertyRent = selectedProperty.Rent || selectedProperty.rent || 0;
+                            rentInput.value = propertyRent;
+                          }
                         }
                       }}>
                         <option value="">Select Property</option>
