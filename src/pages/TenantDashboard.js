@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import ReportSubmission from '../components/ReportSubmission';
 import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
+import {
   Home,
   DollarSign,
   Wrench,
@@ -187,6 +197,25 @@ const TenantDashboard = () => {
       console.error('Failed to load advertisements:', error);
       addNotification('Failed to load advertisements', 'error');
       setAdvertisements([]);
+    }
+  };
+
+  // Load technician contacts
+  const loadTechnicianContacts = async () => {
+    try {
+      if (isDemoMode()) {
+        // Use demo data if available
+        const demoData = getTenantDemoData();
+        setTechnicianContacts(demoData.technicianContacts || []);
+        return;
+      }
+      
+      const contacts = await tenantService.getTechnicianContacts();
+      setTechnicianContacts(Array.isArray(contacts) ? contacts : []);
+    } catch (error) {
+      console.error('Failed to load technician contacts:', error);
+      addNotification('Failed to load technician contacts', 'error');
+      setTechnicianContacts([]);
     }
   };
 
@@ -446,6 +475,13 @@ const TenantDashboard = () => {
   useEffect(() => {
     if (activeTab === 'advertisements') {
       loadAdvertisements();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load technician contacts when technician-contacts tab is active
+  useEffect(() => {
+    if (activeTab === 'technician-contacts') {
+      loadTechnicianContacts();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -798,6 +834,12 @@ Thank you for your payment!
       tenant: ''
     };
 
+    // Calculate open maintenance from actual requests (filter by status)
+    const openMaintenanceCount = maintenanceRequests.filter(m => {
+      const status = (m.Status || m.status || '').toLowerCase();
+      return status === 'pending' || status === 'in progress' || status === 'in-progress';
+    }).length;
+
     return (
       <div className="sa-overview-page">
         <div className="sa-overview-top">
@@ -807,20 +849,121 @@ Thank you for your payment!
               <span className="sa-card-subtitle">Welcome, {data.tenant || 'Tenant'}!</span>
             </div>
             <div className="sa-mini-legend">
-              <span className="sa-legend-item sa-legend-expected">Current Lease</span>
-              <span className="sa-legend-item sa-legend-current">Rent Due</span>
+              <span className="sa-legend-item sa-legend-expected">Payments (XOF)</span>
+              <span className="sa-legend-item sa-legend-current">Maintenance Requests</span>
             </div>
-            <div className="sa-chart-placeholder">
-              <div className="sa-chart-line sa-chart-line-expected" />
-              <div className="sa-chart-line sa-chart-line-current" />
-            </div>
-            <div className="sa-chart-footer">
-              <span>Jan</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-              <span>Jun</span>
+            <div style={{ width: '100%', height: '200px', marginTop: '20px' }}>
+              <ResponsiveContainer>
+                <AreaChart
+                  data={(() => {
+                    // Calculate payment history for last 6 months
+                    const now = new Date();
+                    const chartData = [];
+                    
+                    for (let i = 5; i >= 0; i--) {
+                      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                      const monthName = monthDate.toLocaleString('default', { month: 'short' });
+                      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+                      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+                      
+                      // Count payments in this month
+                      const monthPayments = payments.filter(p => {
+                        const paymentDate = new Date(p.Date || p.date || p.createdAt || p.CreatedAt);
+                        return paymentDate >= monthStart && paymentDate <= monthEnd;
+                      });
+                      const totalPaid = monthPayments.reduce((sum, p) => sum + (p.Amount || p.amount || 0), 0);
+                      
+                      // Count maintenance requests in this month
+                      const monthMaintenance = maintenanceRequests.filter(m => {
+                        const maintDate = new Date(m.Date || m.date || m.CreatedAt || m.createdAt);
+                        return maintDate >= monthStart && maintDate <= monthEnd;
+                      }).length;
+                      
+                      chartData.push({
+                        month: monthName,
+                        payments: Math.round(totalPaid),
+                        maintenance: monthMaintenance
+                      });
+                    }
+                    
+                    return chartData;
+                  })()}
+                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
+                >
+                  <defs>
+                    <linearGradient id="colorPayments" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorMaintenance" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                    label={{ value: 'Payments (XOF)', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#6b7280" 
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                    label={{ value: 'Requests', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      padding: '8px 12px'
+                    }}
+                    formatter={(value, name) => {
+                      if (name === 'payments') return [`${value.toLocaleString()} XOF`, 'Payments'];
+                      if (name === 'maintenance') return [value, 'Maintenance Requests'];
+                      return value;
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '10px' }}
+                    iconType="line"
+                  />
+                  <Area
+                    yAxisId="left"
+                    type="natural"
+                    dataKey="payments"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    fill="url(#colorPayments)"
+                    dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
+                    name="Payments (XOF)"
+                  />
+                  <Area
+                    yAxisId="right"
+                    type="natural"
+                    dataKey="maintenance"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    fill="url(#colorMaintenance)"
+                    dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
+                    name="Maintenance Requests"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
@@ -841,7 +984,7 @@ Thank you for your payment!
             <div className="sa-metric-card">
               <p className="sa-metric-label">Open Maintenance</p>
               <p className="sa-metric-value">
-                {data.openMaintenanceTickets || 0}
+                {openMaintenanceCount}
               </p>
             </div>
             <div className="sa-banner-card">

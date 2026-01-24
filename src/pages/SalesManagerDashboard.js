@@ -247,14 +247,27 @@ const SalesManagerDashboard = () => {
       ]);
 
       console.log('Loaded data:', { overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData });
+
+      const normalizedProperties = Array.isArray(propertiesData) ? propertiesData : [];
+      const normalizedSalesProps = Array.isArray(salesPropsData) ? salesPropsData : [];
+
+      // Properties added in this dashboard and marked as "For Sale"
+      const salePropertiesFromManaged = normalizedProperties.filter(p => {
+        const propType = (p.PropertyType || p.propertyType || '').toLowerCase();
+        return propType === 'for sale';
+      });
+
+      // Combine managed sale properties with backend sales listings
+      const combinedSalesProps = [...salePropertiesFromManaged, ...normalizedSalesProps];
+
       setOverviewData(overview);
-      setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      setProperties(normalizedProperties);
       setClients(Array.isArray(clientsData) ? clientsData : []);
       setWaitingListClients(Array.isArray(waitingListData) ? waitingListData : []);
       setUnpaidRents(Array.isArray(unpaidRentsData) ? unpaidRentsData : []);
       setAlerts(Array.isArray(alertsData) ? alertsData : []);
       setOwners(Array.isArray(ownersData) ? ownersData : []);
-      setSalesProperties(Array.isArray(salesPropsData) ? salesPropsData : []);
+      setSalesProperties(combinedSalesProps);
     } catch (error) {
       console.error('Failed to load data:', error);
       if (!isDemoMode()) {
@@ -933,7 +946,7 @@ const SalesManagerDashboard = () => {
       buildingType: formData.get('buildingType')?.trim() || null,
       status: formData.get('status')?.trim(),
       rent: formData.get('rent') ? parseFloat(formData.get('rent')) : undefined,
-      unitNumber: formData.get('unitNumber')?.trim(),
+      numberOfUnits: formData.get('numberOfUnits') ? parseInt(formData.get('numberOfUnits')) : 1,
       bedrooms: formData.get('bedrooms') ? parseInt(formData.get('bedrooms')) : undefined,
       bathrooms: formData.get('bathrooms') ? parseFloat(formData.get('bathrooms')) : undefined,
       urgency: formData.get('urgency')?.trim() || 'normal',
@@ -942,8 +955,8 @@ const SalesManagerDashboard = () => {
     };
 
     // Validate required fields
-    if (!propertyData.address || !propertyData.type || !propertyData.propertyType || !propertyData.status || !propertyData.rent || !propertyData.unitNumber) {
-      addNotification('Please fill in all required fields (Address, Type, Property Type, Status, Unit Number, ' + (propertyData.propertyType === 'For Sale' ? 'Total Price' : 'Monthly Rent') + ')', 'error');
+    if (!propertyData.address || !propertyData.type || !propertyData.propertyType || !propertyData.status || !propertyData.rent || !propertyData.numberOfUnits || propertyData.numberOfUnits < 1) {
+      addNotification('Please fill in all required fields (Address, Type, Property Type, Status, Number of Units (at least 1), ' + (propertyData.propertyType === 'For Sale' ? 'Total Price' : 'Monthly Rent') + ')', 'error');
       return;
     }
 
@@ -991,7 +1004,12 @@ const SalesManagerDashboard = () => {
     }
     if (formData.get('status')) updateData.status = formData.get('status').trim();
     if (formData.get('rent')) updateData.rent = parseFloat(formData.get('rent'));
-    if (formData.get('unitNumber')) updateData.unitNumber = formData.get('unitNumber').trim();
+    if (formData.get('numberOfUnits')) {
+      const numUnits = parseInt(formData.get('numberOfUnits'));
+      if (numUnits >= 1) {
+        updateData.numberOfUnits = numUnits;
+      }
+    }
     if (formData.get('bedrooms')) updateData.bedrooms = parseInt(formData.get('bedrooms'));
     if (formData.get('bathrooms')) updateData.bathrooms = parseFloat(formData.get('bathrooms'));
     if (formData.get('urgency')) updateData.urgency = formData.get('urgency').trim();
@@ -2922,13 +2940,13 @@ const SalesManagerDashboard = () => {
                       <select name="property" id="property" required onChange={(e) => {
                         const selectedProperty = properties.find(p => (p.Address || p.address) === e.target.value);
                         if (selectedProperty) {
-                          const units = selectedProperty.Units || selectedProperty.units || 1;
+                          const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
                           const unitSelect = document.getElementById('unitNumber');
                           if (unitSelect) {
                             unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
-                            for (let i = 1; i <= units; i++) {
+                            for (let i = 1; i <= numberOfUnits; i++) {
                               const option = document.createElement('option');
-                              option.value = i;
+                              option.value = `Unit ${i}`;
                               option.textContent = `Unit ${i}`;
                               unitSelect.appendChild(option);
                             }
@@ -2941,8 +2959,8 @@ const SalesManagerDashboard = () => {
                             const propertyId = property.ID || property.id;
                             const address = property.Address || property.address || 'Unnamed Property';
                             const type = property.Type || property.type || '';
-                            const units = property.Units || property.units || 1;
-                            const displayText = type ? `${address} - ${type} (${units} units)` : `${address} (${units} units)`;
+                            const numberOfUnits = property.NumberOfUnits || property.numberOfUnits || 1;
+                            const displayText = type ? `${address} - ${type} (${numberOfUnits} units)` : `${address} (${numberOfUnits} units)`;
                             return (
                               <option key={propertyId || `property-${address}`} value={address}>
                                 {displayText}
@@ -3360,14 +3378,19 @@ const SalesManagerDashboard = () => {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label htmlFor="create-unit-number">Unit Number *</label>
+                    <label htmlFor="create-number-of-units">Number of Units *</label>
                     <input
-                      type="text"
-                      name="unitNumber"
-                      id="create-unit-number"
+                      type="number"
+                      name="numberOfUnits"
+                      id="create-number-of-units"
                       required
-                      placeholder="e.g., Unit 101, Apt 4B"
+                      min="1"
+                      defaultValue="1"
+                      placeholder="e.g., 100 for an apartment building"
                     />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                      Total number of units in this property (e.g., 100 for an apartment building)
+                    </small>
                   </div>
                 </div>
 
@@ -3554,14 +3577,17 @@ const SalesManagerDashboard = () => {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label htmlFor="edit-unit-number">Unit Number</label>
+                    <label htmlFor="edit-number-of-units">Number of Units</label>
                     <input
-                      type="text"
-                      name="unitNumber"
-                      id="edit-unit-number"
-                      defaultValue={editingProperty.UnitNumber || editingProperty.unitNumber || ''}
-                      placeholder="e.g., Unit 101, Apt 4B"
+                      type="number"
+                      name="numberOfUnits"
+                      id="edit-number-of-units"
+                      min="1"
+                      defaultValue={editingProperty.NumberOfUnits || editingProperty.numberOfUnits || 1}
                     />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                      Total number of units in this property
+                    </small>
                   </div>
                 </div>
 
