@@ -18,7 +18,15 @@ import {
   Megaphone,
   Phone,
   Edit,
-  Trash2
+  Trash2,
+  ClipboardList,
+  DollarSign,
+  HardHat,
+  LogIn,
+  LogOut,
+  History,
+  TrendingUp,
+  FileCheck
 } from 'lucide-react';
 import { technicianService } from '../services/technicianService';
 import { messagingService } from '../services/messagingService';
@@ -69,7 +77,37 @@ const TechnicianDashboard = () => {
     description: ''
   });
   
+  // New state for restructured sections
+  const [quotes, setQuotes] = useState([]);
+  const [works, setWorks] = useState([]);
+  const [entryTenants, setEntryTenants] = useState([]);
+  const [exitTenants, setExitTenants] = useState([]);
+  const [historyData, setHistoryData] = useState({
+    queries: [],
+    quotes: [],
+    works: [],
+    inventories: []
+  });
+  const [reportsData, setReportsData] = useState(null);
+  const [showInventoryFormModal, setShowInventoryFormModal] = useState(false);
+  const [inventoryFormData, setInventoryFormData] = useState({
+    type: 'Entry', // Entry or Exit
+    propertyType: '', // Studio, Apartment, Duplex, Villa
+    numberOfRooms: 1,
+    propertyAddress: '',
+    tenantName: '',
+    date: new Date().toISOString().split('T')[0],
+    technicianName: '',
+    // Dynamic form data will be stored here
+    formData: {}
+  });
+  
   // Filter states
+  const [quoteStatusFilter, setQuoteStatusFilter] = useState('');
+  const [workStatusFilter, setWorkStatusFilter] = useState('');
+  const [historyDateFilter, setHistoryDateFilter] = useState('');
+  const [historyTypeFilter, setHistoryTypeFilter] = useState('');
+  const [historyPropertyFilter, setHistoryPropertyFilter] = useState('');
   
   
   // Advertisements state
@@ -116,12 +154,17 @@ const TechnicianDashboard = () => {
         return;
       }
       
-      const [overview, inspection, task, maintenanceRequests, contacts] = await Promise.all([
+      const [overview, inspection, task, maintenanceRequests, contacts, quotesData, worksData, entryData, exitData, historyDataRes] = await Promise.all([
         technicianService.getOverview().catch(() => null),
         technicianService.listInspections().catch(() => []),
         technicianService.listTasks().catch(() => []),
         technicianService.listMaintenanceRequests().catch(() => []),
-        technicianService.getTechnicianContacts().catch(() => [])
+        technicianService.getTechnicianContacts().catch(() => []),
+        technicianService.listQuotes().catch(() => []),
+        technicianService.getWorkProgress({}).catch(() => []),
+        technicianService.getStateOfEntry().catch(() => []),
+        technicianService.getStateOfExit().catch(() => []),
+        technicianService.getHistory({}).catch(() => ({ queries: [], quotes: [], works: [], inventories: [] }))
       ]);
       
       setOverviewData(overview);
@@ -143,6 +186,26 @@ const TechnicianDashboard = () => {
       
       // Set technician contacts
       setTechnicianContacts(Array.isArray(contacts) ? contacts : []);
+      
+      // Set quotes
+      setQuotes(Array.isArray(quotesData) ? quotesData : []);
+      
+      // Set works (maintenance requests that are work orders)
+      setWorks(Array.isArray(worksData) ? worksData : []);
+      
+      // Set entry and exit states
+      setEntryTenants(Array.isArray(entryData) ? entryData : []);
+      setExitTenants(Array.isArray(exitData) ? exitData : []);
+      
+      // Set history data
+      if (historyDataRes && typeof historyDataRes === 'object') {
+        setHistoryData({
+          queries: Array.isArray(historyDataRes.queries) ? historyDataRes.queries : [],
+          quotes: Array.isArray(historyDataRes.quotes) ? historyDataRes.quotes : [],
+          works: Array.isArray(historyDataRes.works) ? historyDataRes.works : [],
+          inventories: Array.isArray(historyDataRes.inventories) ? historyDataRes.inventories : []
+        });
+      }
     } catch (error) {
       console.error('Error loading technician data:', error);
       if (!isDemoMode()) {
@@ -602,10 +665,15 @@ const TechnicianDashboard = () => {
   const tabs = useMemo(
     () => [
       { id: 'overview', label: 'Overview', icon: Building },
-      { id: 'inspections', label: 'Inspections', icon: CheckCircle },
       { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-      { id: 'tasks', label: 'Tasks', icon: Calendar },
-      { id: 'technician-contacts', label: 'Technician Contacts', icon: Phone },
+      { id: 'quotes', label: 'The Quotes', icon: DollarSign },
+      { id: 'works', label: 'Works', icon: HardHat },
+      { id: 'state-entry', label: 'State of the Entry', icon: LogIn },
+      { id: 'state-exit', label: 'State of Affairs of Exit', icon: LogOut },
+      { id: 'worker-contacts', label: 'Contact of Workers', icon: Phone },
+      { id: 'history', label: 'History', icon: History },
+      { id: 'reports', label: 'Reports', icon: FileCheck },
+      { id: 'inventory-form', label: 'Inventory Form', icon: ClipboardList },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Settings', icon: Settings }
@@ -648,23 +716,53 @@ const TechnicianDashboard = () => {
           </div>
 
           <div className="sa-overview-metrics">
-            <div className="sa-metric-card sa-metric-primary">
-              <p className="sa-metric-label">Total Open Tickets</p>
-              <p className="sa-metric-period">Active tickets</p>
-              <p className="sa-metric-value">{overviewData?.totalOpenTickets || 0}</p>
+            {/* Pending Requests */}
+            <div className="sa-metric-card sa-metric-primary" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('maintenance')}>
+              <p className="sa-metric-label">Pending Requests</p>
+              <p className="sa-metric-period">Awaiting processing</p>
+              <p className="sa-metric-value">{requests.filter(r => (r.Status || r.status) === 'Pending').length}</p>
             </div>
-            <div className="sa-metric-card">
-              <p className="sa-metric-label">Urgent Tickets Pending</p>
+            
+            {/* Quotes to be Validated */}
+            <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('quotes')}>
+              <p className="sa-metric-label">Quotes to be Validated</p>
+              <p className="sa-metric-period">Awaiting validation</p>
+              <p className="sa-metric-value">{quotes.filter(q => (q.Status || q.status) === 'Sent' || (q.Status || q.status) === 'Pending').length}</p>
+            </div>
+            
+            {/* Urgent Work */}
+            <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('works')}>
+              <p className="sa-metric-label">Urgent Work</p>
               <p className="sa-metric-period">High priority</p>
               <p className="sa-metric-value">{overviewData?.urgentTicketsPending || 0}</p>
             </div>
+            
+            {/* Important Alerts */}
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Important Alerts</p>
+              <p className="sa-metric-period">Requires attention</p>
+              <p className="sa-metric-value">{requests.filter(r => {
+                const priority = (r.Priority || r.priority || '').toLowerCase();
+                return priority === 'urgent' && (r.Status || r.status) !== 'Completed';
+              }).length}</p>
+            </div>
+            
+            {/* Monthly Indicators */}
+            <div className="sa-metric-card">
+              <p className="sa-metric-label">Monthly Requests</p>
+              <p className="sa-metric-period">This month</p>
+              <p className="sa-metric-value">{requests.filter(r => {
+                const date = r.CreatedAt || r.createdAt || r.Date || r.date;
+                if (!date) return false;
+                const reqDate = new Date(date);
+                const now = new Date();
+                return reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
+              }).length}</p>
+            </div>
+            
             <div className="sa-metric-card">
               <p className="sa-metric-label">Average Resolution Time</p>
-              <p className="sa-metric-number">{overviewData?.averageResolutionTime ? `${overviewData.averageResolutionTime} days` : 'N/A'}</p>
-            </div>
-            <div className="sa-metric-card">
-              <p className="sa-metric-label">Total Inspections</p>
-              <p className="sa-metric-number">{overviewData?.totalInspections || 0}</p>
+              <p className="sa-metric-number">{overviewData?.averageResolutionTime ? `${overviewData.averageResolutionTime.toFixed(1)} days` : 'N/A'}</p>
             </div>
             {/* Advertisements Display - Replacing Banner Card */}
             {advertisements.length > 0 ? (
@@ -886,6 +984,41 @@ const TechnicianDashboard = () => {
   );
 
   const renderMaintenance = () => {
+    const handleProcessRequest = async (maintenance) => {
+      try {
+        setLoading(true);
+        await technicianService.updateMaintenanceRequest(maintenance.ID || maintenance.id, {
+          status: 'In Progress'
+        });
+        addNotification('Request processed successfully', 'success');
+        loadData();
+      } catch (error) {
+        console.error('Error processing request:', error);
+        addNotification('Failed to process request', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleRefuseRequest = async (maintenance) => {
+      if (!window.confirm('Are you sure you want to refuse this maintenance request?')) {
+        return;
+      }
+      try {
+        setLoading(true);
+        await technicianService.updateMaintenanceRequest(maintenance.ID || maintenance.id, {
+          status: 'Refused'
+        });
+        addNotification('Request refused successfully', 'success');
+        loadData();
+      } catch (error) {
+        console.error('Error refusing request:', error);
+        addNotification('Failed to refuse request', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const handleUpdateMaintenance = async (maintenance) => {
       setShowTaskModal(true);
       setSelectedTask(maintenance);
@@ -918,10 +1051,10 @@ const TechnicianDashboard = () => {
       <div className="sa-section-card">
         <div className="sa-section-header">
           <div>
-        <h3>Maintenance & Repairs</h3>
-        <p>Track maintenance tasks and repair work</p>
+            <h3>Maintenance</h3>
+            <p>Receipt of tenant requests - Analyze and define if they should be processed or refused</p>
           </div>
-      </div>
+        </div>
 
         <div className="sa-filters-section">
           <select 
@@ -1037,11 +1170,31 @@ const TechnicianDashboard = () => {
                         >
                           👁️
                         </button>
-                        <button className="sa-icon-button" onClick={() => handleUpdateMaintenance(maintenance)} title="Edit">✏️</button>
-                        {!quoteGenerated && (
-                          <button className="sa-icon-button" onClick={() => handleSubmitQuote(maintenance)} title="Generate Quote" style={{ color: '#16a34a', marginLeft: '8px' }}>💰</button>
-                    )}
-                  </td>
+                        {status === 'Pending' && (
+                          <>
+                            <button 
+                              className="sa-icon-button" 
+                              onClick={() => handleProcessRequest(maintenance)} 
+                              title="Process Request"
+                              style={{ color: '#16a34a', marginLeft: '8px' }}
+                            >
+                              ✓
+                            </button>
+                            <button 
+                              className="sa-icon-button" 
+                              onClick={() => handleRefuseRequest(maintenance)} 
+                              title="Refuse Request"
+                              style={{ color: '#ef4444', marginLeft: '8px' }}
+                            >
+                              ✗
+                            </button>
+                          </>
+                        )}
+                        <button className="sa-icon-button" onClick={() => handleUpdateMaintenance(maintenance)} title="Edit" style={{ marginLeft: '8px' }}>✏️</button>
+                        {!quoteGenerated && status !== 'Refused' && (
+                          <button className="sa-icon-button" onClick={() => handleSubmitQuote(maintenance)} title="Generate Quote" style={{ color: '#2563eb', marginLeft: '8px' }}>💰</button>
+                        )}
+                      </td>
                 </tr>
                   );
                 })
@@ -1274,83 +1427,6 @@ const TechnicianDashboard = () => {
             <p>Select a user to view details.</p>
           )}
         </div>
-      </div>
-    </div>
-  );
-
-  const renderQuotes = () => (
-    <div className="sa-section-card">
-      <div className="sa-section-header">
-        <div>
-        <h3>Submitted Quotes</h3>
-        <p>Track quotes sent to management and owners</p>
-      </div>
-      </div>
-
-      <div className="sa-filters-section">
-        <select 
-          className="sa-filter-select"
-          value=""
-          onChange={() => {}}
-        >
-          <option value="">All Status</option>
-          <option value="Sent">Sent</option>
-          <option value="Approved">Approved</option>
-          <option value="Rejected">Rejected</option>
-        </select>
-      </div>
-
-      <div className="sa-table-wrapper">
-        <table className="sa-table">
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Date</th>
-              <th>Recipient</th>
-              <th>Property</th>
-              <th>Issue</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[].length === 0 ? (
-              <tr>
-                <td colSpan={7} className="sa-table-empty">
-                  No quotes found
-                </td>
-              </tr>
-            ) : (
-              [].map((q, index) => {
-                const quoteId = q.id || q.ID;
-                const date = q.date || q.Date || q.createdAt || q.CreatedAt;
-                const recipient = q.recipient || q.Recipient;
-                const property = q.property || q.Property;
-                const issue = q.issue || q.Issue;
-                const amount = q.amount || q.Amount || 0;
-                const status = (q.status || q.Status || 'Sent').toLowerCase();
-                
-                return (
-                  <tr key={quoteId}>
-                    <td>{index + 1}</td>
-                    <td>{date ? new Date(date).toLocaleDateString() : 'N/A'}</td>
-                    <td className="sa-cell-main">
-                      <span className="sa-cell-title">{recipient}</span>
-                    </td>
-                    <td>{property}</td>
-                    <td>{issue}</td>
-                    <td>${amount.toLocaleString()}</td>
-                    <td>
-                      <span className={`sa-status-pill ${status}`}>
-                        {status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
       </div>
     </div>
   );
@@ -1806,18 +1882,730 @@ const TechnicianDashboard = () => {
     );
   };
 
+  // Render Quotes Section - List quotes being validated and validated quotes
+  const renderQuotes = () => {
+    const quotesToValidate = quotes.filter(q => {
+      const status = (q.Status || q.status || '').toLowerCase();
+      return status === 'sent' || status === 'pending';
+    });
+    const validatedQuotes = quotes.filter(q => {
+      const status = (q.Status || q.status || '').toLowerCase();
+      return status === 'approved' || status === 'validated';
+    });
+
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>The Quotes</h3>
+            <p>Manage quotes awaiting validation and view validated quotes</p>
+          </div>
+        </div>
+
+        <div className="sa-filters-section">
+          <select 
+            className="sa-filter-select"
+            value={quoteStatusFilter}
+            onChange={(e) => setQuoteStatusFilter(e.target.value)}
+          >
+            <option value="">All Status</option>
+            <option value="Sent">Being Validated</option>
+            <option value="Approved">Validated</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+
+        {/* Quotes Being Validated Tab */}
+        <div style={{ marginBottom: '24px' }}>
+          <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Quotes Being Validated</h4>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Date</th>
+                  <th>Property</th>
+                  <th>Issue</th>
+                  <th>Amount</th>
+                  <th>Recipient</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quotesToValidate.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="sa-table-empty">No quotes awaiting validation</td>
+                  </tr>
+                ) : (
+                  quotesToValidate.map((q, index) => (
+                    <tr key={q.ID || q.id}>
+                      <td>{index + 1}</td>
+                      <td>{q.Date || q.date ? new Date(q.Date || q.date).toLocaleDateString() : 'N/A'}</td>
+                      <td>{q.Property || q.property || 'N/A'}</td>
+                      <td>{q.Issue || q.issue || 'N/A'}</td>
+                      <td>${(q.Amount || q.amount || 0).toLocaleString()}</td>
+                      <td>{q.Recipient || q.recipient || 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${(q.Status || q.status || 'sent').toLowerCase()}`}>
+                          {q.Status || q.status || 'Sent'}
+                        </span>
+                      </td>
+                      <td>
+                        {/* Check if super urgent - requires single validation */}
+                        <span className="sa-status-pill urgent">Super Urgent</span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Validated Quotes Tab */}
+        <div>
+          <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Validated Quotes</h4>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Date</th>
+                  <th>Property</th>
+                  <th>Issue</th>
+                  <th>Amount</th>
+                  <th>Recipient</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {validatedQuotes.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="sa-table-empty">No validated quotes</td>
+                  </tr>
+                ) : (
+                  validatedQuotes.map((q, index) => (
+                    <tr key={q.ID || q.id}>
+                      <td>{index + 1}</td>
+                      <td>{q.Date || q.date ? new Date(q.Date || q.date).toLocaleDateString() : 'N/A'}</td>
+                      <td>{q.Property || q.property || 'N/A'}</td>
+                      <td>{q.Issue || q.issue || 'N/A'}</td>
+                      <td>${(q.Amount || q.amount || 0).toLocaleString()}</td>
+                      <td>{q.Recipient || q.recipient || 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${(q.Status || q.status || 'approved').toLowerCase()}`}>
+                          {q.Status || q.status || 'Approved'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Works Section - List work in progress, in pause, and completed
+  const renderWorks = () => {
+    const worksInProgress = works.filter(w => (w.Status || w.status) === 'In Progress');
+    const worksInPause = works.filter(w => (w.Status || w.status) === 'Paused' || (w.Status || w.status) === 'On Hold');
+    const completedWorks = works.filter(w => (w.Status || w.status) === 'Completed');
+
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>Works</h3>
+            <p>Manage work orders: in progress, paused, and completed</p>
+          </div>
+        </div>
+
+        <div className="sa-filters-section">
+          <select 
+            className="sa-filter-select"
+            value={workStatusFilter}
+            onChange={(e) => setWorkStatusFilter(e.target.value)}
+          >
+            <option value="">All Status</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Paused">In Pause</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+
+        {/* Work In Progress */}
+        <div style={{ marginBottom: '24px' }}>
+          <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Work In Progress</h4>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Property</th>
+                  <th>Issue</th>
+                  <th>Priority</th>
+                  <th>Assigned To</th>
+                  <th>Est. Cost</th>
+                  <th>Date Started</th>
+                </tr>
+              </thead>
+              <tbody>
+                {worksInProgress.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="sa-table-empty">No work in progress</td>
+                  </tr>
+                ) : (
+                  worksInProgress.map((w, index) => (
+                    <tr key={w.ID || w.id}>
+                      <td>{index + 1}</td>
+                      <td>{w.Property || w.property || 'N/A'}</td>
+                      <td>{w.Issue || w.issue || 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${(w.Priority || w.priority || 'normal').toLowerCase()}`}>
+                          {w.Priority || w.priority || 'Normal'}
+                        </span>
+                      </td>
+                      <td>{w.Assigned || w.assigned || 'Unassigned'}</td>
+                      <td>${(w.EstimatedCost || w.estimatedCost || 0).toLocaleString()}</td>
+                      <td>{w.Date || w.date ? new Date(w.Date || w.date).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Work In Pause */}
+        <div style={{ marginBottom: '24px' }}>
+          <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Work In Pause</h4>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Property</th>
+                  <th>Issue</th>
+                  <th>Priority</th>
+                  <th>Assigned To</th>
+                  <th>Est. Cost</th>
+                  <th>Date Paused</th>
+                </tr>
+              </thead>
+              <tbody>
+                {worksInPause.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="sa-table-empty">No work in pause</td>
+                  </tr>
+                ) : (
+                  worksInPause.map((w, index) => (
+                    <tr key={w.ID || w.id}>
+                      <td>{index + 1}</td>
+                      <td>{w.Property || w.property || 'N/A'}</td>
+                      <td>{w.Issue || w.issue || 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${(w.Priority || w.priority || 'normal').toLowerCase()}`}>
+                          {w.Priority || w.priority || 'Normal'}
+                        </span>
+                      </td>
+                      <td>{w.Assigned || w.assigned || 'Unassigned'}</td>
+                      <td>${(w.EstimatedCost || w.estimatedCost || 0).toLocaleString()}</td>
+                      <td>{w.Date || w.date ? new Date(w.Date || w.date).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Completed Works */}
+        <div>
+          <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Completed Works</h4>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Property</th>
+                  <th>Issue</th>
+                  <th>Priority</th>
+                  <th>Assigned To</th>
+                  <th>Final Cost</th>
+                  <th>Date Completed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {completedWorks.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="sa-table-empty">No completed work</td>
+                  </tr>
+                ) : (
+                  completedWorks.map((w, index) => (
+                    <tr key={w.ID || w.id}>
+                      <td>{index + 1}</td>
+                      <td>{w.Property || w.property || 'N/A'}</td>
+                      <td>{w.Issue || w.issue || 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${(w.Priority || w.priority || 'normal').toLowerCase()}`}>
+                          {w.Priority || w.priority || 'Normal'}
+                        </span>
+                      </td>
+                      <td>{w.Assigned || w.assigned || 'Unassigned'}</td>
+                      <td>${(w.EstimatedCost || w.estimatedCost || 0).toLocaleString()}</td>
+                      <td>{w.CompletedAt || w.completedAt ? new Date(w.CompletedAt || w.completedAt).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render State of Entry - List tenants who paid deposit and requested inventory
+  const renderStateEntry = () => {
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>State of the Entry</h3>
+            <p>List of tenants who paid the deposit at the accountant's and requested inventory of premises</p>
+          </div>
+          <button 
+            className="sa-primary-cta"
+            onClick={() => {
+              setInventoryFormData({ ...inventoryFormData, type: 'Entry' });
+              setShowInventoryFormModal(true);
+            }}
+          >
+            <Plus size={16} />
+            Create Entry Inventory
+          </button>
+        </div>
+
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Tenant Name</th>
+                <th>Property</th>
+                <th>Unit Number</th>
+                <th>Deposit Paid Date</th>
+                <th>Inventory Request Date</th>
+                <th>Status</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {entryTenants.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="sa-table-empty">
+                    No entry inventory requests found. Tenants who have paid deposits and requested inventory will appear here.
+                  </td>
+                </tr>
+              ) : (
+                entryTenants.map((tenant, index) => (
+                  <tr key={tenant.ID || tenant.id}>
+                    <td>{index + 1}</td>
+                    <td>{tenant.Name || tenant.name || 'N/A'}</td>
+                    <td>{tenant.Property || tenant.property || 'N/A'}</td>
+                    <td>{tenant.UnitNumber || tenant.unitNumber || 'N/A'}</td>
+                    <td>{tenant.DepositPaidDate ? new Date(tenant.DepositPaidDate).toLocaleDateString() : 'N/A'}</td>
+                    <td>{tenant.InventoryRequestDate ? new Date(tenant.InventoryRequestDate).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(tenant.Status || tenant.status || 'pending').toLowerCase()}`}>
+                        {tenant.Status || tenant.status || 'Pending'}
+                      </span>
+                    </td>
+                    <td className="sa-row-actions">
+                      <button 
+                        className="sa-icon-button" 
+                        onClick={() => {
+                          setInventoryFormData({ ...inventoryFormData, type: 'Entry', tenantName: tenant.Name || tenant.name, propertyAddress: tenant.Property || tenant.property });
+                          setShowInventoryFormModal(true);
+                        }}
+                        title="Create Inventory"
+                      >
+                        📋
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Render State of Exit - List tenants who requested contract termination
+  const renderStateExit = () => {
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>State of Affairs of Exit</h3>
+            <p>List of tenants who have requested to terminate their contract</p>
+          </div>
+          <button 
+            className="sa-primary-cta"
+            onClick={() => {
+              setInventoryFormData({ ...inventoryFormData, type: 'Exit' });
+              setShowInventoryFormModal(true);
+            }}
+          >
+            <Plus size={16} />
+            Create Exit Inventory
+          </button>
+        </div>
+
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Tenant Name</th>
+                <th>Property</th>
+                <th>Unit Number</th>
+                <th>Termination Request Date</th>
+                <th>Exit Inventory Status</th>
+                <th>Deposit Refund Status</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {exitTenants.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="sa-table-empty">
+                    No exit requests found. Tenants who have requested contract termination will appear here.
+                  </td>
+                </tr>
+              ) : (
+                exitTenants.map((tenant, index) => (
+                  <tr key={tenant.ID || tenant.id}>
+                    <td>{index + 1}</td>
+                    <td>{tenant.Name || tenant.name || 'N/A'}</td>
+                    <td>{tenant.Property || tenant.property || 'N/A'}</td>
+                    <td>{tenant.UnitNumber || tenant.unitNumber || 'N/A'}</td>
+                    <td>{tenant.TerminationRequestDate ? new Date(tenant.TerminationRequestDate).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(tenant.ExitInventoryStatus || tenant.exitInventoryStatus || 'pending').toLowerCase()}`}>
+                        {tenant.ExitInventoryStatus || tenant.exitInventoryStatus || 'Pending'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`sa-status-pill ${(tenant.DepositRefundStatus || tenant.depositRefundStatus || 'pending').toLowerCase()}`}>
+                        {tenant.DepositRefundStatus || tenant.depositRefundStatus || 'Pending'}
+                      </span>
+                    </td>
+                    <td className="sa-row-actions">
+                      <button 
+                        className="sa-icon-button" 
+                        onClick={() => {
+                          setInventoryFormData({ ...inventoryFormData, type: 'Exit', tenantName: tenant.Name || tenant.name, propertyAddress: tenant.Property || tenant.property });
+                          setShowInventoryFormModal(true);
+                        }}
+                        title="Create Exit Inventory"
+                      >
+                        📋
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Render History Section - Query history, Quote history, Work history, Inventory reports history
+  const renderHistory = () => {
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>History</h3>
+            <p>View query history, quote history, work history, and inventory reports history</p>
+          </div>
+        </div>
+
+        <div className="sa-filters-section">
+          <input
+            type="date"
+            className="sa-filter-select"
+            value={historyDateFilter}
+            onChange={(e) => setHistoryDateFilter(e.target.value)}
+            placeholder="Filter by date"
+          />
+          <select 
+            className="sa-filter-select"
+            value={historyTypeFilter}
+            onChange={(e) => setHistoryTypeFilter(e.target.value)}
+          >
+            <option value="">All Types</option>
+            <option value="query">Query History</option>
+            <option value="quote">Quote History</option>
+            <option value="work">Work History</option>
+            <option value="inventory">Inventory Reports</option>
+          </select>
+          <input
+            type="text"
+            className="sa-filter-select"
+            value={historyPropertyFilter}
+            onChange={(e) => setHistoryPropertyFilter(e.target.value)}
+            placeholder="Filter by property"
+          />
+        </div>
+
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Type</th>
+                <th>Property</th>
+                <th>Description</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                // Combine all history data
+                const allHistory = [
+                  ...historyData.queries.map(q => ({ ...q, type: 'Query' })),
+                  ...historyData.quotes.map(q => ({ ...q, type: 'Quote' })),
+                  ...historyData.works.map(w => ({ ...w, type: 'Work' })),
+                  ...historyData.inventories.map(i => ({ ...i, type: 'Inventory' }))
+                ].filter(item => {
+                  if (historyDateFilter) {
+                    const itemDate = new Date(item.Date || item.date || item.CreatedAt || item.createdAt);
+                    const filterDate = new Date(historyDateFilter);
+                    if (itemDate.toDateString() !== filterDate.toDateString()) return false;
+                  }
+                  if (historyTypeFilter) {
+                    if (item.type.toLowerCase() !== historyTypeFilter.toLowerCase()) return false;
+                  }
+                  if (historyPropertyFilter) {
+                    const property = item.Property || item.property || '';
+                    if (!property.toLowerCase().includes(historyPropertyFilter.toLowerCase())) return false;
+                  }
+                  return true;
+                }).sort((a, b) => {
+                  const dateA = new Date(a.Date || a.date || a.CreatedAt || a.createdAt);
+                  const dateB = new Date(b.Date || b.date || b.CreatedAt || b.createdAt);
+                  return dateB - dateA;
+                });
+
+                if (allHistory.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={6} className="sa-table-empty">No history records found</td>
+                    </tr>
+                  );
+                }
+
+                return allHistory.map((item, index) => (
+                  <tr key={`${item.type}-${item.ID || item.id || index}`}>
+                    <td>{index + 1}</td>
+                    <td>
+                      <span className="sa-status-pill" style={{ backgroundColor: '#e0e7ff', color: '#3730a3' }}>
+                        {item.type}
+                      </span>
+                    </td>
+                    <td>{item.Property || item.property || 'N/A'}</td>
+                    <td>{item.Issue || item.issue || item.Description || item.description || 'N/A'}</td>
+                    <td>{item.Date || item.date || item.CreatedAt || item.createdAt ? new Date(item.Date || item.date || item.CreatedAt || item.createdAt).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(item.Status || item.status || 'completed').toLowerCase()}`}>
+                        {item.Status || item.status || 'Completed'}
+                      </span>
+                    </td>
+                  </tr>
+                ));
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Reports Section
+  const renderReports = () => {
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>Reports</h3>
+            <p>Generate and view various reports</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
+            // Generate monthly report of requests
+            addNotification('Monthly report of requests feature coming soon', 'info');
+          }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Monthly Report of Requests</h4>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Generate monthly summary of maintenance requests</p>
+          </div>
+
+          <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
+            // Generate quotes report
+            addNotification('Quotes report feature coming soon', 'info');
+          }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Report of the Quotes</h4>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>View all quotes and their validation status</p>
+          </div>
+
+          <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
+            // Generate work report
+            addNotification('Work report feature coming soon', 'info');
+          }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Report of the Work Carried Out</h4>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Summary of completed work orders</p>
+          </div>
+
+          <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
+            // Generate emergency report
+            addNotification('Emergency report feature coming soon', 'info');
+          }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Emergency Report</h4>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Urgent and emergency maintenance requests</p>
+          </div>
+
+          <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
+            // Generate property/building report
+            addNotification('Property report feature coming soon', 'info');
+          }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Report by Property or Building</h4>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Detailed report for specific property</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Inventory Form - Comprehensive dynamic form
+  const renderInventoryForm = () => {
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>Inventory Form (Entry / Exit)</h3>
+            <p>Create detailed inventory reports for property entry or exit</p>
+          </div>
+          <button 
+            className="sa-primary-cta"
+            onClick={() => {
+              setInventoryFormData({
+                type: 'Entry',
+                propertyType: '',
+                numberOfRooms: 1,
+                propertyAddress: '',
+                tenantName: '',
+                date: new Date().toISOString().split('T')[0],
+                technicianName: '',
+                formData: {}
+              });
+              setShowInventoryFormModal(true);
+            }}
+          >
+            <Plus size={16} />
+            New Inventory Form
+          </button>
+        </div>
+
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Type</th>
+                <th>Property</th>
+                <th>Tenant</th>
+                <th>Property Type</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {inspections.filter(i => {
+                const type = i.Type || i.type;
+                return type === 'Move-in' || type === 'Move-out';
+              }).length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="sa-table-empty">
+                    No inventory forms created yet. Click "New Inventory Form" to create one.
+                  </td>
+                </tr>
+              ) : (
+                inspections.filter(i => {
+                  const type = i.Type || i.type;
+                  return type === 'Move-in' || type === 'Move-out';
+                }).map((inv, index) => (
+                  <tr key={inv.ID || inv.id}>
+                    <td>{index + 1}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(inv.Type || inv.type || 'move-in').toLowerCase().replace(' ', '-')}`}>
+                        {inv.Type || inv.type || 'Move-in'}
+                      </span>
+                    </td>
+                    <td>{inv.Property || inv.property || 'N/A'}</td>
+                    <td>N/A</td>
+                    <td>N/A</td>
+                    <td>{inv.Date || inv.date ? new Date(inv.Date || inv.date).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                      <span className="sa-status-pill completed">Completed</span>
+                    </td>
+                    <td className="sa-row-actions">
+                      <button className="sa-icon-button" title="View">👁️</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
         return renderOverview();
-      case 'inspections':
-        return renderInspections();
       case 'maintenance':
         return renderMaintenance();
-      case 'tasks':
-        return renderTasks();
-      case 'technician-contacts':
-        return renderTechnicianContacts();
+      case 'quotes':
+        return renderQuotes();
+      case 'works':
+        return renderWorks();
+      case 'state-entry':
+        return renderStateEntry();
+      case 'state-exit':
+        return renderStateExit();
+      case 'worker-contacts':
+        return renderTechnicianContacts(); // Reuse existing function
+      case 'history':
+        return renderHistory();
+      case 'reports':
+        return renderReports();
+      case 'inventory-form':
+        return renderInventoryForm();
       case 'advertisements':
         return renderAdvertisements();
       case 'chat':
@@ -2427,6 +3215,267 @@ const TechnicianDashboard = () => {
                     disabled={loading}
                   >
                     {loading ? 'Saving...' : (selectedContact ? 'Update Contact' : 'Add Contact')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comprehensive Inventory Form Modal */}
+      {showInventoryFormModal && (
+        <div className="modal-overlay" onClick={() => setShowInventoryFormModal(false)}>
+          <div className="modal-content" style={{ maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Inventory Form - {inventoryFormData.type === 'Entry' ? 'Entry' : 'Exit'}</h3>
+              <button className="modal-close" onClick={() => setShowInventoryFormModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                // Handle form submission
+                addNotification('Inventory form submission feature coming soon', 'info');
+                setShowInventoryFormModal(false);
+              }} className="modal-form">
+                
+                {/* A. General Information */}
+                <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
+                  <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>A. General Information</h4>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Type of State of Affairs *</label>
+                      <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="radio"
+                            name="inventoryType"
+                            value="Entry"
+                            checked={inventoryFormData.type === 'Entry'}
+                            onChange={(e) => setInventoryFormData({ ...inventoryFormData, type: e.target.value })}
+                            required
+                          />
+                          Entry
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="radio"
+                            name="inventoryType"
+                            value="Exit"
+                            checked={inventoryFormData.type === 'Exit'}
+                            onChange={(e) => setInventoryFormData({ ...inventoryFormData, type: e.target.value })}
+                            required
+                          />
+                          Exit
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Type of Property *</label>
+                      <select
+                        value={inventoryFormData.propertyType}
+                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, propertyType: e.target.value, numberOfRooms: e.target.value === 'Studio' ? 1 : inventoryFormData.numberOfRooms })}
+                        required
+                      >
+                        <option value="">Select Property Type</option>
+                        <option value="Studio">Studio</option>
+                        <option value="Apartment">Apartment</option>
+                        <option value="Duplex">Duplex</option>
+                        <option value="Villa">Villa</option>
+                      </select>
+                    </div>
+                    {inventoryFormData.propertyType && inventoryFormData.propertyType !== 'Studio' && (
+                      <div className="form-group">
+                        <label>Number of Rooms *</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={inventoryFormData.numberOfRooms}
+                          onChange={(e) => setInventoryFormData({ ...inventoryFormData, numberOfRooms: parseInt(e.target.value) || 1 })}
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Address of the Property *</label>
+                      <input
+                        type="text"
+                        value={inventoryFormData.propertyAddress}
+                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, propertyAddress: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Tenant Name *</label>
+                      <input
+                        type="text"
+                        value={inventoryFormData.tenantName}
+                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, tenantName: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Date *</label>
+                      <input
+                        type="date"
+                        value={inventoryFormData.date}
+                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, date: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Name of the Technical Manager *</label>
+                      <input
+                        type="text"
+                        value={inventoryFormData.technicianName}
+                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, technicianName: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dynamic Sections Based on Property Type */}
+                {inventoryFormData.propertyType && (
+                  <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
+                    <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>
+                      B. STATE OF THE PREMISES – {inventoryFormData.propertyType.toUpperCase()}
+                    </h4>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '16px' }}>
+                      {inventoryFormData.propertyType === 'Studio' && 'Evaluation of the unique piece and basic equipment.'}
+                      {inventoryFormData.propertyType === 'Apartment' && 'Each room is automatically generated according to the number of rooms.'}
+                      {(inventoryFormData.propertyType === 'Duplex' || inventoryFormData.propertyType === 'Villa') && 'Multi-level management and outdoor spaces.'}
+                    </p>
+                    
+                    {/* Property-specific form sections will be dynamically rendered here */}
+                    <div style={{ padding: '12px', background: '#fff', borderRadius: '4px' }}>
+                      <p style={{ fontSize: '0.875rem', color: '#6b7280', fontStyle: 'italic' }}>
+                        Detailed property evaluation form sections will be displayed here based on property type and number of rooms.
+                        Each element allows: state evaluation (good/average/bad), comments, and mandatory photos.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* E. Meters & Equipment */}
+                <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
+                  <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>E. Meters & Equipment</h4>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Index Electricity Meter</label>
+                      <input type="text" placeholder="Enter meter reading" />
+                    </div>
+                    <div className="form-group">
+                      <label>Index Water Meter</label>
+                      <input type="text" placeholder="Enter meter reading" />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Gas (if applicable)</label>
+                      <input type="text" placeholder="Enter gas meter reading" />
+                    </div>
+                    <div className="form-group">
+                      <label>Number of Keys Handed In</label>
+                      <input type="number" min="0" placeholder="Enter number of keys" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* F. Observations */}
+                <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
+                  <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>F. Observations</h4>
+                  <div className="form-group">
+                    <label>Comments from the Technical Manager</label>
+                    <textarea rows="3" placeholder="Enter comments..." />
+                  </div>
+                  <div className="form-group">
+                    <label>Observations of the Tenant</label>
+                    <textarea rows="3" placeholder="Enter tenant observations..." />
+                  </div>
+                </div>
+
+                {/* G. Exit - Estimation of Degradations (only for Exit) */}
+                {inventoryFormData.type === 'Exit' && (
+                  <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
+                    <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>G. OUTPUT – ESTIMATION OF DEGRADATIONS</h4>
+                    <div className="form-group">
+                      <label>Observed Degradations</label>
+                      <textarea rows="3" placeholder="Describe observed degradations..." />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Work to be Carried Out</label>
+                        <textarea rows="2" placeholder="Describe work needed..." />
+                      </div>
+                      <div className="form-group">
+                        <label>Estimated Cost</label>
+                        <input type="number" step="0.01" min="0" placeholder="0.00" />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Impact on Bail</label>
+                      <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input type="radio" name="bailImpact" value="None" />
+                          None
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input type="radio" name="bailImpact" value="Partial" />
+                          Partial
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input type="radio" name="bailImpact" value="Total" />
+                          Total
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* H. Digital Signature */}
+                <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
+                  <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>H. DIGITAL SIGNATURE (MANDATORY)</h4>
+                  <div className="form-group">
+                    <label>Signature of the Technical Manager *</label>
+                    <div style={{ border: '2px dashed #d1d5db', borderRadius: '8px', padding: '24px', textAlign: 'center', minHeight: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Touch screen signature area (to be implemented)</p>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Signature of the Tenant *</label>
+                    <div style={{ border: '2px dashed #d1d5db', borderRadius: '8px', padding: '24px', textAlign: 'center', minHeight: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Touch screen signature area (to be implemented)</p>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '8px', fontStyle: 'italic' }}>
+                      "I acknowledge the accuracy of the above information."
+                    </p>
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button 
+                    type="button" 
+                    className="action-button secondary" 
+                    onClick={() => setShowInventoryFormModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="action-button primary" 
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Finalize and Generate PDF'}
                   </button>
                 </div>
               </form>

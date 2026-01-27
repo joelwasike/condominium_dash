@@ -167,4 +167,32 @@ export const technicianService = {
       method: 'DELETE',
     });
   },
+
+  // State of Entry and Exit
+  getStateOfEntry: async () => {
+    return apiRequest(buildApiUrl('/api/technician/state-entry'), {
+      method: 'GET',
+    });
+  },
+
+  getStateOfExit: async () => {
+    return apiRequest(buildApiUrl('/api/technician/state-exit'), {
+      method: 'GET',
+    });
+  },
+
+  // History
+  getHistory: async (filters = {}) => {
+    const queryParams = new URLSearchParams();
+    if (filters.date) queryParams.append('date', filters.date);
+    if (filters.type) queryParams.append('type', filters.type);
+    if (filters.property) queryParams.append('property', filters.property);
+    
+    const url = buildApiUrl('/api/technician/history');
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
+    
+    return apiRequest(fullUrl, {
+      method: 'GET',
+    });
+  },
 };

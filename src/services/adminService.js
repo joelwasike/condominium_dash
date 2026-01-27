@@ -223,4 +223,87 @@ export const adminService = {
       body: JSON.stringify({ reason }),
     });
   },
+
+  // New Client Management
+  getNewClients: async (filters = {}) => {
+    const queryParams = new URLSearchParams();
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.search) queryParams.append('search', filters.search);
+    
+    const url = buildApiUrl('/api/admin/new-clients');
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
+    
+    return await apiRequest(fullUrl, {
+      method: 'GET',
+    });
+  },
+
+  createNewClient: async (clientData) => {
+    const url = buildApiUrl('/api/admin/new-clients');
+    return await apiRequest(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(clientData),
+    });
+  },
+
+  updateClientStatus: async (id, status) => {
+    const url = buildApiUrl(`/api/admin/new-clients/${id}/status`);
+    return await apiRequest(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  // Terminations
+  getTerminations: async (filters = {}) => {
+    const queryParams = new URLSearchParams();
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.search) queryParams.append('search', filters.search);
+    
+    const url = buildApiUrl('/api/admin/terminations');
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
+    
+    return await apiRequest(fullUrl, {
+      method: 'GET',
+    });
+  },
+
+  updateTerminationStatus: async (id, status) => {
+    const url = buildApiUrl(`/api/admin/terminations/${id}/status`);
+    return await apiRequest(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  // History
+  getHistory: async (filters = {}) => {
+    const queryParams = new URLSearchParams();
+    if (filters.type) queryParams.append('type', filters.type);
+    if (filters.date) queryParams.append('date', filters.date);
+    
+    const url = buildApiUrl('/api/admin/history');
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
+    
+    return await apiRequest(fullUrl, {
+      method: 'GET',
+    });
+  },
+
+  // Reports
+  getReports: async (reportType, filters = {}) => {
+    const queryParams = new URLSearchParams();
+    if (filters.month) queryParams.append('month', filters.month);
+    if (filters.year) queryParams.append('year', filters.year);
+    
+    const url = buildApiUrl(`/api/admin/reports/${reportType}`);
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
+    
+    return await apiRequest(fullUrl, {
+      method: 'GET',
+    });
+  },
 };
