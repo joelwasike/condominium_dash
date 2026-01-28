@@ -134,6 +134,7 @@ const TechnicianDashboard = () => {
   const [contactForm, setContactForm] = useState({
     name: '',
     category: '',
+    customCategory: '',
     phone: '',
     email: '',
     address: '',
@@ -1879,16 +1880,23 @@ const TechnicianDashboard = () => {
     setLoading(true);
     try {
       const contactId = selectedContact?.ID || selectedContact?.id;
+      const payload = {
+        ...contactForm,
+        category:
+          contactForm.category === 'other' && contactForm.customCategory.trim()
+            ? contactForm.customCategory.trim()
+            : contactForm.category,
+      };
       if (contactId) {
-        await technicianService.updateTechnicianContact(contactId, contactForm);
+        await technicianService.updateTechnicianContact(contactId, payload);
         addNotification('Contact updated successfully', 'success');
       } else {
-        await technicianService.createTechnicianContact(contactForm);
+        await technicianService.createTechnicianContact(payload);
         addNotification('Contact added successfully', 'success');
       }
       setShowContactModal(false);
       setSelectedContact(null);
-      setContactForm({ name: '', category: '', phone: '', email: '', address: '', description: '' });
+      setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '' });
       loadData();
     } catch (error) {
       console.error('Error saving contact:', error);
@@ -1920,6 +1928,7 @@ const TechnicianDashboard = () => {
     setContactForm({
       name: contact.Name || contact.name || '',
       category: contact.Category || contact.category || '',
+      customCategory: '',
       phone: contact.Phone || contact.phone || '',
       email: contact.Email || contact.email || '',
       address: contact.Address || contact.address || '',
@@ -1940,7 +1949,7 @@ const TechnicianDashboard = () => {
             className="sa-primary-cta" 
             onClick={() => {
               setSelectedContact(null);
-              setContactForm({ name: '', category: '', phone: '', email: '', address: '', description: '' });
+              setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '' });
               setShowContactModal(true);
             }} 
             disabled={loading}
@@ -3323,6 +3332,20 @@ const TechnicianDashboard = () => {
                   </div>
                 </div>
 
+                {contactForm.category === 'other' && (
+                  <div className="form-group">
+                    <label htmlFor="contactCustomCategory">Custom Worker Type *</label>
+                    <input
+                      type="text"
+                      id="contactCustomCategory"
+                      value={contactForm.customCategory}
+                      onChange={(e) => setContactForm(prev => ({ ...prev, customCategory: e.target.value }))}
+                      placeholder="e.g., Roofer, Tiler, Welder"
+                      required
+                    />
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label htmlFor="contactAddress">Address</label>
                   <input
@@ -3352,7 +3375,7 @@ const TechnicianDashboard = () => {
                     onClick={() => {
                       setShowContactModal(false);
                       setSelectedContact(null);
-                      setContactForm({ name: '', category: '', phone: '', email: '', address: '', description: '' });
+                      setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '' });
                     }}
                   >
                     Cancel
