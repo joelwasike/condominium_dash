@@ -1543,6 +1543,7 @@ Thank you for your payment!
                     const address = contact.Address || contact.address || '';
                     const description = contact.Description || contact.description || '';
                     const categoryName = contact.Category || contact.category || '';
+                    const photoUrl = contact.PhotoURL || contact.photoURL || contact.photoUrl || '';
 
                     return (
                       <div 
@@ -1558,10 +1559,20 @@ Thank you for your payment!
                         onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'}
                         onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)'}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                          <h4 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem', fontWeight: '600' }}>
-                            {name}
-                          </h4>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {photoUrl && (
+                              <img
+                                src={photoUrl}
+                                alt={`${name} photo`}
+                                style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                                onClick={() => window.open(photoUrl, '_blank')}
+                              />
+                            )}
+                            <h4 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem', fontWeight: '600' }}>
+                              {name}
+                            </h4>
+                          </div>
                           <span style={{
                             padding: '4px 8px',
                             borderRadius: '4px',

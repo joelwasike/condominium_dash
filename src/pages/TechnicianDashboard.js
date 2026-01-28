@@ -103,7 +103,9 @@ const TechnicianDashboard = () => {
     phone: '',
     email: '',
     address: '',
-    description: ''
+    description: '',
+    photo: null,
+    idCard: null
   });
   
   // New state for restructured sections
@@ -1959,7 +1961,7 @@ const TechnicianDashboard = () => {
       }
       setShowContactModal(false);
       setSelectedContact(null);
-      setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '' });
+      setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '', photo: null, idCard: null });
       loadData();
     } catch (error) {
       console.error('Error saving contact:', error);
@@ -1995,7 +1997,9 @@ const TechnicianDashboard = () => {
       phone: contact.Phone || contact.phone || '',
       email: contact.Email || contact.email || '',
       address: contact.Address || contact.address || '',
-      description: contact.Description || contact.description || ''
+      description: contact.Description || contact.description || '',
+      photo: null,
+      idCard: null
     });
     setShowContactModal(true);
   };
@@ -2012,7 +2016,7 @@ const TechnicianDashboard = () => {
             className="sa-primary-cta" 
             onClick={() => {
               setSelectedContact(null);
-              setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '' });
+              setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '', photo: null, idCard: null });
               setShowContactModal(true);
             }} 
             disabled={loading}
@@ -3437,6 +3441,33 @@ const TechnicianDashboard = () => {
                     />
                   </div>
                 )}
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="contactPhoto">Worker Photo</label>
+                    <input
+                      type="file"
+                      id="contactPhoto"
+                      accept="image/*"
+                      onChange={(e) => setContactForm(prev => ({ ...prev, photo: e.target.files?.[0] || null }))}
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                      This photo will be visible to tenants.
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="contactIdCard">Identity Card (Private)</label>
+                    <input
+                      type="file"
+                      id="contactIdCard"
+                      accept="image/*"
+                      onChange={(e) => setContactForm(prev => ({ ...prev, idCard: e.target.files?.[0] || null }))}
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                      This file is not shown to tenants.
+                    </small>
+                  </div>
+                </div>
 
                 <div className="form-group">
                   <label htmlFor="contactAddress">Address</label>

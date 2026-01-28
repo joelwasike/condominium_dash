@@ -1,5 +1,19 @@
 import { buildApiUrl, apiRequest } from '../config/api';
 
+const buildAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return {};
+  const tokenStr = String(token).trim();
+  const sanitizedToken = tokenStr
+    .split('')
+    .map(char => {
+      const code = char.charCodeAt(0);
+      return (code >= 32 && code <= 126) ? char : '';
+    })
+    .join('');
+  return sanitizedToken ? { Authorization: sanitizedToken } : {};
+};
+
 export const technicianService = {
   // Overview APIs
   getOverview: async () => {
@@ -185,19 +199,59 @@ export const technicianService = {
   },
 
   createTechnicianContact: async (contactData) => {
-    return apiRequest(buildApiUrl('/api/technician/technician-contacts'), {
+    const url = buildApiUrl('/api/technician/technician-contacts');
+    const formData = new FormData();
+    formData.append('name', contactData.name || '');
+    formData.append('category', contactData.category || '');
+    formData.append('phone', contactData.phone || '');
+    if (contactData.email) formData.append('email', contactData.email);
+    if (contactData.address) formData.append('address', contactData.address);
+    if (contactData.description) formData.append('description', contactData.description);
+    if (contactData.photo) formData.append('photo', contactData.photo);
+    if (contactData.idCard) formData.append('idCard', contactData.idCard);
+
+    const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(contactData),
+      headers: {
+        ...buildAuthHeaders(),
+      },
+      body: formData,
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Request failed (${response.status})`);
+    }
+
+    return await response.json();
   },
 
   updateTechnicianContact: async (id, contactData) => {
-    return apiRequest(buildApiUrl(`/api/technician/technician-contacts/${id}`), {
+    const url = buildApiUrl(`/api/technician/technician-contacts/${id}`);
+    const formData = new FormData();
+    if (contactData.name) formData.append('name', contactData.name);
+    if (contactData.category) formData.append('category', contactData.category);
+    if (contactData.phone) formData.append('phone', contactData.phone);
+    if (contactData.email) formData.append('email', contactData.email);
+    if (contactData.address) formData.append('address', contactData.address);
+    if (contactData.description) formData.append('description', contactData.description);
+    if (contactData.photo) formData.append('photo', contactData.photo);
+    if (contactData.idCard) formData.append('idCard', contactData.idCard);
+
+    const response = await fetch(url, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(contactData),
+      headers: {
+        ...buildAuthHeaders(),
+      },
+      body: formData,
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Request failed (${response.status})`);
+    }
+
+    return await response.json();
   },
 
   deleteTechnicianContact: async (id) => {
