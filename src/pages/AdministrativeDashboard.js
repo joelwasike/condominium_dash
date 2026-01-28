@@ -121,6 +121,25 @@ const AdministrativeDashboard = () => {
     if (!clientDocForm.clientId) return null;
     return newClients.find(client => String(client.ID || client.id) === String(clientDocForm.clientId)) || null;
   }, [clientDocForm.clientId, newClients]);
+
+  const openUploadForClient = (client) => {
+    const clientId = client.ID || client.id;
+    if (!clientId) {
+      addNotification('Selected client is missing an ID', 'error');
+      return;
+    }
+    setClientDocForm({
+      clientId: String(clientId),
+      property: '',
+      applicationFees: false,
+      transferOrResubscription: false,
+      sodeci: false,
+      cie10: false,
+      cie15: false
+    });
+    setClientDocFiles({});
+    setShowNewClientModal(true);
+  };
   
   // Filter states
   const [documentStatusFilter, setDocumentStatusFilter] = useState('');
@@ -2346,7 +2365,11 @@ const AdministrativeDashboard = () => {
                 </tr>
               ) : (
                 filteredClients.map((client, index) => (
-                  <tr key={client.ID || client.id || index}>
+                  <tr
+                    key={client.ID || client.id || index}
+                    onClick={() => openUploadForClient(client)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td>{index + 1}</td>
                     <td>
                       <div className="sa-cell-main">
@@ -2376,12 +2399,25 @@ const AdministrativeDashboard = () => {
                     <td className="sa-row-actions">
                       <button
                         className="sa-icon-button"
+                        title="Upload Documents"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openUploadForClient(client);
+                        }}
+                      >
+                        📎
+                      </button>
+                      <button
+                        className="sa-icon-button"
                         title="View Checklist"
-                        onClick={() => handleViewChecklist(client)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewChecklist(client);
+                        }}
                       >
                         👁️
                       </button>
-                      <button className="sa-icon-button" title="Edit">✏️</button>
+                      <button className="sa-icon-button" title="Edit" onClick={(e) => e.stopPropagation()}>✏️</button>
                     </td>
                   </tr>
                 ))
@@ -2712,28 +2748,19 @@ const AdministrativeDashboard = () => {
           }}
         >
           <div className="form-group">
-            <label htmlFor="client-select">Select Tenant *</label>
-            <select
-              id="client-select"
-              value={clientDocForm.clientId}
-              onChange={(e) => {
-                setClientDocForm({ ...clientDocForm, clientId: e.target.value });
-                setClientDocFiles({});
-              }}
-              required
-            >
-              <option value="">Select tenant</option>
-              {newClients.map(client => {
-                const id = client.ID || client.id;
-                const name = client.name || client.Name || client.email || client.Email || 'Unnamed';
-                const type = client.type || client.Type || 'individual';
-                return (
-                  <option key={id} value={id}>
-                    {name} ({type})
-                  </option>
-                );
-              })}
-            </select>
+            <label>Selected Client</label>
+            <div className="sa-cell-main" style={{ padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+              <span className="sa-cell-title">
+                {selectedClient
+                  ? (selectedClient.name || selectedClient.Name || selectedClient.email || selectedClient.Email || 'Unnamed')
+                  : 'No client selected'}
+              </span>
+              {selectedClient && (
+                <span className="sa-cell-sub">
+                  {(selectedClient.type || selectedClient.Type || 'individual').toLowerCase()}
+                </span>
+              )}
+            </div>
           </div>
 
         <div className="form-group">
