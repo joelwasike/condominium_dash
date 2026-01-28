@@ -329,8 +329,8 @@
 
 .photo-preview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(70px, 80px));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 64px));
+  gap: 6px;
   margin-top: 16px;
   max-width: 100%;
 }
@@ -341,7 +341,7 @@
   overflow: hidden;
   background: white;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  max-width: 80px;
+  max-width: 64px;
   width: 100%;
   aspect-ratio: 1;
 }
@@ -375,13 +375,7 @@
 }
 
 .photo-name {
-  display: block;
-  padding: 6px;
-  font-size: 0.65rem;
-  color: #374151;
-  font-family: 'Poppins', sans-serif;
-  text-align: center;
-  word-break: break-all;
+  display: none;
 }
 
 /* Modal Styles */
