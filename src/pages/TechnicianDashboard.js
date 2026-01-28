@@ -68,41 +68,6 @@ const TechnicianDashboard = () => {
     return rooms;
   }, []);
 
-  // Ensure room/item structure exists in formData when property settings change
-  useEffect(() => {
-    if (!inventoryFormData.propertyType) return;
-    const roomList = getRoomList(inventoryFormData.propertyType, inventoryFormData.numberOfRooms);
-    if (roomList.length === 0) return;
-
-    setInventoryFormData(prev => {
-      const prevRooms = prev.formData?.rooms || {};
-      let changed = false;
-      const nextRooms = { ...prevRooms };
-
-      roomList.forEach(roomName => {
-        if (!nextRooms[roomName]) {
-          nextRooms[roomName] = {};
-          changed = true;
-        }
-        INSPECTION_ITEMS.forEach(item => {
-          if (!nextRooms[roomName][item.key]) {
-            nextRooms[roomName][item.key] = { condition: '', comment: '', photos: [] };
-            changed = true;
-          }
-        });
-      });
-
-      if (!changed) return prev;
-      return {
-        ...prev,
-        formData: {
-          ...prev.formData,
-          rooms: nextRooms,
-        },
-      };
-    });
-  }, [inventoryFormData.propertyType, inventoryFormData.numberOfRooms, INSPECTION_ITEMS, getRoomList]);
-
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
   const [overviewData, setOverviewData] = useState(null);
@@ -172,6 +137,41 @@ const TechnicianDashboard = () => {
       exit: { degradations: '', workToBeCarriedOut: '', estimatedCost: 0, bailImpact: 'None' },
     }
   });
+
+  // Ensure room/item structure exists in formData when property settings change
+  useEffect(() => {
+    if (!inventoryFormData.propertyType) return;
+    const roomList = getRoomList(inventoryFormData.propertyType, inventoryFormData.numberOfRooms);
+    if (roomList.length === 0) return;
+
+    setInventoryFormData(prev => {
+      const prevRooms = prev.formData?.rooms || {};
+      let changed = false;
+      const nextRooms = { ...prevRooms };
+
+      roomList.forEach(roomName => {
+        if (!nextRooms[roomName]) {
+          nextRooms[roomName] = {};
+          changed = true;
+        }
+        INSPECTION_ITEMS.forEach(item => {
+          if (!nextRooms[roomName][item.key]) {
+            nextRooms[roomName][item.key] = { condition: '', comment: '', photos: [] };
+            changed = true;
+          }
+        });
+      });
+
+      if (!changed) return prev;
+      return {
+        ...prev,
+        formData: {
+          ...prev.formData,
+          rooms: nextRooms,
+        },
+      };
+    });
+  }, [inventoryFormData.propertyType, inventoryFormData.numberOfRooms, INSPECTION_ITEMS, getRoomList]);
   
   // Filter states
   const [quoteStatusFilter, setQuoteStatusFilter] = useState('');
