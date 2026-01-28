@@ -340,7 +340,7 @@ const AdministrativeDashboard = () => {
         return;
       }
       
-      const [
+        const [
         overview,
         inboxData,
         documentsData,
@@ -350,13 +350,13 @@ const AdministrativeDashboard = () => {
         leasesData,
         paymentFollowUpsData,
         clientsData,
-        propertiesData,
+          propertiesData,
         visitsData,
         negotiationsData,
         transfersData,
         newClientsData,
         terminationsData,
-        historyDataRes
+          historyDataRes
       ] = await Promise.all([
         adminService.getOverview().catch(() => null),
         adminService.getInbox().catch(() => ({ items: [] })),
@@ -375,7 +375,7 @@ const AdministrativeDashboard = () => {
         }).catch(() => []),
         adminService.getPendingPaymentFollowUps().catch(() => []),
         adminService.getClients().catch(() => []),
-        adminService.getProperties().catch(() => []),
+          adminService.getProperties().catch(() => []),
         adminService.getVisits().catch(() => []),
         adminService.getNegotiations().catch(() => []),
         adminService.getTransfers().catch(() => []),
@@ -2535,7 +2535,21 @@ const AdministrativeDashboard = () => {
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="lease-property">Property</label>
-              <input type="text" id="lease-property" name="property" placeholder="Property address" required />
+              <select id="lease-property" name="property" required>
+                <option value="">Select property</option>
+                {properties.map(property => {
+                  const id = property.ID || property.id;
+                  const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                  return (
+                    <option key={id} value={label}>
+                      {label}
+                    </option>
+                  );
+                })}
+                {properties.length === 0 && (
+                  <option value="" disabled>No properties found</option>
+                )}
+              </select>
             </div>
             <div className="form-group">
               <label htmlFor="lease-rent">Monthly Rent</label>
@@ -2722,7 +2736,7 @@ const AdministrativeDashboard = () => {
             </select>
           </div>
 
-          <div className="form-group">
+        <div className="form-group">
             <label htmlFor="client-property">Select the house who he will interest for *</label>
             <select
               id="client-property"
@@ -2731,7 +2745,7 @@ const AdministrativeDashboard = () => {
               required
             >
               <option value="">Select property</option>
-              {properties.map(property => {
+            {properties.map(property => {
                 const id = property.ID || property.id;
                 const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                 return (
@@ -2740,13 +2754,16 @@ const AdministrativeDashboard = () => {
                   </option>
                 );
               })}
+            {properties.length === 0 && (
+              <option value="" disabled>No properties found</option>
+            )}
             </select>
           </div>
 
-          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
+        <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
             <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
-            <div className="form-group" style={{ marginBottom: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="form-group" style={{ marginBottom: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.applicationFees}
@@ -2755,8 +2772,8 @@ const AdministrativeDashboard = () => {
                 Application fees (37,000 FCFA - obligation to pay)
               </label>
             </div>
-            <div className="form-group" style={{ marginBottom: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="form-group" style={{ marginBottom: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.transferOrResubscription}
@@ -2765,8 +2782,8 @@ const AdministrativeDashboard = () => {
                 Transfer or Re-subscription (optional)
               </label>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.sodeci}
@@ -2775,8 +2792,8 @@ const AdministrativeDashboard = () => {
                 SODECI: 35,000 FCFA
               </label>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.cie10}
@@ -2785,8 +2802,8 @@ const AdministrativeDashboard = () => {
                 CIE: 10A 37 375 FCFA
               </label>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.cie15}

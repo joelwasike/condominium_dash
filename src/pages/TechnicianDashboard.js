@@ -807,6 +807,48 @@ const TechnicianDashboard = () => {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const userName = currentUser.name || currentUser.Name || 'Technician';
 
+    const monthLabels = [];
+    const monthlyRequests = [];
+    const monthlyCompleted = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i -= 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = date.toLocaleString('default', { month: 'short' });
+      monthLabels.push(label);
+
+      const totalCount = requests.filter(r => {
+        const dateValue = r.CreatedAt || r.createdAt || r.Date || r.date;
+        if (!dateValue) return false;
+        const reqDate = new Date(dateValue);
+        return reqDate.getMonth() === date.getMonth() && reqDate.getFullYear() === date.getFullYear();
+      }).length;
+
+      const completedCount = requests.filter(r => {
+        const dateValue = r.CreatedAt || r.createdAt || r.Date || r.date;
+        if (!dateValue) return false;
+        const reqDate = new Date(dateValue);
+        const status = (r.Status || r.status || '').toLowerCase();
+        return reqDate.getMonth() === date.getMonth() &&
+          reqDate.getFullYear() === date.getFullYear() &&
+          status === 'completed';
+      }).length;
+
+      monthlyRequests.push(totalCount);
+      monthlyCompleted.push(completedCount);
+    }
+
+    const maxValue = Math.max(1, ...monthlyRequests, ...monthlyCompleted);
+    const chartWidth = 300;
+    const chartHeight = 140;
+    const chartPadding = 10;
+    const toPoint = (value, index, count) => {
+      const x = chartPadding + (index * (chartWidth - chartPadding * 2)) / (count - 1 || 1);
+      const y = chartHeight - chartPadding - (value / maxValue) * (chartHeight - chartPadding * 2);
+      return `${x},${y}`;
+    };
+    const requestsPath = monthlyRequests.map((v, i) => toPoint(v, i, monthlyRequests.length)).join(' ');
+    const completedPath = monthlyCompleted.map((v, i) => toPoint(v, i, monthlyCompleted.length)).join(' ');
+
     return (
       <div className="sa-overview-page">
         <div className="sa-overview-top">
@@ -816,20 +858,29 @@ const TechnicianDashboard = () => {
               <span className="sa-card-subtitle">Welcome, {userName}!</span>
             </div>
             <div className="sa-mini-legend">
-              <span className="sa-legend-item sa-legend-expected">Open Tickets</span>
-              <span className="sa-legend-item sa-legend-current">Resolution Time</span>
+              <span className="sa-legend-item sa-legend-expected">Requests</span>
+              <span className="sa-legend-item sa-legend-current">Completed</span>
             </div>
-            <div className="sa-chart-placeholder">
-              <div className="sa-chart-line sa-chart-line-expected" />
-              <div className="sa-chart-line sa-chart-line-current" />
+            <div style={{ width: '100%', height: '180px' }}>
+              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} width="100%" height="180" role="img" aria-label="Maintenance requests chart">
+                <polyline
+                  fill="none"
+                  stroke="#7c3aed"
+                  strokeWidth="3"
+                  points={requestsPath}
+                />
+                <polyline
+                  fill="none"
+                  stroke="#22c55e"
+                  strokeWidth="3"
+                  points={completedPath}
+                />
+              </svg>
             </div>
             <div className="sa-chart-footer">
-              <span>Jan</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-              <span>Jun</span>
+              {monthLabels.map(label => (
+                <span key={label}>{label}</span>
+              ))}
             </div>
           </div>
 
@@ -2835,14 +2886,26 @@ const TechnicianDashboard = () => {
                 <div className="form-row">
               <div className="form-group">
                     <label htmlFor="inspection-property">Property *</label>
-                <input
-                  type="text"
+                <select
                       id="inspection-property"
                   value={inspectionForm.property}
                   onChange={(e) => setInspectionForm({...inspectionForm, property: e.target.value})}
-                  placeholder="Enter property address"
                   required
-                />
+                >
+                  <option value="">Select property</option>
+                  {companyProperties.map(property => {
+                    const id = property.ID || property.id;
+                    const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                    return (
+                      <option key={id} value={label}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                  {companyProperties.length === 0 && (
+                    <option value="" disabled>No properties found</option>
+                  )}
+                </select>
               </div>
               <div className="form-group">
                     <label htmlFor="inspection-type">Inspection Type *</label>
@@ -2930,19 +2993,36 @@ const TechnicianDashboard = () => {
                 <div className="form-row">
               <div className="form-group">
                     <label htmlFor="task-property">Property {!selectedTask && '*'}</label>
-                <input
-                  type="text"
+                <select
                       id="task-property"
                       value={selectedTask ? (selectedTask.Property || selectedTask.property || '') : (taskForm.property || '')}
                       onChange={(e) => {
-                        if (selectedTask) return; // Disabled for existing tasks
+                        if (selectedTask) return;
                         setTaskForm({...taskForm, property: e.target.value});
                       }}
                       disabled={!!selectedTask}
                       className={selectedTask ? "disabled-input" : ""}
                       required={!selectedTask}
-                      placeholder="Enter property address"
-                />
+                >
+                  <option value="">Select property</option>
+                  {companyProperties.map(property => {
+                    const id = property.ID || property.id;
+                    const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                    return (
+                      <option key={id} value={label}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                  {selectedTask && (selectedTask.Property || selectedTask.property) && !companyProperties.find(p => (p.Address || p.address) === (selectedTask.Property || selectedTask.property)) && (
+                    <option value={selectedTask.Property || selectedTask.property}>
+                      {selectedTask.Property || selectedTask.property}
+                    </option>
+                  )}
+                  {companyProperties.length === 0 && (
+                    <option value="" disabled>No properties found</option>
+                  )}
+                </select>
               </div>
               <div className="form-group">
                     <label htmlFor="task-priority">Priority {!selectedTask && '*'}</label>

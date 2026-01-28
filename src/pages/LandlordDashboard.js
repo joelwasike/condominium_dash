@@ -2411,7 +2411,21 @@ const LandlordDashboard = () => {
         }}>
           <div className="form-group">
             <label>Property</label>
-            <input type="text" name="property" required />
+            <select name="property" required>
+              <option value="">Select property</option>
+              {properties.map(property => {
+                const id = property.ID || property.id;
+                const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                return (
+                  <option key={id} value={label}>
+                    {label}
+                  </option>
+                );
+              })}
+              {properties.length === 0 && (
+                <option value="" disabled>No properties found</option>
+              )}
+            </select>
           </div>
           <div className="form-group">
             <label>Work Type</label>
@@ -2470,7 +2484,21 @@ const LandlordDashboard = () => {
         }}>
           <div className="form-group">
             <label>Property</label>
-            <input type="text" name="property" required />
+            <select name="property" required>
+              <option value="">Select property</option>
+              {properties.map(property => {
+                const id = property.ID || property.id;
+                const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                return (
+                  <option key={id} value={label}>
+                    {label}
+                  </option>
+                );
+              })}
+              {properties.length === 0 && (
+                <option value="" disabled>No properties found</option>
+              )}
+            </select>
           </div>
           <div className="form-group">
             <label>Claim Type</label>
@@ -2515,7 +2543,21 @@ const LandlordDashboard = () => {
         }}>
           <div className="form-group">
             <label>Property</label>
-            <input type="text" name="property" required />
+            <select name="property" required>
+              <option value="">Select property</option>
+              {properties.map(property => {
+                const id = property.ID || property.id;
+                const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                return (
+                  <option key={id} value={label}>
+                    {label}
+                  </option>
+                );
+              })}
+              {properties.length === 0 && (
+                <option value="" disabled>No properties found</option>
+              )}
+            </select>
           </div>
           <div className="form-group">
             <label>Inventory Type</label>
@@ -2573,7 +2615,21 @@ const LandlordDashboard = () => {
           </div>
           <div className="form-group">
             <label>Property</label>
-            <input type="text" name="property" required />
+            <select name="property" required>
+              <option value="">Select property</option>
+              {properties.map(property => {
+                const id = property.ID || property.id;
+                const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                return (
+                  <option key={id} value={label}>
+                    {label}
+                  </option>
+                );
+              })}
+              {properties.length === 0 && (
+                <option value="" disabled>No properties found</option>
+              )}
+            </select>
           </div>
           <div className="form-group">
             <label>Tenant</label>
