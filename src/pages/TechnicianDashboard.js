@@ -3602,7 +3602,7 @@ const TechnicianDashboard = () => {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Property *</label>
+                      <label>Address of the Property *</label>
                       <select
                         value={inventoryFormData.propertyAddress}
                         onChange={(e) =>
@@ -3630,11 +3630,17 @@ const TechnicianDashboard = () => {
                                   : typeLower.includes('apartment')
                                     ? 'Apartment'
                                     : '';
+                            const matchingTenant = (currentInventoryTenants || []).find(t => {
+                              const property = t.Property || t.property || '';
+                              return property === selectedAddress;
+                            });
+                            const tenantName = matchingTenant ? (matchingTenant.Name || matchingTenant.name || '') : '';
                             return {
                               ...prev,
                               propertyAddress: selectedAddress,
                               numberOfRooms: bedrooms ? Number(bedrooms) : prev.numberOfRooms,
                               propertyType: inferredType || prev.propertyType || (bedrooms ? 'Apartment' : prev.propertyType),
+                              tenantName: tenantName || prev.tenantName,
                             };
                           })
                         }
@@ -3646,6 +3652,9 @@ const TechnicianDashboard = () => {
                             {address}
                           </option>
                         ))}
+                        {inventoryPropertyOptions.length === 0 && (
+                          <option value="" disabled>No properties available</option>
+                        )}
                       </select>
                     </div>
                     <div className="form-group" style={{ position: 'relative' }}>
