@@ -249,6 +249,12 @@ export const adminService = {
     return await apiRequest(url);
   },
 
+  // Get landlords (for lease agreement dropdown)
+  getLandlords: async () => {
+    const url = buildApiUrl('/api/admin/landlords');
+    return await apiRequest(url);
+  },
+
   // Get properties (for statistics)
   getProperties: async () => {
     const url = buildApiUrl('/api/admin/properties');

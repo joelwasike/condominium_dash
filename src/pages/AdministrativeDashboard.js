@@ -78,6 +78,7 @@ const AdministrativeDashboard = () => {
   const carouselIntervalRef = useRef(null);
   const [clients, setClients] = useState([]); // Clients for pending approval table
   const [properties, setProperties] = useState([]); // Properties for statistics
+  const [landlords, setLandlords] = useState([]);
   const [visits, setVisits] = useState([]); // Visits data
   const [negotiations, setNegotiations] = useState([]); // Negotiations data
   const [transfers, setTransfers] = useState([]); // Transfer requests
@@ -359,7 +360,7 @@ const AdministrativeDashboard = () => {
         return;
       }
       
-        const [
+      const [
         overview,
         inboxData,
         documentsData,
@@ -370,6 +371,7 @@ const AdministrativeDashboard = () => {
         paymentFollowUpsData,
         clientsData,
           propertiesData,
+        landlordsData,
         visitsData,
         negotiationsData,
         transfersData,
@@ -395,6 +397,7 @@ const AdministrativeDashboard = () => {
         adminService.getPendingPaymentFollowUps().catch(() => []),
         adminService.getClients().catch(() => []),
           adminService.getProperties().catch(() => []),
+        adminService.getLandlords().catch(() => []),
         adminService.getVisits().catch(() => []),
         adminService.getNegotiations().catch(() => []),
         adminService.getTransfers().catch(() => []),
@@ -413,6 +416,7 @@ const AdministrativeDashboard = () => {
       setPendingPaymentFollowUps(Array.isArray(paymentFollowUpsData) ? paymentFollowUpsData : []);
       setClients(Array.isArray(clientsData) ? clientsData : []);
       setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      setLandlords(Array.isArray(landlordsData) ? landlordsData : []);
       setVisits(Array.isArray(visitsData) ? visitsData : []);
       setNegotiations(Array.isArray(negotiationsData) ? negotiationsData : []);
       setTransfers(Array.isArray(transfersData) ? transfersData : []);
@@ -2515,7 +2519,7 @@ const AdministrativeDashboard = () => {
                 startDate: formData.get('start'),
                 endDate: formData.get('end'),
                 rent: parseFloat(formData.get('rent')),
-                status: 'Pending'
+                status: formData.get('leaseStatus') || 'Created'
               };
               const created = await adminService.createLease(newLease);
               const leaseId = created?.id || created?.ID;
@@ -2565,7 +2569,21 @@ const AdministrativeDashboard = () => {
             </div>
             <div className="form-group">
               <label htmlFor="lease-landlord">Landlord</label>
-              <input type="text" id="lease-landlord" name="landlord" placeholder="Landlord name" required />
+              <select id="lease-landlord" name="landlord" required>
+                <option value="">Select landlord</option>
+                {landlords.map(landlord => {
+                  const id = landlord.ID || landlord.id;
+                  const name = landlord.Name || landlord.name || landlord.Email || landlord.email || `Landlord ${id}`;
+                  return (
+                    <option key={id} value={landlord.Name || landlord.name || landlord.Email || landlord.email}>
+                      {name}
+                    </option>
+                  );
+                })}
+                {landlords.length === 0 && (
+                  <option value="" disabled>No landlords found</option>
+                )}
+              </select>
             </div>
           </div>
           <div className="form-row">
@@ -2590,6 +2608,17 @@ const AdministrativeDashboard = () => {
             <div className="form-group">
               <label htmlFor="lease-rent">Monthly Rent</label>
               <input type="number" id="lease-rent" name="rent" min="0" step="0.01" placeholder="0.00 XOF" required />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="lease-status">Lease Status</label>
+              <select id="lease-status" name="leaseStatus" required>
+                <option value="Created">Lease contract being created</option>
+                <option value="Pending Management Signature">Lease contract pending signature by management</option>
+                <option value="Pending Owner Signature">Pending signature by owner</option>
+                <option value="Active">Active lease contract</option>
+              </select>
             </div>
           </div>
           <div className="form-row">
@@ -2790,7 +2819,7 @@ const AdministrativeDashboard = () => {
         <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
             <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
           <div className="form-group" style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.applicationFees}
@@ -2800,7 +2829,7 @@ const AdministrativeDashboard = () => {
               </label>
             </div>
           <div className="form-group" style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.transferOrResubscription}
@@ -2810,7 +2839,7 @@ const AdministrativeDashboard = () => {
               </label>
             </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.sodeci}
@@ -2820,7 +2849,7 @@ const AdministrativeDashboard = () => {
               </label>
             </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.cie10}
@@ -2830,7 +2859,7 @@ const AdministrativeDashboard = () => {
               </label>
             </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.cie15}
