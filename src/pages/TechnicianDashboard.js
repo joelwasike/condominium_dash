@@ -112,6 +112,7 @@ const TechnicianDashboard = () => {
   const [entryTenants, setEntryTenants] = useState([]);
   const [exitTenants, setExitTenants] = useState([]);
   const [companyProperties, setCompanyProperties] = useState([]);
+  const [companyTenants, setCompanyTenants] = useState([]);
   const [historyData, setHistoryData] = useState({
     queries: [],
     quotes: [],
@@ -183,6 +184,10 @@ const TechnicianDashboard = () => {
   // Helper data for Inventory Form (Entry / Exit)
   const currentInventoryTenants =
     inventoryFormData.type === 'Entry' ? entryTenants : exitTenants;
+  const tenantOptions =
+    currentInventoryTenants && currentInventoryTenants.length > 0
+      ? currentInventoryTenants
+      : companyTenants;
 
   const inventoryPropertyOptions = Array.from(
     new Set(
@@ -246,7 +251,7 @@ const TechnicianDashboard = () => {
         return;
       }
       
-      const [overview, inspection, task, maintenanceRequests, contacts, quotesData, worksData, entryData, exitData, historyDataRes, propertiesData] = await Promise.all([
+      const [overview, inspection, task, maintenanceRequests, contacts, quotesData, worksData, entryData, exitData, historyDataRes, propertiesData, tenantsData] = await Promise.all([
         technicianService.getOverview().catch(() => null),
         technicianService.listInspections().catch(() => []),
         technicianService.listTasks().catch(() => []),
@@ -257,7 +262,8 @@ const TechnicianDashboard = () => {
         technicianService.getStateOfEntry().catch(() => []),
         technicianService.getStateOfExit().catch(() => []),
         technicianService.getHistory({}).catch(() => ({ queries: [], quotes: [], works: [], inventories: [] })),
-        technicianService.getProperties().catch(() => [])
+        technicianService.getProperties().catch(() => []),
+        technicianService.getTenants().catch(() => [])
       ]);
       
       setOverviewData(overview);
@@ -291,6 +297,7 @@ const TechnicianDashboard = () => {
       setExitTenants(Array.isArray(exitData) ? exitData : []);
 
       setCompanyProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      setCompanyTenants(Array.isArray(tenantsData) ? tenantsData : []);
       
       // Set history data
       if (historyDataRes && typeof historyDataRes === 'object') {
@@ -3744,11 +3751,16 @@ const TechnicianDashboard = () => {
                         value={inventoryFormData.tenantName}
                         onChange={(e) => {
                           const selectedName = e.target.value;
-                          const selectedTenant = (currentInventoryTenants || []).find(t => {
-                            const name = t.Name || t.name || '';
+                          const selectedTenant = (tenantOptions || []).find(t => {
+                            const name = t.Name || t.name || t.Email || t.email || '';
                             return name === selectedName;
                           });
-                          const selectedPropertyAddress = selectedTenant?.Property || selectedTenant?.property || '';
+                          const selectedPropertyAddress =
+                            selectedTenant?.Property ||
+                            selectedTenant?.property ||
+                            selectedTenant?.Address ||
+                            selectedTenant?.address ||
+                            '';
                           const selectedProperty = (companyProperties || []).find(
                             p => (p.Address || p.address) === selectedPropertyAddress
                           );
@@ -3782,16 +3794,16 @@ const TechnicianDashboard = () => {
                         required
                       >
                         <option value="">Select tenant</option>
-                        {(currentInventoryTenants || []).map((t, idx) => {
-                          const name = t.Name || t.name || '';
-                          const property = t.Property || t.property || '';
+                        {(tenantOptions || []).map((t, idx) => {
+                          const name = t.Name || t.name || t.Email || t.email || '';
+                          const property = t.Property || t.property || t.Address || t.address || '';
                           return (
                             <option key={`${name}-${idx}`} value={name}>
                               {name} {property ? `- ${property}` : ''}
                             </option>
                           );
                         })}
-                        {(!currentInventoryTenants || currentInventoryTenants.length === 0) && (
+                        {(!tenantOptions || tenantOptions.length === 0) && (
                           <option value="" disabled>No tenants available</option>
                         )}
                       </select>

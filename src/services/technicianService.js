@@ -114,6 +114,13 @@ export const technicianService = {
     });
   },
 
+  // Tenants
+  getTenants: async () => {
+    return apiRequest(buildApiUrl('/api/technician/tenants'), {
+      method: 'GET',
+    });
+  },
+
   submitQuote: async (quoteData) => {
     return apiRequest(buildApiUrl('/api/technician/quotes'), {
       method: 'POST',
