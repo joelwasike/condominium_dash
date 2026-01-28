@@ -1166,8 +1166,10 @@ const TechnicianDashboard = () => {
 
     // Only show non-completed maintenance in this table.
     const visibleRequests = requests.filter(m => {
-      const status = (m.status || m.Status || '').toLowerCase();
-      return status !== 'completed';
+      const rawStatus = m.status || m.Status || '';
+      const status = String(rawStatus).trim().toLowerCase();
+      const completedStatuses = ['completed', 'complete', 'done', 'finished', 'closed', 'resolved'];
+      return !completedStatuses.some(s => status === s || status.startsWith(s));
     });
 
     return (
@@ -1221,7 +1223,6 @@ const TechnicianDashboard = () => {
           <option value="">All Status</option>
             <option value="Pending">Pending</option>
             <option value="In Progress">In Progress</option>
-            <option value="Completed">Completed</option>
         </select>
       </div>
 
@@ -2122,12 +2123,13 @@ const TechnicianDashboard = () => {
                   <th>Amount</th>
                   <th>Recipient</th>
                   <th>Status</th>
+                  <th>Validated By</th>
                 </tr>
               </thead>
               <tbody>
                 {validatedQuotes.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="sa-table-empty">No validated quotes</td>
+                    <td colSpan={8} className="sa-table-empty">No validated quotes</td>
                   </tr>
                 ) : (
                   validatedQuotes.map((q, index) => (
@@ -2143,6 +2145,7 @@ const TechnicianDashboard = () => {
                           {q.Status || q.status || 'Approved'}
                         </span>
                       </td>
+                      <td>{q.ValidatedBy || q.validatedBy || 'N/A'}</td>
                     </tr>
                   ))
                 )}
