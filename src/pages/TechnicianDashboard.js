@@ -40,6 +40,69 @@ import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 
 const TechnicianDashboard = () => {
+  const INSPECTION_ITEMS = useMemo(
+    () => [
+      { key: 'doorHandles', label: 'Door handles' },
+      { key: 'doors', label: 'Doors (bedrooms, bathrooms, closets)' },
+      { key: 'closets', label: 'Closets and storage' },
+      { key: 'walls', label: 'Walls and paintwork' },
+      { key: 'floors', label: 'Floors' },
+      { key: 'fixtures', label: 'Visible fixtures and fittings' },
+    ],
+    []
+  );
+
+  const getRoomList = useCallback((propertyType, numberOfRooms) => {
+    if (!propertyType) return [];
+    const rooms = [];
+    if (propertyType === 'Studio') {
+      rooms.push('Main Room', 'Kitchenette', 'Bathroom');
+      return rooms;
+    }
+    // Common rooms for apartments/villas/duplex
+    rooms.push('Living Room', 'Kitchen', 'Bathroom', 'Toilet', 'Corridor');
+    const bedrooms = Math.max(1, Number(numberOfRooms) || 1);
+    for (let i = 1; i <= bedrooms; i++) rooms.push(`Bedroom ${i}`);
+    if (propertyType === 'Duplex') rooms.push('Stairs', 'Balcony/Terrace');
+    if (propertyType === 'Villa') rooms.push('Terrace', 'Exterior');
+    return rooms;
+  }, []);
+
+  // Ensure room/item structure exists in formData when property settings change
+  useEffect(() => {
+    if (!inventoryFormData.propertyType) return;
+    const roomList = getRoomList(inventoryFormData.propertyType, inventoryFormData.numberOfRooms);
+    if (roomList.length === 0) return;
+
+    setInventoryFormData(prev => {
+      const prevRooms = prev.formData?.rooms || {};
+      let changed = false;
+      const nextRooms = { ...prevRooms };
+
+      roomList.forEach(roomName => {
+        if (!nextRooms[roomName]) {
+          nextRooms[roomName] = {};
+          changed = true;
+        }
+        INSPECTION_ITEMS.forEach(item => {
+          if (!nextRooms[roomName][item.key]) {
+            nextRooms[roomName][item.key] = { condition: '', comment: '', photos: [] };
+            changed = true;
+          }
+        });
+      });
+
+      if (!changed) return prev;
+      return {
+        ...prev,
+        formData: {
+          ...prev.formData,
+          rooms: nextRooms,
+        },
+      };
+    });
+  }, [inventoryFormData.propertyType, inventoryFormData.numberOfRooms, INSPECTION_ITEMS, getRoomList]);
+
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
   const [overviewData, setOverviewData] = useState(null);
@@ -97,9 +160,15 @@ const TechnicianDashboard = () => {
     propertyAddress: '',
     tenantName: '',
     date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().slice(0, 5),
     technicianName: '',
     // Dynamic form data will be stored here
-    formData: {}
+    formData: {
+      rooms: {},
+      meters: { electricity: '', water: '', gas: '', keys: '' },
+      observations: { technician: '', tenant: '' },
+      exit: { degradations: '', workToBeCarriedOut: '', estimatedCost: 0, bailImpact: 'None' },
+    }
   });
   
   // Filter states
@@ -109,6 +178,26 @@ const TechnicianDashboard = () => {
   const [historyTypeFilter, setHistoryTypeFilter] = useState('');
   const [historyPropertyFilter, setHistoryPropertyFilter] = useState('');
   
+  // Helper data for Inventory Form (Entry / Exit)
+  const currentInventoryTenants =
+    inventoryFormData.type === 'Entry' ? entryTenants : exitTenants;
+
+  const inventoryPropertyOptions = Array.from(
+    new Set(
+      (currentInventoryTenants || [])
+        .map(t => t.Property || t.property)
+        .filter(Boolean)
+    )
+  );
+
+  const inventoryTenantSuggestions =
+    inventoryFormData.tenantName && currentInventoryTenants
+      ? currentInventoryTenants.filter(t => {
+          const name = (t.Name || t.name || '').toLowerCase();
+          return name.includes(inventoryFormData.tenantName.toLowerCase());
+        })
+      : [];
+
   
   // Advertisements state
   const [advertisements, setAdvertisements] = useState([]);
@@ -321,7 +410,30 @@ const TechnicianDashboard = () => {
     try {
       const taskId = task.id || task.ID;
       await technicianService.updateTask(taskId, { status: 'Completed' });
-      addNotification('Task marked as completed', 'success');
+
+      // When a maintenance task is marked as completed, automatically
+      // create a pending quote (if one has not already been generated)
+      // so that it appears in the Quotes page for validation by the
+      // owner or agency admin.
+      const alreadyGenerated = task.quoteGenerated || task.QuoteGenerated;
+      if (!alreadyGenerated) {
+        const quoteData = {
+          maintenanceId: taskId,
+          property: task.Property || task.property || '',
+          issue: task.Issue || task.issue || 'Maintenance Task',
+          amount: task.EstimatedCost || task.estimatedCost || 0,
+          recipient: 'management@example.com',
+        };
+        try {
+          await technicianService.submitQuote(quoteData);
+          addNotification('Task completed and quote submitted for validation', 'success');
+        } catch (quoteError) {
+          console.error('Error submitting quote for completed task:', quoteError);
+          addNotification('Task completed, but failed to submit quote', 'warning');
+        }
+      } else {
+        addNotification('Task marked as completed', 'success');
+      }
       loadData(); // Reload data to show updated task
     } catch (error) {
       console.error('Error completing task:', error);
@@ -1020,12 +1132,17 @@ const TechnicianDashboard = () => {
     };
 
     const handleUpdateMaintenance = async (maintenance) => {
+      // Reuse the task modal to update estimated hours/cost and status
       setShowTaskModal(true);
       setSelectedTask(maintenance);
       setTaskForm({
+        property: maintenance.property || maintenance.Property || '',
+        issue: maintenance.issue || maintenance.Issue || '',
+        priority: (maintenance.priority || maintenance.Priority || 'normal').toLowerCase(),
         status: maintenance.status || maintenance.Status || 'Pending',
         estimatedHours: maintenance.estimatedHours || maintenance.EstimatedHours || 0,
         estimatedCost: maintenance.estimatedCost || maintenance.EstimatedCost || 0,
+        assigned: maintenance.assigned || maintenance.Assigned || maintenance.assignedTo || maintenance.AssignedTo || '',
       });
     };
 
@@ -1047,6 +1164,12 @@ const TechnicianDashboard = () => {
       }
     };
 
+    // Only show non-completed maintenance in this table.
+    const visibleRequests = requests.filter(m => {
+      const status = (m.status || m.Status || '').toLowerCase();
+      return status !== 'completed';
+    });
+
     return (
       <div className="sa-section-card">
         <div className="sa-section-header">
@@ -1054,6 +1177,28 @@ const TechnicianDashboard = () => {
             <h3>Maintenance</h3>
             <p>Receipt of tenant requests - Analyze and define if they should be processed or refused</p>
           </div>
+          <button
+            className="sa-primary-cta"
+            onClick={() => {
+              // Open the generic task modal in "create" mode so the technician
+              // can add a new maintenance task.
+              setSelectedTask(null);
+              setTaskForm({
+                property: '',
+                issue: '',
+                priority: 'normal',
+                status: 'Pending',
+                estimatedHours: 0,
+                estimatedCost: 0,
+                assigned: '',
+              });
+              setShowTaskModal(true);
+            }}
+            disabled={loading}
+          >
+            <Plus size={18} />
+            Add Maintenance
+          </button>
         </div>
 
         <div className="sa-filters-section">
@@ -1098,14 +1243,14 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {requests.length === 0 ? (
+            {visibleRequests.length === 0 ? (
               <tr>
                   <td colSpan={11} className="sa-table-empty">
                   No maintenance requests found
                 </td>
               </tr>
             ) : (
-                requests.map((maintenance, index) => {
+                visibleRequests.map((maintenance, index) => {
                   const maintenanceId = maintenance.id || maintenance.ID;
                   const property = maintenance.property || maintenance.Property;
                   const issue = maintenance.title || maintenance.Title || maintenance.issue || maintenance.Issue || 'Maintenance Request';
@@ -3234,9 +3379,132 @@ const TechnicianDashboard = () => {
             <div className="modal-body">
               <form onSubmit={async (e) => {
                 e.preventDefault();
-                // Handle form submission
-                addNotification('Inventory form submission feature coming soon', 'info');
-                setShowInventoryFormModal(false);
+                try {
+                  setLoading(true);
+
+                  // Validate mandatory checklist fields + photos
+                  const rooms = inventoryFormData.formData?.rooms || {};
+                  const roomNames = Object.keys(rooms);
+                  if (roomNames.length === 0) {
+                    addNotification('Please select property type and rooms, then fill the checklist.', 'error');
+                    return;
+                  }
+
+                  for (const roomName of roomNames) {
+                    const items = rooms[roomName] || {};
+                    for (const item of INSPECTION_ITEMS) {
+                      const it = items[item.key] || {};
+                      if (!it.condition) {
+                        addNotification(`Missing condition: ${roomName} → ${item.label}`, 'error');
+                        return;
+                      }
+                      const photos = it.photos || [];
+                      if (!Array.isArray(photos) || photos.length === 0) {
+                        addNotification(`Missing photo(s): ${roomName} → ${item.label}`, 'error');
+                        return;
+                      }
+                    }
+                  }
+
+                  const scheduledAt =
+                    inventoryFormData.date && inventoryFormData.time
+                      ? `${inventoryFormData.date}T${inventoryFormData.time}`
+                      : inventoryFormData.date;
+
+                  const inspectionType = inventoryFormData.type === 'Entry' ? 'Move-in' : 'Move-out';
+
+                  // Build report data without File objects
+                  const reportData = {
+                    appointment: {
+                      property: inventoryFormData.propertyAddress,
+                      tenant: inventoryFormData.tenantName,
+                      scheduledAt,
+                      inspectionType,
+                    },
+                    property: {
+                      type: inventoryFormData.propertyType,
+                      numberOfRooms: inventoryFormData.numberOfRooms,
+                      address: inventoryFormData.propertyAddress,
+                    },
+                    rooms: {},
+                    meters: inventoryFormData.formData?.meters || {},
+                    observations: inventoryFormData.formData?.observations || {},
+                    exit: inventoryFormData.type === 'Exit' ? (inventoryFormData.formData?.exit || {}) : undefined,
+                  };
+
+                  // Initialize empty photoUrls arrays for each item
+                  for (const roomName of roomNames) {
+                    reportData.rooms[roomName] = {};
+                    for (const item of INSPECTION_ITEMS) {
+                      const it = rooms[roomName]?.[item.key] || {};
+                      reportData.rooms[roomName][item.key] = {
+                        label: item.label,
+                        condition: it.condition,
+                        comment: it.comment || '',
+                        photoUrls: [],
+                      };
+                    }
+                  }
+
+                  // Create inspection first
+                  const created = await technicianService.createInspection({
+                    property: inventoryFormData.propertyAddress,
+                    type: inspectionType,
+                    inspector: inventoryFormData.technicianName,
+                    tenant: inventoryFormData.tenantName,
+                    scheduledAt,
+                    status: 'Completed',
+                    notes: inventoryFormData.formData?.observations?.technician || '',
+                    reportData,
+                    photos: [],
+                  });
+
+                  const inspectionId = created?.id || created?.ID;
+                  if (!inspectionId) {
+                    addNotification('Failed to create inspection record (missing ID).', 'error');
+                    return;
+                  }
+
+                  // Upload photos item-by-item, keep mapping into reportData
+                  for (const roomName of roomNames) {
+                    for (const item of INSPECTION_ITEMS) {
+                      const it = rooms[roomName]?.[item.key] || {};
+                      const files = it.photos || [];
+                      for (const file of files) {
+                        const uploadRes = await technicianService.uploadInspectionPhoto(inspectionId, file);
+                        const photoUrl = uploadRes?.photoUrl || uploadRes?.photoURL || uploadRes?.PhotoUrl;
+                        if (photoUrl) {
+                          reportData.rooms[roomName][item.key].photoUrls.push(photoUrl);
+                        }
+                      }
+                    }
+                  }
+
+                  // Update inspection with final reportData (with photo URLs)
+                  await technicianService.updateInspection(inspectionId, {
+                    tenant: inventoryFormData.tenantName,
+                    scheduledAt,
+                    status: 'Completed',
+                    reportData,
+                  });
+
+                  // Finalize to generate printable report file
+                  const finalized = await technicianService.finalizeInspection(inspectionId);
+                  const reportUrl = finalized?.reportUrl || finalized?.reportURL || finalized?.ReportUrl;
+
+                  addNotification('Inventory report saved successfully.', 'success');
+                  if (reportUrl) {
+                    // Open report for download/print (user can "Save as PDF")
+                    window.open(`${API_CONFIG.BASE_URL}${reportUrl}`, '_blank');
+                  }
+
+                  setShowInventoryFormModal(false);
+                } catch (error) {
+                  console.error('Error submitting inventory form:', error);
+                  addNotification(error.message || 'Failed to submit inventory form', 'error');
+                } finally {
+                  setLoading(false);
+                }
               }} className="modal-form">
                 
                 {/* A. General Information */}
@@ -3303,22 +3571,98 @@ const TechnicianDashboard = () => {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Address of the Property *</label>
-                      <input
-                        type="text"
+                      <label>Property *</label>
+                      <select
                         value={inventoryFormData.propertyAddress}
-                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, propertyAddress: e.target.value })}
+                        onChange={(e) =>
+                          setInventoryFormData({
+                            ...inventoryFormData,
+                            propertyAddress: e.target.value,
+                          })
+                        }
                         required
-                      />
+                      >
+                        <option value="">Select Property</option>
+                        {inventoryPropertyOptions.map(address => (
+                          <option key={address} value={address}>
+                            {address}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <div className="form-group">
+                    <div className="form-group" style={{ position: 'relative' }}>
                       <label>Tenant Name *</label>
                       <input
                         type="text"
                         value={inventoryFormData.tenantName}
-                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, tenantName: e.target.value })}
+                        onChange={(e) =>
+                          setInventoryFormData({
+                            ...inventoryFormData,
+                            tenantName: e.target.value,
+                          })
+                        }
                         required
+                        placeholder="Start typing tenant name..."
+                        autoComplete="off"
                       />
+                      {inventoryTenantSuggestions.length > 0 && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            zIndex: 20,
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '0 0 0.5rem 0.5rem',
+                            maxHeight: '180px',
+                            overflowY: 'auto',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                          }}
+                        >
+                          {inventoryTenantSuggestions.slice(0, 5).map((t, idx) => {
+                            const name = t.Name || t.name || '';
+                            const property = t.Property || t.property || '';
+                            return (
+                              <button
+                                key={`${name}-${idx}`}
+                                type="button"
+                                onClick={() =>
+                                  setInventoryFormData({
+                                    ...inventoryFormData,
+                                    tenantName: name,
+                                    propertyAddress:
+                                      inventoryFormData.propertyAddress || property,
+                                  })
+                                }
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '6px 10px',
+                                  border: 'none',
+                                  borderBottom: '1px solid #f3f4f6',
+                                  background: '#fff',
+                                  cursor: 'pointer',
+                                  fontSize: '0.85rem',
+                                }}
+                              >
+                                <div style={{ fontWeight: 500 }}>{name}</div>
+                                {property && (
+                                  <div
+                                    style={{
+                                      fontSize: '0.75rem',
+                                      color: '#6b7280',
+                                    }}
+                                  >
+                                    {property}
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -3329,6 +3673,15 @@ const TechnicianDashboard = () => {
                         type="date"
                         value={inventoryFormData.date}
                         onChange={(e) => setInventoryFormData({ ...inventoryFormData, date: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Time *</label>
+                      <input
+                        type="time"
+                        value={inventoryFormData.time || ''}
+                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, time: e.target.value })}
                         required
                       />
                     </div>
@@ -3356,13 +3709,123 @@ const TechnicianDashboard = () => {
                       {(inventoryFormData.propertyType === 'Duplex' || inventoryFormData.propertyType === 'Villa') && 'Multi-level management and outdoor spaces.'}
                     </p>
                     
-                    {/* Property-specific form sections will be dynamically rendered here */}
-                    <div style={{ padding: '12px', background: '#fff', borderRadius: '4px' }}>
-                      <p style={{ fontSize: '0.875rem', color: '#6b7280', fontStyle: 'italic' }}>
-                        Detailed property evaluation form sections will be displayed here based on property type and number of rooms.
-                        Each element allows: state evaluation (good/average/bad), comments, and mandatory photos.
-                      </p>
-                    </div>
+                    {/* Room-by-room inspection checklist */}
+                    {getRoomList(inventoryFormData.propertyType, inventoryFormData.numberOfRooms).map((roomName) => (
+                      <div key={roomName} style={{ marginBottom: '16px', padding: '12px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                        <h5 style={{ margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 600 }}>{roomName}</h5>
+                        <div className="sa-table-wrapper" style={{ marginBottom: 0 }}>
+                          <table className="sa-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '22%' }}>Item</th>
+                                <th style={{ width: '22%' }}>Condition *</th>
+                                <th>Remarks</th>
+                                <th style={{ width: '22%' }}>Photos *</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {INSPECTION_ITEMS.map((item) => {
+                                const itemState =
+                                  inventoryFormData.formData?.rooms?.[roomName]?.[item.key] || { condition: '', comment: '', photos: [] };
+                                return (
+                                  <tr key={`${roomName}-${item.key}`}>
+                                    <td>{item.label}</td>
+                                    <td>
+                                      <select
+                                        value={itemState.condition}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          setInventoryFormData(prev => ({
+                                            ...prev,
+                                            formData: {
+                                              ...prev.formData,
+                                              rooms: {
+                                                ...prev.formData.rooms,
+                                                [roomName]: {
+                                                  ...(prev.formData.rooms?.[roomName] || {}),
+                                                  [item.key]: {
+                                                    ...(prev.formData.rooms?.[roomName]?.[item.key] || {}),
+                                                    condition: value,
+                                                  },
+                                                },
+                                              },
+                                            },
+                                          }));
+                                        }}
+                                        required
+                                      >
+                                        <option value="">Select</option>
+                                        <option value="good">Good condition</option>
+                                        <option value="poor">Poor condition</option>
+                                        <option value="needs_repair">Needs repair</option>
+                                      </select>
+                                    </td>
+                                    <td>
+                                      <input
+                                        type="text"
+                                        value={itemState.comment}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          setInventoryFormData(prev => ({
+                                            ...prev,
+                                            formData: {
+                                              ...prev.formData,
+                                              rooms: {
+                                                ...prev.formData.rooms,
+                                                [roomName]: {
+                                                  ...(prev.formData.rooms?.[roomName] || {}),
+                                                  [item.key]: {
+                                                    ...(prev.formData.rooms?.[roomName]?.[item.key] || {}),
+                                                    comment: value,
+                                                  },
+                                                },
+                                              },
+                                            },
+                                          }));
+                                        }}
+                                        placeholder="e.g., damaged handle, peeling paint..."
+                                      />
+                                    </td>
+                                    <td>
+                                      <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const files = Array.from(e.target.files || []);
+                                          setInventoryFormData(prev => ({
+                                            ...prev,
+                                            formData: {
+                                              ...prev.formData,
+                                              rooms: {
+                                                ...prev.formData.rooms,
+                                                [roomName]: {
+                                                  ...(prev.formData.rooms?.[roomName] || {}),
+                                                  [item.key]: {
+                                                    ...(prev.formData.rooms?.[roomName]?.[item.key] || {}),
+                                                    photos: files,
+                                                  },
+                                                },
+                                              },
+                                            },
+                                          }));
+                                        }}
+                                        required
+                                      />
+                                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
+                                        {Array.isArray(itemState.photos) && itemState.photos.length > 0
+                                          ? `${itemState.photos.length} selected`
+                                          : 'No photos selected'}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -3372,21 +3835,62 @@ const TechnicianDashboard = () => {
                   <div className="form-row">
                     <div className="form-group">
                       <label>Index Electricity Meter</label>
-                      <input type="text" placeholder="Enter meter reading" />
+                      <input
+                        type="text"
+                        placeholder="Enter meter reading"
+                        value={inventoryFormData.formData?.meters?.electricity || ''}
+                        onChange={(e) =>
+                          setInventoryFormData(prev => ({
+                            ...prev,
+                            formData: { ...prev.formData, meters: { ...prev.formData.meters, electricity: e.target.value } },
+                          }))
+                        }
+                      />
                     </div>
                     <div className="form-group">
                       <label>Index Water Meter</label>
-                      <input type="text" placeholder="Enter meter reading" />
+                      <input
+                        type="text"
+                        placeholder="Enter meter reading"
+                        value={inventoryFormData.formData?.meters?.water || ''}
+                        onChange={(e) =>
+                          setInventoryFormData(prev => ({
+                            ...prev,
+                            formData: { ...prev.formData, meters: { ...prev.formData.meters, water: e.target.value } },
+                          }))
+                        }
+                      />
                     </div>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
                       <label>Gas (if applicable)</label>
-                      <input type="text" placeholder="Enter gas meter reading" />
+                      <input
+                        type="text"
+                        placeholder="Enter gas meter reading"
+                        value={inventoryFormData.formData?.meters?.gas || ''}
+                        onChange={(e) =>
+                          setInventoryFormData(prev => ({
+                            ...prev,
+                            formData: { ...prev.formData, meters: { ...prev.formData.meters, gas: e.target.value } },
+                          }))
+                        }
+                      />
                     </div>
                     <div className="form-group">
                       <label>Number of Keys Handed In</label>
-                      <input type="number" min="0" placeholder="Enter number of keys" />
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Enter number of keys"
+                        value={inventoryFormData.formData?.meters?.keys || ''}
+                        onChange={(e) =>
+                          setInventoryFormData(prev => ({
+                            ...prev,
+                            formData: { ...prev.formData, meters: { ...prev.formData.meters, keys: e.target.value } },
+                          }))
+                        }
+                      />
                     </div>
                   </div>
                 </div>
@@ -3396,11 +3900,31 @@ const TechnicianDashboard = () => {
                   <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>F. Observations</h4>
                   <div className="form-group">
                     <label>Comments from the Technical Manager</label>
-                    <textarea rows="3" placeholder="Enter comments..." />
+                    <textarea
+                      rows="3"
+                      placeholder="Enter comments..."
+                      value={inventoryFormData.formData?.observations?.technician || ''}
+                      onChange={(e) =>
+                        setInventoryFormData(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, observations: { ...prev.formData.observations, technician: e.target.value } },
+                        }))
+                      }
+                    />
                   </div>
                   <div className="form-group">
                     <label>Observations of the Tenant</label>
-                    <textarea rows="3" placeholder="Enter tenant observations..." />
+                    <textarea
+                      rows="3"
+                      placeholder="Enter tenant observations..."
+                      value={inventoryFormData.formData?.observations?.tenant || ''}
+                      onChange={(e) =>
+                        setInventoryFormData(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, observations: { ...prev.formData.observations, tenant: e.target.value } },
+                        }))
+                      }
+                    />
                   </div>
                 </div>
 
@@ -3410,31 +3934,96 @@ const TechnicianDashboard = () => {
                     <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>G. OUTPUT – ESTIMATION OF DEGRADATIONS</h4>
                     <div className="form-group">
                       <label>Observed Degradations</label>
-                      <textarea rows="3" placeholder="Describe observed degradations..." />
+                      <textarea
+                        rows="3"
+                        placeholder="Describe observed degradations..."
+                        value={inventoryFormData.formData?.exit?.degradations || ''}
+                        onChange={(e) =>
+                          setInventoryFormData(prev => ({
+                            ...prev,
+                            formData: { ...prev.formData, exit: { ...prev.formData.exit, degradations: e.target.value } },
+                          }))
+                        }
+                      />
                     </div>
                     <div className="form-row">
                       <div className="form-group">
                         <label>Work to be Carried Out</label>
-                        <textarea rows="2" placeholder="Describe work needed..." />
+                        <textarea
+                          rows="2"
+                          placeholder="Describe work needed..."
+                          value={inventoryFormData.formData?.exit?.workToBeCarriedOut || ''}
+                          onChange={(e) =>
+                            setInventoryFormData(prev => ({
+                              ...prev,
+                              formData: { ...prev.formData, exit: { ...prev.formData.exit, workToBeCarriedOut: e.target.value } },
+                            }))
+                          }
+                        />
                       </div>
                       <div className="form-group">
                         <label>Estimated Cost</label>
-                        <input type="number" step="0.01" min="0" placeholder="0.00" />
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={inventoryFormData.formData?.exit?.estimatedCost || 0}
+                          onChange={(e) =>
+                            setInventoryFormData(prev => ({
+                              ...prev,
+                              formData: { ...prev.formData, exit: { ...prev.formData.exit, estimatedCost: parseFloat(e.target.value) || 0 } },
+                            }))
+                          }
+                        />
                       </div>
                     </div>
                     <div className="form-group">
                       <label>Impact on Bail</label>
                       <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <input type="radio" name="bailImpact" value="None" />
+                          <input
+                            type="radio"
+                            name="bailImpact"
+                            value="None"
+                            checked={(inventoryFormData.formData?.exit?.bailImpact || 'None') === 'None'}
+                            onChange={(e) =>
+                              setInventoryFormData(prev => ({
+                                ...prev,
+                                formData: { ...prev.formData, exit: { ...prev.formData.exit, bailImpact: e.target.value } },
+                              }))
+                            }
+                          />
                           None
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <input type="radio" name="bailImpact" value="Partial" />
+                          <input
+                            type="radio"
+                            name="bailImpact"
+                            value="Partial"
+                            checked={(inventoryFormData.formData?.exit?.bailImpact || 'None') === 'Partial'}
+                            onChange={(e) =>
+                              setInventoryFormData(prev => ({
+                                ...prev,
+                                formData: { ...prev.formData, exit: { ...prev.formData.exit, bailImpact: e.target.value } },
+                              }))
+                            }
+                          />
                           Partial
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <input type="radio" name="bailImpact" value="Total" />
+                          <input
+                            type="radio"
+                            name="bailImpact"
+                            value="Total"
+                            checked={(inventoryFormData.formData?.exit?.bailImpact || 'None') === 'Total'}
+                            onChange={(e) =>
+                              setInventoryFormData(prev => ({
+                                ...prev,
+                                formData: { ...prev.formData, exit: { ...prev.formData.exit, bailImpact: e.target.value } },
+                              }))
+                            }
+                          />
                           Total
                         </label>
                       </div>

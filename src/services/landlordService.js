@@ -88,6 +88,32 @@ export const landlordService = {
     return await apiRequest(url);
   },
 
+  // Maintenance Quotes - landlord approval flow
+  getMaintenanceQuotes: async (filters = {}) => {
+    let url = buildApiUrl('/api/landlord/maintenance-quotes');
+    const queryParams = new URLSearchParams();
+
+    if (filters.status) queryParams.append('status', filters.status);
+
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+
+    return await apiRequest(url);
+  },
+
+  approveMaintenanceQuote: async (id) => {
+    return await apiRequest(buildApiUrl(`/api/landlord/maintenance-quotes/${id}/approve`), {
+      method: 'POST',
+    });
+  },
+
+  rejectMaintenanceQuote: async (id) => {
+    return await apiRequest(buildApiUrl(`/api/landlord/maintenance-quotes/${id}/reject`), {
+      method: 'POST',
+    });
+  },
+
   // Reports
   downloadReport: async (filters = {}) => {
     let url = buildApiUrl('/api/landlord/reports/download');

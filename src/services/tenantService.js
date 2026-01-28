@@ -1,5 +1,19 @@
 import { buildApiUrl, apiRequest } from '../config/api';
 
+const buildAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return {};
+  const tokenStr = String(token).trim();
+  const sanitizedToken = tokenStr
+    .split('')
+    .map(char => {
+      const code = char.charCodeAt(0);
+      return (code >= 32 && code <= 126) ? char : '';
+    })
+    .join('');
+  return sanitizedToken ? { Authorization: sanitizedToken } : {};
+};
+
 // Tenant API Service
 export const tenantService = {
   // Payment APIs
@@ -71,16 +85,35 @@ export const tenantService = {
   // Terminate lease
   terminateLease: async (terminationData) => {
     const url = buildApiUrl('/api/tenant/lease/terminate');
-    return await apiRequest(url, {
+    const formData = new FormData();
+    formData.append('reason', terminationData.reason || '');
+    formData.append('terminationDate', terminationData.terminationDate || '');
+    formData.append('comments', terminationData.comments || '');
+    formData.append('securityDepositRefundMethod', terminationData.securityDepositRefundMethod || '');
+    formData.append('inventoryCheckDate', terminationData.inventoryCheckDate || '');
+    if (terminationData.terminationLetter) {
+      formData.append('terminationLetter', terminationData.terminationLetter);
+    }
+    if (Array.isArray(terminationData.supportingDocs)) {
+      terminationData.supportingDocs.forEach(file => {
+        if (file) formData.append('supportingDocs', file);
+      });
+    }
+
+    const response = await fetch(url, {
       method: 'POST',
-      body: JSON.stringify({
-        reason: terminationData.reason,
-        terminationDate: terminationData.terminationDate,
-        comments: terminationData.comments,
-        securityDepositRefundMethod: terminationData.securityDepositRefundMethod,
-        inventoryCheckDate: terminationData.inventoryCheckDate
-      })
+      headers: {
+        ...buildAuthHeaders(),
+      },
+      body: formData,
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Request failed (${response.status})`);
+    }
+
+    return await response.json();
   },
 
   // Transfer payment request

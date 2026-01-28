@@ -1,5 +1,19 @@
 import { buildApiUrl, apiRequest } from '../config/api';
 
+const buildAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return {};
+  const tokenStr = String(token).trim();
+  const sanitizedToken = tokenStr
+    .split('')
+    .map(char => {
+      const code = char.charCodeAt(0);
+      return (code >= 32 && code <= 126) ? char : '';
+    })
+    .join('');
+  return sanitizedToken ? { Authorization: sanitizedToken } : {};
+};
+
 export const adminService = {
   // Overview
   getOverview: async () => {
@@ -34,6 +48,44 @@ export const adminService = {
     }
     
     return await apiRequest(url);
+  },
+
+  uploadClientDocument: async ({ tenant, property, type, file }) => {
+    const url = buildApiUrl('/api/admin/documents/upload');
+    const formData = new FormData();
+    formData.append('tenant', tenant);
+    if (property) formData.append('property', property);
+    formData.append('type', type);
+    formData.append('file', file);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...buildAuthHeaders(),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Upload failed (${response.status})`);
+    }
+
+    return await response.json();
+  },
+
+  saveClientDocumentChecklist: async (payload) => {
+    const url = buildApiUrl('/api/admin/documents/checklist');
+    return await apiRequest(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getClientDocumentChecklist: async (clientId) => {
+    const url = buildApiUrl(`/api/admin/documents/checklist/${clientId}`);
+    return await apiRequest(url, { method: 'GET' });
   },
 
   approveDocument: async (id) => {
@@ -155,6 +207,27 @@ export const adminService = {
       method: 'POST',
       body: JSON.stringify(leaseData),
     });
+  },
+
+  uploadLeaseDocument: async (leaseId, file) => {
+    const url = buildApiUrl(`/api/admin/leases/${leaseId}/document`);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...buildAuthHeaders(),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Upload failed (${response.status})`);
+    }
+
+    return await response.json();
   },
 
   generateLeaseDocument: async (id) => {

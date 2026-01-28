@@ -42,6 +42,17 @@ import '../components/RoleLayout.css';
 import './SalesManagerDashboard.css';
 
 const TenantDashboard = () => {
+  const addMonths = (date, months) => {
+    const base = new Date(date);
+    const day = base.getDate();
+    base.setMonth(base.getMonth() + months);
+    if (base.getDate() < day) {
+      base.setDate(0);
+    }
+    return base;
+  };
+
+  const minTerminationDate = addMonths(new Date(), 3).toISOString().split('T')[0];
   const [activeTab, setActiveTab] = useState('overview');
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
   const [maintenanceForm, setMaintenanceForm] = useState({
@@ -63,7 +74,9 @@ const TenantDashboard = () => {
     terminationDate: '',
     comments: '',
     inventoryCheckDate: '',
-    securityDepositRefundMethod: ''
+    securityDepositRefundMethod: '',
+    terminationLetter: null,
+    supportingDocs: []
   });
   const [showTransferPaymentModal, setShowTransferPaymentModal] = useState(false);
   const [transferPaymentForm, setTransferPaymentForm] = useState({
@@ -619,12 +632,51 @@ const TenantDashboard = () => {
 
     try {
       setLoading(true);
-      
-      await tenantService.terminateLease(terminateLeaseForm);
+
+      if (!terminateLeaseForm.terminationDate) {
+        addNotification('Please select a termination date.', 'error');
+        setLoading(false);
+        return;
+      }
+      if (terminateLeaseForm.terminationDate < minTerminationDate) {
+        addNotification('Termination date must be at least 3 months from today.', 'error');
+        setLoading(false);
+        return;
+      }
+      if (!terminateLeaseForm.terminationLetter) {
+        addNotification('Termination letter is required.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      const refundMethodMap = {
+        mobile_money: 'Mobile Money',
+        bank_transfer: 'Bank Transfer',
+        cash: 'Cash',
+        'Mobile Money': 'Mobile Money',
+        'Bank Transfer': 'Bank Transfer',
+        'Cash': 'Cash',
+      };
+      const normalizedRefundMethod =
+        refundMethodMap[terminateLeaseForm.securityDepositRefundMethod] ||
+        terminateLeaseForm.securityDepositRefundMethod;
+
+      await tenantService.terminateLease({
+        ...terminateLeaseForm,
+        securityDepositRefundMethod: normalizedRefundMethod,
+      });
       
       addNotification('Lease termination request submitted successfully!', 'success');
       
-      setTerminateLeaseForm({ reason: '', terminationDate: '', comments: '', inventoryCheckDate: '', securityDepositRefundMethod: '' });
+      setTerminateLeaseForm({
+        reason: '',
+        terminationDate: '',
+        comments: '',
+        inventoryCheckDate: '',
+        securityDepositRefundMethod: '',
+        terminationLetter: null,
+        supportingDocs: [],
+      });
       setShowTerminateLeaseModal(false);
     } catch (error) {
       console.error('Error submitting lease termination request:', error);
@@ -642,17 +694,25 @@ const TenantDashboard = () => {
       
       // Get property from leaseInfo, overviewData, or use fallback
       let property = '';
-      if (leaseInfo && leaseInfo.property) {
-        property = leaseInfo.property;
-      } else if (leaseInfo && leaseInfo.address) {
-        property = leaseInfo.address;
-      } else if (overviewData) {
-        if (overviewData.lease && overviewData.lease.property) {
-          property = overviewData.lease.property;
-        } else if (overviewData.property) {
-          property = overviewData.property;
-        } else if (overviewData.lease && overviewData.lease.address) {
-          property = overviewData.lease.address;
+      if (leaseInfo) {
+        property = leaseInfo.property || leaseInfo.Property || leaseInfo.address || leaseInfo.Address || '';
+      }
+      if (!property && overviewData) {
+        property =
+          overviewData.property ||
+          overviewData.Property ||
+          (overviewData.lease && (overviewData.lease.property || overviewData.lease.Property || overviewData.lease.address || overviewData.lease.Address)) ||
+          '';
+      }
+      if (!property) {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser);
+            property = user.property || user.Property || '';
+          } catch (error) {
+            console.error('Error parsing stored user:', error);
+          }
         }
       }
       
@@ -1729,7 +1789,12 @@ Thank you for your payment!
                     <div className="photo-preview-grid">
                       {maintenanceForm.photos.map(photo => (
                         <div key={photo.id} className="photo-preview-item">
-                          <img src={photo.preview} alt={photo.name} />
+                          <img
+                            src={photo.preview}
+                            alt={photo.name}
+                            onClick={() => window.open(photo.preview, '_blank')}
+                            style={{ cursor: 'pointer' }}
+                          />
                           <button
                             type="button"
                             className="remove-photo-button"
@@ -1856,11 +1921,11 @@ Thank you for your payment!
                     id="terminationDate"
                     value={terminateLeaseForm.terminationDate}
                     onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, terminationDate: e.target.value }))}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={minTerminationDate}
                     required
                   />
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                    Please note: Early termination may be subject to fees as per your lease agreement.
+                    Legal notice: minimum 3 months from today.
                   </small>
                 </div>
 
@@ -1884,10 +1949,9 @@ Thank you for your payment!
                     required
                   >
                     <option value="">Select refund method</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="mobile_money">Mobile Money</option>
-                    <option value="cash">Cash</option>
-                    <option value="check">Check</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="Cash">Cash</option>
                   </select>
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     How would you like to receive your security deposit refund?
@@ -1906,6 +1970,40 @@ Thank you for your payment!
                   />
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     Please schedule a date for the property inventory check before you move out.
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="terminationLetter">Termination Letter (Required) *</label>
+                  <input
+                    type="file"
+                    id="terminationLetter"
+                    accept=".pdf,image/*"
+                    required
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setTerminateLeaseForm(prev => ({ ...prev, terminationLetter: file }));
+                    }}
+                  />
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Upload the letter mentioning reason and desired departure date.
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="supportingDocs">Supporting Documents (Optional)</label>
+                  <input
+                    type="file"
+                    id="supportingDocs"
+                    accept=".pdf,image/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setTerminateLeaseForm(prev => ({ ...prev, supportingDocs: files }));
+                    }}
+                  />
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Transfer, professional reason, force majeure, etc.
                   </small>
                 </div>
 

@@ -33,6 +33,30 @@ export const technicianService = {
     });
   },
 
+  updateInspection: async (inspectionId, updateData) => {
+    return apiRequest(buildApiUrl(`/api/technician/inspections/${inspectionId}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData),
+    });
+  },
+
+  finalizeInspection: async (inspectionId) => {
+    return apiRequest(buildApiUrl(`/api/technician/inspections/${inspectionId}/finalize`), {
+      method: 'POST',
+    });
+  },
+
+  getLatestInspection: async (filters = {}) => {
+    const queryParams = new URLSearchParams();
+    if (filters.property) queryParams.append('property', filters.property);
+    if (filters.type) queryParams.append('type', filters.type);
+
+    const url = buildApiUrl('/api/technician/inspections/latest');
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
+    return apiRequest(fullUrl, { method: 'GET' });
+  },
+
   // Inventory APIs
   listInventories: async () => {
     return apiRequest(buildApiUrl('/api/technician/inventories'), {

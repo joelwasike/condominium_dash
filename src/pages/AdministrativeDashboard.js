@@ -22,8 +22,7 @@ import {
   UserPlus,
   FileCheck,
   History,
-  LogOut,
-  Building2
+  LogOut
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -35,6 +34,26 @@ import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAdministrativeDemoData } from '../utils/demoData';
 import { t, getLanguage } from '../utils/i18n';
+
+const INDIVIDUAL_DOCUMENTS = [
+  { key: 'id_document', label: 'CNI, passport or identity certificate' },
+  { key: 'employment_contract', label: 'Employment contract' },
+  { key: 'work_certificate', label: 'Certificate of work' },
+  { key: 'pay_slips', label: 'Last three pay slips' },
+  { key: 'last_utility_receipt', label: 'Last receipt (CIE or SODECI)' },
+  { key: 'last_rent_receipts', label: 'Last rent receipts' },
+  { key: 'rib', label: 'RIB' },
+];
+
+const COMPANY_DOCUMENTS = [
+  { key: 'manager_id_document', label: 'CNI, passport or identity certificate of the manager' },
+  { key: 'commercial_register', label: 'Commercial register' },
+  { key: 'dfe', label: 'DFE' },
+  { key: 'arf', label: 'ARF' },
+  { key: 'manager_commitment_letter', label: 'Letter of commitment from the manager on the payment of rent' },
+  { key: 'manager_pay_slips', label: 'Last three payslips of the manager' },
+  { key: 'manager_rib', label: 'RIB of the manager' },
+];
 
 const AdministrativeDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -68,22 +87,25 @@ const AdministrativeDashboard = () => {
   // New state for restructured sections
   const [newClients, setNewClients] = useState([]);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
-  const [newClientForm, setNewClientForm] = useState({
-    type: 'individual', // 'individual' or 'company'
-    name: '',
-    email: '',
-    phone: '',
-    companyName: '',
-    address: '',
-    registrationNumber: '',
-    contactPerson: ''
+  const [clientDocForm, setClientDocForm] = useState({
+    clientId: '',
+    property: '',
+    applicationFees: false,
+    transferOrResubscription: false,
+    sodeci: false,
+    cie10: false,
+    cie15: false
   });
+  const [clientDocFiles, setClientDocFiles] = useState({});
+  const [showChecklistModal, setShowChecklistModal] = useState(false);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+  const [selectedChecklist, setSelectedChecklist] = useState(null);
+  const [checklistClient, setChecklistClient] = useState(null);
   const [clientStatusFilter, setClientStatusFilter] = useState(''); // 'in-progress', 'accepted', 'refused'
   const [clientSearchText, setClientSearchText] = useState('');
   const [leaseSearchText, setLeaseSearchText] = useState('');
   const [mutationSearchText, setMutationSearchText] = useState('');
   const [mutationTab, setMutationTab] = useState('receipt'); // 'receipt', 'in-progress', 'accepted', 'refused'
-  const [mutationBrotherTab, setMutationBrotherTab] = useState('receipt');
   const [terminations, setTerminations] = useState([]);
   const [terminationSearchText, setTerminationSearchText] = useState('');
   const [terminationTab, setTerminationTab] = useState('receipt'); // 'receipt', 'pending', 'made'
@@ -94,6 +116,11 @@ const AdministrativeDashboard = () => {
     terminations: []
   });
   const [reportsData, setReportsData] = useState(null);
+
+  const selectedClient = useMemo(() => {
+    if (!clientDocForm.clientId) return null;
+    return newClients.find(client => String(client.ID || client.id) === String(clientDocForm.clientId)) || null;
+  }, [clientDocForm.clientId, newClients]);
   
   // Filter states
   const [documentStatusFilter, setDocumentStatusFilter] = useState('');
@@ -454,7 +481,6 @@ const AdministrativeDashboard = () => {
       { id: 'new-client', label: 'New Client', icon: UserPlus },
       { id: 'lease-contract', label: 'Lease Contract', icon: FileCheck },
       { id: 'demand-mutation', label: 'Demand of Mutation', icon: ArrowRightLeft },
-      { id: 'demand-mutation-brother', label: 'Demand of Mutation (Brother)', icon: Building2 },
       { id: 'termination', label: 'Termination', icon: LogOut },
       { id: 'history', label: 'History', icon: History },
       { id: 'reports', label: 'Report', icon: TrendingUp },
@@ -1698,11 +1724,32 @@ const AdministrativeDashboard = () => {
     }
   };
 
+  const handleViewChecklist = async (client) => {
+    const clientId = client.ID || client.id;
+    if (!clientId) {
+      addNotification('Client ID is missing', 'error');
+      return;
+    }
+    try {
+      setChecklistClient(client);
+      setChecklistLoading(true);
+      const checklist = await adminService.getClientDocumentChecklist(clientId);
+      setSelectedChecklist(checklist || null);
+      setShowChecklistModal(true);
+    } catch (error) {
+      console.error('Error loading checklist:', error);
+      addNotification('No checklist found for this client', 'info');
+      setSelectedChecklist(null);
+      setShowChecklistModal(true);
+    } finally {
+      setChecklistLoading(false);
+    }
+  };
+
   const renderTransfers = () => {
-    // Determine which tab set to use based on active tab
-    const currentTab = activeTab === 'demand-mutation-brother' ? mutationBrotherTab : mutationTab;
-    const setCurrentTab = activeTab === 'demand-mutation-brother' ? setMutationBrotherTab : setMutationTab;
-    const currentSearch = activeTab === 'demand-mutation-brother' ? mutationSearchText : mutationSearchText;
+    const currentTab = mutationTab;
+    const setCurrentTab = setMutationTab;
+    const currentSearch = mutationSearchText;
     const setCurrentSearch = setMutationSearchText;
     
     // Filter transfers by selected tab and search
@@ -1729,7 +1776,7 @@ const AdministrativeDashboard = () => {
       <div className="sa-section-card">
         <div className="sa-section-header">
           <div>
-            <h3>Demand of Mutation{activeTab === 'demand-mutation-brother' ? ' (User wants to give apartments to brother)' : ''}</h3>
+            <h3>Demand of Mutation</h3>
             <p>List of created mutations - Receipt of transfer requests (the tenant submits their request from their tenant account)</p>
           </div>
         </div>
@@ -2238,21 +2285,21 @@ const AdministrativeDashboard = () => {
           <button 
             className="sa-primary-cta" 
             onClick={() => {
-              setNewClientForm({
-                type: 'individual',
-                name: '',
-                email: '',
-                phone: '',
-                companyName: '',
-                address: '',
-                registrationNumber: '',
-                contactPerson: ''
+              setClientDocForm({
+                clientId: '',
+                property: '',
+                applicationFees: false,
+                transferOrResubscription: false,
+                sodeci: false,
+                cie10: false,
+                cie15: false
               });
+              setClientDocFiles({});
               setShowNewClientModal(true);
             }}
           >
             <Plus size={18} />
-            Add New Client
+            Upload Client Documents
           </button>
         </div>
 
@@ -2327,7 +2374,13 @@ const AdministrativeDashboard = () => {
                       </span>
                     </td>
                     <td className="sa-row-actions">
-                      <button className="sa-icon-button" title="View">👁️</button>
+                      <button
+                        className="sa-icon-button"
+                        title="View Checklist"
+                        onClick={() => handleViewChecklist(client)}
+                      >
+                        👁️
+                      </button>
                       <button className="sa-icon-button" title="Edit">✏️</button>
                     </td>
                   </tr>
@@ -2350,8 +2403,6 @@ const AdministrativeDashboard = () => {
         return renderLeases(); // Reuse existing function, will update it
       case 'demand-mutation':
         return renderTransfers(); // Reuse existing function, will update it
-      case 'demand-mutation-brother':
-        return renderTransfers(); // Same structure, different filter
       case 'termination':
         return renderTermination();
       case 'history':
@@ -2415,28 +2466,35 @@ const AdministrativeDashboard = () => {
       >
         <form
           className="modal-form"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const newLease = {
-              contractTitle: formData.get('contractTitle') || undefined,
-              tenant: formData.get('tenant'),
-              property: formData.get('property'),
-              landlord: formData.get('landlord'),
-              leaseType: formData.get('leaseType'),
-              startDate: formData.get('start'),
-              endDate: formData.get('end'),
-              rent: parseFloat(formData.get('rent')),
-              status: 'Pending'
-            };
-            adminService.createLease(newLease).then(() => {
+            try {
+              const formData = new FormData(e.target);
+              const newLease = {
+                contractTitle: formData.get('contractTitle') || undefined,
+                tenant: formData.get('tenant'),
+                property: formData.get('property'),
+                landlord: formData.get('landlord'),
+                leaseType: formData.get('leaseType'),
+                startDate: formData.get('start'),
+                endDate: formData.get('end'),
+                rent: parseFloat(formData.get('rent')),
+                status: 'Pending'
+              };
+              const created = await adminService.createLease(newLease);
+              const leaseId = created?.id || created?.ID;
+              const fileInput = e.target.querySelector('input[name="leaseDocument"]');
+              const leaseFile = fileInput?.files?.[0];
+              if (leaseId && leaseFile) {
+                await adminService.uploadLeaseDocument(leaseId, leaseFile);
+              }
               addNotification('Lease created successfully', 'success');
               setShowLeaseModal(false);
               loadData();
-            }).catch((error) => {
+            } catch (error) {
               addNotification('Failed to create lease', 'error');
               console.error(error);
-            });
+            }
           }}
         >
           <div className="form-row">
@@ -2493,6 +2551,10 @@ const AdministrativeDashboard = () => {
               <label htmlFor="lease-end">End Date</label>
               <input type="date" id="lease-end" name="end" required />
             </div>
+          </div>
+          <div className="form-group">
+            <label htmlFor="lease-document">Lease Document (PDF/Image)</label>
+            <input type="file" id="lease-document" name="leaseDocument" accept=".pdf,image/*" />
           </div>
           <div className="modal-footer">
             <button type="button" className="action-button secondary" onClick={() => setShowLeaseModal(false)}>
@@ -2555,18 +2617,18 @@ const AdministrativeDashboard = () => {
         isOpen={showNewClientModal}
         onClose={() => {
           setShowNewClientModal(false);
-          setNewClientForm({
-            type: 'individual',
-            name: '',
-            email: '',
-            phone: '',
-            companyName: '',
-            address: '',
-            registrationNumber: '',
-            contactPerson: ''
+          setClientDocForm({
+            clientId: '',
+            property: '',
+            applicationFees: false,
+            transferOrResubscription: false,
+            sodeci: false,
+            cie10: false,
+            cie15: false
           });
+          setClientDocFiles({});
         }}
-        title="Add New Client"
+        title="Upload Client Documents"
         size="md"
       >
         <form
@@ -2575,176 +2637,189 @@ const AdministrativeDashboard = () => {
             e.preventDefault();
             try {
               setLoading(true);
-              await adminService.createNewClient(newClientForm);
-              addNotification('New client created successfully', 'success');
-              setShowNewClientModal(false);
-              setNewClientForm({
-                type: 'individual',
-                name: '',
-                email: '',
-                phone: '',
-                companyName: '',
-                address: '',
-                registrationNumber: '',
-                contactPerson: ''
+              if (!selectedClient) {
+                addNotification('Please select a tenant before uploading documents.', 'error');
+                return;
+              }
+              if (!clientDocForm.property) {
+                addNotification('Please select the property the client is interested in.', 'error');
+                return;
+              }
+
+              const clientType = (selectedClient.type || selectedClient.Type || 'individual').toLowerCase();
+              const requiredDocs = clientType === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS;
+              const missingDocs = requiredDocs.filter(doc => !clientDocFiles[doc.key]);
+              if (missingDocs.length > 0) {
+                addNotification('Please upload all required documents before submitting.', 'error');
+                return;
+              }
+
+              const tenantName = selectedClient.name || selectedClient.Name || selectedClient.email || selectedClient.Email || 'Unknown Tenant';
+
+              for (const doc of requiredDocs) {
+                await adminService.uploadClientDocument({
+                  tenant: tenantName,
+                  property: clientDocForm.property,
+                  type: doc.label,
+                  file: clientDocFiles[doc.key],
+                });
+              }
+
+              await adminService.saveClientDocumentChecklist({
+                clientId: selectedClient.ID || selectedClient.id,
+                tenant: tenantName,
+                property: clientDocForm.property,
+                applicationFees: clientDocForm.applicationFees,
+                transferOrResubscription: clientDocForm.transferOrResubscription,
+                sodeci: clientDocForm.sodeci,
+                cie10a: clientDocForm.cie10,
+                cie15a: clientDocForm.cie15,
               });
+
+              addNotification('Client documents uploaded successfully', 'success');
+              setShowNewClientModal(false);
+              setClientDocForm({
+                clientId: '',
+                property: '',
+                applicationFees: false,
+                transferOrResubscription: false,
+                sodeci: false,
+                cie10: false,
+                cie15: false
+              });
+              setClientDocFiles({});
               loadData();
             } catch (error) {
-              console.error('Error creating new client:', error);
-              addNotification(error.message || 'Failed to create new client', 'error');
+              console.error('Error uploading client documents:', error);
+              addNotification(error.message || 'Failed to upload client documents', 'error');
             } finally {
               setLoading(false);
             }
           }}
         >
           <div className="form-group">
-            <label>Client Type *</label>
-            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+            <label htmlFor="client-select">Select Tenant *</label>
+            <select
+              id="client-select"
+              value={clientDocForm.clientId}
+              onChange={(e) => {
+                setClientDocForm({ ...clientDocForm, clientId: e.target.value });
+                setClientDocFiles({});
+              }}
+              required
+            >
+              <option value="">Select tenant</option>
+              {newClients.map(client => {
+                const id = client.ID || client.id;
+                const name = client.name || client.Name || client.email || client.Email || 'Unnamed';
+                const type = client.type || client.Type || 'individual';
+                return (
+                  <option key={id} value={id}>
+                    {name} ({type})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="client-property">Select the house who he will interest for *</label>
+            <select
+              id="client-property"
+              value={clientDocForm.property}
+              onChange={(e) => setClientDocForm({ ...clientDocForm, property: e.target.value })}
+              required
+            >
+              <option value="">Select property</option>
+              {properties.map(property => {
+                const id = property.ID || property.id;
+                const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                return (
+                  <option key={id} value={label}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
+            <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
+            <div className="form-group" style={{ marginBottom: '8px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
-                  type="radio"
-                  name="clientType"
-                  value="individual"
-                  checked={newClientForm.type === 'individual'}
-                  onChange={(e) => setNewClientForm({ ...newClientForm, type: e.target.value })}
-                  required
+                  type="checkbox"
+                  checked={clientDocForm.applicationFees}
+                  onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFees: e.target.checked })}
                 />
-                Individual
+                Application fees (37,000 FCFA - obligation to pay)
               </label>
+            </div>
+            <div className="form-group" style={{ marginBottom: '8px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
-                  type="radio"
-                  name="clientType"
-                  value="company"
-                  checked={newClientForm.type === 'company'}
-                  onChange={(e) => setNewClientForm({ ...newClientForm, type: e.target.value })}
-                  required
+                  type="checkbox"
+                  checked={clientDocForm.transferOrResubscription}
+                  onChange={(e) => setClientDocForm({ ...clientDocForm, transferOrResubscription: e.target.checked })}
                 />
-                Company
+                Transfer or Re-subscription (optional)
+              </label>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={clientDocForm.sodeci}
+                  onChange={(e) => setClientDocForm({ ...clientDocForm, sodeci: e.target.checked })}
+                />
+                SODECI: 35,000 FCFA
+              </label>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={clientDocForm.cie10}
+                  onChange={(e) => setClientDocForm({ ...clientDocForm, cie10: e.target.checked })}
+                />
+                CIE: 10A 37 375 FCFA
+              </label>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={clientDocForm.cie15}
+                  onChange={(e) => setClientDocForm({ ...clientDocForm, cie15: e.target.checked })}
+                />
+                CIE: 15A + 60 420 FCFA
               </label>
             </div>
           </div>
 
-          {newClientForm.type === 'individual' ? (
-            <>
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="client-name">Name *</label>
+          {selectedClient && (
+            <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+              <h4 style={{ margin: '0 0 8px 0' }}>
+                Parts to Supply ({(selectedClient.type || selectedClient.Type || 'Individual').toLowerCase()})
+              </h4>
+              {( (selectedClient.type || selectedClient.Type || 'individual').toLowerCase() === 'company'
+                ? COMPANY_DOCUMENTS
+                : INDIVIDUAL_DOCUMENTS
+              ).map((doc) => (
+                <div key={doc.key} className="form-group">
+                  <label>{doc.label} *</label>
                   <input
-                    type="text"
-                    id="client-name"
-                    value={newClientForm.name}
-                    onChange={(e) => setNewClientForm({ ...newClientForm, name: e.target.value })}
+                    type="file"
+                    accept=".pdf,image/*"
                     required
-                    placeholder="Enter full name"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      setClientDocFiles(prev => ({ ...prev, [doc.key]: file }));
+                    }}
                   />
                 </div>
-                <div className="form-group">
-                  <label htmlFor="client-email">Email *</label>
-                  <input
-                    type="email"
-                    id="client-email"
-                    value={newClientForm.email}
-                    onChange={(e) => setNewClientForm({ ...newClientForm, email: e.target.value })}
-                    required
-                    placeholder="email@example.com"
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="client-phone">Phone *</label>
-                <input
-                  type="tel"
-                  id="client-phone"
-                  value={newClientForm.phone}
-                  onChange={(e) => setNewClientForm({ ...newClientForm, phone: e.target.value })}
-                  required
-                  placeholder="+225 07 12 34 56 78"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="client-address">Address</label>
-                <input
-                  type="text"
-                  id="client-address"
-                  value={newClientForm.address}
-                  onChange={(e) => setNewClientForm({ ...newClientForm, address: e.target.value })}
-                  placeholder="Enter address"
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="form-group">
-                <label htmlFor="client-company-name">Company Name *</label>
-                <input
-                  type="text"
-                  id="client-company-name"
-                  value={newClientForm.companyName}
-                  onChange={(e) => setNewClientForm({ ...newClientForm, companyName: e.target.value })}
-                  required
-                  placeholder="Enter company name"
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="client-registration">Registration Number *</label>
-                  <input
-                    type="text"
-                    id="client-registration"
-                    value={newClientForm.registrationNumber}
-                    onChange={(e) => setNewClientForm({ ...newClientForm, registrationNumber: e.target.value })}
-                    required
-                    placeholder="Enter registration number"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="client-contact-person">Contact Person *</label>
-                  <input
-                    type="text"
-                    id="client-contact-person"
-                    value={newClientForm.contactPerson}
-                    onChange={(e) => setNewClientForm({ ...newClientForm, contactPerson: e.target.value })}
-                    required
-                    placeholder="Enter contact person name"
-                  />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="client-email">Email *</label>
-                  <input
-                    type="email"
-                    id="client-email"
-                    value={newClientForm.email}
-                    onChange={(e) => setNewClientForm({ ...newClientForm, email: e.target.value })}
-                    required
-                    placeholder="email@example.com"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="client-phone">Phone *</label>
-                  <input
-                    type="tel"
-                    id="client-phone"
-                    value={newClientForm.phone}
-                    onChange={(e) => setNewClientForm({ ...newClientForm, phone: e.target.value })}
-                    required
-                    placeholder="+225 07 12 34 56 78"
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="client-address">Address</label>
-                <input
-                  type="text"
-                  id="client-address"
-                  value={newClientForm.address}
-                  onChange={(e) => setNewClientForm({ ...newClientForm, address: e.target.value })}
-                  placeholder="Enter company address"
-                />
-              </div>
-            </>
+              ))}
+            </div>
           )}
 
           <div className="modal-footer">
@@ -2753,25 +2828,59 @@ const AdministrativeDashboard = () => {
               className="action-button secondary"
               onClick={() => {
                 setShowNewClientModal(false);
-                setNewClientForm({
-                  type: 'individual',
-                  name: '',
-                  email: '',
-                  phone: '',
-                  companyName: '',
-                  address: '',
-                  registrationNumber: '',
-                  contactPerson: ''
+                setClientDocForm({
+                  clientId: '',
+                  property: '',
+                  applicationFees: false,
+                  transferOrResubscription: false,
+                  sodeci: false,
+                  cie10: false,
+                  cie15: false
                 });
+                setClientDocFiles({});
               }}
             >
               Cancel
             </button>
             <button type="submit" className="action-button primary" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Client'}
+              {loading ? 'Uploading...' : 'Upload Documents'}
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Client Checklist Modal */}
+      <Modal
+        isOpen={showChecklistModal}
+        onClose={() => {
+          setShowChecklistModal(false);
+          setSelectedChecklist(null);
+          setChecklistClient(null);
+        }}
+        title="Client Checklist"
+        size="sm"
+      >
+        <div className="modal-form">
+          <div style={{ marginBottom: '12px' }}>
+            <strong>Client:</strong>{' '}
+            {checklistClient ? (checklistClient.name || checklistClient.Name || checklistClient.email || checklistClient.Email || 'N/A') : 'N/A'}
+          </div>
+          {checklistLoading ? (
+            <div>Loading checklist...</div>
+          ) : selectedChecklist ? (
+            <div style={{ display: 'grid', gap: '8px' }}>
+              <div><strong>Property:</strong> {selectedChecklist.property || selectedChecklist.Property || 'N/A'}</div>
+              <div><strong>Application fees:</strong> {selectedChecklist.applicationFees ? 'Yes' : 'No'}</div>
+              <div><strong>Transfer/Re-subscription:</strong> {selectedChecklist.transferOrResubscription ? 'Yes' : 'No'}</div>
+              <div><strong>SODECI:</strong> {selectedChecklist.sodeci ? 'Yes' : 'No'}</div>
+              <div><strong>CIE 10A:</strong> {selectedChecklist.cie10a ? 'Yes' : 'No'}</div>
+              <div><strong>CIE 15A:</strong> {selectedChecklist.cie15a ? 'Yes' : 'No'}</div>
+              <div><strong>Saved:</strong> {selectedChecklist.createdAt || selectedChecklist.CreatedAt ? new Date(selectedChecklist.createdAt || selectedChecklist.CreatedAt).toLocaleDateString() : 'N/A'}</div>
+            </div>
+          ) : (
+            <div>No checklist found for this client.</div>
+          )}
+        </div>
       </Modal>
 
       <div className="notifications-container">

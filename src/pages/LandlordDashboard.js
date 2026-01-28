@@ -65,6 +65,7 @@ const LandlordDashboard = () => {
   const [paymentHistory, setPaymentHistory] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
+  const [maintenanceQuotes, setMaintenanceQuotes] = useState([]);
   const [claims, setClaims] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [businessTracking, setBusinessTracking] = useState(null);
@@ -149,7 +150,7 @@ const LandlordDashboard = () => {
         return;
       }
       
-      const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, claimsData, inventoryData, trackingData, expensesData] = await Promise.all([
+      const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, claimsData, inventoryData, trackingData, expensesData, quotesData] = await Promise.all([
         landlordService.getOverview(),
         landlordService.getProperties(),
         landlordService.getTenants().catch(() => []),
@@ -163,7 +164,8 @@ const LandlordDashboard = () => {
           property: expensePropertyFilter || undefined,
           startDate: expenseStartDate || undefined,
           endDate: expenseEndDate || undefined,
-        }).catch(() => [])
+        }).catch(() => []),
+        landlordService.getMaintenanceQuotes().catch(() => []),
       ]);
       
       setOverviewData(overview);
@@ -176,6 +178,7 @@ const LandlordDashboard = () => {
       setInventory(Array.isArray(inventoryData) ? inventoryData : []);
       setBusinessTracking(trackingData);
       setExpenses(Array.isArray(expensesData) ? expensesData : []);
+      setMaintenanceQuotes(Array.isArray(quotesData) ? quotesData : []);
     } catch (error) {
       console.error('Error loading landlord data:', error);
       if (!isDemoMode()) {
@@ -1513,6 +1516,95 @@ const LandlordDashboard = () => {
         </div>
                 </div>
                 
+          {/* Pending Maintenance Quotes for Approval */}
+          {maintenanceQuotes && maintenanceQuotes.length > 0 && (
+            <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+              <div className="sa-section-header">
+                <div>
+                  <h3>Pending Maintenance Quotes</h3>
+                  <p>Approve or reject maintenance work completed by technicians</p>
+                </div>
+              </div>
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>No</th>
+                      <th>Date</th>
+                      <th>Property</th>
+                      <th>Issue</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th>Validated By</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {maintenanceQuotes.map((quote, index) => {
+                      const status = (quote.Status || quote.status || '').toLowerCase();
+                      return (
+                        <tr key={quote.ID || quote.id || `quote-${index}`}>
+                          <td>{index + 1}</td>
+                          <td>{quote.Date || quote.date ? new Date(quote.Date || quote.date).toLocaleDateString() : 'N/A'}</td>
+                          <td>{quote.Property || quote.property || 'N/A'}</td>
+                          <td>{quote.Issue || quote.issue || 'N/A'}</td>
+                          <td>{(quote.Amount || quote.amount || 0).toLocaleString()} XOF</td>
+                          <td>
+                            <span className={`sa-status-pill ${status || 'pending'}`}>
+                              {quote.Status || quote.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td>{quote.ValidatedBy || quote.validatedBy || '—'}</td>
+                          <td className="sa-row-actions">
+                            {status !== 'approved' && status !== 'rejected' && (
+                              <>
+                                <button
+                                  className="table-action-button edit"
+                                  style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none', padding: '6px 12px' }}
+                                  disabled={loading}
+                                  onClick={async () => {
+                                    try {
+                                      await landlordService.approveMaintenanceQuote(quote.ID || quote.id);
+                                      addNotification('Quote approved successfully', 'success');
+                                      loadData();
+                                    } catch (error) {
+                                      console.error('Error approving quote:', error);
+                                      addNotification('Failed to approve quote', 'error');
+                                    }
+                                  }}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  className="table-action-button delete"
+                                  style={{ backgroundColor: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', marginLeft: '8px' }}
+                                  disabled={loading}
+                                  onClick={async () => {
+                                    if (!window.confirm('Are you sure you want to reject this quote?')) return;
+                                    try {
+                                      await landlordService.rejectMaintenanceQuote(quote.ID || quote.id);
+                                      addNotification('Quote rejected successfully', 'success');
+                                      loadData();
+                                    } catch (error) {
+                                      console.error('Error rejecting quote:', error);
+                                      addNotification('Failed to reject quote', 'error');
+                                    }
+                                  }}
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {workOrders.length > 0 && (
         <div className="sa-section-card" style={{ marginBottom: '24px' }}>
           <div className="sa-section-header">
