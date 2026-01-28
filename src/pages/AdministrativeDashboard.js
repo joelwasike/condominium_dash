@@ -2817,9 +2817,9 @@ const AdministrativeDashboard = () => {
           </div>
 
         <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
-            <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
-          <div className="form-group" style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
+          <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.applicationFees}
@@ -2827,9 +2827,7 @@ const AdministrativeDashboard = () => {
                 />
                 Application fees (37,000 FCFA - obligation to pay)
               </label>
-            </div>
-          <div className="form-group" style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
+            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.transferOrResubscription}
@@ -2837,9 +2835,7 @@ const AdministrativeDashboard = () => {
                 />
                 Transfer or Re-subscription (optional)
               </label>
-            </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
+            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.sodeci}
@@ -2847,9 +2843,7 @@ const AdministrativeDashboard = () => {
                 />
                 SODECI: 35,000 FCFA
               </label>
-            </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
+            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.cie10}
@@ -2857,9 +2851,7 @@ const AdministrativeDashboard = () => {
                 />
                 CIE: 10A 37 375 FCFA
               </label>
-            </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
+            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
                 <input
                   type="checkbox"
                   checked={clientDocForm.cie15}
