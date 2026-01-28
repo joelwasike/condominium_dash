@@ -3685,6 +3685,7 @@ const TechnicianDashboard = () => {
                       <label>Address of the Property *</label>
                       <select
                         value={inventoryFormData.propertyAddress}
+                        disabled={!inventoryFormData.tenantName}
                         onChange={(e) =>
                           setInventoryFormData(prev => {
                             const selectedAddress = e.target.value;
@@ -3739,77 +3740,61 @@ const TechnicianDashboard = () => {
                     </div>
                     <div className="form-group" style={{ position: 'relative' }}>
                       <label>Tenant Name *</label>
-                      <input
-                        type="text"
+                      <select
                         value={inventoryFormData.tenantName}
-                        onChange={(e) =>
-                          setInventoryFormData({
-                            ...inventoryFormData,
-                            tenantName: e.target.value,
-                          })
-                        }
-                        required
-                        placeholder="Start typing tenant name..."
-                        autoComplete="off"
-                      />
-                      {inventoryTenantSuggestions.length > 0 && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '100%',
-                            left: 0,
-                            right: 0,
-                            zIndex: 20,
-                            background: '#fff',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '0 0 0.5rem 0.5rem',
-                            maxHeight: '180px',
-                            overflowY: 'auto',
-                            boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-                          }}
-                        >
-                          {inventoryTenantSuggestions.slice(0, 5).map((t, idx) => {
+                        onChange={(e) => {
+                          const selectedName = e.target.value;
+                          const selectedTenant = (currentInventoryTenants || []).find(t => {
                             const name = t.Name || t.name || '';
-                            const property = t.Property || t.property || '';
-                            return (
-                              <button
-                                key={`${name}-${idx}`}
-                                type="button"
-                                onClick={() =>
-                                  setInventoryFormData({
-                                    ...inventoryFormData,
-                                    tenantName: name,
-                                    propertyAddress:
-                                      inventoryFormData.propertyAddress || property,
-                                  })
-                                }
-                                style={{
-                                  width: '100%',
-                                  textAlign: 'left',
-                                  padding: '6px 10px',
-                                  border: 'none',
-                                  borderBottom: '1px solid #f3f4f6',
-                                  background: '#fff',
-                                  cursor: 'pointer',
-                                  fontSize: '0.85rem',
-                                }}
-                              >
-                                <div style={{ fontWeight: 500 }}>{name}</div>
-                                {property && (
-                                  <div
-                                    style={{
-                                      fontSize: '0.75rem',
-                                      color: '#6b7280',
-                                    }}
-                                  >
-                                    {property}
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                            return name === selectedName;
+                          });
+                          const selectedPropertyAddress = selectedTenant?.Property || selectedTenant?.property || '';
+                          const selectedProperty = (companyProperties || []).find(
+                            p => (p.Address || p.address) === selectedPropertyAddress
+                          );
+                          const bedrooms = selectedProperty?.Bedrooms || selectedProperty?.bedrooms;
+                          const propTypeRaw =
+                            selectedProperty?.Type ||
+                            selectedProperty?.type ||
+                            selectedProperty?.BuildingType ||
+                            selectedProperty?.buildingType ||
+                            selectedProperty?.PropertyType ||
+                            selectedProperty?.propertyType ||
+                            '';
+                          const typeLower = String(propTypeRaw).toLowerCase();
+                          const inferredType = typeLower.includes('studio')
+                            ? 'Studio'
+                            : typeLower.includes('duplex')
+                              ? 'Duplex'
+                              : typeLower.includes('villa')
+                                ? 'Villa'
+                                : typeLower.includes('apartment')
+                                  ? 'Apartment'
+                                  : '';
+                          setInventoryFormData(prev => ({
+                            ...prev,
+                            tenantName: selectedName,
+                            propertyAddress: selectedPropertyAddress || prev.propertyAddress,
+                            numberOfRooms: bedrooms ? Number(bedrooms) : prev.numberOfRooms,
+                            propertyType: inferredType || prev.propertyType || (bedrooms ? 'Apartment' : prev.propertyType),
+                          }));
+                        }}
+                        required
+                      >
+                        <option value="">Select tenant</option>
+                        {(currentInventoryTenants || []).map((t, idx) => {
+                          const name = t.Name || t.name || '';
+                          const property = t.Property || t.property || '';
+                          return (
+                            <option key={`${name}-${idx}`} value={name}>
+                              {name} {property ? `- ${property}` : ''}
+                            </option>
+                          );
+                        })}
+                        {(!currentInventoryTenants || currentInventoryTenants.length === 0) && (
+                          <option value="" disabled>No tenants available</option>
+                        )}
+                      </select>
                     </div>
                   </div>
 
