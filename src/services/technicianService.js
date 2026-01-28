@@ -107,6 +107,13 @@ export const technicianService = {
     });
   },
 
+  // Properties
+  getProperties: async () => {
+    return apiRequest(buildApiUrl('/api/technician/properties'), {
+      method: 'GET',
+    });
+  },
+
   submitQuote: async (quoteData) => {
     return apiRequest(buildApiUrl('/api/technician/quotes'), {
       method: 'POST',

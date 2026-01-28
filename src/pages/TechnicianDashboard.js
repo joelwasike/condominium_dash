@@ -146,6 +146,7 @@ const TechnicianDashboard = () => {
   const [works, setWorks] = useState([]);
   const [entryTenants, setEntryTenants] = useState([]);
   const [exitTenants, setExitTenants] = useState([]);
+  const [companyProperties, setCompanyProperties] = useState([]);
   const [historyData, setHistoryData] = useState({
     queries: [],
     quotes: [],
@@ -185,9 +186,10 @@ const TechnicianDashboard = () => {
 
   const inventoryPropertyOptions = Array.from(
     new Set(
-      (currentInventoryTenants || [])
-        .map(t => t.Property || t.property)
-        .filter(Boolean)
+      (companyProperties && companyProperties.length > 0
+        ? companyProperties.map(p => p.Address || p.address)
+        : (currentInventoryTenants || []).map(t => t.Property || t.property)
+      ).filter(Boolean)
     )
   );
 
@@ -244,7 +246,7 @@ const TechnicianDashboard = () => {
         return;
       }
       
-      const [overview, inspection, task, maintenanceRequests, contacts, quotesData, worksData, entryData, exitData, historyDataRes] = await Promise.all([
+      const [overview, inspection, task, maintenanceRequests, contacts, quotesData, worksData, entryData, exitData, historyDataRes, propertiesData] = await Promise.all([
         technicianService.getOverview().catch(() => null),
         technicianService.listInspections().catch(() => []),
         technicianService.listTasks().catch(() => []),
@@ -254,7 +256,8 @@ const TechnicianDashboard = () => {
         technicianService.getWorkProgress({}).catch(() => []),
         technicianService.getStateOfEntry().catch(() => []),
         technicianService.getStateOfExit().catch(() => []),
-        technicianService.getHistory({}).catch(() => ({ queries: [], quotes: [], works: [], inventories: [] }))
+        technicianService.getHistory({}).catch(() => ({ queries: [], quotes: [], works: [], inventories: [] })),
+        technicianService.getProperties().catch(() => [])
       ]);
       
       setOverviewData(overview);
@@ -286,6 +289,8 @@ const TechnicianDashboard = () => {
       // Set entry and exit states
       setEntryTenants(Array.isArray(entryData) ? entryData : []);
       setExitTenants(Array.isArray(exitData) ? exitData : []);
+
+      setCompanyProperties(Array.isArray(propertiesData) ? propertiesData : []);
       
       // Set history data
       if (historyDataRes && typeof historyDataRes === 'object') {
@@ -3601,9 +3606,36 @@ const TechnicianDashboard = () => {
                       <select
                         value={inventoryFormData.propertyAddress}
                         onChange={(e) =>
-                          setInventoryFormData({
-                            ...inventoryFormData,
-                            propertyAddress: e.target.value,
+                          setInventoryFormData(prev => {
+                            const selectedAddress = e.target.value;
+                            const selectedProperty = (companyProperties || []).find(
+                              p => (p.Address || p.address) === selectedAddress
+                            );
+                            const bedrooms = selectedProperty?.Bedrooms || selectedProperty?.bedrooms;
+                            const propTypeRaw =
+                              selectedProperty?.Type ||
+                              selectedProperty?.type ||
+                              selectedProperty?.BuildingType ||
+                              selectedProperty?.buildingType ||
+                              selectedProperty?.PropertyType ||
+                              selectedProperty?.propertyType ||
+                              '';
+                            const typeLower = String(propTypeRaw).toLowerCase();
+                            const inferredType = typeLower.includes('studio')
+                              ? 'Studio'
+                              : typeLower.includes('duplex')
+                                ? 'Duplex'
+                                : typeLower.includes('villa')
+                                  ? 'Villa'
+                                  : typeLower.includes('apartment')
+                                    ? 'Apartment'
+                                    : '';
+                            return {
+                              ...prev,
+                              propertyAddress: selectedAddress,
+                              numberOfRooms: bedrooms ? Number(bedrooms) : prev.numberOfRooms,
+                              propertyType: inferredType || prev.propertyType || (bedrooms ? 'Apartment' : prev.propertyType),
+                            };
                           })
                         }
                         required
