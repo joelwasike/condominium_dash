@@ -1786,9 +1786,9 @@ Thank you for your payment!
                   </div>
 
                   {maintenanceForm.photos.length > 0 && (
-                    <div className="photo-preview-grid">
+                    <div className="maintenance-photo-preview-grid">
                       {maintenanceForm.photos.map(photo => (
-                        <div key={photo.id} className="photo-preview-item">
+                        <div key={photo.id} className="maintenance-photo-preview-item">
                           <img
                             src={photo.preview}
                             alt={photo.name}
