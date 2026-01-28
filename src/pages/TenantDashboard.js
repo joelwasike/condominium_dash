@@ -1789,12 +1789,17 @@ Thank you for your payment!
                     <div className="maintenance-photo-preview-grid">
                       {maintenanceForm.photos.map(photo => (
                         <div key={photo.id} className="maintenance-photo-preview-item">
-                          <img
-                            src={photo.preview}
-                            alt={photo.name}
+                          <button
+                            type="button"
+                            className="maintenance-photo-placeholder"
                             onClick={() => window.open(photo.preview, '_blank')}
-                            style={{ cursor: 'pointer' }}
-                          />
+                            title={photo.name}
+                          >
+                            <span>Photo</span>
+                            <span className="maintenance-photo-placeholder-name">
+                              {photo.name || 'Attachment'}
+                            </span>
+                          </button>
                           <button
                             type="button"
                             className="remove-photo-button"
