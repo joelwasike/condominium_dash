@@ -111,6 +111,7 @@ const TechnicianDashboard = () => {
   // New state for restructured sections
   const [quotes, setQuotes] = useState([]);
   const [works, setWorks] = useState([]);
+  const [selectedWorkIds, setSelectedWorkIds] = useState([]);
   const [entryTenants, setEntryTenants] = useState([]);
   const [exitTenants, setExitTenants] = useState([]);
   const [companyProperties, setCompanyProperties] = useState([]);
@@ -226,6 +227,9 @@ const TechnicianDashboard = () => {
   
   // Notifications
   const [notifications, setNotifications] = useState([]);
+  const [showWorkStartModal, setShowWorkStartModal] = useState(false);
+  const [selectedQuoteForWork, setSelectedQuoteForWork] = useState(null);
+  const [workSchedule, setWorkSchedule] = useState({ startDate: '', endDate: '' });
   
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -463,6 +467,89 @@ const TechnicianDashboard = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('demo_mode');
     window.location.href = '/';
+  };
+
+  const openWorkStartModal = (quote) => {
+    setSelectedQuoteForWork(quote);
+    setWorkSchedule({ startDate: '', endDate: '' });
+    setShowWorkStartModal(true);
+  };
+
+  const handleStartWorkSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedQuoteForWork) return;
+    const maintenanceId = selectedQuoteForWork.MaintenanceID || selectedQuoteForWork.maintenanceId;
+    if (!maintenanceId) {
+      addNotification('This quote is missing a maintenance reference.', 'error');
+      return;
+    }
+    if (!workSchedule.startDate || !workSchedule.endDate) {
+      addNotification('Please select both start and end dates.', 'error');
+      return;
+    }
+    try {
+      setLoading(true);
+      await technicianService.updateMaintenanceRequest(maintenanceId, {
+        status: 'In Progress',
+        workStartDate: workSchedule.startDate,
+        workEndDate: workSchedule.endDate,
+      });
+      addNotification('Work started and scheduled successfully', 'success');
+      setShowWorkStartModal(false);
+      setSelectedQuoteForWork(null);
+      loadData();
+    } catch (error) {
+      console.error('Error starting work:', error);
+      addNotification(error.message || 'Failed to start work', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWorkStatusChange = async (work, status) => {
+    const workId = work.ID || work.id;
+    if (!workId) return;
+    try {
+      setLoading(true);
+      await technicianService.updateMaintenanceRequest(workId, {
+        status,
+        completedAt: status === 'Completed' ? new Date().toISOString() : undefined,
+      });
+      addNotification('Work status updated', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error updating work status:', error);
+      addNotification(error.message || 'Failed to update work status', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleWorkSelection = (workId) => {
+    setSelectedWorkIds(prev => (
+      prev.includes(workId)
+        ? prev.filter(id => id !== workId)
+        : [...prev, workId]
+    ));
+  };
+
+  const handleArchiveWorks = async (workIds) => {
+    const ids = (workIds || []).filter(Boolean);
+    if (ids.length === 0) return;
+    try {
+      setLoading(true);
+      await Promise.all(
+        ids.map(id => technicianService.updateMaintenanceRequest(id, { archived: true }))
+      );
+      addNotification('Work archived', 'success');
+      setSelectedWorkIds([]);
+      loadData();
+    } catch (error) {
+      console.error('Error archiving work:', error);
+      addNotification(error.message || 'Failed to archive work', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Scroll to bottom of messages
@@ -1382,7 +1469,7 @@ const TechnicianDashboard = () => {
                         >
                           👁️
                         </button>
-                        {status === 'Pending' && (
+                        {(status === 'Pending' || status === 'In Progress') && (
                           <>
                             <button 
                               className="sa-icon-button" 
@@ -2200,12 +2287,13 @@ const TechnicianDashboard = () => {
                   <th>Recipient</th>
                   <th>Status</th>
                   <th>Validated By</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {validatedQuotes.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="sa-table-empty">No validated quotes</td>
+                    <td colSpan={9} className="sa-table-empty">No validated quotes</td>
                   </tr>
                 ) : (
                   validatedQuotes.map((q, index) => (
@@ -2222,6 +2310,14 @@ const TechnicianDashboard = () => {
                         </span>
                       </td>
                       <td>{q.ValidatedBy || q.validatedBy || 'N/A'}</td>
+                      <td>
+                        <button
+                          className="table-action-button edit"
+                          onClick={() => openWorkStartModal(q)}
+                        >
+                          Works Started!
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -2235,9 +2331,12 @@ const TechnicianDashboard = () => {
 
   // Render Works Section - List work in progress, in pause, and completed
   const renderWorks = () => {
-    const worksInProgress = works.filter(w => (w.Status || w.status) === 'In Progress');
-    const worksInPause = works.filter(w => (w.Status || w.status) === 'Paused' || (w.Status || w.status) === 'On Hold');
-    const completedWorks = works.filter(w => (w.Status || w.status) === 'Completed');
+    const activeWorks = works.filter(w => !(w.Archived || w.archived));
+    const worksInProgress = activeWorks.filter(w => (w.Status || w.status) === 'In Progress');
+    const worksInPause = activeWorks.filter(w => (w.Status || w.status) === 'Paused' || (w.Status || w.status) === 'On Hold');
+    const completedWorks = activeWorks.filter(w => (w.Status || w.status) === 'Completed');
+    const completedWorkIds = completedWorks.map(w => w.ID || w.id).filter(Boolean);
+    const allCompletedSelected = completedWorkIds.length > 0 && completedWorkIds.every(id => selectedWorkIds.includes(id));
 
     return (
       <div className="sa-section-card">
@@ -2274,13 +2373,15 @@ const TechnicianDashboard = () => {
                   <th>Priority</th>
                   <th>Assigned To</th>
                   <th>Est. Cost</th>
-                  <th>Date Started</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {worksInProgress.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="sa-table-empty">No work in progress</td>
+                    <td colSpan={9} className="sa-table-empty">No work in progress</td>
                   </tr>
                 ) : (
                   worksInProgress.map((w, index) => (
@@ -2295,7 +2396,16 @@ const TechnicianDashboard = () => {
                       </td>
                       <td>{w.Assigned || w.assigned || 'Unassigned'}</td>
                       <td>${(w.EstimatedCost || w.estimatedCost || 0).toLocaleString()}</td>
-                      <td>{w.Date || w.date ? new Date(w.Date || w.date).toLocaleDateString() : 'N/A'}</td>
+                      <td>{w.WorkStartDate || w.workStartDate ? new Date(w.WorkStartDate || w.workStartDate).toLocaleDateString() : 'N/A'}</td>
+                      <td>{w.WorkEndDate || w.workEndDate ? new Date(w.WorkEndDate || w.workEndDate).toLocaleDateString() : 'N/A'}</td>
+                      <td>
+                        <button className="table-action-button edit" onClick={() => handleWorkStatusChange(w, 'Paused')}>
+                          Pause
+                        </button>
+                        <button className="table-action-button edit" onClick={() => handleWorkStatusChange(w, 'Completed')} style={{ marginLeft: '8px' }}>
+                          Complete
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -2317,13 +2427,15 @@ const TechnicianDashboard = () => {
                   <th>Priority</th>
                   <th>Assigned To</th>
                   <th>Est. Cost</th>
-                  <th>Date Paused</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {worksInPause.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="sa-table-empty">No work in pause</td>
+                    <td colSpan={9} className="sa-table-empty">No work in pause</td>
                   </tr>
                 ) : (
                   worksInPause.map((w, index) => (
@@ -2338,7 +2450,16 @@ const TechnicianDashboard = () => {
                       </td>
                       <td>{w.Assigned || w.assigned || 'Unassigned'}</td>
                       <td>${(w.EstimatedCost || w.estimatedCost || 0).toLocaleString()}</td>
-                      <td>{w.Date || w.date ? new Date(w.Date || w.date).toLocaleDateString() : 'N/A'}</td>
+                      <td>{w.WorkStartDate || w.workStartDate ? new Date(w.WorkStartDate || w.workStartDate).toLocaleDateString() : 'N/A'}</td>
+                      <td>{w.WorkEndDate || w.workEndDate ? new Date(w.WorkEndDate || w.workEndDate).toLocaleDateString() : 'N/A'}</td>
+                      <td>
+                        <button className="table-action-button edit" onClick={() => handleWorkStatusChange(w, 'In Progress')}>
+                          Resume
+                        </button>
+                        <button className="table-action-button edit" onClick={() => handleWorkStatusChange(w, 'Completed')} style={{ marginLeft: '8px' }}>
+                          Complete
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -2349,28 +2470,60 @@ const TechnicianDashboard = () => {
 
         {/* Completed Works */}
         <div>
-          <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Completed Works</h4>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>Completed Works</h4>
+            <button
+              className="action-button secondary"
+              type="button"
+              onClick={() => handleArchiveWorks(selectedWorkIds)}
+              disabled={selectedWorkIds.length === 0 || loading}
+            >
+              Archive Selected
+            </button>
+          </div>
           <div className="sa-table-wrapper">
             <table className="sa-table">
               <thead>
                 <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      checked={allCompletedSelected}
+                      onChange={() => {
+                        if (allCompletedSelected) {
+                          setSelectedWorkIds(prev => prev.filter(id => !completedWorkIds.includes(id)));
+                        } else {
+                          setSelectedWorkIds(prev => Array.from(new Set([...prev, ...completedWorkIds])));
+                        }
+                      }}
+                    />
+                  </th>
                   <th>No</th>
                   <th>Property</th>
                   <th>Issue</th>
                   <th>Priority</th>
                   <th>Assigned To</th>
                   <th>Final Cost</th>
-                  <th>Date Completed</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {completedWorks.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="sa-table-empty">No completed work</td>
+                    <td colSpan={10} className="sa-table-empty">No completed work</td>
                   </tr>
                 ) : (
                   completedWorks.map((w, index) => (
                     <tr key={w.ID || w.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedWorkIds.includes(w.ID || w.id)}
+                          onChange={() => toggleWorkSelection(w.ID || w.id)}
+                        />
+                      </td>
                       <td>{index + 1}</td>
                       <td>{w.Property || w.property || 'N/A'}</td>
                       <td>{w.Issue || w.issue || 'N/A'}</td>
@@ -2381,7 +2534,18 @@ const TechnicianDashboard = () => {
                       </td>
                       <td>{w.Assigned || w.assigned || 'Unassigned'}</td>
                       <td>${(w.EstimatedCost || w.estimatedCost || 0).toLocaleString()}</td>
-                      <td>{w.CompletedAt || w.completedAt ? new Date(w.CompletedAt || w.completedAt).toLocaleDateString() : 'N/A'}</td>
+                      <td>{w.WorkStartDate || w.workStartDate ? new Date(w.WorkStartDate || w.workStartDate).toLocaleDateString() : 'N/A'}</td>
+                      <td>{w.WorkEndDate || w.workEndDate ? new Date(w.WorkEndDate || w.workEndDate).toLocaleDateString() : (w.CompletedAt || w.completedAt ? new Date(w.CompletedAt || w.completedAt).toLocaleDateString() : 'N/A')}</td>
+                      <td>
+                        <button
+                          className="table-action-button edit"
+                          type="button"
+                          onClick={() => handleArchiveWorks([w.ID || w.id])}
+                          disabled={loading}
+                        >
+                          Archive
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -3106,18 +3270,6 @@ const TechnicianDashboard = () => {
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="task-hours">Estimated Hours</label>
-                <input
-                  type="number"
-                      id="task-hours"
-                      value={taskForm.estimatedHours || 0}
-                  onChange={(e) => setTaskForm({...taskForm, estimatedHours: parseFloat(e.target.value) || 0})}
-                  min="0"
-                  step="0.5"
-                      placeholder="0"
-                />
-              </div>
-              <div className="form-group">
                     <label htmlFor="task-cost">Estimated Cost ($)</label>
                 <input
                   type="number"
@@ -3129,7 +3281,7 @@ const TechnicianDashboard = () => {
                       placeholder="0.00"
                 />
               </div>
-                </div>
+            </div>
                 <div className="modal-footer">
                 <button 
                   type="button" 
@@ -3355,6 +3507,47 @@ const TechnicianDashboard = () => {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWorkStartModal && (
+        <div className="modal-overlay" onClick={() => setShowWorkStartModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Work Started</h3>
+              <button className="modal-close" onClick={() => setShowWorkStartModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleStartWorkSubmit} className="modal-form">
+                <div className="form-group">
+                  <label>Start Date *</label>
+                  <input
+                    type="date"
+                    value={workSchedule.startDate}
+                    onChange={(e) => setWorkSchedule(prev => ({ ...prev, startDate: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>End Date *</label>
+                  <input
+                    type="date"
+                    value={workSchedule.endDate}
+                    onChange={(e) => setWorkSchedule(prev => ({ ...prev, endDate: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowWorkStartModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Saving...' : 'Start Work'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
