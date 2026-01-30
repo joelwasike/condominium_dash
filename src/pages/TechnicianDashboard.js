@@ -179,7 +179,16 @@ const TechnicianDashboard = () => {
   
   // Filter states
   const [quoteStatusFilter, setQuoteStatusFilter] = useState('');
+  const [quoteDateFilter, setQuoteDateFilter] = useState('');
+  const [quotePropertyFilter, setQuotePropertyFilter] = useState('');
+  const [quoteSearchText, setQuoteSearchText] = useState('');
+  const [quoteMinAmount, setQuoteMinAmount] = useState('');
+  const [quoteMaxAmount, setQuoteMaxAmount] = useState('');
   const [workStatusFilter, setWorkStatusFilter] = useState('');
+  const [workDateFilter, setWorkDateFilter] = useState('');
+  const [workPropertyFilter, setWorkPropertyFilter] = useState('');
+  const [workPriorityFilter, setWorkPriorityFilter] = useState('');
+  const [workSearchText, setWorkSearchText] = useState('');
   const [historyDateFilter, setHistoryDateFilter] = useState('');
   const [historyTypeFilter, setHistoryTypeFilter] = useState('');
   const [historyPropertyFilter, setHistoryPropertyFilter] = useState('');
@@ -467,6 +476,13 @@ const TechnicianDashboard = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('demo_mode');
     window.location.href = '/';
+  };
+
+  const normalizeDateValue = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
   };
 
   const openWorkStartModal = (quote) => {
@@ -2193,11 +2209,35 @@ const TechnicianDashboard = () => {
 
   // Render Quotes Section - List quotes being validated and validated quotes
   const renderQuotes = () => {
-    const quotesToValidate = quotes.filter(q => {
+    const filteredQuotes = quotes.filter(q => {
+      const status = (q.Status || q.status || '').toLowerCase();
+      const property = (q.Property || q.property || '').toLowerCase();
+      const issue = (q.Issue || q.issue || '').toLowerCase();
+      const recipient = (q.Recipient || q.recipient || '').toLowerCase();
+      const dateValue = q.Date || q.date || q.CreatedAt || q.createdAt;
+      const normalizedDate = normalizeDateValue(dateValue);
+      const amount = Number(q.Amount || q.amount || 0);
+
+      if (quoteStatusFilter) {
+        const expected = quoteStatusFilter.toLowerCase();
+        if (expected !== status) return false;
+      }
+      if (quoteDateFilter && normalizedDate !== quoteDateFilter) return false;
+      if (quotePropertyFilter && !property.includes(quotePropertyFilter.toLowerCase())) return false;
+      if (quoteSearchText) {
+        const search = quoteSearchText.toLowerCase();
+        if (!issue.includes(search) && !recipient.includes(search)) return false;
+      }
+      if (quoteMinAmount && amount < Number(quoteMinAmount)) return false;
+      if (quoteMaxAmount && amount > Number(quoteMaxAmount)) return false;
+      return true;
+    });
+
+    const quotesToValidate = filteredQuotes.filter(q => {
       const status = (q.Status || q.status || '').toLowerCase();
       return status === 'sent' || status === 'pending';
     });
-    const validatedQuotes = quotes.filter(q => {
+    const validatedQuotes = filteredQuotes.filter(q => {
       const status = (q.Status || q.status || '').toLowerCase();
       return status === 'approved' || status === 'validated';
     });
@@ -2211,17 +2251,53 @@ const TechnicianDashboard = () => {
           </div>
         </div>
 
-        <div className="sa-filters-section">
+        <div className="sa-filters-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
           <select 
             className="sa-filter-select"
             value={quoteStatusFilter}
             onChange={(e) => setQuoteStatusFilter(e.target.value)}
           >
             <option value="">All Status</option>
-            <option value="Sent">Being Validated</option>
-            <option value="Approved">Validated</option>
-            <option value="Rejected">Rejected</option>
+            <option value="sent">Being Validated</option>
+            <option value="approved">Validated</option>
+            <option value="rejected">Rejected</option>
           </select>
+          <input
+            type="date"
+            className="sa-filter-select"
+            value={quoteDateFilter}
+            onChange={(e) => setQuoteDateFilter(e.target.value)}
+          />
+          <input
+            type="text"
+            className="sa-filter-select"
+            placeholder="Filter by property"
+            value={quotePropertyFilter}
+            onChange={(e) => setQuotePropertyFilter(e.target.value)}
+          />
+          <input
+            type="text"
+            className="sa-filter-select"
+            placeholder="Search issue or recipient"
+            value={quoteSearchText}
+            onChange={(e) => setQuoteSearchText(e.target.value)}
+          />
+          <input
+            type="number"
+            className="sa-filter-select"
+            placeholder="Min amount"
+            value={quoteMinAmount}
+            onChange={(e) => setQuoteMinAmount(e.target.value)}
+            min="0"
+          />
+          <input
+            type="number"
+            className="sa-filter-select"
+            placeholder="Max amount"
+            value={quoteMaxAmount}
+            onChange={(e) => setQuoteMaxAmount(e.target.value)}
+            min="0"
+          />
         </div>
 
         {/* Quotes Being Validated Tab */}
@@ -2331,10 +2407,32 @@ const TechnicianDashboard = () => {
 
   // Render Works Section - List work in progress, in pause, and completed
   const renderWorks = () => {
-    const activeWorks = works.filter(w => !(w.Archived || w.archived));
-    const worksInProgress = activeWorks.filter(w => (w.Status || w.status) === 'In Progress');
-    const worksInPause = activeWorks.filter(w => (w.Status || w.status) === 'Paused' || (w.Status || w.status) === 'On Hold');
-    const completedWorks = activeWorks.filter(w => (w.Status || w.status) === 'Completed');
+    const filteredWorks = works.filter(w => {
+      if (w.Archived || w.archived) return false;
+      const status = (w.Status || w.status || '').toLowerCase();
+      const property = (w.Property || w.property || '').toLowerCase();
+      const issue = (w.Issue || w.issue || '').toLowerCase();
+      const assigned = (w.Assigned || w.assigned || '').toLowerCase();
+      const priority = (w.Priority || w.priority || '').toLowerCase();
+      const dateValue = w.WorkStartDate || w.workStartDate || w.Date || w.date || w.CreatedAt || w.createdAt;
+      const normalizedDate = normalizeDateValue(dateValue);
+
+      if (workStatusFilter) {
+        if (status !== workStatusFilter.toLowerCase()) return false;
+      }
+      if (workDateFilter && normalizedDate !== workDateFilter) return false;
+      if (workPropertyFilter && !property.includes(workPropertyFilter.toLowerCase())) return false;
+      if (workPriorityFilter && priority !== workPriorityFilter.toLowerCase()) return false;
+      if (workSearchText) {
+        const search = workSearchText.toLowerCase();
+        if (!issue.includes(search) && !assigned.includes(search)) return false;
+      }
+      return true;
+    });
+
+    const worksInProgress = filteredWorks.filter(w => (w.Status || w.status) === 'In Progress');
+    const worksInPause = filteredWorks.filter(w => (w.Status || w.status) === 'Paused' || (w.Status || w.status) === 'On Hold');
+    const completedWorks = filteredWorks.filter(w => (w.Status || w.status) === 'Completed');
     const completedWorkIds = completedWorks.map(w => w.ID || w.id).filter(Boolean);
     const allCompletedSelected = completedWorkIds.length > 0 && completedWorkIds.every(id => selectedWorkIds.includes(id));
 
@@ -2347,17 +2445,48 @@ const TechnicianDashboard = () => {
           </div>
         </div>
 
-        <div className="sa-filters-section">
+        <div className="sa-filters-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
           <select 
             className="sa-filter-select"
             value={workStatusFilter}
             onChange={(e) => setWorkStatusFilter(e.target.value)}
           >
             <option value="">All Status</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Paused">In Pause</option>
-            <option value="Completed">Completed</option>
+            <option value="in progress">In Progress</option>
+            <option value="paused">In Pause</option>
+            <option value="completed">Completed</option>
           </select>
+          <input
+            type="date"
+            className="sa-filter-select"
+            value={workDateFilter}
+            onChange={(e) => setWorkDateFilter(e.target.value)}
+          />
+          <input
+            type="text"
+            className="sa-filter-select"
+            placeholder="Filter by property"
+            value={workPropertyFilter}
+            onChange={(e) => setWorkPropertyFilter(e.target.value)}
+          />
+          <select
+            className="sa-filter-select"
+            value={workPriorityFilter}
+            onChange={(e) => setWorkPriorityFilter(e.target.value)}
+          >
+            <option value="">All Priority</option>
+            <option value="low">Low</option>
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+          <input
+            type="text"
+            className="sa-filter-select"
+            placeholder="Search issue or assigned"
+            value={workSearchText}
+            onChange={(e) => setWorkSearchText(e.target.value)}
+          />
         </div>
 
         {/* Work In Progress */}

@@ -133,11 +133,13 @@ const SalesManagerDashboard = () => {
   const [importMode, setImportMode] = useState('manual'); // 'manual' or 'excel'
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState(null); // { type: 'single' | 'bulk', user: {...} | users: [...] }
+  const [selectedApprovedClientId, setSelectedApprovedClientId] = useState('');
   
   // API Data States
   const [overviewData, setOverviewData] = useState(null);
   const [properties, setProperties] = useState([]);
   const [clients, setClients] = useState([]);
+  const [approvedClients, setApprovedClients] = useState([]);
   const [waitingListClients, setWaitingListClients] = useState([]);
   const [unpaidRents, setUnpaidRents] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -146,6 +148,11 @@ const SalesManagerDashboard = () => {
   const [salesProperties, setSalesProperties] = useState([]); // Properties that are strictly for sale
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
+
+  const selectedApprovedClient = useMemo(() => {
+    if (!selectedApprovedClientId) return null;
+    return approvedClients.find(client => String(client.ID || client.id) === String(selectedApprovedClientId)) || null;
+  }, [approvedClients, selectedApprovedClientId]);
 
   // Auto-slide carousel for advertisements on overview page
   useEffect(() => {
@@ -220,6 +227,7 @@ const SalesManagerDashboard = () => {
         setOverviewData(demoData.overview);
         setProperties(demoData.properties);
         setClients(demoData.clients);
+        setApprovedClients([]);
         setWaitingListClients(demoData.waitingListClients);
         setUnpaidRents(demoData.unpaidRents);
         setAlerts(demoData.alerts);
@@ -229,7 +237,7 @@ const SalesManagerDashboard = () => {
         return;
       }
       
-      const [overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData] = await Promise.all([
+      const [overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData] = await Promise.all([
         salesManagerService.getOverview(),
         salesManagerService.getProperties({
           status: propertyStatusFilter || undefined,
@@ -237,6 +245,7 @@ const SalesManagerDashboard = () => {
           urgency: propertyUrgencyFilter || undefined,
         }),
         salesManagerService.getClients(),
+        salesManagerService.getApprovedClients().catch(() => []),
         salesManagerService.getWaitingListClients().catch(() => []),
         salesManagerService.getUnpaidRents().catch(() => []),
         salesManagerService.getAlerts(alertTypeFilter || null),
@@ -244,7 +253,7 @@ const SalesManagerDashboard = () => {
         salesManagerService.getSalesProperties().catch(() => []),
       ]);
 
-      console.log('Loaded data:', { overview, propertiesData, clientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData });
+      console.log('Loaded data:', { overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData });
 
       const normalizedProperties = Array.isArray(propertiesData) ? propertiesData : [];
       const normalizedSalesProps = Array.isArray(salesPropsData) ? salesPropsData : [];
@@ -261,6 +270,7 @@ const SalesManagerDashboard = () => {
       setOverviewData(overview);
       setProperties(normalizedProperties);
       setClients(Array.isArray(clientsData) ? clientsData : []);
+      setApprovedClients(Array.isArray(approvedClientsData) ? approvedClientsData : []);
       setWaitingListClients(Array.isArray(waitingListData) ? waitingListData : []);
       setUnpaidRents(Array.isArray(unpaidRentsData) ? unpaidRentsData : []);
       setAlerts(Array.isArray(alertsData) ? alertsData : []);
@@ -754,29 +764,31 @@ const SalesManagerDashboard = () => {
   const handleCreateTenant = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    
-    // Validate required fields
-    const firstName = formData.get('firstName')?.trim();
-    const lastName = formData.get('lastName')?.trim();
-    const email = formData.get('email')?.trim();
-    const phone = formData.get('phone')?.trim();
+    const approvedClientId = formData.get('approvedClientId')?.trim();
     const property = formData.get('property')?.trim();
     const rent = formData.get('rent');
     const moveInDate = formData.get('moveInDate');
     
-    if (!firstName || !lastName || !email || !phone || !property || !rent || !moveInDate) {
-      addNotification('Please fill in all required fields', 'error');
+    if (!approvedClientId || !property || !rent || !moveInDate) {
+      addNotification('Please select an approved client and fill all required fields', 'error');
+      return;
+    }
+
+    const approvedClient = approvedClients.find(client => String(client.ID || client.id) === String(approvedClientId));
+    if (!approvedClient) {
+      addNotification('Selected approved client not found', 'error');
       return;
     }
     
     const unitNumber = formData.get('unitNumber')?.trim();
     
     const tenantData = {
-      name: `${firstName} ${lastName}`,
+      newClientId: Number(approvedClientId),
+      name: approvedClient.name || approvedClient.Name || '',
+      email: approvedClient.email || approvedClient.Email || '',
+      phone: approvedClient.phone || approvedClient.Phone || '',
       property: property,
       unitNumber: unitNumber || null,
-      email: email,
-      phone: phone,
       amount: parseFloat(rent),
       moveInDate: moveInDate,
     };
@@ -803,6 +815,7 @@ const SalesManagerDashboard = () => {
       // Reset form and close modal
       setShowTenantCreationModal(false);
       setUploadedDocuments([]);
+      setSelectedApprovedClientId('');
       e.target.reset();
       
       addNotification(`Tenant "${tenantData.name}" created successfully!`, 'success');
@@ -2756,6 +2769,7 @@ const SalesManagerDashboard = () => {
           setUploadedDocuments([]);
           setExcelFile(null);
           setImportMode('manual');
+          setSelectedApprovedClientId('');
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -2765,6 +2779,7 @@ const SalesManagerDashboard = () => {
                 setUploadedDocuments([]);
                 setExcelFile(null);
                 setImportMode('manual');
+                setSelectedApprovedClientId('');
               }}>×</button>
             </div>
             <div className="modal-body">
@@ -2872,23 +2887,63 @@ const SalesManagerDashboard = () => {
                 <form onSubmit={handleCreateTenant}>
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="firstName">First Name</label>
-                      <input type="text" name="firstName" required placeholder="Enter first name" />
+                      <label htmlFor="approvedClientId">Approved Client *</label>
+                      <select
+                        name="approvedClientId"
+                        id="approvedClientId"
+                        value={selectedApprovedClientId}
+                        onChange={(e) => setSelectedApprovedClientId(e.target.value)}
+                        required
+                      >
+                        <option value="">Select approved client</option>
+                        {approvedClients.map(client => {
+                          const id = client.ID || client.id;
+                          const label = client.name || client.Name || client.email || client.Email || `Client ${id}`;
+                          return (
+                            <option key={id} value={id}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
                     </div>
                     <div className="form-group">
-                      <label htmlFor="lastName">Last Name</label>
-                      <input type="text" name="lastName" required placeholder="Enter last name" />
+                      <label>Client Type</label>
+                      <input
+                        type="text"
+                        value={selectedApprovedClient ? (selectedApprovedClient.type || selectedApprovedClient.Type || 'individual') : ''}
+                        disabled
+                      />
                     </div>
                   </div>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="email">Email Address</label>
-                      <input type="email" name="email" required placeholder="tenant@example.com" />
+                      <label>Client Name</label>
+                      <input
+                        type="text"
+                        value={selectedApprovedClient ? (selectedApprovedClient.name || selectedApprovedClient.Name || '') : ''}
+                        disabled
+                      />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="phone">Phone Number</label>
-                      <input type="tel" name="phone" required placeholder="+1-555-0000" />
+                      <label>Email Address</label>
+                      <input
+                        type="email"
+                        value={selectedApprovedClient ? (selectedApprovedClient.email || selectedApprovedClient.Email || '') : ''}
+                        disabled
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Phone Number</label>
+                      <input
+                        type="tel"
+                        value={selectedApprovedClient ? (selectedApprovedClient.phone || selectedApprovedClient.Phone || '') : ''}
+                        disabled
+                      />
                     </div>
                   </div>
 

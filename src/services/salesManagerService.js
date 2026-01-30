@@ -43,6 +43,12 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Get approved client applications for onboarding
+  getApprovedClients: async () => {
+    const url = buildApiUrl('/api/salesmanager/approved-clients');
+    return await apiRequest(url);
+  },
+
   // Get waiting list clients
   getWaitingListClients: async () => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/waiting-list`);

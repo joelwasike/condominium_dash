@@ -88,6 +88,16 @@ const AdministrativeDashboard = () => {
   // New state for restructured sections
   const [newClients, setNewClients] = useState([]);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
+  const [newClientForm, setNewClientForm] = useState({
+    type: 'individual',
+    name: '',
+    email: '',
+    phone: '',
+    companyName: '',
+    address: '',
+    registrationNumber: '',
+    contactPerson: ''
+  });
   const [clientDocForm, setClientDocForm] = useState({
     clientId: '',
     property: '',
@@ -129,6 +139,16 @@ const AdministrativeDashboard = () => {
       addNotification('Selected client is missing an ID', 'error');
       return;
     }
+    setNewClientForm({
+      type: (client.type || client.Type || 'individual').toLowerCase(),
+      name: client.name || client.Name || '',
+      email: client.email || client.Email || '',
+      phone: client.phone || client.Phone || '',
+      companyName: client.companyName || client.CompanyName || '',
+      address: client.address || client.Address || '',
+      registrationNumber: client.registrationNumber || client.RegistrationNumber || '',
+      contactPerson: client.contactPerson || client.ContactPerson || ''
+    });
     setClientDocForm({
       clientId: String(clientId),
       property: '',
@@ -141,6 +161,20 @@ const AdministrativeDashboard = () => {
     setClientDocFiles({});
     setShowNewClientModal(true);
   };
+
+  const handleClientStatusUpdate = async (clientId, status) => {
+    try {
+      setLoading(true);
+      await adminService.updateClientStatus(clientId, status);
+      addNotification('Client status updated', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error updating client status:', error);
+      addNotification(error.message || 'Failed to update client status', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Filter states
   const [documentStatusFilter, setDocumentStatusFilter] = useState('');
@@ -148,6 +182,11 @@ const AdministrativeDashboard = () => {
   const [documentTenantFilter, setDocumentTenantFilter] = useState('');
   const [utilityStatusFilter, setUtilityStatusFilter] = useState('');
   const [leaseStatusFilter, setLeaseStatusFilter] = useState('');
+  const [leaseForm, setLeaseForm] = useState({
+    tenantId: '',
+    property: '',
+    rent: ''
+  });
 
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -2283,6 +2322,8 @@ const AdministrativeDashboard = () => {
   const renderNewClient = () => {
     // Filter clients based on search and status
     const filteredClients = newClients.filter(client => {
+      const statusValue = (client.status || client.Status || client.ApplicationStatus || client.applicationStatus || '').toLowerCase();
+      if (statusValue === 'onboarded') return false;
       if (clientSearchText) {
         const search = clientSearchText.toLowerCase();
         const name = (client.name || client.Name || '').toLowerCase();
@@ -2290,10 +2331,9 @@ const AdministrativeDashboard = () => {
         if (!name.includes(search) && !email.includes(search)) return false;
       }
       if (clientStatusFilter) {
-        const status = (client.status || client.Status || client.ApplicationStatus || client.applicationStatus || '').toLowerCase();
-        if (clientStatusFilter === 'in-progress' && status !== 'pending' && status !== 'in-progress') return false;
-        if (clientStatusFilter === 'accepted' && status !== 'accepted' && status !== 'approved') return false;
-        if (clientStatusFilter === 'refused' && status !== 'refused' && status !== 'rejected') return false;
+        if (clientStatusFilter === 'in-progress' && statusValue !== 'pending' && statusValue !== 'in-progress') return false;
+        if (clientStatusFilter === 'accepted' && statusValue !== 'accepted' && statusValue !== 'approved') return false;
+        if (clientStatusFilter === 'refused' && statusValue !== 'refused' && statusValue !== 'rejected') return false;
       }
       return true;
     });
@@ -2303,11 +2343,21 @@ const AdministrativeDashboard = () => {
         <div className="sa-section-header">
           <div>
             <h3>New Client</h3>
-            <p>List of new tenants received - Add new client (individual or company)</p>
+            <p>List of new client applications - upload documents and approve for onboarding</p>
           </div>
           <button 
             className="sa-primary-cta" 
             onClick={() => {
+              setNewClientForm({
+                type: 'individual',
+                name: '',
+                email: '',
+                phone: '',
+                companyName: '',
+                address: '',
+                registrationNumber: '',
+                contactPerson: ''
+              });
               setClientDocForm({
                 clientId: '',
                 property: '',
@@ -2421,7 +2471,26 @@ const AdministrativeDashboard = () => {
                       >
                         👁️
                       </button>
-                      <button className="sa-icon-button" title="Edit" onClick={(e) => e.stopPropagation()}>✏️</button>
+                      <button
+                        className="sa-icon-button"
+                        title="Approve Client"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleClientStatusUpdate(client.ID || client.id, 'Approved');
+                        }}
+                      >
+                        ✅
+                      </button>
+                      <button
+                        className="sa-icon-button"
+                        title="Reject Client"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleClientStatusUpdate(client.ID || client.id, 'Rejected');
+                        }}
+                      >
+                        ❌
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -2482,6 +2551,25 @@ const AdministrativeDashboard = () => {
     window.location.href = '/';
   };
 
+  const handleLeaseTenantChange = (tenantId) => {
+    const selected = clients.find(client => String(client.ID || client.id) === String(tenantId));
+    if (!selected) {
+      setLeaseForm({ tenantId: '', property: '', rent: '' });
+      return;
+    }
+    const propertyLabel = selected.Property || selected.property || '';
+    const propertyMatch = properties.find(property => {
+      const label = property.Address || property.address || property.name || property.Name || '';
+      return label === propertyLabel;
+    });
+    const rentValue = selected.Amount || selected.amount || propertyMatch?.Rent || propertyMatch?.rent || '';
+    setLeaseForm({
+      tenantId: String(tenantId),
+      property: propertyLabel,
+      rent: rentValue ? String(rentValue) : ''
+    });
+  };
+
   return (
     <>
       <RoleLayout
@@ -2500,7 +2588,10 @@ const AdministrativeDashboard = () => {
 
       <Modal
         isOpen={showLeaseModal}
-        onClose={() => setShowLeaseModal(false)}
+        onClose={() => {
+          setShowLeaseModal(false);
+          setLeaseForm({ tenantId: '', property: '', rent: '' });
+        }}
         title="Create Lease Agreement"
         size="md"
       >
@@ -2510,15 +2601,20 @@ const AdministrativeDashboard = () => {
             e.preventDefault();
             try {
               const formData = new FormData(e.target);
+              const selectedTenant = clients.find(client => String(client.ID || client.id) === String(leaseForm.tenantId));
+              if (!selectedTenant) {
+                addNotification('Please select a tenant.', 'error');
+                return;
+              }
               const newLease = {
                 contractTitle: formData.get('contractTitle') || undefined,
-                tenant: formData.get('tenant'),
-                property: formData.get('property'),
+                tenant: selectedTenant.name || selectedTenant.Name || selectedTenant.email || selectedTenant.Email,
+                property: leaseForm.property || formData.get('property'),
                 landlord: formData.get('landlord'),
                 leaseType: formData.get('leaseType'),
                 startDate: formData.get('start'),
                 endDate: formData.get('end'),
-                rent: parseFloat(formData.get('rent')),
+                rent: parseFloat(leaseForm.rent || formData.get('rent')),
                 status: formData.get('leaseStatus') || 'Created'
               };
               const created = await adminService.createLease(newLease);
@@ -2555,14 +2651,17 @@ const AdministrativeDashboard = () => {
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="lease-tenant">Tenant *</label>
-              <select id="lease-tenant" name="tenant" required>
+              <select
+                id="lease-tenant"
+                name="tenant"
+                required
+                value={leaseForm.tenantId}
+                onChange={(e) => handleLeaseTenantChange(e.target.value)}
+              >
                 <option value="">Select Tenant from Database</option>
-                {clients.filter(c => {
-                  const status = (c.status || c.Status || c.ApplicationStatus || c.applicationStatus || '').toLowerCase();
-                  return status === 'accepted' || status === 'approved' || status === 'active';
-                }).map(client => (
-                  <option key={client.ID || client.id} value={client.name || client.Name || client.email || client.Email}>
-                    {client.name || client.Name || client.email || client.Email} {client.property ? `- ${client.property || client.Property}` : ''}
+                {clients.map(client => (
+                  <option key={client.ID || client.id} value={client.ID || client.id}>
+                    {client.name || client.Name || client.email || client.Email} {client.property || client.Property ? `- ${client.property || client.Property}` : ''}
                   </option>
                 ))}
               </select>
@@ -2589,8 +2688,20 @@ const AdministrativeDashboard = () => {
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="lease-property">Property</label>
-              <select id="lease-property" name="property" required>
+              <select
+                id="lease-property"
+                name="property"
+                required
+                value={leaseForm.property}
+                onChange={(e) => setLeaseForm(prev => ({ ...prev, property: e.target.value }))}
+              >
                 <option value="">Select property</option>
+                {leaseForm.property && !properties.some(property => {
+                  const label = property.Address || property.address || property.name || property.Name || '';
+                  return label === leaseForm.property;
+                }) && (
+                  <option value={leaseForm.property}>{leaseForm.property}</option>
+                )}
                 {properties.map(property => {
                   const id = property.ID || property.id;
                   const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
@@ -2607,7 +2718,17 @@ const AdministrativeDashboard = () => {
             </div>
             <div className="form-group">
               <label htmlFor="lease-rent">Monthly Rent</label>
-              <input type="number" id="lease-rent" name="rent" min="0" step="0.01" placeholder="0.00 XOF" required />
+              <input
+                type="number"
+                id="lease-rent"
+                name="rent"
+                min="0"
+                step="0.01"
+                placeholder="0.00 XOF"
+                required
+                value={leaseForm.rent}
+                onChange={(e) => setLeaseForm(prev => ({ ...prev, rent: e.target.value }))}
+              />
             </div>
           </div>
           <div className="form-row">
@@ -2696,6 +2817,16 @@ const AdministrativeDashboard = () => {
         isOpen={showNewClientModal}
         onClose={() => {
           setShowNewClientModal(false);
+          setNewClientForm({
+            type: 'individual',
+            name: '',
+            email: '',
+            phone: '',
+            companyName: '',
+            address: '',
+            registrationNumber: '',
+            contactPerson: ''
+          });
           setClientDocForm({
             clientId: '',
             property: '',
@@ -2716,16 +2847,27 @@ const AdministrativeDashboard = () => {
             e.preventDefault();
             try {
               setLoading(true);
-              if (!selectedClient) {
-                addNotification('Please select a tenant before uploading documents.', 'error');
-                return;
+              let client = selectedClient;
+              if (!client) {
+                if (!newClientForm.email || !newClientForm.phone || (newClientForm.type === 'individual' && !newClientForm.name)) {
+                  addNotification('Please fill in all required client details.', 'error');
+                  return;
+                }
+                if (newClientForm.type === 'company' && (!newClientForm.companyName || !newClientForm.registrationNumber || !newClientForm.contactPerson)) {
+                  addNotification('Please fill in all required company details.', 'error');
+                  return;
+                }
+
+                const createdClient = await adminService.createNewClient(newClientForm);
+                client = createdClient;
+                setClientDocForm(prev => ({ ...prev, clientId: String(createdClient.ID || createdClient.id) }));
               }
               if (!clientDocForm.property) {
                 addNotification('Please select the property the client is interested in.', 'error');
                 return;
               }
 
-              const clientType = (selectedClient.type || selectedClient.Type || 'individual').toLowerCase();
+              const clientType = (client.type || client.Type || 'individual').toLowerCase();
               const requiredDocs = clientType === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS;
               const missingDocs = requiredDocs.filter(doc => !clientDocFiles[doc.key]);
               if (missingDocs.length > 0) {
@@ -2733,7 +2875,7 @@ const AdministrativeDashboard = () => {
                 return;
               }
 
-              const tenantName = selectedClient.name || selectedClient.Name || selectedClient.email || selectedClient.Email || 'Unknown Tenant';
+              const tenantName = client.name || client.Name || client.email || client.Email || 'Unknown Tenant';
 
               for (const doc of requiredDocs) {
                 await adminService.uploadClientDocument({
@@ -2745,7 +2887,7 @@ const AdministrativeDashboard = () => {
               }
 
               await adminService.saveClientDocumentChecklist({
-                clientId: selectedClient.ID || selectedClient.id,
+                clientId: client.ID || client.id,
                 tenant: tenantName,
                 property: clientDocForm.property,
                 applicationFees: clientDocForm.applicationFees,
@@ -2776,6 +2918,107 @@ const AdministrativeDashboard = () => {
             }
           }}
         >
+          {!selectedClient && (
+            <div style={{ marginBottom: '16px' }}>
+              <h4 style={{ margin: '0 0 12px 0' }}>New Client Details</h4>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Client Type *</label>
+                  <select
+                    value={newClientForm.type}
+                    onChange={(e) => setNewClientForm(prev => ({ ...prev, type: e.target.value }))}
+                    required
+                  >
+                    <option value="individual">Individual</option>
+                    <option value="company">Company</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Email *</label>
+                  <input
+                    type="email"
+                    value={newClientForm.email}
+                    onChange={(e) => setNewClientForm(prev => ({ ...prev, email: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              {newClientForm.type === 'individual' ? (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Full Name *</label>
+                    <input
+                      type="text"
+                      value={newClientForm.name}
+                      onChange={(e) => setNewClientForm(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone *</label>
+                    <input
+                      type="text"
+                      value={newClientForm.phone}
+                      onChange={(e) => setNewClientForm(prev => ({ ...prev, phone: e.target.value }))}
+                      required
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Company Name *</label>
+                      <input
+                        type="text"
+                        value={newClientForm.companyName}
+                        onChange={(e) => setNewClientForm(prev => ({ ...prev, companyName: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Registration Number *</label>
+                      <input
+                        type="text"
+                        value={newClientForm.registrationNumber}
+                        onChange={(e) => setNewClientForm(prev => ({ ...prev, registrationNumber: e.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Contact Person *</label>
+                      <input
+                        type="text"
+                        value={newClientForm.contactPerson}
+                        onChange={(e) => setNewClientForm(prev => ({ ...prev, contactPerson: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Phone *</label>
+                      <input
+                        type="text"
+                        value={newClientForm.phone}
+                        onChange={(e) => setNewClientForm(prev => ({ ...prev, phone: e.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Company Address</label>
+                    <input
+                      type="text"
+                      value={newClientForm.address}
+                      onChange={(e) => setNewClientForm(prev => ({ ...prev, address: e.target.value }))}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <div className="form-group">
             <label>Selected Client</label>
             <div className="sa-cell-main" style={{ padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
