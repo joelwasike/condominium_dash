@@ -3090,30 +3090,28 @@ const AdministrativeDashboard = () => {
             </div>
           </div>
 
-          {selectedClient && (
-            <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
-              <h4 style={{ margin: '0 0 8px 0' }}>
-                Parts to Supply ({(selectedClient.type || selectedClient.Type || 'Individual').toLowerCase()})
-              </h4>
-              {( (selectedClient.type || selectedClient.Type || 'individual').toLowerCase() === 'company'
-                ? COMPANY_DOCUMENTS
-                : INDIVIDUAL_DOCUMENTS
-              ).map((doc) => (
-                <div key={doc.key} className="form-group">
-                  <label>{doc.label} *</label>
-                  <input
-                    type="file"
-                    accept=".pdf,image/*"
-                    required
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      setClientDocFiles(prev => ({ ...prev, [doc.key]: file }));
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+            <h4 style={{ margin: '0 0 8px 0' }}>
+              Parts to Supply ({((selectedClient?.type || selectedClient?.Type || newClientForm.type || 'individual')).toLowerCase()})
+            </h4>
+            {(((selectedClient?.type || selectedClient?.Type || newClientForm.type || 'individual').toLowerCase() === 'company')
+              ? COMPANY_DOCUMENTS
+              : INDIVIDUAL_DOCUMENTS
+            ).map((doc) => (
+              <div key={doc.key} className="form-group">
+                <label>{doc.label} *</label>
+                <input
+                  type="file"
+                  accept=".pdf,image/*"
+                  required
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    setClientDocFiles(prev => ({ ...prev, [doc.key]: file }));
+                  }}
+                />
+              </div>
+            ))}
+          </div>
 
           <div className="modal-footer">
             <button
