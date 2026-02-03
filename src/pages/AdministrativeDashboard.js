@@ -101,7 +101,7 @@ const AdministrativeDashboard = () => {
   const [clientDocForm, setClientDocForm] = useState({
     clientId: '',
     property: '',
-    applicationFees: false,
+    applicationFees: true,
     transferOrResubscription: false,
     sodeci: false,
     cie10: false,
@@ -152,7 +152,7 @@ const AdministrativeDashboard = () => {
     setClientDocForm({
       clientId: String(clientId),
       property: '',
-      applicationFees: false,
+      applicationFees: true,
       transferOrResubscription: false,
       sodeci: false,
       cie10: false,
@@ -2361,7 +2361,7 @@ const AdministrativeDashboard = () => {
               setClientDocForm({
                 clientId: '',
                 property: '',
-                applicationFees: false,
+                applicationFees: true,
                 transferOrResubscription: false,
                 sodeci: false,
                 cie10: false,
@@ -2372,7 +2372,7 @@ const AdministrativeDashboard = () => {
             }}
           >
             <Plus size={18} />
-            Upload Client Documents
+            Create New Client
           </button>
         </div>
 
@@ -2830,7 +2830,7 @@ const AdministrativeDashboard = () => {
           setClientDocForm({
             clientId: '',
             property: '',
-            applicationFees: false,
+            applicationFees: true,
             transferOrResubscription: false,
             sodeci: false,
             cie10: false,
@@ -2838,7 +2838,7 @@ const AdministrativeDashboard = () => {
           });
           setClientDocFiles({});
         }}
-        title="Upload Client Documents"
+        title="Create New Client"
         size="md"
       >
         <form
@@ -2902,7 +2902,7 @@ const AdministrativeDashboard = () => {
               setClientDocForm({
                 clientId: '',
                 property: '',
-                applicationFees: false,
+                applicationFees: true,
                 transferOrResubscription: false,
                 sodeci: false,
                 cie10: false,
@@ -3019,22 +3019,6 @@ const AdministrativeDashboard = () => {
               )}
             </div>
           )}
-          <div className="form-group">
-            <label>Selected Client</label>
-            <div className="sa-cell-main" style={{ padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-              <span className="sa-cell-title">
-                {selectedClient
-                  ? (selectedClient.name || selectedClient.Name || selectedClient.email || selectedClient.Email || 'Unnamed')
-                  : 'No client selected'}
-              </span>
-              {selectedClient && (
-                <span className="sa-cell-sub">
-                  {(selectedClient.type || selectedClient.Type || 'individual').toLowerCase()}
-                </span>
-              )}
-            </div>
-          </div>
-
         <div className="form-group">
             <label htmlFor="client-property">Select the house who he will interest for *</label>
             <select
@@ -3066,7 +3050,8 @@ const AdministrativeDashboard = () => {
                 <input
                   type="checkbox"
                   checked={clientDocForm.applicationFees}
-                  onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFees: e.target.checked })}
+                  readOnly
+                  disabled
                 />
                 Application fees (37,000 FCFA - obligation to pay)
               </label>
@@ -3139,7 +3124,7 @@ const AdministrativeDashboard = () => {
                 setClientDocForm({
                   clientId: '',
                   property: '',
-                  applicationFees: false,
+                applicationFees: true,
                   transferOrResubscription: false,
                   sodeci: false,
                   cie10: false,
