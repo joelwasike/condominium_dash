@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserCircle, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { Settings, LogOut, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { t, getLanguage } from '../utils/i18n';
 import './ProfileDropdown.css';
@@ -54,6 +54,19 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
   const userRole = userProfile?.role || '';
   const profilePicture = userProfile?.profilePictureURL || userProfile?.ProfilePictureURL;
 
+  // Initials from name: "John Doe" -> "JD", "Mary Jane" -> "MJ", "John" -> "J"
+  const getInitials = (name) => {
+    if (!name || typeof name !== 'string') return 'U';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+    if (parts[0].length >= 2) return parts[0].slice(0, 2).toUpperCase();
+    return parts[0].charAt(0).toUpperCase() || 'U';
+  };
+
+  const initials = getInitials(userName);
+
   return (
     <div className="profile-dropdown-wrapper" ref={dropdownRef}>
       <button
@@ -68,7 +81,9 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
             className="profile-avatar-image"
           />
         ) : (
-          <UserCircle size={28} />
+          <span className="profile-avatar-initials" aria-hidden="true">
+            {initials}
+          </span>
         )}
         <ChevronDown size={16} className="dropdown-chevron" />
       </button>
@@ -85,7 +100,7 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
                 />
               ) : (
                 <div className="profile-avatar-placeholder">
-                  {userName.charAt(0).toUpperCase()}
+                  {initials}
                 </div>
               )}
               <div className="profile-details-text">
