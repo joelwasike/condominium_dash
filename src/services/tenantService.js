@@ -90,6 +90,9 @@ export const tenantService = {
     formData.append('terminationDate', terminationData.terminationDate || '');
     formData.append('comments', terminationData.comments || '');
     formData.append('securityDepositRefundMethod', terminationData.securityDepositRefundMethod || '');
+    if (terminationData.securityDepositRefundMethod === 'Mobile Money' && terminationData.mobileMoneyNumber) {
+      formData.append('mobileMoneyNumber', terminationData.mobileMoneyNumber);
+    }
     formData.append('inventoryCheckDate', terminationData.inventoryCheckDate || '');
     if (terminationData.terminationLetter) {
       formData.append('terminationLetter', terminationData.terminationLetter);

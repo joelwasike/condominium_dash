@@ -365,6 +365,16 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
+  approveLeaseAgreement: async (leaseId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/leases/${leaseId}/approve`, {
+      method: 'POST',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to approve lease');
+    return parseJson(response);
+  },
+
   approveExpense: async (expenseId) => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/expenses/${expenseId}/approve`, {

@@ -61,6 +61,9 @@ const AdministrativeDashboard = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectingDocId, setRejectingDocId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [showEditClientModal, setShowEditClientModal] = useState(false);
+  const [editingClient, setEditingClient] = useState(null);
+  const [editClientForm, setEditClientForm] = useState({ securityDepositPaid: false });
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   
@@ -112,6 +115,8 @@ const AdministrativeDashboard = () => {
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [selectedChecklist, setSelectedChecklist] = useState(null);
   const [checklistClient, setChecklistClient] = useState(null);
+  const [checklistDocuments, setChecklistDocuments] = useState([]);
+  const [checklistDocsLoading, setChecklistDocsLoading] = useState(false);
   const [clientStatusFilter, setClientStatusFilter] = useState(''); // 'in-progress', 'accepted', 'refused'
   const [clientSearchText, setClientSearchText] = useState('');
   const [leaseSearchText, setLeaseSearchText] = useState('');
@@ -175,6 +180,34 @@ const AdministrativeDashboard = () => {
       setLoading(false);
     }
   };
+
+  const openEditClient = (client) => {
+    setEditingClient(client);
+    setEditClientForm({
+      securityDepositPaid: Boolean(client.SecurityDepositPaid || client.securityDepositPaid),
+    });
+    setShowEditClientModal(true);
+  };
+
+  const handleEditClientSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingClient) return;
+    try {
+      setLoading(true);
+      await adminService.updateClientApplication(editingClient.ID || editingClient.id, {
+        securityDepositPaid: editClientForm.securityDepositPaid,
+      });
+      addNotification('Client updated', 'success');
+      setShowEditClientModal(false);
+      setEditingClient(null);
+      loadData();
+    } catch (error) {
+      console.error('Error updating client:', error);
+      addNotification(error.message || 'Failed to update client', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Filter states
   const [documentStatusFilter, setDocumentStatusFilter] = useState('');
@@ -185,7 +218,8 @@ const AdministrativeDashboard = () => {
   const [leaseForm, setLeaseForm] = useState({
     tenantId: '',
     property: '',
-    rent: ''
+    rent: '',
+    landlord: ''
   });
 
   // Messaging states
@@ -510,8 +544,7 @@ const AdministrativeDashboard = () => {
     if (activeTab === 'leases') {
       const loadLeases = async () => {
         try {
-          const status = leaseTab === 'active' ? 'Active' : leaseTab === 'pending' ? 'Pending' : 'Expired';
-          const leasesData = await adminService.getLeases({ status });
+          const leasesData = await adminService.getLeases();
           setLeases(Array.isArray(leasesData) ? leasesData : []);
         } catch (error) {
           console.error('Error loading leases:', error);
@@ -1310,8 +1343,26 @@ const AdministrativeDashboard = () => {
       
       // Status filter
       const status = (lease.status || lease.Status || 'Active').toLowerCase();
-      if (leaseTab === 'active' || leaseTab === 'valid') return status === 'active' || status === 'valid' || status === 'completed';
-      if (leaseTab === 'pending' || leaseTab === 'in-progress') return status === 'pending' || status === 'in-progress' || status === 'draft';
+      if (leaseTab === 'active' || leaseTab === 'valid') {
+        return (
+          status === 'active' ||
+          status === 'valid' ||
+          status === 'completed' ||
+          status === 'approved' ||
+          status === 'validated'
+        );
+      }
+      if (leaseTab === 'pending' || leaseTab === 'in-progress') {
+        return (
+          status === 'pending' ||
+          status === 'in-progress' ||
+          status === 'draft' ||
+          status === 'created' ||
+          status === 'pending management signature' ||
+          status === 'pending owner signature' ||
+          status === 'pending signature'
+        );
+      }
       if (leaseTab === 'expired') return status === 'expired';
       return true;
     });
@@ -1795,16 +1846,25 @@ const AdministrativeDashboard = () => {
     try {
       setChecklistClient(client);
       setChecklistLoading(true);
+      setChecklistDocsLoading(true);
+      setChecklistDocuments([]);
       const checklist = await adminService.getClientDocumentChecklist(clientId);
       setSelectedChecklist(checklist || null);
+      const tenantName = client.name || client.Name || client.email || client.Email || '';
+      if (tenantName) {
+        const docs = await adminService.getDocuments({ tenant: tenantName }).catch(() => []);
+        setChecklistDocuments(Array.isArray(docs) ? docs : []);
+      }
       setShowChecklistModal(true);
     } catch (error) {
       console.error('Error loading checklist:', error);
       addNotification('No checklist found for this client', 'info');
       setSelectedChecklist(null);
+      setChecklistDocuments([]);
       setShowChecklistModal(true);
     } finally {
       setChecklistLoading(false);
+      setChecklistDocsLoading(false);
     }
   };
 
@@ -2406,6 +2466,7 @@ const AdministrativeDashboard = () => {
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Registration Date</th>
+                <th>Security Deposit</th>
                 <th>Status</th>
                 <th />
               </tr>
@@ -2413,7 +2474,7 @@ const AdministrativeDashboard = () => {
             <tbody>
               {filteredClients.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="sa-table-empty">
+                  <td colSpan={9} className="sa-table-empty">
                     No new clients found
                   </td>
                 </tr>
@@ -2445,6 +2506,7 @@ const AdministrativeDashboard = () => {
                         ? new Date(client.registrationDate || client.RegistrationDate || client.createdAt || client.CreatedAt).toLocaleDateString()
                         : 'N/A'}
                     </td>
+                    <td>{(client.SecurityDepositPaid || client.securityDepositPaid) ? 'Paid' : 'Not Paid'}</td>
                     <td>
                       <span className={`sa-status-pill ${(client.status || client.Status || client.ApplicationStatus || client.applicationStatus || 'in-progress').toLowerCase()}`}>
                         {client.status || client.Status || client.ApplicationStatus || client.applicationStatus || 'In Progress'}
@@ -2480,6 +2542,16 @@ const AdministrativeDashboard = () => {
                         }}
                       >
                         ✅
+                      </button>
+                      <button
+                        className="sa-icon-button"
+                        title="Edit Client"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditClient(client);
+                        }}
+                      >
+                        ✏️
                       </button>
                       <button
                         className="sa-icon-button"
@@ -2554,7 +2626,7 @@ const AdministrativeDashboard = () => {
   const handleLeaseTenantChange = (tenantId) => {
     const selected = clients.find(client => String(client.ID || client.id) === String(tenantId));
     if (!selected) {
-      setLeaseForm({ tenantId: '', property: '', rent: '' });
+      setLeaseForm({ tenantId: '', property: '', rent: '', landlord: '' });
       return;
     }
     const propertyLabel = selected.Property || selected.property || '';
@@ -2563,10 +2635,17 @@ const AdministrativeDashboard = () => {
       return label === propertyLabel;
     });
     const rentValue = selected.Amount || selected.amount || propertyMatch?.Rent || propertyMatch?.rent || '';
+    const landlordValue =
+      propertyMatch?.Landlord ||
+      propertyMatch?.landlord ||
+      propertyMatch?.LandlordName ||
+      propertyMatch?.landlordName ||
+      '';
     setLeaseForm({
       tenantId: String(tenantId),
       property: propertyLabel,
-      rent: rentValue ? String(rentValue) : ''
+      rent: rentValue ? String(rentValue) : '',
+      landlord: landlordValue
     });
   };
 
@@ -2590,7 +2669,7 @@ const AdministrativeDashboard = () => {
         isOpen={showLeaseModal}
         onClose={() => {
           setShowLeaseModal(false);
-          setLeaseForm({ tenantId: '', property: '', rent: '' });
+          setLeaseForm({ tenantId: '', property: '', rent: '', landlord: '' });
         }}
         title="Create Lease Agreement"
         size="md"
@@ -2606,16 +2685,31 @@ const AdministrativeDashboard = () => {
                 addNotification('Please select a tenant.', 'error');
                 return;
               }
+              const tenantName = selectedTenant.name || selectedTenant.Name || selectedTenant.email || selectedTenant.Email;
+              const selectedPropertyLabel = leaseForm.property || formData.get('property');
+              const propertyMatch = properties.find(property => {
+                const label = property.Address || property.address || property.name || property.Name || '';
+                return label === selectedPropertyLabel;
+              });
+              const selectedLandlordName = leaseForm.landlord || formData.get('landlord');
+              const landlordMatch = landlords.find(landlord => {
+                const name = landlord.Name || landlord.name || landlord.Email || landlord.email || '';
+                return name === selectedLandlordName;
+              });
+
               const newLease = {
                 contractTitle: formData.get('contractTitle') || undefined,
-                tenant: selectedTenant.name || selectedTenant.Name || selectedTenant.email || selectedTenant.Email,
-                property: leaseForm.property || formData.get('property'),
-                landlord: formData.get('landlord'),
+                tenant: tenantName,
+                tenantId: selectedTenant.ID || selectedTenant.id,
+                property: selectedPropertyLabel,
+                propertyId: propertyMatch?.ID || propertyMatch?.id,
+                landlord: selectedLandlordName,
+                landlordId: landlordMatch?.ID || landlordMatch?.id,
                 leaseType: formData.get('leaseType'),
                 startDate: formData.get('start'),
                 endDate: formData.get('end'),
                 rent: parseFloat(leaseForm.rent || formData.get('rent')),
-                status: formData.get('leaseStatus') || 'Created'
+                status: formData.get('leaseStatus') || 'Pending Management Signature'
               };
               const created = await adminService.createLease(newLease);
               const leaseId = created?.id || created?.ID;
@@ -2625,6 +2719,7 @@ const AdministrativeDashboard = () => {
                 await adminService.uploadLeaseDocument(leaseId, leaseFile);
               }
               addNotification('Lease created successfully', 'success');
+              setLeaseTab('in-progress');
               setShowLeaseModal(false);
               loadData();
             } catch (error) {
@@ -2668,8 +2763,20 @@ const AdministrativeDashboard = () => {
             </div>
             <div className="form-group">
               <label htmlFor="lease-landlord">Landlord</label>
-              <select id="lease-landlord" name="landlord" required>
+              <select
+                id="lease-landlord"
+                name="landlord"
+                required
+                value={leaseForm.landlord}
+                onChange={(e) => setLeaseForm(prev => ({ ...prev, landlord: e.target.value }))}
+              >
                 <option value="">Select landlord</option>
+                {leaseForm.landlord && !landlords.some(landlord => {
+                  const name = landlord.Name || landlord.name || landlord.Email || landlord.email || '';
+                  return name === leaseForm.landlord;
+                }) && (
+                  <option value={leaseForm.landlord}>{leaseForm.landlord}</option>
+                )}
                 {landlords.map(landlord => {
                   const id = landlord.ID || landlord.id;
                   const name = landlord.Name || landlord.name || landlord.Email || landlord.email || `Landlord ${id}`;
@@ -2693,7 +2800,24 @@ const AdministrativeDashboard = () => {
                 name="property"
                 required
                 value={leaseForm.property}
-                onChange={(e) => setLeaseForm(prev => ({ ...prev, property: e.target.value }))}
+                onChange={(e) => {
+                  const selectedProperty = e.target.value;
+                  const propertyMatch = properties.find(property => {
+                    const label = property.Address || property.address || property.name || property.Name || '';
+                    return label === selectedProperty;
+                  });
+                  const landlordValue =
+                    propertyMatch?.Landlord ||
+                    propertyMatch?.landlord ||
+                    propertyMatch?.LandlordName ||
+                    propertyMatch?.landlordName ||
+                    '';
+                  setLeaseForm(prev => ({
+                    ...prev,
+                    property: selectedProperty,
+                    landlord: landlordValue || prev.landlord
+                  }));
+                }}
               >
                 <option value="">Select property</option>
                 {leaseForm.property && !properties.some(property => {
@@ -2734,9 +2858,9 @@ const AdministrativeDashboard = () => {
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="lease-status">Lease Status</label>
-              <select id="lease-status" name="leaseStatus" required>
-                <option value="Created">Lease contract being created</option>
+              <select id="lease-status" name="leaseStatus" defaultValue="Pending Management Signature" required>
                 <option value="Pending Management Signature">Lease contract pending signature by management</option>
+                <option value="Created">Lease contract being created</option>
                 <option value="Pending Owner Signature">Pending signature by owner</option>
                 <option value="Active">Active lease contract</option>
               </select>
@@ -3045,49 +3169,49 @@ const AdministrativeDashboard = () => {
 
         <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
           <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
-                <input
-                  type="checkbox"
-                  checked={clientDocForm.applicationFees}
-                  readOnly
-                  disabled
-                />
-                Application fees (37,000 FCFA - obligation to pay)
-              </label>
-            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
-                <input
-                  type="checkbox"
-                  checked={clientDocForm.transferOrResubscription}
-                  onChange={(e) => setClientDocForm({ ...clientDocForm, transferOrResubscription: e.target.checked })}
-                />
-                Transfer or Re-subscription (optional)
-              </label>
-            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
-                <input
-                  type="checkbox"
-                  checked={clientDocForm.sodeci}
-                  onChange={(e) => setClientDocForm({ ...clientDocForm, sodeci: e.target.checked })}
-                />
-                SODECI: 35,000 FCFA
-              </label>
-            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
-                <input
-                  type="checkbox"
-                  checked={clientDocForm.cie10}
-                  onChange={(e) => setClientDocForm({ ...clientDocForm, cie10: e.target.checked })}
-                />
-                CIE: 10A 37 375 FCFA
-              </label>
-            <label style={{ display: 'grid', gridTemplateColumns: '24px 1fr', alignItems: 'center', columnGap: '12px' }}>
-                <input
-                  type="checkbox"
-                  checked={clientDocForm.cie15}
-                  onChange={(e) => setClientDocForm({ ...clientDocForm, cie15: e.target.checked })}
-                />
-                CIE: 15A + 60 420 FCFA
-              </label>
-            </div>
+          <div className="application-fees-list">
+            <label className="application-fee-item">
+              <input
+                type="checkbox"
+                checked={clientDocForm.applicationFees}
+                readOnly
+                disabled
+              />
+              <span>Application fees (37,000 FCFA - obligation to pay)</span>
+            </label>
+            <label className="application-fee-item">
+              <input
+                type="checkbox"
+                checked={clientDocForm.transferOrResubscription}
+                onChange={(e) => setClientDocForm({ ...clientDocForm, transferOrResubscription: e.target.checked })}
+              />
+              <span>Transfer or Re-subscription (optional)</span>
+            </label>
+            <label className="application-fee-item">
+              <input
+                type="checkbox"
+                checked={clientDocForm.sodeci}
+                onChange={(e) => setClientDocForm({ ...clientDocForm, sodeci: e.target.checked })}
+              />
+              <span>SODECI: 35,000 FCFA</span>
+            </label>
+            <label className="application-fee-item">
+              <input
+                type="checkbox"
+                checked={clientDocForm.cie10}
+                onChange={(e) => setClientDocForm({ ...clientDocForm, cie10: e.target.checked })}
+              />
+              <span>CIE: 10A 37 375 FCFA</span>
+            </label>
+            <label className="application-fee-item">
+              <input
+                type="checkbox"
+                checked={clientDocForm.cie15}
+                onChange={(e) => setClientDocForm({ ...clientDocForm, cie15: e.target.checked })}
+              />
+              <span>CIE: 15A + 60 420 FCFA</span>
+            </label>
+          </div>
           </div>
 
           <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
@@ -3147,6 +3271,7 @@ const AdministrativeDashboard = () => {
           setShowChecklistModal(false);
           setSelectedChecklist(null);
           setChecklistClient(null);
+          setChecklistDocuments([]);
         }}
         title="Client Checklist"
         size="sm"
@@ -3171,7 +3296,69 @@ const AdministrativeDashboard = () => {
           ) : (
             <div>No checklist found for this client.</div>
           )}
+          <div style={{ marginTop: '16px' }}>
+            <strong>Documents:</strong>
+            {checklistDocsLoading ? (
+              <div style={{ marginTop: '8px' }}>Loading documents...</div>
+            ) : checklistDocuments.length === 0 ? (
+              <div style={{ marginTop: '8px' }}>No documents found.</div>
+            ) : (
+              <div style={{ display: 'grid', gap: '8px', marginTop: '8px' }}>
+                {checklistDocuments.map(doc => (
+                  <div key={doc.ID || doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{doc.Type || doc.type || 'Document'}</span>
+                    <a
+                      href={doc.URL || doc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="sa-link"
+                    >
+                      View/Download
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={showEditClientModal}
+        onClose={() => {
+          setShowEditClientModal(false);
+          setEditingClient(null);
+        }}
+        title="Edit Client"
+        size="sm"
+      >
+        <form className="modal-form" onSubmit={handleEditClientSubmit}>
+          <div className="form-group">
+            <label>Security Deposit Paid</label>
+            <select
+              value={editClientForm.securityDepositPaid ? 'yes' : 'no'}
+              onChange={(e) => setEditClientForm({ securityDepositPaid: e.target.value === 'yes' })}
+            >
+              <option value="no">Not Paid</option>
+              <option value="yes">Paid</option>
+            </select>
+          </div>
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="action-button secondary"
+              onClick={() => {
+                setShowEditClientModal(false);
+                setEditingClient(null);
+              }}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="action-button primary" disabled={loading}>
+              {loading ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </form>
       </Modal>
 
       <div className="notifications-container">

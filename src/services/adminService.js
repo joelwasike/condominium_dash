@@ -209,6 +209,15 @@ export const adminService = {
     });
   },
 
+  updateLeaseStatus: async (leaseId, status) => {
+    const url = buildApiUrl(`/api/admin/leases/${leaseId}/status`);
+    return await apiRequest(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+  },
+
   uploadLeaseDocument: async (leaseId, file) => {
     const url = buildApiUrl(`/api/admin/leases/${leaseId}/document`);
     const formData = new FormData();
@@ -332,6 +341,15 @@ export const adminService = {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
+    });
+  },
+
+  updateClientApplication: async (id, payload) => {
+    const url = buildApiUrl(`/api/admin/new-clients/${id}`);
+    return await apiRequest(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
   },
 

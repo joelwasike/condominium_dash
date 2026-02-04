@@ -49,6 +49,17 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Approved client documents (uploaded by administrative agent)
+  getApprovedClientDocuments: async (clientId) => {
+    const url = buildApiUrl(`/api/salesmanager/approved-clients/${clientId}/documents`);
+    return await apiRequest(url);
+  },
+
+  getApprovedClientChecklist: async (clientId) => {
+    const url = buildApiUrl(`/api/salesmanager/approved-clients/${clientId}/checklist`);
+    return await apiRequest(url);
+  },
+
   // Get waiting list clients
   getWaitingListClients: async () => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/waiting-list`);

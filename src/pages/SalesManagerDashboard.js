@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -134,6 +134,9 @@ const SalesManagerDashboard = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState(null); // { type: 'single' | 'bulk', user: {...} | users: [...] }
   const [selectedApprovedClientId, setSelectedApprovedClientId] = useState('');
+  const [approvedClientDocuments, setApprovedClientDocuments] = useState([]);
+  const [approvedClientChecklist, setApprovedClientChecklist] = useState(null);
+  const [loadingApprovedDocs, setLoadingApprovedDocs] = useState(false);
   
   // API Data States
   const [overviewData, setOverviewData] = useState(null);
@@ -153,6 +156,37 @@ const SalesManagerDashboard = () => {
     if (!selectedApprovedClientId) return null;
     return approvedClients.find(client => String(client.ID || client.id) === String(selectedApprovedClientId)) || null;
   }, [approvedClients, selectedApprovedClientId]);
+
+  const addMonths = useCallback((date, months) => {
+    const base = new Date(date);
+    const day = base.getDate();
+    base.setMonth(base.getMonth() + months);
+    if (base.getDate() < day) {
+      base.setDate(0);
+    }
+    return base;
+  }, []);
+
+  const approvedClientDepositInfo = useMemo(() => {
+    if (!selectedApprovedClient) return { paid: false, paidAt: null, maxMoveInDate: '' };
+    const paid = Boolean(
+      selectedApprovedClient.SecurityDepositPaid ||
+      selectedApprovedClient.securityDepositPaid
+    );
+    const paidAtRaw =
+      selectedApprovedClient.SecurityDepositPaidAt ||
+      selectedApprovedClient.securityDepositPaidAt ||
+      selectedApprovedClient.SecurityDepositDate ||
+      selectedApprovedClient.securityDepositDate ||
+      selectedApprovedClient.DepositPaidAt ||
+      selectedApprovedClient.depositPaidAt ||
+      selectedApprovedClient.DepositDate ||
+      selectedApprovedClient.depositDate ||
+      null;
+    const paidAt = paidAtRaw ? new Date(paidAtRaw) : null;
+    const maxMoveInDate = paidAt ? addMonths(paidAt, 1).toISOString().split('T')[0] : '';
+    return { paid, paidAt, maxMoveInDate };
+  }, [selectedApprovedClient, addMonths]);
 
   // Auto-slide carousel for advertisements on overview page
   useEffect(() => {
@@ -302,6 +336,33 @@ const SalesManagerDashboard = () => {
   useEffect(() => {
     loadData();
   }, [propertyStatusFilter, propertyTypeFilter, propertyUrgencyFilter, alertTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!selectedApprovedClientId) {
+      setApprovedClientDocuments([]);
+      setApprovedClientChecklist(null);
+      return;
+    }
+    const loadApprovedClientDocs = async () => {
+      try {
+        setLoadingApprovedDocs(true);
+        const [docs, checklist] = await Promise.all([
+          salesManagerService.getApprovedClientDocuments(selectedApprovedClientId).catch(() => []),
+          salesManagerService.getApprovedClientChecklist(selectedApprovedClientId).catch(() => null),
+        ]);
+        setApprovedClientDocuments(Array.isArray(docs) ? docs : []);
+        setApprovedClientChecklist(checklist || null);
+      } catch (error) {
+        console.error('Failed to load approved client documents:', error);
+        addNotification('Failed to load client documents', 'error');
+        setApprovedClientDocuments([]);
+        setApprovedClientChecklist(null);
+      } finally {
+        setLoadingApprovedDocs(false);
+      }
+    };
+    loadApprovedClientDocs();
+  }, [selectedApprovedClientId, addNotification]);
 
   // Load advertisements when advertisements or overview tab is active
   useEffect(() => {
@@ -675,6 +736,29 @@ const SalesManagerDashboard = () => {
     }
   };
 
+  const downloadCsvExample = () => {
+    const headers = ['Name', 'Property', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status'];
+    const exampleRow = [
+      'Jane Doe',
+      'Apartment 4B, 123 Main St',
+      'jane.doe@example.com',
+      '+2250700000000',
+      '150000',
+      '2026-02-01',
+      'Active'
+    ];
+    const csvContent = `${headers.join(',')}\n${exampleRow.join(',')}\n`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'tenants_import_example.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
   const handleExcelUpload = async () => {
     if (!excelFile) {
       addNotification('Please select a file first', 'error');
@@ -779,6 +863,32 @@ const SalesManagerDashboard = () => {
       addNotification('Selected approved client not found', 'error');
       return;
     }
+
+    const depositPaid = Boolean(
+      approvedClient.SecurityDepositPaid ||
+      approvedClient.securityDepositPaid
+    );
+    const depositPaidAtRaw =
+      approvedClient.SecurityDepositPaidAt ||
+      approvedClient.securityDepositPaidAt ||
+      approvedClient.SecurityDepositDate ||
+      approvedClient.securityDepositDate ||
+      approvedClient.DepositPaidAt ||
+      approvedClient.depositPaidAt ||
+      approvedClient.DepositDate ||
+      approvedClient.depositDate ||
+      null;
+    if (depositPaid && !depositPaidAtRaw) {
+      addNotification('Deposit paid date is missing. Please update it before setting move-in date.', 'error');
+      return;
+    }
+    if (depositPaid && depositPaidAtRaw) {
+      const maxMoveIn = addMonths(new Date(depositPaidAtRaw), 1).toISOString().split('T')[0];
+      if (moveInDate > maxMoveIn) {
+        addNotification('Move-in date must be within 1 month after the deposit was paid.', 'error');
+        return;
+      }
+    }
     
     const unitNumber = formData.get('unitNumber')?.trim();
     
@@ -791,6 +901,8 @@ const SalesManagerDashboard = () => {
       unitNumber: unitNumber || null,
       amount: parseFloat(rent),
       moveInDate: moveInDate,
+      adminDocumentIds: approvedClientDocuments.map(doc => doc.ID || doc.id).filter(Boolean),
+      adminChecklistId: approvedClientChecklist?.ID || approvedClientChecklist?.id || null,
     };
     
     try {
@@ -2814,6 +2926,15 @@ const SalesManagerDashboard = () => {
                         <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
                           Upload an Excel file (.xlsx, .xls) or CSV file (.csv) with tenant details. Required columns: Name, Property, Email, Phone, Amount, MoveInDate. Optional: Status (defaults to 'Active'). Date format: YYYY-MM-DD or DD/MM/YYYY
                         </p>
+                        <button
+                          type="button"
+                          className="action-button secondary"
+                          onClick={downloadCsvExample}
+                          style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+                        >
+                          <Download size={16} />
+                          Download CSV Example
+                        </button>
                       </div>
                       
                       <div className="file-upload-area" style={{
@@ -2945,6 +3066,33 @@ const SalesManagerDashboard = () => {
                         disabled
                       />
                     </div>
+                    <div className="form-group">
+                      <label>Security Deposit</label>
+                      <input
+                        type="text"
+                        value={
+                          selectedApprovedClient
+                            ? (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid')
+                            : ''
+                        }
+                        disabled
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Deposit Paid Date</label>
+                      <input
+                        type="text"
+                        value={
+                          approvedClientDepositInfo.paidAt
+                            ? new Date(approvedClientDepositInfo.paidAt).toLocaleDateString()
+                            : ''
+                        }
+                        disabled
+                      />
+                    </div>
                   </div>
 
                   <div className="form-row">
@@ -3010,8 +3158,75 @@ const SalesManagerDashboard = () => {
                     </div>
                     <div className="form-group">
                       <label htmlFor="moveInDate">Move-in Date</label>
-                      <input type="date" name="moveInDate" required />
+                      <input
+                        type="date"
+                        name="moveInDate"
+                        required
+                        max={approvedClientDepositInfo.paid ? approvedClientDepositInfo.maxMoveInDate || undefined : undefined}
+                      />
+                      {approvedClientDepositInfo.paid && approvedClientDepositInfo.maxMoveInDate && (
+                        <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                          Must be within 1 month after deposit payment ({approvedClientDepositInfo.maxMoveInDate}).
+                        </small>
+                      )}
                     </div>
+                  </div>
+
+                  <div className="document-upload-section" style={{ marginTop: '24px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
+                    <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600' }}>Administrative Agent Documents</h4>
+                    {loadingApprovedDocs ? (
+                      <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Loading documents...</div>
+                    ) : approvedClientDocuments.length === 0 ? (
+                      <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>No documents linked to this client yet.</div>
+                    ) : (
+                      <div className="uploaded-documents-list">
+                        {approvedClientDocuments.map((doc, index) => {
+                          const docUrl = doc.URL || doc.url;
+                          const fullUrl =
+                            docUrl && docUrl.startsWith('http')
+                              ? docUrl
+                              : docUrl
+                                ? `${API_CONFIG.BASE_URL}${docUrl}`
+                                : '';
+                          return (
+                            <div key={doc.ID || doc.id || index} className="document-item" style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px',
+                              background: '#fff',
+                              borderRadius: '8px',
+                              marginBottom: '8px'
+                            }}>
+                              <FileText size={16} color="#6b7280" />
+                              <div className="document-info" style={{ flex: 1 }}>
+                                <span className="document-name" style={{ fontSize: '0.875rem', display: 'block' }}>
+                                  {doc.Type || doc.type || 'Document'}
+                                </span>
+                                {fullUrl && (
+                                  <a
+                                    href={fullUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="document-link"
+                                    style={{ fontSize: '0.75rem', color: '#2563eb' }}
+                                  >
+                                    View/Download
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {approvedClientChecklist && (
+                      <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#6b7280' }}>
+                        Checklist saved on {approvedClientChecklist.createdAt || approvedClientChecklist.CreatedAt
+                          ? new Date(approvedClientChecklist.createdAt || approvedClientChecklist.CreatedAt).toLocaleDateString()
+                          : 'N/A'}
+                      </div>
+                    )}
                   </div>
 
                   {/* Document Upload Section */}

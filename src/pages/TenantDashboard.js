@@ -51,6 +51,19 @@ const TenantDashboard = () => {
     }
     return base;
   };
+  const shiftBusinessDays = (date, offset) => {
+    const result = new Date(date);
+    const step = offset >= 0 ? 1 : -1;
+    let remaining = Math.abs(offset);
+    while (remaining > 0) {
+      result.setDate(result.getDate() + step);
+      const day = result.getDay();
+      if (day !== 0 && day !== 6) {
+        remaining -= 1;
+      }
+    }
+    return result;
+  };
 
   const minTerminationDate = addMonths(new Date(), 3).toISOString().split('T')[0];
   const [activeTab, setActiveTab] = useState('overview');
@@ -75,9 +88,11 @@ const TenantDashboard = () => {
     comments: '',
     inventoryCheckDate: '',
     securityDepositRefundMethod: '',
+    mobileMoneyNumber: '',
     terminationLetter: null,
     supportingDocs: []
   });
+  const [inventoryDateRange, setInventoryDateRange] = useState({ min: '', max: '' });
   const [showTransferPaymentModal, setShowTransferPaymentModal] = useState(false);
   const [transferPaymentForm, setTransferPaymentForm] = useState({
     recipientName: '',
@@ -484,6 +499,31 @@ const TenantDashboard = () => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!terminateLeaseForm.terminationDate) {
+      setInventoryDateRange({ min: '', max: '' });
+      return;
+    }
+    const terminationDate = new Date(terminateLeaseForm.terminationDate);
+    if (Number.isNaN(terminationDate.getTime())) {
+      setInventoryDateRange({ min: '', max: '' });
+      return;
+    }
+    const minDate = shiftBusinessDays(terminationDate, -5);
+    const maxDate = shiftBusinessDays(terminationDate, -2);
+    const min = minDate.toISOString().split('T')[0];
+    const max = maxDate.toISOString().split('T')[0];
+    setInventoryDateRange({ min, max });
+
+    if (
+      terminateLeaseForm.inventoryCheckDate &&
+      (terminateLeaseForm.inventoryCheckDate < min ||
+        terminateLeaseForm.inventoryCheckDate > max)
+    ) {
+      setTerminateLeaseForm(prev => ({ ...prev, inventoryCheckDate: '' }));
+    }
+  }, [terminateLeaseForm.terminationDate]);
+
   // Load advertisements when advertisements tab is active
   useEffect(() => {
     if (activeTab === 'advertisements') {
@@ -643,6 +683,16 @@ const TenantDashboard = () => {
         setLoading(false);
         return;
       }
+      if (
+        terminateLeaseForm.inventoryCheckDate &&
+        inventoryDateRange.min &&
+        (terminateLeaseForm.inventoryCheckDate < inventoryDateRange.min ||
+          terminateLeaseForm.inventoryCheckDate > inventoryDateRange.max)
+      ) {
+        addNotification('Inventory date must be 2–5 business days before termination.', 'error');
+        setLoading(false);
+        return;
+      }
       if (!terminateLeaseForm.terminationLetter) {
         addNotification('Termination letter is required.', 'error');
         setLoading(false);
@@ -661,6 +711,12 @@ const TenantDashboard = () => {
         refundMethodMap[terminateLeaseForm.securityDepositRefundMethod] ||
         terminateLeaseForm.securityDepositRefundMethod;
 
+      if (normalizedRefundMethod === 'Mobile Money' && !terminateLeaseForm.mobileMoneyNumber) {
+        addNotification('Mobile money number is required for Mobile Money refunds.', 'error');
+        setLoading(false);
+        return;
+      }
+
       await tenantService.terminateLease({
         ...terminateLeaseForm,
         securityDepositRefundMethod: normalizedRefundMethod,
@@ -674,6 +730,7 @@ const TenantDashboard = () => {
         comments: '',
         inventoryCheckDate: '',
         securityDepositRefundMethod: '',
+        mobileMoneyNumber: '',
         terminationLetter: null,
         supportingDocs: [],
       });
@@ -1973,6 +2030,19 @@ Thank you for your payment!
                     How would you like to receive your security deposit refund?
                   </small>
                 </div>
+                {terminateLeaseForm.securityDepositRefundMethod === 'Mobile Money' && (
+                  <div className="form-group">
+                    <label htmlFor="mobileMoneyNumber">Mobile Money Number *</label>
+                    <input
+                      type="tel"
+                      id="mobileMoneyNumber"
+                      value={terminateLeaseForm.mobileMoneyNumber}
+                      onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, mobileMoneyNumber: e.target.value }))}
+                      placeholder="e.g., +225 07 12 34 56 78"
+                      required
+                    />
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label htmlFor="inventoryCheckDate">Inventory Check Date *</label>
@@ -1981,11 +2051,15 @@ Thank you for your payment!
                     id="inventoryCheckDate"
                     value={terminateLeaseForm.inventoryCheckDate}
                     onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, inventoryCheckDate: e.target.value }))}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={inventoryDateRange.min || undefined}
+                    max={inventoryDateRange.max || undefined}
+                    disabled={!terminateLeaseForm.terminationDate}
                     required
                   />
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                    Please schedule a date for the property inventory check before you move out.
+                    {terminateLeaseForm.terminationDate
+                      ? `Choose a date between ${inventoryDateRange.min} and ${inventoryDateRange.max} (2–5 business days before).`
+                      : 'Select a termination date first.'}
                   </small>
                 </div>
 

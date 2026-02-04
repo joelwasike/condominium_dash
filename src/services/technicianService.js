@@ -100,6 +100,30 @@ export const technicianService = {
     });
   },
 
+  createMaintenanceRequest: async (requestData) => {
+    if (requestData && Array.isArray(requestData.photos) && requestData.photos.length > 0) {
+      const formData = new FormData();
+      formData.append('property', requestData.property || '');
+      formData.append('issue', requestData.issue || '');
+      formData.append('priority', requestData.priority || 'normal');
+      formData.append('status', requestData.status || 'Pending');
+      formData.append('estimatedCost', String(requestData.estimatedCost || 0));
+      if (requestData.assigned) formData.append('assigned', requestData.assigned);
+      requestData.photos.forEach((file) => {
+        if (file) formData.append('photos', file);
+      });
+      return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
+        method: 'POST',
+        body: formData,
+      });
+    }
+    return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestData),
+    });
+  },
+
   updateMaintenanceRequest: async (id, updateData) => {
     return apiRequest(buildApiUrl(`/api/technician/maintenance-requests/${id}`), {
       method: 'PUT',
@@ -171,6 +195,22 @@ export const technicianService = {
   },
 
   createTask: async (taskData) => {
+    if (taskData && Array.isArray(taskData.photos) && taskData.photos.length > 0) {
+      const formData = new FormData();
+      formData.append('property', taskData.property || '');
+      formData.append('issue', taskData.issue || '');
+      formData.append('priority', taskData.priority || 'normal');
+      formData.append('estimatedHours', String(taskData.estimatedHours || 0));
+      formData.append('estimatedCost', String(taskData.estimatedCost || 0));
+      if (taskData.assigned) formData.append('assigned', taskData.assigned);
+      taskData.photos.forEach((file) => {
+        if (file) formData.append('photos', file);
+      });
+      return apiRequest(buildApiUrl('/api/technician/tasks'), {
+        method: 'POST',
+        body: formData,
+      });
+    }
     return apiRequest(buildApiUrl('/api/technician/tasks'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

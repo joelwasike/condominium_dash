@@ -83,10 +83,12 @@ const TechnicianDashboard = () => {
   });
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [taskContext, setTaskContext] = useState('task');
   const [taskForm, setTaskForm] = useState({
     status: '',
     estimatedHours: 0,
-    estimatedCost: 0
+    estimatedCost: 0,
+    photos: []
   });
   const [showPhotoUploadModal, setShowPhotoUploadModal] = useState(false);
   const [selectedInspectionForPhoto, setSelectedInspectionForPhoto] = useState(null);
@@ -128,6 +130,9 @@ const TechnicianDashboard = () => {
     type: 'Entry', // Entry or Exit
     propertyType: '', // Studio, Apartment, Duplex, Villa
     numberOfRooms: 1,
+    numberOfBathrooms: 1,
+    numberOfKitchens: 1,
+    hasSwimmingPool: false,
     propertyAddress: '',
     tenantName: '',
     date: new Date().toISOString().split('T')[0],
@@ -182,8 +187,6 @@ const TechnicianDashboard = () => {
   const [quoteDateFilter, setQuoteDateFilter] = useState('');
   const [quotePropertyFilter, setQuotePropertyFilter] = useState('');
   const [quoteSearchText, setQuoteSearchText] = useState('');
-  const [quoteMinAmount, setQuoteMinAmount] = useState('');
-  const [quoteMaxAmount, setQuoteMaxAmount] = useState('');
   const [workStatusFilter, setWorkStatusFilter] = useState('');
   const [workDateFilter, setWorkDateFilter] = useState('');
   const [workPropertyFilter, setWorkPropertyFilter] = useState('');
@@ -385,6 +388,7 @@ const TechnicianDashboard = () => {
   };
 
   const handleTaskView = (task) => {
+    setTaskContext('task');
     setSelectedTask(task);
     setTaskForm({
       status: task.Status || task.status || 'Pending',
@@ -393,7 +397,8 @@ const TechnicianDashboard = () => {
       property: task.Property || task.property || '',
       issue: task.Issue || task.issue || '',
       priority: task.Priority || task.priority || 'normal',
-      assigned: task.Assigned || task.assigned || ''
+        assigned: task.Assigned || task.assigned || '',
+        photos: []
     });
     setShowTaskModal(true);
   };
@@ -404,7 +409,31 @@ const TechnicianDashboard = () => {
     setLoading(true);
     try {
       const taskId = selectedTask?.id || selectedTask?.ID;
-      if (taskId) {
+      if (taskContext === 'maintenance') {
+        if (taskId) {
+          await technicianService.updateMaintenanceRequest(taskId, {
+            status: taskForm.status || 'Pending',
+            estimatedCost: taskForm.estimatedCost || 0,
+            assigned: taskForm.assigned || '',
+            priority: taskForm.priority || 'normal',
+            issue: taskForm.issue || '',
+            property: taskForm.property || '',
+          });
+          addNotification('Maintenance updated successfully', 'success');
+        } else {
+          const maintenanceData = {
+            property: taskForm.property || '',
+            issue: taskForm.issue || 'Maintenance Task',
+            priority: taskForm.priority || 'normal',
+            status: taskForm.status || 'Pending',
+            estimatedCost: taskForm.estimatedCost || 0,
+            assigned: taskForm.assigned || '',
+            photos: taskForm.photos || []
+          };
+          await technicianService.createMaintenanceRequest(maintenanceData);
+          addNotification('Maintenance created successfully', 'success');
+        }
+      } else if (taskId) {
         // Update existing task
         await technicianService.updateTask(taskId, taskForm);
         addNotification('Task updated successfully', 'success');
@@ -417,13 +446,15 @@ const TechnicianDashboard = () => {
           estimatedHours: taskForm.estimatedHours || 0,
           estimatedCost: taskForm.estimatedCost || 0,
           assigned: taskForm.assigned || '',
+          photos: taskForm.photos || []
         };
         await technicianService.createTask(taskData);
         addNotification('Task created successfully', 'success');
       }
       setShowTaskModal(false);
       setSelectedTask(null);
-      setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0 });
+      setTaskContext('task');
+      setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0, photos: [] });
       loadData(); // Reload data to show updated/created task
     } catch (error) {
       console.error('Error updating/creating task:', error);
@@ -903,7 +934,6 @@ const TechnicianDashboard = () => {
       { id: 'worker-contacts', label: 'Contact of Workers', icon: Phone },
       { id: 'history', label: 'History', icon: History },
       { id: 'reports', label: 'Reports', icon: FileCheck },
-      { id: 'inventory-form', label: 'Inventory Form', icon: ClipboardList },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
       { id: 'settings', label: 'Settings', icon: Settings }
@@ -1303,6 +1333,7 @@ const TechnicianDashboard = () => {
     const handleUpdateMaintenance = async (maintenance) => {
       // Reuse the task modal to update estimated hours/cost and status
       setShowTaskModal(true);
+      setTaskContext('maintenance');
       setSelectedTask(maintenance);
       setTaskForm({
         property: maintenance.property || maintenance.Property || '',
@@ -1317,11 +1348,18 @@ const TechnicianDashboard = () => {
 
     const handleSubmitQuote = async (maintenance) => {
       try {
+        const estimatedCostRaw =
+          maintenance.estimatedCost ??
+          maintenance.EstimatedCost ??
+          maintenance.estimated_cost ??
+          maintenance.Estimated_Cost ??
+          0;
+        const estimatedCost = Number(estimatedCostRaw) || 0;
         const quoteData = {
           maintenanceId: maintenance.id || maintenance.ID,
           property: maintenance.property || maintenance.Property,
           issue: maintenance.issue || maintenance.Issue,
-          amount: maintenance.estimatedCost || maintenance.EstimatedCost || 0,
+          amount: estimatedCost,
           recipient: 'management@example.com',
         };
         await technicianService.submitQuote(quoteData);
@@ -1354,6 +1392,7 @@ const TechnicianDashboard = () => {
               // Open the generic task modal in "create" mode so the technician
               // can add a new maintenance task.
               setSelectedTask(null);
+              setTaskContext('maintenance');
               setTaskForm({
                 property: '',
                 issue: '',
@@ -1362,6 +1401,7 @@ const TechnicianDashboard = () => {
                 estimatedHours: 0,
                 estimatedCost: 0,
                 assigned: '',
+                photos: [],
               });
               setShowTaskModal(true);
             }}
@@ -1430,7 +1470,13 @@ const TechnicianDashboard = () => {
                   const assigned = maintenance.assigned || maintenance.Assigned || maintenance.assignedTo || maintenance.AssignedTo || 'Unassigned';
                   const date = maintenance.date || maintenance.Date || maintenance.createdAt || maintenance.CreatedAt;
                   const estimatedHours = maintenance.estimatedHours || maintenance.EstimatedHours || 0;
-                  const estimatedCost = maintenance.estimatedCost || maintenance.EstimatedCost || 0;
+                  const estimatedCostRaw =
+                    maintenance.estimatedCost ??
+                    maintenance.EstimatedCost ??
+                    maintenance.estimated_cost ??
+                    maintenance.Estimated_Cost ??
+                    0;
+                  const estimatedCost = Number(estimatedCostRaw) || 0;
                   const quoteGenerated = maintenance.quoteGenerated || maintenance.QuoteGenerated || false;
                   const photos = maintenance.photos || maintenance.Photos || maintenance.photoURLs || maintenance.PhotoURLs || [];
                   
@@ -1874,7 +1920,7 @@ const TechnicianDashboard = () => {
           className="sa-primary-cta"
           onClick={() => {
             setSelectedTask(null);
-            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0 });
+            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [] });
             setShowTaskModal(true);
           }}
         >
@@ -2216,7 +2262,6 @@ const TechnicianDashboard = () => {
       const recipient = (q.Recipient || q.recipient || '').toLowerCase();
       const dateValue = q.Date || q.date || q.CreatedAt || q.createdAt;
       const normalizedDate = normalizeDateValue(dateValue);
-      const amount = Number(q.Amount || q.amount || 0);
 
       if (quoteStatusFilter) {
         const expected = quoteStatusFilter.toLowerCase();
@@ -2228,8 +2273,6 @@ const TechnicianDashboard = () => {
         const search = quoteSearchText.toLowerCase();
         if (!issue.includes(search) && !recipient.includes(search)) return false;
       }
-      if (quoteMinAmount && amount < Number(quoteMinAmount)) return false;
-      if (quoteMaxAmount && amount > Number(quoteMaxAmount)) return false;
       return true;
     });
 
@@ -2281,22 +2324,6 @@ const TechnicianDashboard = () => {
             placeholder="Search issue or recipient"
             value={quoteSearchText}
             onChange={(e) => setQuoteSearchText(e.target.value)}
-          />
-          <input
-            type="number"
-            className="sa-filter-select"
-            placeholder="Min amount"
-            value={quoteMinAmount}
-            onChange={(e) => setQuoteMinAmount(e.target.value)}
-            min="0"
-          />
-          <input
-            type="number"
-            className="sa-filter-select"
-            placeholder="Max amount"
-            value={quoteMaxAmount}
-            onChange={(e) => setQuoteMaxAmount(e.target.value)}
-            min="0"
           />
         </div>
 
@@ -2391,7 +2418,7 @@ const TechnicianDashboard = () => {
                           className="table-action-button edit"
                           onClick={() => openWorkStartModal(q)}
                         >
-                          Works Started!
+                          Start Work
                         </button>
                       </td>
                     </tr>
@@ -3031,6 +3058,9 @@ const TechnicianDashboard = () => {
                 type: 'Entry',
                 propertyType: '',
                 numberOfRooms: 1,
+                numberOfBathrooms: 1,
+                numberOfKitchens: 1,
+                hasSwimmingPool: false,
                 propertyAddress: '',
                 tenantName: '',
                 date: new Date().toISOString().split('T')[0],
@@ -3121,8 +3151,6 @@ const TechnicianDashboard = () => {
         return renderHistory();
       case 'reports':
         return renderReports();
-      case 'inventory-form':
-        return renderInventoryForm();
       case 'advertisements':
         return renderAdvertisements();
       case 'chat':
@@ -3276,7 +3304,8 @@ const TechnicianDashboard = () => {
         <div className="modal-overlay" onClick={() => {
           setShowTaskModal(false);
           setSelectedTask(null);
-          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0 });
+          setTaskContext('task');
+          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [] });
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -3286,7 +3315,8 @@ const TechnicianDashboard = () => {
                 onClick={() => {
                   setShowTaskModal(false);
                   setSelectedTask(null);
-                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0 });
+                  setTaskContext('task');
+                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [] });
                 }}
               >
                 ×
@@ -3411,6 +3441,26 @@ const TechnicianDashboard = () => {
                 />
               </div>
             </div>
+            {!selectedTask && (
+              <div className="form-group">
+                <label htmlFor="task-photos">Upload Photos (Optional)</label>
+                <input
+                  type="file"
+                  id="task-photos"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setTaskForm(prev => ({ ...prev, photos: files }));
+                  }}
+                />
+                {taskForm.photos && taskForm.photos.length > 0 && (
+                  <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#6b7280' }}>
+                    {taskForm.photos.length} photo{taskForm.photos.length !== 1 ? 's' : ''} selected
+                  </div>
+                )}
+              </div>
+            )}
                 <div className="modal-footer">
                 <button 
                   type="button" 
@@ -3418,7 +3468,8 @@ const TechnicianDashboard = () => {
                   onClick={() => {
                     setShowTaskModal(false);
                     setSelectedTask(null);
-                      setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0 });
+                    setTaskContext('task');
+                    setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [] });
                   }}
                 >
                     Cancel
@@ -3773,6 +3824,26 @@ const TechnicianDashboard = () => {
                       accept="image/*"
                       onChange={(e) => setContactForm(prev => ({ ...prev, photo: e.target.files?.[0] || null }))}
                     />
+                    {selectedContact && (selectedContact.PhotoURL || selectedContact.photoUrl) && (
+                      <div style={{ marginTop: '8px' }}>
+                        <img
+                          src={selectedContact.PhotoURL || selectedContact.photoUrl}
+                          alt="Worker"
+                          style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                        />
+                        <div>
+                          <a
+                            href={selectedContact.PhotoURL || selectedContact.photoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            download
+                            className="sa-link"
+                          >
+                            Download photo
+                          </a>
+                        </div>
+                      </div>
+                    )}
                     <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
                       This photo will be visible to tenants.
                     </small>
@@ -3785,6 +3856,26 @@ const TechnicianDashboard = () => {
                       accept="image/*"
                       onChange={(e) => setContactForm(prev => ({ ...prev, idCard: e.target.files?.[0] || null }))}
                     />
+                    {selectedContact && (selectedContact.IDCardURL || selectedContact.idCardUrl) && (
+                      <div style={{ marginTop: '8px' }}>
+                        <img
+                          src={selectedContact.IDCardURL || selectedContact.idCardUrl}
+                          alt="ID Card"
+                          style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                        />
+                        <div>
+                          <a
+                            href={selectedContact.IDCardURL || selectedContact.idCardUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            download
+                            className="sa-link"
+                          >
+                            Download ID card
+                          </a>
+                        </div>
+                      </div>
+                    )}
                     <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
                       This file is not shown to tenants.
                     </small>
@@ -3895,6 +3986,9 @@ const TechnicianDashboard = () => {
                     property: {
                       type: inventoryFormData.propertyType,
                       numberOfRooms: inventoryFormData.numberOfRooms,
+                      numberOfBathrooms: inventoryFormData.numberOfBathrooms,
+                      numberOfKitchens: inventoryFormData.numberOfKitchens,
+                      hasSwimmingPool: inventoryFormData.hasSwimmingPool,
                       address: inventoryFormData.propertyAddress,
                     },
                     rooms: {},
@@ -4042,6 +4136,39 @@ const TechnicianDashboard = () => {
 
                   <div className="form-row">
                     <div className="form-group">
+                      <label>Number of Bathrooms *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={inventoryFormData.numberOfBathrooms}
+                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, numberOfBathrooms: parseInt(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Number of Kitchens *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={inventoryFormData.numberOfKitchens}
+                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, numberOfKitchens: parseInt(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Swimming Pool</label>
+                      <select
+                        value={inventoryFormData.hasSwimmingPool ? 'yes' : 'no'}
+                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, hasSwimmingPool: e.target.value === 'yes' })}
+                      >
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
                       <label>Address of the Property *</label>
                       <select
                         value={inventoryFormData.propertyAddress}
@@ -4053,6 +4180,7 @@ const TechnicianDashboard = () => {
                               p => (p.Address || p.address) === selectedAddress
                             );
                             const bedrooms = selectedProperty?.Bedrooms || selectedProperty?.bedrooms;
+                            const bathrooms = selectedProperty?.Bathrooms || selectedProperty?.bathrooms;
                             const propTypeRaw =
                               selectedProperty?.Type ||
                               selectedProperty?.type ||
@@ -4080,6 +4208,7 @@ const TechnicianDashboard = () => {
                               ...prev,
                               propertyAddress: selectedAddress,
                               numberOfRooms: bedrooms ? Number(bedrooms) : prev.numberOfRooms,
+                              numberOfBathrooms: bathrooms !== undefined ? Number(bathrooms) : prev.numberOfBathrooms,
                               propertyType: inferredType || prev.propertyType || (bedrooms ? 'Apartment' : prev.propertyType),
                               tenantName: tenantName || prev.tenantName,
                             };
@@ -4118,6 +4247,7 @@ const TechnicianDashboard = () => {
                             p => (p.Address || p.address) === selectedPropertyAddress
                           );
                           const bedrooms = selectedProperty?.Bedrooms || selectedProperty?.bedrooms;
+                          const bathrooms = selectedProperty?.Bathrooms || selectedProperty?.bathrooms;
                           const propTypeRaw =
                             selectedProperty?.Type ||
                             selectedProperty?.type ||
@@ -4141,6 +4271,7 @@ const TechnicianDashboard = () => {
                             tenantName: selectedName,
                             propertyAddress: selectedPropertyAddress || prev.propertyAddress,
                             numberOfRooms: bedrooms ? Number(bedrooms) : prev.numberOfRooms,
+                            numberOfBathrooms: bathrooms !== undefined ? Number(bathrooms) : prev.numberOfBathrooms,
                             propertyType: inferredType || prev.propertyType || (bedrooms ? 'Apartment' : prev.propertyType),
                           }));
                         }}

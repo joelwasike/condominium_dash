@@ -489,6 +489,18 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
+  const handleApproveLease = async (leaseId) => {
+    if (!window.confirm('Approve this lease agreement?')) return;
+    try {
+      await agencyDirectorService.approveLeaseAgreement(leaseId);
+      addNotification('Lease approved successfully!', 'success');
+      await loadContractsData();
+    } catch (error) {
+      console.error('Error approving lease:', error);
+      addNotification(error.message || 'Failed to approve lease', 'error');
+    }
+  };
+
   // Annual subscription handler
   const handlePayAnnualSubscription = async (e) => {
     e.preventDefault();
@@ -2038,6 +2050,7 @@ const AgencyDirectorDashboard = () => {
                 <th>End Date</th>
                 <th>Rent</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -2064,11 +2077,19 @@ const AgencyDirectorDashboard = () => {
                       {lease.status || lease.Status || 'Draft'}
                     </span>
                   </td>
+                  <td className="sa-row-actions">
+                    <button
+                      className="table-action-button edit"
+                      onClick={() => handleApproveLease(lease.id || lease.ID)}
+                    >
+                      Approve
+                    </button>
+                  </td>
                 </tr>
               ))}
               {leasesAwaitingSignature.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="sa-table-empty">No leases awaiting signature</td>
+                  <td colSpan={8} className="sa-table-empty">No leases awaiting signature</td>
                 </tr>
               )}
             </tbody>
@@ -3192,6 +3213,7 @@ const AgencyDirectorDashboard = () => {
               <th>Rent</th>
               <th>Status</th>
               <th>Contract</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -3251,11 +3273,19 @@ const AgencyDirectorDashboard = () => {
                   </button>
                   <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#6b7280' }}>Document pdf</p>
                 </td>
+                <td className="sa-row-actions">
+                  <button
+                    className="table-action-button edit"
+                    onClick={() => handleApproveLease(lease.id || lease.ID)}
+                  >
+                    Approve
+                  </button>
+                </td>
               </tr>
             ))}
             {leasesAwaitingSignature.length === 0 && (
               <tr>
-                <td colSpan={6} className="sa-table-empty">No leases awaiting signature</td>
+                <td colSpan={7} className="sa-table-empty">No leases awaiting signature</td>
               </tr>
             )}
           </tbody>

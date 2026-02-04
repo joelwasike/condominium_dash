@@ -502,6 +502,24 @@
   gap: 8px;
 }
 
+.application-fees-list {
+  display: grid;
+  gap: 10px;
+}
+
+.application-fee-item {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  column-gap: 12px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.application-fee-item input[type="checkbox"] {
+  margin: 0;
+}
+
 .sa-icon-button {
   border: none;
   background: transparent;
