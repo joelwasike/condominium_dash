@@ -376,6 +376,12 @@ export const adminService = {
     });
   },
 
+  // State of Entry / Exit (inventory) - list filled by technicians
+  getInventory: async () => {
+    const url = buildApiUrl('/api/admin/inventory');
+    return await apiRequest(url, { method: 'GET' });
+  },
+
   // History
   getHistory: async (filters = {}) => {
     const queryParams = new URLSearchParams();

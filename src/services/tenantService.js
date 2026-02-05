@@ -168,5 +168,11 @@ export const tenantService = {
   getTechnicianContacts: async () => {
     const url = buildApiUrl('/api/tenant/technician-contacts');
     return await apiRequest(url);
+  },
+
+  // Get my state of entry/exit (inventory) records filled by technician
+  getMyInventory: async () => {
+    const url = buildApiUrl('/api/tenant/inventory');
+    return await apiRequest(url);
   }
 };

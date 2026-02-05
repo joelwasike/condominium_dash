@@ -25,7 +25,7 @@ const RoleLayout = ({
   children,
   onLogout,
   headerActions,
-  hideSearch = false,
+  hideSearch = true,
   activeId,
   onActiveChange,
   title,

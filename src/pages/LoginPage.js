@@ -3,6 +3,7 @@ import { Eye, EyeOff, Play, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 import { API_CONFIG } from '../config/api';
+import { profileService } from '../services/profileService';
 
 const LoginPage = ({ onLogin }) => {
   const navigate = useNavigate();
@@ -121,9 +122,30 @@ const LoginPage = ({ onLogin }) => {
       }
 
       if (response.ok && data?.token && data?.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // Backend now returns user with profilePictureURL so header avatar shows picture without visiting profile
+        const userToStore = {
+          ...data.user,
+          profilePictureURL: data.user.profilePictureURL ?? data.user.profile_picture ?? data.user.ProfilePictureURL
+        };
+        localStorage.setItem('user', JSON.stringify(userToStore));
         localStorage.setItem('token', data.token);
-        onLogin(data.user);
+        onLogin(userToStore);
+        // Sync profile picture from /api/profile so avatar is up to date even if login response was cached
+        profileService.getProfile().then((profile) => {
+          const pictureUrl = profile.profilePictureURL || profile.profilePicture || profile.profile_picture;
+          if (pictureUrl) {
+            try {
+              const stored = localStorage.getItem('user');
+              if (stored) {
+                const user = JSON.parse(stored);
+                user.profilePictureURL = pictureUrl;
+                if (profile.name) user.name = profile.name;
+                localStorage.setItem('user', JSON.stringify(user));
+                window.dispatchEvent(new Event('userProfileUpdated'));
+              }
+            } catch (e) { /* ignore */ }
+          }
+        }).catch(() => { /* ignore */ });
       } else {
         const message = data?.error || `Login failed (HTTP ${response.status})`;
         setError(message);

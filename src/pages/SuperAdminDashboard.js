@@ -377,15 +377,6 @@ const SuperAdminDashboard = () => {
       </div>
       
       <div className="sa-transactions-filters">
-        <div className="sa-search-input">
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="Search by Name, Email or Date"
-            value={transactionSearch}
-            onChange={(e) => setTransactionSearch(e.target.value)}
-          />
-        </div>
         <div className="sa-date-filters">
           <input
             type="date"

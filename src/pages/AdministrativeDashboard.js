@@ -22,7 +22,8 @@ import {
   UserPlus,
   FileCheck,
   History,
-  LogOut
+  LogOut,
+  ClipboardList
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -126,6 +127,7 @@ const AdministrativeDashboard = () => {
   const [terminations, setTerminations] = useState([]);
   const [terminationSearchText, setTerminationSearchText] = useState('');
   const [terminationTab, setTerminationTab] = useState('receipt'); // 'receipt', 'pending', 'made'
+  const [inventoryList, setInventoryList] = useState([]); // State of Entry / Exit filled by technicians
   const [historyData, setHistoryData] = useState({
     clients: [],
     leases: [],
@@ -451,6 +453,7 @@ const AdministrativeDashboard = () => {
         transfersData,
         newClientsData,
         terminationsData,
+        inventoryData,
           historyDataRes
       ] = await Promise.all([
         adminService.getOverview().catch(() => null),
@@ -477,6 +480,7 @@ const AdministrativeDashboard = () => {
         adminService.getTransfers().catch(() => []),
         adminService.getNewClients().catch(() => []),
         adminService.getTerminations().catch(() => []),
+        adminService.getInventory().catch(() => []),
         adminService.getHistory().catch(() => ({ clients: [], leases: [], mutations: [], terminations: [] }))
       ]);
       
@@ -498,6 +502,7 @@ const AdministrativeDashboard = () => {
       // Set new data
       setNewClients(Array.isArray(newClientsData) ? newClientsData : []);
       setTerminations(Array.isArray(terminationsData) ? terminationsData : []);
+      setInventoryList(Array.isArray(inventoryData) ? inventoryData : []);
       
       // Set history data
       if (historyDataRes && typeof historyDataRes === 'object') {
@@ -578,6 +583,7 @@ const AdministrativeDashboard = () => {
       { id: 'lease-contract', label: 'Lease Contract', icon: FileCheck },
       { id: 'demand-mutation', label: 'Demand of Mutation', icon: ArrowRightLeft },
       { id: 'termination', label: 'Termination', icon: LogOut },
+      { id: 'state-of-entry-exit', label: 'State of Entry / Exit', icon: ClipboardList },
       { id: 'history', label: 'History', icon: History },
       { id: 'reports', label: 'Report', icon: TrendingUp },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
@@ -981,13 +987,6 @@ const AdministrativeDashboard = () => {
           <option value="Income">Income Proof</option>
           <option value="Reference">References</option>
         </select>
-        <input
-          className="sa-search-input"
-          type="text"
-          placeholder="Search by tenant name..."
-          value={documentTenantFilter}
-          onChange={(e) => setDocumentTenantFilter(e.target.value)}
-        />
       </div>
 
       {loading ? (
@@ -1380,16 +1379,6 @@ const AdministrativeDashboard = () => {
             <Plus size={18} />
             Add Lease Contract
           </button>
-        </div>
-
-        <div className="sa-filters-section">
-          <input
-            type="text"
-            className="sa-search-input"
-            placeholder="Search by tenant, property, or contract title..."
-            value={leaseSearchText}
-            onChange={(e) => setLeaseSearchText(e.target.value)}
-          />
         </div>
 
         {/* Tabs */}
@@ -1905,16 +1894,6 @@ const AdministrativeDashboard = () => {
           </div>
         </div>
 
-        <div className="sa-filters-section">
-          <input
-            type="text"
-            className="sa-search-input"
-            placeholder="Search by property, current client, or new client..."
-            value={currentSearch}
-            onChange={(e) => setCurrentSearch(e.target.value)}
-          />
-        </div>
-
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
           <button
@@ -2107,18 +2086,8 @@ const AdministrativeDashboard = () => {
         <div className="sa-section-header">
           <div>
             <h3>Termination</h3>
-            <p>List of all cancellation requests - Receipt of termination requests</p>
+            <p>List of all cancellation requests - Receipt of termination requests. State of exit: inventory must be done before the 5th of the next month (tenant chooses a date in that range).</p>
           </div>
-        </div>
-
-        <div className="sa-filters-section">
-          <input
-            type="text"
-            className="sa-search-input"
-            placeholder="Search by tenant or property..."
-            value={terminationSearchText}
-            onChange={(e) => setTerminationSearchText(e.target.value)}
-          />
         </div>
 
         {/* Tabs */}
@@ -2439,13 +2408,6 @@ const AdministrativeDashboard = () => {
         </div>
 
         <div className="sa-filters-section">
-          <input
-            type="text"
-            className="sa-search-input"
-            placeholder="Search by name or email..."
-            value={clientSearchText}
-            onChange={(e) => setClientSearchText(e.target.value)}
-          />
           <select 
             className="sa-filter-select"
             value={clientStatusFilter}
@@ -2576,6 +2538,83 @@ const AdministrativeDashboard = () => {
     );
   };
 
+  // Render State of Entry / Exit (inventory filled by technicians)
+  const renderStateOfEntryExit = () => {
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>State of Entry / Exit</h3>
+            <p>Inventory (state of entry or exit) reports filled by technicians for your company</p>
+          </div>
+        </div>
+        {inventoryList.length === 0 ? (
+          <div className="sa-table-empty">No state of entry or exit records yet. When technicians fill an inventory, it will appear here.</div>
+        ) : (
+          <div className="sa-table-wrapper" style={{ marginTop: '20px' }}>
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Type</th>
+                  <th>Tenant</th>
+                  <th>Property</th>
+                  <th>Date</th>
+                  <th>Inspector</th>
+                  <th>Status</th>
+                  <th>Report</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventoryList.map((inv, index) => {
+                  const type = inv.type || inv.Type || '';
+                  const tenant = inv.tenant || inv.Tenant || '—';
+                  const property = inv.property || inv.Property || '—';
+                  const date = inv.date || inv.Date || inv.createdAt || inv.CreatedAt;
+                  const dateStr = date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
+                  const inspector = inv.inspector || inv.Inspector || '—';
+                  const status = inv.status || inv.Status || '—';
+                  const reportURL = inv.reportURL || inv.ReportURL;
+                  return (
+                    <tr key={inv.id || inv.ID || index}>
+                      <td>{index + 1}</td>
+                      <td>
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.85rem',
+                          fontWeight: '500',
+                          backgroundColor: type === 'Move-in' ? '#dbeafe' : '#fef3c7',
+                          color: type === 'Move-in' ? '#1e40af' : '#92400e'
+                        }}>
+                          {type === 'Move-in' ? 'Entry' : type === 'Move-out' ? 'Exit' : type || '—'}
+                        </span>
+                      </td>
+                      <td>{tenant}</td>
+                      <td>{property}</td>
+                      <td>{dateStr}</td>
+                      <td>{inspector}</td>
+                      <td>{status}</td>
+                      <td>
+                        {reportURL ? (
+                          <a href={reportURL} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}>
+                            View report
+                          </a>
+                        ) : (
+                          <span style={{ color: '#9ca3af' }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = (currentTab = activeTab) => {
     switch (currentTab) {
       case 'overview':
@@ -2588,6 +2627,8 @@ const AdministrativeDashboard = () => {
         return renderTransfers(); // Reuse existing function, will update it
       case 'termination':
         return renderTermination();
+      case 'state-of-entry-exit':
+        return renderStateOfEntryExit();
       case 'history':
         return renderHistory();
       case 'reports':

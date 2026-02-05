@@ -1304,15 +1304,6 @@ const AgencyDirectorDashboard = () => {
                 <option key={role} value={role}>{role}</option>
               ))}
             </select>
-            <div className="sa-search-input">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search by name or email"
-                value={userSearchText}
-                onChange={(e) => setUserSearchText(e.target.value)}
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -2944,15 +2935,6 @@ const AgencyDirectorDashboard = () => {
                 <option key={role} value={role}>{role}</option>
               ))}
             </select>
-            <div className="sa-search-input">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search by name or email"
-                value={userSearchText}
-                onChange={(e) => setUserSearchText(e.target.value)}
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -3308,18 +3290,6 @@ const AgencyDirectorDashboard = () => {
 
     return (
       <div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-          <div className="sa-search-input" style={{ width: '300px' }}>
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search by owner name"
-              value={userSearchText}
-              onChange={(e) => setUserSearchText(e.target.value)}
-            />
-          </div>
-        </div>
-
         <div style={{ marginBottom: '12px' }}>
           <h3 style={{ margin: 0, color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>Property</h3>
         </div>
@@ -3713,15 +3683,6 @@ const AgencyDirectorDashboard = () => {
               <Plus size={16} />
               Add Owner
             </button>
-            <div className="sa-search-input" style={{ marginLeft: '12px' }}>
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search by owner name or email"
-                value={userSearchText}
-                onChange={(e) => setUserSearchText(e.target.value)}
-              />
-            </div>
           </div>
         </div>
 

@@ -1568,13 +1568,6 @@ const SalesManagerDashboard = () => {
               <option value="high">High</option>
               <option value="normal">Normal</option>
             </select>
-          <div className="sa-search-input">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search by Address, Type or Status"
-            />
-          </div>
         </div>
 
         <div className="sa-section-card">
@@ -2126,15 +2119,6 @@ const SalesManagerDashboard = () => {
           <Filter size={16} />
           Filter
         </button>
-        <div className="sa-search-input">
-          <Search size={16} />
-        <input 
-          type="text" 
-            placeholder="Search by Name, Email or Phone"
-          value={clientSearchText}
-          onChange={(e) => setClientSearchText(e.target.value)}
-        />
-        </div>
       </div>
 
       <div className="sa-section-card">
@@ -2325,13 +2309,6 @@ const SalesManagerDashboard = () => {
           <option value="Vacant Property">Vacant Property</option>
           <option value="Maintenance">Maintenance</option>
         </select>
-        <div className="sa-search-input">
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="Search by Title, Property or Message"
-          />
-        </div>
       </div>
 
       <div className="sa-section-card">

@@ -28,7 +28,9 @@ import {
   FileX,
   UserPlus,
   Phone,
-  Copy
+  Copy,
+  Search,
+  FileCheck
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -113,6 +115,8 @@ const TenantDashboard = () => {
   const [showMaintenanceViewModal, setShowMaintenanceViewModal] = useState(false);
   const [selectedMaintenanceRequest, setSelectedMaintenanceRequest] = useState(null);
   const [technicianContacts, setTechnicianContacts] = useState([]);
+  const [technicianContactSearch, setTechnicianContactSearch] = useState('');
+  const [myInventory, setMyInventory] = useState([]);
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -139,6 +143,7 @@ const TenantDashboard = () => {
       { id: 'payments', label: t('nav.payments'), icon: DollarSign },
       { id: 'maintenance', label: t('technician.maintenance'), icon: Wrench },
       { id: 'technician-contacts', label: 'Technician Contacts', icon: Phone },
+      { id: 'state-of-entry-exit', label: 'State of Entry / Exit', icon: FileCheck },
       { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
       { id: 'chat', label: t('nav.messages'), icon: MessageCircle },
       { id: 'settings', label: t('nav.profileSettings'), icon: Settings }
@@ -245,6 +250,22 @@ const TenantDashboard = () => {
       console.error('Failed to load technician contacts:', error);
       addNotification('Failed to load technician contacts', 'error');
       setTechnicianContacts([]);
+    }
+  };
+
+  // Load my state of entry/exit (inventory) records filled by technician
+  const loadMyInventory = async () => {
+    try {
+      if (isDemoMode()) {
+        setMyInventory([]);
+        return;
+      }
+      const list = await tenantService.getMyInventory();
+      setMyInventory(Array.isArray(list) ? list : []);
+    } catch (error) {
+      console.error('Failed to load state of entry/exit:', error);
+      addNotification('Failed to load state of entry/exit', 'error');
+      setMyInventory([]);
     }
   };
 
@@ -510,11 +531,13 @@ const TenantDashboard = () => {
       setInventoryDateRange({ min: '', max: '' });
       return;
     }
-    // Inventory check date must be after the termination date (e.g. 1–10 business days after)
+    // State of exit: inventory must be done before the 5th of the next month (tenant can choose any day in this range)
     const dayAfter = new Date(terminationDate);
     dayAfter.setDate(dayAfter.getDate() + 1);
     const minDate = dayAfter;
-    const maxDate = shiftBusinessDays(terminationDate, 10);
+    // 4th of the month following termination = "before the 5th of the next month"
+    const nextMonth = new Date(terminationDate.getFullYear(), terminationDate.getMonth() + 1, 1);
+    const maxDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 4);
     const min = minDate.toISOString().split('T')[0];
     const max = maxDate.toISOString().split('T')[0];
     setInventoryDateRange({ min, max });
@@ -539,6 +562,13 @@ const TenantDashboard = () => {
   useEffect(() => {
     if (activeTab === 'technician-contacts') {
       loadTechnicianContacts();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load state of entry/exit when tab is active
+  useEffect(() => {
+    if (activeTab === 'state-of-entry-exit') {
+      loadMyInventory();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -693,7 +723,7 @@ const TenantDashboard = () => {
         (terminateLeaseForm.inventoryCheckDate < inventoryDateRange.min ||
           terminateLeaseForm.inventoryCheckDate > inventoryDateRange.max)
       ) {
-        addNotification('Inventory check date must be after the termination date (within 10 business days after).', 'error');
+        addNotification('State of exit: inventory date must be before the 5th of the next month.', 'error');
         setLoading(false);
         return;
       }
@@ -1552,8 +1582,18 @@ Thank you for your payment!
   };
 
   const renderTechnicianContacts = () => {
-    // Group contacts by category
-    const groupedContacts = technicianContacts.reduce((acc, contact) => {
+    // Filter by worker name (search)
+    const searchTrim = (technicianContactSearch || '').trim().toLowerCase();
+    const filteredContacts = searchTrim
+      ? technicianContacts.filter((contact) => {
+          const name = (contact.Name || contact.name || '').toLowerCase();
+          const category = (contact.Category || contact.category || '').toLowerCase();
+          return name.includes(searchTrim) || category.includes(searchTrim);
+        })
+      : technicianContacts;
+
+    // Group filtered contacts by category
+    const groupedContacts = filteredContacts.reduce((acc, contact) => {
       const category = contact.Category || contact.category || 'other';
       if (!acc[category]) {
         acc[category] = [];
@@ -1581,10 +1621,39 @@ Thank you for your payment!
           </div>
         </div>
 
+        {technicianContacts.length > 0 && (
+          <div style={{ marginBottom: '20px', marginTop: '8px' }}>
+            <div
+              className="sa-search-input"
+              style={{
+                maxWidth: '400px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 14px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                backgroundColor: '#f9fafb'
+              }}
+            >
+              <Search size={18} color="#6b7280" />
+              <input
+                type="text"
+                placeholder="Search by worker name or category..."
+                value={technicianContactSearch}
+                onChange={(e) => setTechnicianContactSearch(e.target.value)}
+                style={{ border: 'none', background: 'transparent', flex: 1, fontSize: '0.9rem', outline: 'none' }}
+              />
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="sa-table-empty">Loading technician contacts...</div>
         ) : technicianContacts.length === 0 ? (
           <div className="sa-table-empty">No technician contacts available</div>
+        ) : filteredContacts.length === 0 ? (
+          <div className="sa-table-empty">No technicians match your search</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginTop: '24px' }}>
             {Object.entries(groupedContacts).map(([category, contacts]) => (
@@ -1594,8 +1663,9 @@ Thank you for your payment!
                 </h3>
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-                  gap: '16px' 
+                  gridTemplateColumns: 'repeat(3, 1fr)', 
+                  gap: '20px',
+                  alignItems: 'stretch'
                 }}>
                   {contacts.map((contact) => {
                     const contactId = contact.ID || contact.id;
@@ -1720,6 +1790,82 @@ Thank you for your payment!
     );
   };
 
+  const renderStateOfEntryExit = () => {
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h2>State of Entry / Exit</h2>
+            <p>View inventory (state of entry or exit) reports filled by the technician for your property</p>
+          </div>
+        </div>
+        {myInventory.length === 0 ? (
+          <div className="sa-table-empty">No state of entry or exit records yet. When a technician fills an inventory for you, it will appear here.</div>
+        ) : (
+          <div className="sa-table-wrapper" style={{ marginTop: '20px' }}>
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Property</th>
+                  <th>Date</th>
+                  <th>Inspector</th>
+                  <th>Status</th>
+                  <th>Report</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myInventory.map((inv) => {
+                  const type = inv.type || inv.Type || '';
+                  const property = inv.property || inv.Property || '—';
+                  const date = inv.date || inv.Date || inv.createdAt || inv.CreatedAt;
+                  const dateStr = date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
+                  const inspector = inv.inspector || inv.Inspector || '—';
+                  const status = inv.status || inv.Status || '—';
+                  const reportURL = inv.reportURL || inv.ReportURL;
+                  return (
+                    <tr key={inv.id || inv.ID}>
+                      <td>
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.85rem',
+                          fontWeight: '500',
+                          backgroundColor: type === 'Move-in' ? '#dbeafe' : '#fef3c7',
+                          color: type === 'Move-in' ? '#1e40af' : '#92400e'
+                        }}>
+                          {type === 'Move-in' ? 'Entry' : type === 'Move-out' ? 'Exit' : type || '—'}
+                        </span>
+                      </td>
+                      <td>{property}</td>
+                      <td>{dateStr}</td>
+                      <td>{inspector}</td>
+                      <td>{status}</td>
+                      <td>
+                        {reportURL ? (
+                          <a
+                            href={reportURL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}
+                          >
+                            View report
+                          </a>
+                        ) : (
+                          <span style={{ color: '#9ca3af' }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -1730,6 +1876,8 @@ Thank you for your payment!
         return renderMaintenance();
       case 'technician-contacts':
         return renderTechnicianContacts();
+      case 'state-of-entry-exit':
+        return renderStateOfEntryExit();
       case 'advertisements':
         return renderAdvertisements();
       case 'chat':
@@ -2063,7 +2211,7 @@ Thank you for your payment!
                   />
                     <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     {terminateLeaseForm.terminationDate
-                      ? `Choose a date between ${inventoryDateRange.min} and ${inventoryDateRange.max} (after termination, up to 10 business days).`
+                      ? `State of exit: choose a date between ${inventoryDateRange.min} and ${inventoryDateRange.max} (inventory must be done before the 5th of the next month).`
                       : 'Select a termination date first.'}
                   </small>
                 </div>

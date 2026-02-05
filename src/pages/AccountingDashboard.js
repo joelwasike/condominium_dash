@@ -3850,17 +3850,7 @@ const AccountingDashboard = () => {
             placeholder="End Date"
           />
 
-          <div className="sa-search-input-wrapper">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search expenses..."
-              value={expenseSearchText}
-              onChange={(e) => setExpenseSearchText(e.target.value)}
-            />
-          </div>
-
-          {(expenseBuildingFilter || expenseCategoryFilter || expenseScopeFilter || expenseStartDateFilter || expenseEndDateFilter || expenseSearchText) && (
+          {(expenseBuildingFilter || expenseCategoryFilter || expenseScopeFilter || expenseStartDateFilter || expenseEndDateFilter) && (
             <button
               className="sa-outline-button"
               onClick={() => {
@@ -3869,7 +3859,6 @@ const AccountingDashboard = () => {
                 setExpenseScopeFilter('');
                 setExpenseStartDateFilter('');
                 setExpenseEndDateFilter('');
-                setExpenseSearchText('');
               }}
               style={{ marginLeft: 'auto' }}
             >

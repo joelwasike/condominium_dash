@@ -2348,13 +2348,6 @@ const TechnicianDashboard = () => {
             value={quotePropertyFilter}
             onChange={(e) => setQuotePropertyFilter(e.target.value)}
           />
-          <input
-            type="text"
-            className="sa-filter-select"
-            placeholder="Search issue or recipient"
-            value={quoteSearchText}
-            onChange={(e) => setQuoteSearchText(e.target.value)}
-          />
         </div>
 
         {/* Quotes Being Validated Tab */}
@@ -2549,13 +2542,6 @@ const TechnicianDashboard = () => {
             <option value="high">High</option>
             <option value="urgent">Urgent</option>
           </select>
-          <input
-            type="text"
-            className="sa-filter-select"
-            placeholder="Search issue or assigned"
-            value={workSearchText}
-            onChange={(e) => setWorkSearchText(e.target.value)}
-          />
         </div>
 
         {/* Work In Progress */}
@@ -2822,20 +2808,6 @@ const TechnicianDashboard = () => {
         </div>
 
         <div className="sa-filters-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-          <input
-            type="text"
-            className="sa-filter-select"
-            placeholder="Filter by name"
-            value={stateEntryNameFilter}
-            onChange={(e) => setStateEntryNameFilter(e.target.value)}
-          />
-          <input
-            type="text"
-            className="sa-filter-select"
-            placeholder="Filter by property"
-            value={stateEntryPropertyFilter}
-            onChange={(e) => setStateEntryPropertyFilter(e.target.value)}
-          />
           <select
             className="sa-filter-select"
             value={stateEntryStatusFilter}
@@ -2987,13 +2959,6 @@ const TechnicianDashboard = () => {
             <option value="work">Work History</option>
             <option value="inventory">Inventory Reports</option>
           </select>
-          <input
-            type="text"
-            className="sa-filter-select"
-            value={historyPropertyFilter}
-            onChange={(e) => setHistoryPropertyFilter(e.target.value)}
-            placeholder="Filter by property"
-          />
         </div>
 
         <div className="sa-table-wrapper">
