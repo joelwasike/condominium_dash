@@ -94,6 +94,7 @@ export const tenantService = {
       formData.append('mobileMoneyNumber', terminationData.mobileMoneyNumber);
     }
     formData.append('inventoryCheckDate', terminationData.inventoryCheckDate || '');
+    formData.append('inventoryCheckTime', terminationData.inventoryCheckTime || '');
     if (terminationData.terminationLetter) {
       formData.append('terminationLetter', terminationData.terminationLetter);
     }

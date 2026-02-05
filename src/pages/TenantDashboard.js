@@ -87,6 +87,7 @@ const TenantDashboard = () => {
     terminationDate: '',
     comments: '',
     inventoryCheckDate: '',
+    inventoryCheckTime: '',
     securityDepositRefundMethod: '',
     mobileMoneyNumber: '',
     terminationLetter: null,
@@ -509,8 +510,11 @@ const TenantDashboard = () => {
       setInventoryDateRange({ min: '', max: '' });
       return;
     }
-    const minDate = shiftBusinessDays(terminationDate, -5);
-    const maxDate = shiftBusinessDays(terminationDate, -2);
+    // Inventory check date must be after the termination date (e.g. 1–10 business days after)
+    const dayAfter = new Date(terminationDate);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+    const minDate = dayAfter;
+    const maxDate = shiftBusinessDays(terminationDate, 10);
     const min = minDate.toISOString().split('T')[0];
     const max = maxDate.toISOString().split('T')[0];
     setInventoryDateRange({ min, max });
@@ -520,7 +524,7 @@ const TenantDashboard = () => {
       (terminateLeaseForm.inventoryCheckDate < min ||
         terminateLeaseForm.inventoryCheckDate > max)
     ) {
-      setTerminateLeaseForm(prev => ({ ...prev, inventoryCheckDate: '' }));
+      setTerminateLeaseForm(prev => ({ ...prev, inventoryCheckDate: '', inventoryCheckTime: '' }));
     }
   }, [terminateLeaseForm.terminationDate]);
 
@@ -689,7 +693,7 @@ const TenantDashboard = () => {
         (terminateLeaseForm.inventoryCheckDate < inventoryDateRange.min ||
           terminateLeaseForm.inventoryCheckDate > inventoryDateRange.max)
       ) {
-        addNotification('Inventory date must be 2–5 business days before termination.', 'error');
+        addNotification('Inventory check date must be after the termination date (within 10 business days after).', 'error');
         setLoading(false);
         return;
       }
@@ -729,6 +733,7 @@ const TenantDashboard = () => {
         terminationDate: '',
         comments: '',
         inventoryCheckDate: '',
+        inventoryCheckTime: '',
         securityDepositRefundMethod: '',
         mobileMoneyNumber: '',
         terminationLetter: null,
@@ -2056,10 +2061,23 @@ Thank you for your payment!
                     disabled={!terminateLeaseForm.terminationDate}
                     required
                   />
-                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     {terminateLeaseForm.terminationDate
-                      ? `Choose a date between ${inventoryDateRange.min} and ${inventoryDateRange.max} (2–5 business days before).`
+                      ? `Choose a date between ${inventoryDateRange.min} and ${inventoryDateRange.max} (after termination, up to 10 business days).`
                       : 'Select a termination date first.'}
+                  </small>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="inventoryCheckTime">Inventory Check Time</label>
+                  <input
+                    type="time"
+                    id="inventoryCheckTime"
+                    value={terminateLeaseForm.inventoryCheckTime}
+                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, inventoryCheckTime: e.target.value }))}
+                    disabled={!terminateLeaseForm.terminationDate}
+                  />
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Optional. Set the time for the inventory check appointment.
                   </small>
                 </div>
 

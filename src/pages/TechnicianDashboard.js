@@ -95,6 +95,9 @@ const TechnicianDashboard = () => {
   const [photoFile, setPhotoFile] = useState(null);
   const [showMaintenanceViewModal, setShowMaintenanceViewModal] = useState(false);
   const [selectedMaintenanceRequest, setSelectedMaintenanceRequest] = useState(null);
+  const [maintenancePriorityFilter, setMaintenancePriorityFilter] = useState('');
+  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState('');
+  const [maintenancePropertyFilter, setMaintenancePropertyFilter] = useState('');
   const [technicianContacts, setTechnicianContacts] = useState([]);
   const [showContactModal, setShowContactModal] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
@@ -195,6 +198,11 @@ const TechnicianDashboard = () => {
   const [historyDateFilter, setHistoryDateFilter] = useState('');
   const [historyTypeFilter, setHistoryTypeFilter] = useState('');
   const [historyPropertyFilter, setHistoryPropertyFilter] = useState('');
+  const [stateEntryView, setStateEntryView] = useState('entry'); // 'entry' | 'exit'
+  const [stateEntryNameFilter, setStateEntryNameFilter] = useState('');
+  const [stateEntryPropertyFilter, setStateEntryPropertyFilter] = useState('');
+  const [stateEntryStatusFilter, setStateEntryStatusFilter] = useState('');
+  const [stateEntryDateFilter, setStateEntryDateFilter] = useState('');
   
   // Helper data for Inventory Form (Entry / Exit)
   const currentInventoryTenants =
@@ -929,8 +937,7 @@ const TechnicianDashboard = () => {
       { id: 'maintenance', label: 'Maintenance', icon: Wrench },
       { id: 'quotes', label: 'The Quotes', icon: DollarSign },
       { id: 'works', label: 'Works', icon: HardHat },
-      { id: 'state-entry', label: 'State of the Entry', icon: LogIn },
-      { id: 'state-exit', label: 'State of Affairs of Exit', icon: LogOut },
+      { id: 'state-entry', label: 'State of Entry / Exit', icon: LogIn },
       { id: 'worker-contacts', label: 'Contact of Workers', icon: Phone },
       { id: 'history', label: 'History', icon: History },
       { id: 'reports', label: 'Reports', icon: FileCheck },
@@ -1299,13 +1306,13 @@ const TechnicianDashboard = () => {
       try {
         setLoading(true);
         await technicianService.updateMaintenanceRequest(maintenance.ID || maintenance.id, {
-          status: 'In Progress'
+          status: 'Approved'
         });
-        addNotification('Request processed successfully', 'success');
+        addNotification('Maintenance approved successfully', 'success');
         loadData();
       } catch (error) {
-        console.error('Error processing request:', error);
-        addNotification('Failed to process request', 'error');
+        console.error('Error approving maintenance:', error);
+        addNotification(error.message || 'Failed to approve maintenance', 'error');
       } finally {
         setLoading(false);
       }
@@ -1371,13 +1378,24 @@ const TechnicianDashboard = () => {
       }
     };
 
-    // Only show non-completed maintenance in this table.
+    // Only show non-completed maintenance in this table, then apply filters.
     const visibleRequests = requests.filter(m => {
       const rawStatus = m.status || m.Status || '';
       const status = String(rawStatus).trim().toLowerCase();
       const completedStatuses = ['completed', 'complete', 'done', 'finished', 'closed', 'resolved'];
-      return !completedStatuses.some(s => status === s || status.startsWith(s));
+      if (completedStatuses.some(s => status === s || status.startsWith(s))) return false;
+
+      const priority = (m.priority || m.Priority || 'normal').toString().trim().toLowerCase();
+      const mStatus = (m.status || m.Status || '').toString().trim();
+      const property = (m.property || m.Property || '').toString().toLowerCase();
+
+      if (maintenancePriorityFilter && priority !== maintenancePriorityFilter.toLowerCase()) return false;
+      if (maintenanceStatusFilter && mStatus !== maintenanceStatusFilter) return false;
+      if (maintenancePropertyFilter && !property.includes(maintenancePropertyFilter.toLowerCase())) return false;
+      return true;
     });
+
+    const uniqueProperties = [...new Set(requests.map(m => (m.property || m.Property || '').trim()).filter(Boolean))].sort();
 
     return (
       <div className="sa-section-card">
@@ -1413,27 +1431,39 @@ const TechnicianDashboard = () => {
         </div>
 
         <div className="sa-filters-section">
-          <select 
+          <select
             className="sa-filter-select"
-            value=""
-            onChange={() => {}}
+            value={maintenancePriorityFilter}
+            onChange={(e) => setMaintenancePriorityFilter(e.target.value)}
           >
-          <option value="">All Priority Levels</option>
-          <option value="urgent">Urgent</option>
-          <option value="high">High</option>
+            <option value="">All Priority Levels</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
             <option value="normal">Normal</option>
-          <option value="low">Low</option>
-        </select>
-          <select 
+            <option value="low">Low</option>
+          </select>
+          <select
             className="sa-filter-select"
-            value=""
-            onChange={() => {}}
+            value={maintenanceStatusFilter}
+            onChange={(e) => setMaintenanceStatusFilter(e.target.value)}
           >
-          <option value="">All Status</option>
+            <option value="">All Status</option>
             <option value="Pending">Pending</option>
             <option value="In Progress">In Progress</option>
-        </select>
-      </div>
+            <option value="Approved">Approved</option>
+            <option value="Refused">Refused</option>
+          </select>
+          <select
+            className="sa-filter-select"
+            value={maintenancePropertyFilter}
+            onChange={(e) => setMaintenancePropertyFilter(e.target.value)}
+          >
+            <option value="">All Properties</option>
+            {uniqueProperties.map((prop) => (
+              <option key={prop} value={prop}>{prop}</option>
+            ))}
+          </select>
+        </div>
 
         <div className="sa-table-wrapper">
           <table className="sa-table">
@@ -1536,7 +1566,7 @@ const TechnicianDashboard = () => {
                             <button 
                               className="sa-icon-button" 
                               onClick={() => handleProcessRequest(maintenance)} 
-                              title="Process Request"
+                              title="Approve"
                               style={{ color: '#16a34a', marginLeft: '8px' }}
                             >
                               ✓
@@ -2399,7 +2429,12 @@ const TechnicianDashboard = () => {
                     <td colSpan={9} className="sa-table-empty">No validated quotes</td>
                   </tr>
                 ) : (
-                  validatedQuotes.map((q, index) => (
+                  validatedQuotes.map((q, index) => {
+                    const quoteMaintenanceId = q.MaintenanceID || q.maintenanceId;
+                    const workStarted = quoteMaintenanceId && works.some(
+                      w => String(w.ID || w.id) === String(quoteMaintenanceId) && (w.Status || w.status) === 'In Progress'
+                    );
+                    return (
                     <tr key={q.ID || q.id}>
                       <td>{index + 1}</td>
                       <td>{q.Date || q.date ? new Date(q.Date || q.date).toLocaleDateString() : 'N/A'}</td>
@@ -2414,15 +2449,22 @@ const TechnicianDashboard = () => {
                       </td>
                       <td>{q.ValidatedBy || q.validatedBy || 'N/A'}</td>
                       <td>
-                        <button
-                          className="table-action-button edit"
-                          onClick={() => openWorkStartModal(q)}
-                        >
-                          Start Work
-                        </button>
+                        {workStarted ? (
+                          <span className="sa-status-pill completed" style={{ cursor: 'default' }}>
+                            Work Started
+                          </span>
+                        ) : (
+                          <button
+                            className="table-action-button edit"
+                            onClick={() => openWorkStartModal(q)}
+                          >
+                            Start Work
+                          </button>
+                        )}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -2713,25 +2755,105 @@ const TechnicianDashboard = () => {
     );
   };
 
-  // Render State of Entry - List tenants who paid deposit and requested inventory
+  // Render State of Entry / Exit - Single page with Entry | Exit switch and filters
   const renderStateEntry = () => {
+    const list = stateEntryView === 'entry' ? entryTenants : exitTenants;
+    const toDateOnly = (d) => {
+      if (!d) return '';
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? '' : dt.toISOString().slice(0, 10);
+    };
+    const filteredList = list.filter((tenant) => {
+      const name = (tenant.Name || tenant.name || '').toString().toLowerCase();
+      const property = (tenant.Property || tenant.property || '').toString().toLowerCase();
+      const statusEntry = (tenant.Status || tenant.status || '').toString().toLowerCase();
+      const statusExit = (tenant.ExitInventoryStatus || tenant.exitInventoryStatus || '').toString().toLowerCase();
+      const status = stateEntryView === 'entry' ? statusEntry : statusExit;
+      const dateEntry = tenant.DepositPaidDate || tenant.InventoryRequestDate || '';
+      const dateExit = tenant.TerminationRequestDate || '';
+      const tenantDate = stateEntryView === 'entry' ? toDateOnly(dateEntry) : toDateOnly(dateExit);
+
+      if (stateEntryNameFilter && !name.includes(stateEntryNameFilter.trim().toLowerCase())) return false;
+      if (stateEntryPropertyFilter && !property.includes(stateEntryPropertyFilter.trim().toLowerCase())) return false;
+      if (stateEntryStatusFilter && status !== stateEntryStatusFilter.trim().toLowerCase()) return false;
+      if (stateEntryDateFilter && tenantDate !== stateEntryDateFilter) return false;
+      return true;
+    });
+
     return (
       <div className="sa-section-card">
         <div className="sa-section-header">
           <div>
-            <h3>State of the Entry</h3>
-            <p>List of tenants who paid the deposit at the accountant's and requested inventory of premises</p>
+            <h3>State of Entry / Exit</h3>
+            <p>
+              {stateEntryView === 'entry'
+                ? 'Entry: tenants who paid deposit and requested inventory. Switch to Exit for termination requests.'
+                : 'Exit: tenants who requested contract termination. Switch to Entry for deposit/inventory requests.'}
+            </p>
           </div>
           <button 
             className="sa-primary-cta"
             onClick={() => {
-              setInventoryFormData({ ...inventoryFormData, type: 'Entry' });
+              setInventoryFormData({ ...inventoryFormData, type: stateEntryView === 'entry' ? 'Entry' : 'Exit' });
               setShowInventoryFormModal(true);
             }}
           >
             <Plus size={16} />
-            Create Entry Inventory
+            Add Inventory ({stateEntryView === 'entry' ? 'Entry' : 'Exit'})
           </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontWeight: 600, color: '#374151' }}>View:</span>
+          <button
+            type="button"
+            className={stateEntryView === 'entry' ? 'action-button primary' : 'action-button secondary'}
+            onClick={() => setStateEntryView('entry')}
+          >
+            Entry
+          </button>
+          <button
+            type="button"
+            className={stateEntryView === 'exit' ? 'action-button primary' : 'action-button secondary'}
+            onClick={() => setStateEntryView('exit')}
+          >
+            Exit
+          </button>
+        </div>
+
+        <div className="sa-filters-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+          <input
+            type="text"
+            className="sa-filter-select"
+            placeholder="Filter by name"
+            value={stateEntryNameFilter}
+            onChange={(e) => setStateEntryNameFilter(e.target.value)}
+          />
+          <input
+            type="text"
+            className="sa-filter-select"
+            placeholder="Filter by property"
+            value={stateEntryPropertyFilter}
+            onChange={(e) => setStateEntryPropertyFilter(e.target.value)}
+          />
+          <select
+            className="sa-filter-select"
+            value={stateEntryStatusFilter}
+            onChange={(e) => setStateEntryStatusFilter(e.target.value)}
+          >
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <input
+            type="date"
+            className="sa-filter-select"
+            placeholder="Filter by date"
+            value={stateEntryDateFilter}
+            onChange={(e) => setStateEntryDateFilter(e.target.value)}
+          />
         </div>
 
         <div className="sa-table-wrapper">
@@ -2742,21 +2864,33 @@ const TechnicianDashboard = () => {
                 <th>Tenant Name</th>
                 <th>Property</th>
                 <th>Unit Number</th>
-                <th>Deposit Paid Date</th>
-                <th>Inventory Request Date</th>
-                <th>Status</th>
+                {stateEntryView === 'entry' ? (
+                  <>
+                    <th>Deposit Paid Date</th>
+                    <th>Inventory Request Date</th>
+                    <th>Status</th>
+                  </>
+                ) : (
+                  <>
+                    <th>Termination Request Date</th>
+                    <th>Exit Inventory Status</th>
+                    <th>Deposit Refund Status</th>
+                  </>
+                )}
                 <th />
               </tr>
             </thead>
             <tbody>
-              {entryTenants.length === 0 ? (
+              {filteredList.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="sa-table-empty">
-                    No entry inventory requests found. Tenants who have paid deposits and requested inventory will appear here.
+                    {stateEntryView === 'entry'
+                      ? 'No entry inventory requests found. Use filters or add an Entry inventory from the popup.'
+                      : 'No exit requests found. Use filters or add an Exit inventory from the popup.'}
                   </td>
                 </tr>
-              ) : (
-                entryTenants.map((tenant, index) => (
+              ) : stateEntryView === 'entry' ? (
+                filteredList.map((tenant, index) => (
                   <tr key={tenant.ID || tenant.id}>
                     <td>{index + 1}</td>
                     <td>{tenant.Name || tenant.name || 'N/A'}</td>
@@ -2783,58 +2917,8 @@ const TechnicianDashboard = () => {
                     </td>
                   </tr>
                 ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
-
-  // Render State of Exit - List tenants who requested contract termination
-  const renderStateExit = () => {
-    return (
-      <div className="sa-section-card">
-        <div className="sa-section-header">
-          <div>
-            <h3>State of Affairs of Exit</h3>
-            <p>List of tenants who have requested to terminate their contract</p>
-          </div>
-          <button 
-            className="sa-primary-cta"
-            onClick={() => {
-              setInventoryFormData({ ...inventoryFormData, type: 'Exit' });
-              setShowInventoryFormModal(true);
-            }}
-          >
-            <Plus size={16} />
-            Create Exit Inventory
-          </button>
-        </div>
-
-        <div className="sa-table-wrapper">
-          <table className="sa-table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Tenant Name</th>
-                <th>Property</th>
-                <th>Unit Number</th>
-                <th>Termination Request Date</th>
-                <th>Exit Inventory Status</th>
-                <th>Deposit Refund Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {exitTenants.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="sa-table-empty">
-                    No exit requests found. Tenants who have requested contract termination will appear here.
-                  </td>
-                </tr>
               ) : (
-                exitTenants.map((tenant, index) => (
+                filteredList.map((tenant, index) => (
                   <tr key={tenant.ID || tenant.id}>
                     <td>{index + 1}</td>
                     <td>{tenant.Name || tenant.name || 'N/A'}</td>
@@ -3143,8 +3227,6 @@ const TechnicianDashboard = () => {
         return renderWorks();
       case 'state-entry':
         return renderStateEntry();
-      case 'state-exit':
-        return renderStateExit();
       case 'worker-contacts':
         return renderTechnicianContacts(); // Reuse existing function
       case 'history':
@@ -3414,7 +3496,33 @@ const TechnicianDashboard = () => {
                   <option value="Scheduled">Scheduled</option>
                 </select>
               </div>
-                  {!selectedTask && (
+                  {taskContext === 'maintenance' ? (
+              <div className="form-group">
+                      <label htmlFor="task-assigned">Assigned To (Worker)</label>
+                      <select
+                        id="task-assigned"
+                        value={taskForm.assigned || ''}
+                        onChange={(e) => setTaskForm({...taskForm, assigned: e.target.value})}
+                      >
+                        <option value="">Select worker...</option>
+                        {technicianContacts.map((contact) => {
+                          const name = contact.Name || contact.name || 'N/A';
+                          const category = contact.Category || contact.category || '';
+                          return (
+                            <option key={contact.ID || contact.id} value={name}>
+                              {name}{category ? ` (${category})` : ''}
+                            </option>
+                          );
+                        })}
+                        {taskForm.assigned && !technicianContacts.some(c => (c.Name || c.name) === taskForm.assigned) && (
+                          <option value={taskForm.assigned}>{taskForm.assigned} (current)</option>
+                        )}
+                        {technicianContacts.length === 0 && !taskForm.assigned && (
+                          <option value="" disabled>No workers in Contact of Workers</option>
+                        )}
+                      </select>
+                    </div>
+                  ) : !selectedTask ? (
               <div className="form-group">
                       <label htmlFor="task-assigned">Assigned To</label>
                       <input
@@ -3425,7 +3533,7 @@ const TechnicianDashboard = () => {
                         placeholder="Enter technician name"
                       />
                     </div>
-                  )}
+                  ) : null}
                 </div>
                 <div className="form-row">
                   <div className="form-group">
@@ -3443,20 +3551,46 @@ const TechnicianDashboard = () => {
             </div>
             {!selectedTask && (
               <div className="form-group">
-                <label htmlFor="task-photos">Upload Photos (Optional)</label>
+                <label htmlFor="task-photos">Upload one or more photos (optional)</label>
                 <input
                   type="file"
                   id="task-photos"
                   accept="image/*"
                   multiple
                   onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    setTaskForm(prev => ({ ...prev, photos: files }));
+                    const newFiles = Array.from(e.target.files || []);
+                    setTaskForm(prev => ({
+                      ...prev,
+                      photos: [...(prev.photos || []), ...newFiles]
+                    }));
+                    e.target.value = '';
                   }}
                 />
                 {taskForm.photos && taskForm.photos.length > 0 && (
-                  <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#6b7280' }}>
-                    {taskForm.photos.length} photo{taskForm.photos.length !== 1 ? 's' : ''} selected
+                  <div style={{ marginTop: '8px' }}>
+                    <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '6px' }}>
+                      {taskForm.photos.length} photo{taskForm.photos.length !== 1 ? 's' : ''} selected
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.85rem', color: '#374151' }}>
+                      {taskForm.photos.map((file, idx) => (
+                        <li key={`${file.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{ flex: 1 }}>{file.name}</span>
+                          <button
+                            type="button"
+                            className="action-button secondary"
+                            style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                            onClick={() => {
+                              setTaskForm(prev => ({
+                                ...prev,
+                                photos: prev.photos.filter((_, i) => i !== idx)
+                              }));
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
@@ -3724,7 +3858,7 @@ const TechnicianDashboard = () => {
                     Cancel
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
-                    {loading ? 'Saving...' : 'Start Work'}
+                    {loading ? 'Saving...' : 'Set Work Started'}
                   </button>
                 </div>
               </form>
@@ -4122,7 +4256,7 @@ const TechnicianDashboard = () => {
                     </div>
                     {inventoryFormData.propertyType && inventoryFormData.propertyType !== 'Studio' && (
                       <div className="form-group">
-                        <label>Number of Rooms *</label>
+                        <label>Number of Bedrooms *</label>
                         <input
                           type="number"
                           min="1"
@@ -4333,7 +4467,7 @@ const TechnicianDashboard = () => {
                     </h4>
                     <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '16px' }}>
                       {inventoryFormData.propertyType === 'Studio' && 'Evaluation of the unique piece and basic equipment.'}
-                      {inventoryFormData.propertyType === 'Apartment' && 'Each room is automatically generated according to the number of rooms.'}
+                      {inventoryFormData.propertyType === 'Apartment' && 'Each room is automatically generated according to the number of bedrooms.'}
                       {(inventoryFormData.propertyType === 'Duplex' || inventoryFormData.propertyType === 'Villa') && 'Multi-level management and outdoor spaces.'}
                     </p>
                     

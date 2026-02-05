@@ -46,17 +46,31 @@ const SettingsPage = () => {
     setLoading(true);
     try {
       const profile = await profileService.getProfile();
+      const pictureUrl = profile.profilePictureURL || profile.profilePicture || profile.profile_picture || '';
       setProfileForm({
         name: profile.name || '',
         email: profile.email || '',
         company: profile.company || '',
         role: profile.role || '',
         status: profile.status || '',
-        profilePicture: profile.profilePictureURL || profile.profilePicture || profile.profile_picture || ''
+        profilePicture: pictureUrl
       });
       // Store user ID for potential future use
       if (profile.id) {
         setUserId(profile.id);
+      }
+      // Sync profile picture (and name) to localStorage user so the top-right avatar shows it
+      try {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser && pictureUrl) {
+          const user = JSON.parse(storedUser);
+          user.profilePictureURL = pictureUrl;
+          if (profile.name) user.name = profile.name;
+          localStorage.setItem('user', JSON.stringify(user));
+          window.dispatchEvent(new CustomEvent('userProfileUpdated'));
+        }
+      } catch (e) {
+        console.error('Error syncing profile to localStorage:', e);
       }
     } catch (error) {
       console.error('Error loading profile:', error);

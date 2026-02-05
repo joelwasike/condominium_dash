@@ -111,6 +111,7 @@ const AdministrativeDashboard = () => {
     cie15: false
   });
   const [clientDocFiles, setClientDocFiles] = useState({});
+  const clientDocFileInputRefs = useRef({});
   const [showChecklistModal, setShowChecklistModal] = useState(false);
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [selectedChecklist, setSelectedChecklist] = useState(null);
@@ -1341,14 +1342,15 @@ const AdministrativeDashboard = () => {
         if (!tenant.includes(search) && !property.includes(search) && !contractTitle.includes(search)) return false;
       }
       
-      // Status filter
+      // Status filter: Valid tab only shows leases approved by management (Active / Approved by management)
       const status = (lease.status || lease.Status || 'Active').toLowerCase();
       if (leaseTab === 'active' || leaseTab === 'valid') {
         return (
           status === 'active' ||
+          status === 'approved by management' ||
+          status === 'approved' ||
           status === 'valid' ||
           status === 'completed' ||
-          status === 'approved' ||
           status === 'validated'
         );
       }
@@ -3167,6 +3169,27 @@ const AdministrativeDashboard = () => {
             </select>
           </div>
 
+          {clientDocForm.property && (() => {
+            const selectedProp = properties.find(p => {
+              const label = p.Address || p.address || p.name || p.Name || `Property ${p.ID || p.id}`;
+              return label === clientDocForm.property;
+            });
+            const monthlyRent = selectedProp ? (Number(selectedProp.rent) || Number(selectedProp.Rent) || 0) : 0;
+            const securityDeposit = monthlyRent * 2;
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ padding: '12px', background: '#f0fdf4', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#166534', marginBottom: '4px' }}>Monthly Rent</div>
+                  <div style={{ fontWeight: 600, color: '#15803d' }}>{monthlyRent ? `${Number(monthlyRent).toLocaleString()} FCFA` : '—'}</div>
+                </div>
+                <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#1e40af', marginBottom: '4px' }}>Security Deposit (2× monthly rent)</div>
+                  <div style={{ fontWeight: 600, color: '#1d4ed8' }}>{securityDeposit ? `${Number(securityDeposit).toLocaleString()} FCFA` : '—'}</div>
+                </div>
+              </div>
+            );
+          })()}
+
         <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
           <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
           <div className="application-fees-list">
@@ -3224,15 +3247,40 @@ const AdministrativeDashboard = () => {
             ).map((doc) => (
               <div key={doc.key} className="form-group">
                 <label>{doc.label} *</label>
-                <input
-                  type="file"
-                  accept=".pdf,image/*"
-                  required
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    setClientDocFiles(prev => ({ ...prev, [doc.key]: file }));
-                  }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <input
+                    ref={(el) => { if (el) clientDocFileInputRefs.current[doc.key] = el; }}
+                    type="file"
+                    accept=".pdf,image/*"
+                    required={!clientDocFiles[doc.key]}
+                    style={{ maxWidth: '100%' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      setClientDocFiles(prev => ({ ...prev, [doc.key]: file }));
+                    }}
+                  />
+                  {clientDocFiles[doc.key] && (
+                    <>
+                      <span style={{ fontSize: '13px', color: '#374151' }}>{clientDocFiles[doc.key].name}</span>
+                      <button
+                        type="button"
+                        className="action-button secondary"
+                        style={{ padding: '4px 10px', fontSize: '12px' }}
+                        onClick={() => {
+                          const inputEl = clientDocFileInputRefs.current[doc.key];
+                          if (inputEl) inputEl.value = '';
+                          setClientDocFiles(prev => {
+                            const next = { ...prev };
+                            delete next[doc.key];
+                            return next;
+                          });
+                        }}
+                      >
+                        Change / Remove
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>

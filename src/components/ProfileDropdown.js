@@ -52,7 +52,7 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
 
   const userName = userProfile?.name || userProfile?.username || 'User';
   const userRole = userProfile?.role || '';
-  const profilePicture = userProfile?.profilePictureURL || userProfile?.ProfilePictureURL;
+  const profilePicture = userProfile?.profilePictureURL || userProfile?.ProfilePictureURL || userProfile?.profilePicture || userProfile?.profile_picture;
 
   // Initials from name: "John Doe" -> "JD", "Mary Jane" -> "MJ", "John" -> "J"
   const getInitials = (name) => {
