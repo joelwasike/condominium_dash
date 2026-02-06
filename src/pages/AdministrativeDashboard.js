@@ -127,6 +127,8 @@ const AdministrativeDashboard = () => {
   const [terminations, setTerminations] = useState([]);
   const [terminationSearchText, setTerminationSearchText] = useState('');
   const [terminationTab, setTerminationTab] = useState('receipt'); // 'receipt', 'pending', 'made'
+  const [showTerminationDetailModal, setShowTerminationDetailModal] = useState(false);
+  const [selectedTerminationForDetail, setSelectedTerminationForDetail] = useState(null);
   const [inventoryList, setInventoryList] = useState([]); // State of Entry / Exit filled by technicians
   const [historyData, setHistoryData] = useState({
     clients: [],
@@ -2075,8 +2077,10 @@ const AdministrativeDashboard = () => {
       
       // Status filter
       const status = (termination.status || termination.Status || '').toLowerCase();
+      const inventoryStatus = (termination.inventoryStatus || termination.InventoryStatus || '').toLowerCase();
       if (terminationTab === 'receipt') return status === 'pending' || status === 'received';
-      if (terminationTab === 'pending') return status === 'pending' || status === 'waiting-inventory';
+      // Pending tab: status pending/waiting-inventory OR inventory status is pending
+      if (terminationTab === 'pending') return status === 'pending' || status === 'waiting-inventory' || inventoryStatus === 'pending';
       if (terminationTab === 'made') return status === 'completed' || status === 'made' || status === 'accepted';
       return true;
     });
@@ -2183,7 +2187,16 @@ const AdministrativeDashboard = () => {
                       </span>
                     </td>
                     <td className="sa-row-actions">
-                      <button className="sa-icon-button" title="View">👁️</button>
+                      <button
+                        className="sa-icon-button"
+                        title="View details"
+                        onClick={() => {
+                          setSelectedTerminationForDetail(termination);
+                          setShowTerminationDetailModal(true);
+                        }}
+                      >
+                        👁️
+                      </button>
                       {terminationTab === 'pending' && (
                         <button 
                           className="sa-icon-button" 
@@ -2707,6 +2720,70 @@ const AdministrativeDashboard = () => {
           </div>
         )}
       </RoleLayout>
+
+      {/* Termination detail modal – all uploaded details */}
+      <Modal
+        isOpen={showTerminationDetailModal}
+        onClose={() => {
+          setShowTerminationDetailModal(false);
+          setSelectedTerminationForDetail(null);
+        }}
+        title="Termination details"
+        size="md"
+      >
+        {selectedTerminationForDetail && (
+          <div className="modal-form" style={{ padding: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[
+                { key: 'Tenant', val: selectedTerminationForDetail.tenant || selectedTerminationForDetail.Tenant || selectedTerminationForDetail.name || selectedTerminationForDetail.Name },
+                { key: 'Property', val: selectedTerminationForDetail.property || selectedTerminationForDetail.Property },
+                { key: 'Unit number', val: selectedTerminationForDetail.unitNumber || selectedTerminationForDetail.UnitNumber },
+                { key: 'Request date', val: selectedTerminationForDetail.requestDate || selectedTerminationForDetail.RequestDate || selectedTerminationForDetail.createdAt || selectedTerminationForDetail.CreatedAt },
+                { key: 'Status', val: selectedTerminationForDetail.status || selectedTerminationForDetail.Status },
+                { key: 'Inventory status', val: selectedTerminationForDetail.inventoryStatus || selectedTerminationForDetail.InventoryStatus },
+                { key: 'Termination date', val: selectedTerminationForDetail.terminationDate || selectedTerminationForDetail.TerminationDate },
+                { key: 'Termination reason', val: selectedTerminationForDetail.terminationReason || selectedTerminationForDetail.TerminationReason },
+                { key: 'Security deposit refund method', val: selectedTerminationForDetail.securityDepositRefundMethod || selectedTerminationForDetail.SecurityDepositRefundMethod },
+                { key: 'Inventory check date', val: selectedTerminationForDetail.inventoryCheckDate || selectedTerminationForDetail.InventoryCheckDate },
+                { key: 'Inventory check time', val: selectedTerminationForDetail.inventoryCheckTime || selectedTerminationForDetail.InventoryCheckTime },
+                { key: 'ID', val: selectedTerminationForDetail.id ?? selectedTerminationForDetail.ID },
+                { key: 'Created at', val: selectedTerminationForDetail.createdAt || selectedTerminationForDetail.CreatedAt },
+                { key: 'Updated at', val: selectedTerminationForDetail.updatedAt || selectedTerminationForDetail.UpdatedAt }
+              ].filter(({ val }) => val !== undefined && val !== null && val !== '').map(({ key, val }) => {
+                let display = String(val);
+                if (typeof val === 'object' && val && typeof val.getMonth === 'function') {
+                  display = new Date(val).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+                } else if (typeof val === 'string' && /^\d{4}-\d{2}/.test(val)) {
+                  try {
+                    display = new Date(val).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+                  } catch (_) { /* keep string */ }
+                }
+                return (
+                  <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' }}>
+                    <span style={{ fontWeight: '600', color: '#374151', minWidth: '160px' }}>{key}</span>
+                    <span style={{ color: '#1f2937', textAlign: 'right', wordBreak: 'break-word' }}>{display}</span>
+                  </div>
+                );
+              })}
+              {/* Any other keys from backend */}
+              {Object.keys(selectedTerminationForDetail)
+                .filter(k => !['tenant', 'Tenant', 'name', 'Name', 'property', 'Property', 'unitNumber', 'UnitNumber', 'requestDate', 'RequestDate', 'createdAt', 'CreatedAt', 'status', 'Status', 'inventoryStatus', 'InventoryStatus', 'terminationDate', 'TerminationDate', 'terminationReason', 'TerminationReason', 'securityDepositRefundMethod', 'SecurityDepositRefundMethod', 'inventoryCheckDate', 'InventoryCheckDate', 'inventoryCheckTime', 'InventoryCheckTime', 'id', 'ID', 'updatedAt', 'UpdatedAt'].includes(k))
+                .map(k => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' }}>
+                    <span style={{ fontWeight: '600', color: '#374151', minWidth: '160px' }}>{k}</span>
+                    <span style={{ color: '#1f2937', textAlign: 'right', wordBreak: 'break-word' }}>
+                      {typeof selectedTerminationForDetail[k] === 'object' && selectedTerminationForDetail[k] !== null
+                        ? (selectedTerminationForDetail[k] && typeof selectedTerminationForDetail[k].getMonth === 'function'
+                          ? new Date(selectedTerminationForDetail[k]).toLocaleString()
+                          : JSON.stringify(selectedTerminationForDetail[k]))
+                        : String(selectedTerminationForDetail[k])}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         isOpen={showLeaseModal}

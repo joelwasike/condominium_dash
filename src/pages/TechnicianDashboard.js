@@ -2741,7 +2741,12 @@ const TechnicianDashboard = () => {
     );
   };
 
-  // Render State of Entry / Exit - Single page with Entry | Exit switch and filters
+  // Inventory reports submitted by technician (Move-in / Move-out from inspections list)
+  const inventoryReportsList = inspections.filter(
+    (i) => (i.Type || i.type) === 'Move-in' || (i.Type || i.type) === 'Move-out'
+  );
+
+  // Render State of Entry / Exit - Single page with list of submitted reports + Entry | Exit tenant tables
   const renderStateEntry = () => {
     const list = stateEntryView === 'entry' ? entryTenants : exitTenants;
     const toDateOnly = (d) => {
@@ -2772,9 +2777,7 @@ const TechnicianDashboard = () => {
           <div>
             <h3>State of Entry / Exit</h3>
             <p>
-              {stateEntryView === 'entry'
-                ? 'Entry: tenants who paid deposit and requested inventory. Switch to Exit for termination requests.'
-                : 'Exit: tenants who requested contract termination. Switch to Entry for deposit/inventory requests.'}
+              View inventory reports you have submitted, and add new Entry or Exit inventories for tenants below.
             </p>
           </div>
           <button 
@@ -2787,6 +2790,78 @@ const TechnicianDashboard = () => {
             <Plus size={16} />
             Add Inventory ({stateEntryView === 'entry' ? 'Entry' : 'Exit'})
           </button>
+        </div>
+
+        {/* List of inventory reports submitted by this technician (same as admin view) */}
+        <div style={{ marginBottom: '32px' }}>
+          <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600', color: '#374151' }}>
+            Inventory reports you&apos;ve submitted
+          </h4>
+          {inventoryReportsList.length === 0 ? (
+            <div className="sa-table-empty" style={{ marginTop: '8px' }}>
+              No inventory reports yet. Add an Entry or Exit inventory using the button above or from the tenant list below.
+            </div>
+          ) : (
+            <div className="sa-table-wrapper" style={{ marginTop: '8px' }}>
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Type</th>
+                    <th>Tenant</th>
+                    <th>Property</th>
+                    <th>Date</th>
+                    <th>Inspector</th>
+                    <th>Status</th>
+                    <th>Report</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inventoryReportsList.map((inv, index) => {
+                    const type = inv.type || inv.Type || '';
+                    const tenant = inv.tenant || inv.Tenant || '—';
+                    const property = inv.property || inv.Property || '—';
+                    const date = inv.date || inv.Date || inv.createdAt || inv.CreatedAt;
+                    const dateStr = date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
+                    const inspector = inv.inspector || inv.Inspector || '—';
+                    const status = inv.status || inv.Status || '—';
+                    const reportURL = inv.reportURL || inv.ReportURL;
+                    return (
+                      <tr key={inv.id || inv.ID || index}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            backgroundColor: type === 'Move-in' ? '#dbeafe' : '#fef3c7',
+                            color: type === 'Move-in' ? '#1e40af' : '#92400e'
+                          }}>
+                            {type === 'Move-in' ? 'Entry' : type === 'Move-out' ? 'Exit' : type || '—'}
+                          </span>
+                        </td>
+                        <td>{tenant}</td>
+                        <td>{property}</td>
+                        <td>{dateStr}</td>
+                        <td>{inspector}</td>
+                        <td>{status}</td>
+                        <td>
+                          {reportURL ? (
+                            <a href={reportURL.startsWith('http') ? reportURL : `${API_CONFIG.BASE_URL}${reportURL}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}>
+                              View report
+                            </a>
+                          ) : (
+                            <span style={{ color: '#9ca3af' }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -2807,6 +2882,11 @@ const TechnicianDashboard = () => {
           </button>
         </div>
 
+        <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600', color: '#374151' }}>
+          {stateEntryView === 'entry'
+            ? 'Tenants who need Entry inventory – select a row to add a new report'
+            : 'Tenants who need Exit inventory – select a row to add a new report'}
+        </h4>
         <div className="sa-filters-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '16px' }}>
           <select
             className="sa-filter-select"
@@ -4163,6 +4243,7 @@ const TechnicianDashboard = () => {
                   }
 
                   setShowInventoryFormModal(false);
+                  loadData(); // Refresh State of Entry/Exit list and tenant dashboard will show it for the tenant
                 } catch (error) {
                   console.error('Error submitting inventory form:', error);
                   addNotification(error.message || 'Failed to submit inventory form', 'error');
@@ -4328,6 +4409,9 @@ const TechnicianDashboard = () => {
                     </div>
                     <div className="form-group" style={{ position: 'relative' }}>
                       <label>Tenant Name *</label>
+                      <p style={{ margin: '0 0 6px 0', fontSize: '0.8rem', color: '#6b7280' }}>
+                        Use the tenant&apos;s name as in their account so they can see this report in their dashboard (State of Entry/Exit).
+                      </p>
                       <select
                         value={inventoryFormData.tenantName}
                         onChange={(e) => {

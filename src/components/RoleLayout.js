@@ -262,15 +262,26 @@ const RoleLayout = ({
       </aside>
 
       <div className="role-main technician-main">
-        <header className="role-topbar technician-topbar">
-          <button 
+        <header
+          className="role-topbar technician-topbar"
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            width: '100%',
+            boxSizing: 'border-box',
+          }}
+        >
+          <button
             className="mobile-menu-toggle"
+            style={{ marginRight: 'auto' }}
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle menu"
           >
             {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
-          
+
           {!hideSearch && (
             <div className="topbar-search">
               <Search size={18} />
@@ -287,7 +298,15 @@ const RoleLayout = ({
               />
             </div>
           )}
-          <div className="topbar-actions">
+          <div
+            className="topbar-actions"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginLeft: 'auto',
+              flexShrink: 0,
+            }}
+          >
             <LanguageSelector />
             
             {headerActions?.map(action => {
