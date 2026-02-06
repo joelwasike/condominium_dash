@@ -1534,7 +1534,8 @@ const AdministrativeDashboard = () => {
                   const property = lease.property || lease.Property || 'N/A';
                   const documentURL = lease.documentURL || lease.DocumentURL;
                   const status = lease.status || lease.Status || 'Pending';
-                  
+                  // On Valid tab, show "Active" for all so it's consistent (stored value can be Valid, Active, Approved, etc.)
+                  const displayStatus = leaseTab === 'valid' ? 'Active' : status;
                   return (
                     <tr key={lease.id || lease.ID}>
                       <td>{index + 1}</td>
@@ -1544,8 +1545,8 @@ const AdministrativeDashboard = () => {
                       <td>{property}</td>
                       <td>{landlord}</td>
                       <td>
-                        <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
-                          {status}
+                        <span className={`sa-status-pill ${displayStatus.toLowerCase().replace(' ', '-')}`}>
+                          {displayStatus}
                         </span>
                       </td>
                       <td>
