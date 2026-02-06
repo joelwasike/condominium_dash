@@ -222,7 +222,14 @@ const AdministrativeDashboard = () => {
       setEditClientDocsLoading(true);
       try {
         const docs = await adminService.getDocuments({ tenant: tenantName });
-        setEditClientExistingDocuments(Array.isArray(docs) ? docs : []);
+        const docsList = Array.isArray(docs) ? docs : [];
+        setEditClientExistingDocuments(docsList);
+        // Pre-select the property that was used when uploading this client's documents
+        const docWithProperty = docsList.find((d) => (d.Property || d.property || '').trim() !== '');
+        const propertyFromDoc = docWithProperty ? (docWithProperty.Property || docWithProperty.property) : '';
+        if (propertyFromDoc) {
+          setEditClientForm((prev) => ({ ...prev, property: propertyFromDoc }));
+        }
       } catch (err) {
         console.error('Error loading client documents:', err);
         setEditClientExistingDocuments([]);
