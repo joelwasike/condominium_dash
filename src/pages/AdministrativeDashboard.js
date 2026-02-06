@@ -2432,7 +2432,8 @@ const AdministrativeDashboard = () => {
   const renderNewClient = () => {
     // Filter clients based on search and status
     const filteredClients = newClients.filter(client => {
-      const statusValue = (client.status || client.Status || client.ApplicationStatus || client.applicationStatus || '').toLowerCase();
+      const rawStatus = (client.status || client.Status || client.ApplicationStatus || client.applicationStatus || '').toLowerCase();
+      const statusValue = rawStatus.replace(/\s+/g, '-');
       if (statusValue === 'onboarded') return false;
       if (clientSearchText) {
         const search = clientSearchText.toLowerCase();
@@ -2442,8 +2443,8 @@ const AdministrativeDashboard = () => {
       }
       if (clientStatusFilter) {
         if (clientStatusFilter === 'in-progress' && statusValue !== 'pending' && statusValue !== 'in-progress') return false;
-        if (clientStatusFilter === 'accepted' && statusValue !== 'accepted' && statusValue !== 'approved') return false;
-        if (clientStatusFilter === 'refused' && statusValue !== 'refused' && statusValue !== 'rejected') return false;
+        if (clientStatusFilter === 'accepted' && rawStatus !== 'accepted' && rawStatus !== 'approved') return false;
+        if (clientStatusFilter === 'refused' && rawStatus !== 'refused' && rawStatus !== 'rejected') return false;
       }
       return true;
     });
