@@ -1425,13 +1425,17 @@ const AdministrativeDashboard = () => {
   const renderLeases = () => {
     // Filter leases by selected tab and search
     const filteredLeases = leases.filter(lease => {
-      // Search filter
-      if (leaseSearchText) {
-        const search = leaseSearchText.toLowerCase();
+      // Search filter (tenant, property, contract title, landlord, lease type, status)
+      if (leaseSearchText.trim()) {
+        const search = leaseSearchText.trim().toLowerCase();
         const tenant = (lease.tenant || lease.Tenant || '').toLowerCase();
         const property = (lease.property || lease.Property || '').toLowerCase();
         const contractTitle = (lease.contractTitle || lease.ContractTitle || '').toLowerCase();
-        if (!tenant.includes(search) && !property.includes(search) && !contractTitle.includes(search)) return false;
+        const landlord = (lease.landlord || lease.Landlord || '').toLowerCase();
+        const leaseType = (lease.leaseType || lease.LeaseType || '').toLowerCase();
+        const status = (lease.status || lease.Status || '').toLowerCase();
+        if (!tenant.includes(search) && !property.includes(search) && !contractTitle.includes(search) &&
+            !landlord.includes(search) && !leaseType.includes(search) && !status.includes(search)) return false;
       }
       
       // Status filter: Valid tab only shows leases approved by management (Active / Approved by management)
@@ -1506,6 +1510,23 @@ const AdministrativeDashboard = () => {
           >
             Valid
           </button>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <input
+            type="text"
+            placeholder="Search by tenant, property, contract title, landlord, lease type..."
+            value={leaseSearchText}
+            onChange={(e) => setLeaseSearchText(e.target.value)}
+            style={{
+              width: '100%',
+              maxWidth: '400px',
+              padding: '10px 14px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem'
+            }}
+          />
         </div>
 
         {filteredLeases.length === 0 ? (
