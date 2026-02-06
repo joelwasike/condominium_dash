@@ -123,6 +123,8 @@ const TenantDashboard = () => {
   const [overviewData, setOverviewData] = useState(null);
   const [leaseInfo, setLeaseInfo] = useState(null);
   const [payments, setPayments] = useState([]);
+  const [transferRequests, setTransferRequests] = useState([]);
+  const [paymentsTab, setPaymentsTab] = useState('payments'); // 'payments' | 'transfers'
   const [maintenanceRequests, setMaintenanceRequests] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
   const [showMaintenanceViewModal, setShowMaintenanceViewModal] = useState(false);
@@ -187,18 +189,20 @@ const TenantDashboard = () => {
         return;
       }
       
-      const [overview, paymentsData, maintenanceData, lease] = await Promise.all([
+      const [overview, paymentsData, transfersData, maintenanceData, lease] = await Promise.all([
         tenantService.getOverview().catch(() => null),
         tenantService.listPayments().catch(() => []),
+        tenantService.listTransferRequests().catch(() => []),
         tenantService.listMaintenance().catch(() => []),
         tenantService.getLeaseInfo().catch(() => null)
       ]);
 
       setOverviewData(overview);
       setLeaseInfo(lease);
-      // Ensure payments is an array
       const paymentsArray = Array.isArray(paymentsData) ? paymentsData : [];
       setPayments(paymentsArray);
+      const transfersArray = Array.isArray(transfersData) ? transfersData : [];
+      setTransferRequests(transfersArray);
       // Ensure maintenance is an array
       const maintenanceArray = Array.isArray(maintenanceData) ? maintenanceData : [];
       setMaintenanceRequests(maintenanceArray);
@@ -212,25 +216,27 @@ const TenantDashboard = () => {
     }
   };
 
-  // Load payments separately
+  // Load payments and transfer requests
   const loadPayments = async () => {
     try {
       if (isDemoMode()) {
         const demoData = getTenantDemoData();
-        setPayments(demoData.payments);
+        setPayments(demoData.payments || []);
+        setTransferRequests(demoData.transferRequests || []);
         return;
       }
-      
-      const paymentsData = await tenantService.listPayments();
-      // Ensure payments is an array
-      const paymentsArray = Array.isArray(paymentsData) ? paymentsData : [];
-      setPayments(paymentsArray);
-      console.log('Loaded payments:', paymentsArray);
+      const [paymentsData, transfersData] = await Promise.all([
+        tenantService.listPayments(),
+        tenantService.listTransferRequests()
+      ]);
+      setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+      setTransferRequests(Array.isArray(transfersData) ? transfersData : []);
     } catch (error) {
-      console.error('Error loading payments:', error);
+      console.error('Error loading payments/transfers:', error);
       if (!isDemoMode()) {
-        addNotification('Failed to load payments', 'error');
+        addNotification('Failed to load payment data', 'error');
         setPayments([]);
+        setTransferRequests([]);
       }
     }
   };
@@ -891,6 +897,7 @@ const TenantDashboard = () => {
       setTransferDocFiles({});
       Object.values(transferDocFileInputRefs.current).forEach(el => { if (el) el.value = ''; });
       setShowTransferPaymentModal(false);
+      await loadPayments();
     } catch (error) {
       console.error('Error submitting payment transfer request:', error);
       addNotification(error.message || 'Failed to submit payment transfer request', 'error');
@@ -1203,9 +1210,9 @@ Thank you for your payment!
       <div className="sa-section-header">
         <div>
           <h2>Payment Management</h2>
-          <p>Make payments and view your payment history</p>
+          <p>Make payments, view payment history, and transfer payment requests</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button className="sa-primary-cta" onClick={() => setShowPaymentModal(true)} disabled={loading}>
             <Plus size={18} />
             Make Payment
@@ -1222,7 +1229,6 @@ Thank you for your payment!
           <button 
             className="sa-primary-cta" 
             onClick={async () => {
-              // Ensure leaseInfo is loaded before opening modal
               if (!leaseInfo && !isDemoMode()) {
                 try {
                   const lease = await tenantService.getLeaseInfo();
@@ -1242,71 +1248,156 @@ Thank you for your payment!
         </div>
       </div>
 
-      {loading ? (
-        <div className="sa-table-empty">Loading payments...</div>
-      ) : payments.length === 0 ? (
-        <div className="sa-table-empty">No payments found</div>
-      ) : (
-        <div className="sa-table-wrapper">
-          <table className="sa-table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Method</th>
-                <th>Status</th>
-                <th className="table-menu"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((payment, index) => {
-                // Handle both uppercase and lowercase field names from API
-                const paymentId = payment.ID || payment.id;
-                const paymentDate = payment.Date || payment.date || payment.createdAt || payment.CreatedAt;
-                const chargeType = payment.ChargeType || payment.chargeType || 'Rent';
-                const amount = payment.Amount || payment.amount || 0;
-                const method = payment.Method || payment.method || 'N/A';
-                const status = payment.Status || payment.status || 'Pending';
-                
-                return (
-                  <tr key={paymentId || `payment-${index}`}>
-                    <td>{index + 1}</td>
-                    <td>{paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</td>
-                    <td>
-                      <div className="sa-cell-main">
-                        <span className="sa-cell-title">{chargeType}</span>
-                        {payment.reference && (
-                          <span className="sa-cell-sub">Ref: {payment.reference}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td>{typeof amount === 'number' ? amount.toLocaleString() : amount} XOF</td>
-                    <td>{method}</td>
-                    <td>
-                      <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
-                        {status}
-                      </span>
-                    </td>
-                    <td className="table-menu">
-                      <div className="table-actions">
-                        <button
-                          className="table-action-button view"
-                          onClick={() => downloadReceipt(paymentId)}
-                          title="Download Receipt"
-                        >
-                          <Download size={14} />
-                          Download
-                        </button>
-                      </div>
-                    </td>
+      <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
+        <button
+          type="button"
+          onClick={() => setPaymentsTab('payments')}
+          style={{
+            padding: '12px 24px',
+            border: 'none',
+            background: 'transparent',
+            color: paymentsTab === 'payments' ? '#7c3aed' : '#6b7280',
+            borderBottom: paymentsTab === 'payments' ? '2px solid #7c3aed' : '2px solid transparent',
+            cursor: 'pointer',
+            fontWeight: paymentsTab === 'payments' ? '600' : '400',
+            marginBottom: '-2px'
+          }}
+        >
+          Payment history
+        </button>
+        <button
+          type="button"
+          onClick={() => setPaymentsTab('transfers')}
+          style={{
+            padding: '12px 24px',
+            border: 'none',
+            background: 'transparent',
+            color: paymentsTab === 'transfers' ? '#7c3aed' : '#6b7280',
+            borderBottom: paymentsTab === 'transfers' ? '2px solid #7c3aed' : '2px solid transparent',
+            cursor: 'pointer',
+            fontWeight: paymentsTab === 'transfers' ? '600' : '400',
+            marginBottom: '-2px'
+          }}
+        >
+          Transfer payment requests
+        </button>
+      </div>
+
+      {paymentsTab === 'payments' && (
+        <>
+          {loading ? (
+            <div className="sa-table-empty">Loading payments...</div>
+          ) : payments.length === 0 ? (
+            <div className="sa-table-empty">No payments found</div>
+          ) : (
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th className="table-menu"></th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {payments.map((payment, index) => {
+                    const paymentId = payment.ID || payment.id;
+                    const paymentDate = payment.Date || payment.date || payment.createdAt || payment.CreatedAt;
+                    const chargeType = payment.ChargeType || payment.chargeType || 'Rent';
+                    const amount = payment.Amount || payment.amount || 0;
+                    const method = payment.Method || payment.method || 'N/A';
+                    const status = payment.Status || payment.status || 'Pending';
+                    return (
+                      <tr key={paymentId || `payment-${index}`}>
+                        <td>{index + 1}</td>
+                        <td>{paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</td>
+                        <td>
+                          <div className="sa-cell-main">
+                            <span className="sa-cell-title">{chargeType}</span>
+                            {payment.reference && (
+                              <span className="sa-cell-sub">Ref: {payment.reference}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td>{typeof amount === 'number' ? amount.toLocaleString() : amount} XOF</td>
+                        <td>{method}</td>
+                        <td>
+                          <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
+                            {status}
+                          </span>
+                        </td>
+                        <td className="table-menu">
+                          <div className="table-actions">
+                            <button
+                              className="table-action-button view"
+                              onClick={() => downloadReceipt(paymentId)}
+                              title="Download Receipt"
+                            >
+                              <Download size={14} />
+                              Download
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {paymentsTab === 'transfers' && (
+        <>
+          {loading ? (
+            <div className="sa-table-empty">Loading transfer requests...</div>
+          ) : transferRequests.length === 0 ? (
+            <div className="sa-table-empty">No transfer requests yet. Use &quot;Transfer Payment Request&quot; to submit one.</div>
+          ) : (
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Property</th>
+                    <th>New client (recipient)</th>
+                    <th>Request date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transferRequests.map((tr, index) => {
+                    const requestDate = tr.requestDate || tr.createdAt || tr.CreatedAt;
+                    const newClient = tr.newClient || tr.recipientName || tr.RecipientName || 'N/A';
+                    const status = tr.status || tr.Status || 'Pending';
+                    return (
+                      <tr key={tr.id || tr.ID || `transfer-${index}`}>
+                        <td>{index + 1}</td>
+                        <td>{tr.property || tr.Property || 'N/A'}</td>
+                        <td>{newClient}</td>
+                        <td>
+                          {requestDate
+                            ? new Date(requestDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+                            : 'N/A'}
+                        </td>
+                        <td>
+                          <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
+                            {status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

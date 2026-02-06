@@ -120,6 +120,12 @@ export const tenantService = {
     return await response.json();
   },
 
+  // List my transfer payment requests (history with status)
+  listTransferRequests: async () => {
+    const url = buildApiUrl('/api/tenant/payments/transfers');
+    return await apiRequest(url);
+  },
+
   // Transfer payment request (files = array of document URLs from Cloudinary)
   transferPaymentRequest: async (transferData) => {
     const url = buildApiUrl('/api/tenant/payments/transfer');

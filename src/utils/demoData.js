@@ -41,6 +41,10 @@ export const getTenantDemoData = () => ({
   maintenanceRequests: [
     { id: generateId(), title: 'Leaky Faucet', description: 'Kitchen faucet is leaking', status: 'In Progress', priority: 'Medium', date: generateDate(5) },
     { id: generateId(), title: 'AC Not Working', description: 'Air conditioning unit stopped working', status: 'Completed', priority: 'High', date: generateDate(15) }
+  ],
+  transferRequests: [
+    { id: generateId(), property: '123 Demo Street, Apartment 4B', newClient: 'Jane Relative', recipientName: 'Jane Relative', requestDate: generateDate(10), status: 'Pending' },
+    { id: generateId(), property: '123 Demo Street, Apartment 4B', newClient: 'John Family', recipientName: 'John Family', requestDate: generateDate(45), status: 'Approved' }
   ]
 });
 
