@@ -200,11 +200,17 @@
 
 .role-topbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
+  gap: 16px;
   padding: 24px 32px;
   background: #ffffff;
   box-shadow: 0 12px 32px rgba(18, 36, 104, 0.08);
+}
+
+/* Push menu toggle to the left so language, notifications and profile stay on the right */
+.role-topbar > .mobile-menu-toggle {
+  margin-right: auto;
 }
 
 .topbar-search {
@@ -238,6 +244,8 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .icon-button {
@@ -436,6 +444,10 @@
     flex-wrap: wrap;
   }
 
+  .role-topbar > .mobile-menu-toggle {
+    margin-right: auto;
+  }
+
   .topbar-search {
     min-width: 0;
     flex: 1;
@@ -445,6 +457,7 @@
 
   .topbar-actions {
     gap: 8px;
+    margin-left: auto;
   }
 
   .topbar-profile {
