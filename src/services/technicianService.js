@@ -101,10 +101,30 @@ export const technicianService = {
   },
 
   createMaintenanceRequest: async (requestData) => {
-    // Always send JSON to avoid proxy/middleware parsing multipart as JSON (causes "invalid character '-' in numeric literal").
-    // If the user selected photos, we create the request without photos first; photos can be added via update if the API supports it.
     const cost = Number(requestData?.estimatedCost);
     const numCost = Number.isFinite(cost) ? cost : 0;
+    const photos = requestData?.photos;
+    const hasPhotos = Array.isArray(photos) && photos.length > 0;
+
+    if (hasPhotos) {
+      const formData = new FormData();
+      formData.append('property', String(requestData?.property ?? ''));
+      formData.append('issue', String(requestData?.issue ?? ''));
+      formData.append('priority', String(requestData?.priority ?? 'normal'));
+      formData.append('status', String(requestData?.status ?? 'Pending'));
+      formData.append('estimatedCost', String(numCost));
+      formData.append('assigned', String(requestData?.assigned ?? ''));
+      photos.forEach((file) => {
+        if (file && typeof file === 'object' && file instanceof File) {
+          formData.append('photos', file);
+        }
+      });
+      return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
+        method: 'POST',
+        body: formData,
+      });
+    }
+
     const jsonBody = {
       property: String(requestData?.property ?? ''),
       issue: String(requestData?.issue ?? ''),

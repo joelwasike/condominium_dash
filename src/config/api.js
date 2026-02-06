@@ -101,6 +101,11 @@ export const apiRequest = async (url, options = {}) => {
     },
   };
 
+  // When sending FormData, do not set Content-Type so the browser sets multipart/form-data with boundary
+  if (config.body && config.body instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+
   try {
     const response = await fetch(url, config);
     
