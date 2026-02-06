@@ -3635,26 +3635,7 @@ const AdministrativeDashboard = () => {
                   />
                 </div>
               </div>
-              <div className="form-group">
-                <label>Company Address</label>
-                <input
-                  type="text"
-                  value={editClientForm.address}
-                  onChange={(e) => setEditClientForm(prev => ({ ...prev, address: e.target.value }))}
-                />
-              </div>
             </>
-          )}
-
-          {editClientForm.type === 'individual' && (
-            <div className="form-group">
-              <label>Address</label>
-              <input
-                type="text"
-                value={editClientForm.address}
-                onChange={(e) => setEditClientForm(prev => ({ ...prev, address: e.target.value }))}
-              />
-            </div>
           )}
 
           <div className="form-group">
