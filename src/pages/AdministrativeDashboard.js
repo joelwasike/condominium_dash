@@ -64,7 +64,20 @@ const AdministrativeDashboard = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
-  const [editClientForm, setEditClientForm] = useState({ securityDepositPaid: false });
+  const [editClientForm, setEditClientForm] = useState({
+    type: 'individual',
+    name: '',
+    email: '',
+    phone: '',
+    companyName: '',
+    address: '',
+    registrationNumber: '',
+    contactPerson: '',
+    securityDepositPaid: false,
+    property: ''
+  });
+  const [editClientDocFiles, setEditClientDocFiles] = useState({});
+  const editClientFileInputRefs = useRef({});
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   
@@ -188,9 +201,20 @@ const AdministrativeDashboard = () => {
 
   const openEditClient = (client) => {
     setEditingClient(client);
+    const type = (client.Type || client.type || 'individual').toLowerCase();
     setEditClientForm({
+      type,
+      name: client.Name || client.name || '',
+      email: client.Email || client.email || '',
+      phone: client.Phone || client.phone || '',
+      companyName: client.CompanyName || client.companyName || '',
+      address: client.Address || client.address || '',
+      registrationNumber: client.RegistrationNumber || client.registrationNumber || '',
+      contactPerson: client.ContactPerson || client.contactPerson || '',
       securityDepositPaid: Boolean(client.SecurityDepositPaid || client.securityDepositPaid),
+      property: client.Property || client.property || ''
     });
+    setEditClientDocFiles({});
     setShowEditClientModal(true);
   };
 
@@ -200,11 +224,32 @@ const AdministrativeDashboard = () => {
     try {
       setLoading(true);
       await adminService.updateClientApplication(editingClient.ID || editingClient.id, {
+        type: editClientForm.type,
+        name: editClientForm.type === 'company' ? editClientForm.companyName : editClientForm.name,
+        email: editClientForm.email,
+        phone: editClientForm.phone,
+        companyName: editClientForm.companyName,
+        address: editClientForm.address,
+        registrationNumber: editClientForm.registrationNumber,
+        contactPerson: editClientForm.contactPerson,
         securityDepositPaid: editClientForm.securityDepositPaid,
       });
+      const tenantName = editClientForm.type === 'company' ? editClientForm.companyName : editClientForm.name;
+      const docList = editClientForm.type === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS;
+      for (const doc of docList) {
+        if (editClientDocFiles[doc.key]) {
+          await adminService.uploadClientDocument({
+            tenant: tenantName,
+            property: editClientForm.property || undefined,
+            type: doc.label,
+            file: editClientDocFiles[doc.key],
+          });
+        }
+      }
       addNotification('Client updated', 'success');
       setShowEditClientModal(false);
       setEditingClient(null);
+      setEditClientDocFiles({});
       loadData();
     } catch (error) {
       console.error('Error updating client:', error);
@@ -2492,16 +2537,6 @@ const AdministrativeDashboard = () => {
                     <td className="sa-row-actions">
                       <button
                         className="sa-icon-button"
-                        title="Upload Documents"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openUploadForClient(client);
-                        }}
-                      >
-                        📎
-                      </button>
-                      <button
-                        className="sa-icon-button"
                         title="View Checklist"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -3494,21 +3529,191 @@ const AdministrativeDashboard = () => {
         onClose={() => {
           setShowEditClientModal(false);
           setEditingClient(null);
+          setEditClientDocFiles({});
         }}
         title="Edit Client"
-        size="sm"
+        size="md"
       >
         <form className="modal-form" onSubmit={handleEditClientSubmit}>
+          <h4 style={{ margin: '0 0 12px 0' }}>Client details</h4>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Client Type *</label>
+              <select
+                value={editClientForm.type}
+                onChange={(e) => setEditClientForm(prev => ({ ...prev, type: e.target.value }))}
+                required
+              >
+                <option value="individual">Individual</option>
+                <option value="company">Company</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Email *</label>
+              <input
+                type="email"
+                value={editClientForm.email}
+                onChange={(e) => setEditClientForm(prev => ({ ...prev, email: e.target.value }))}
+                required
+              />
+            </div>
+          </div>
+
+          {editClientForm.type === 'individual' ? (
+            <div className="form-row">
+              <div className="form-group">
+                <label>Full Name *</label>
+                <input
+                  type="text"
+                  value={editClientForm.name}
+                  onChange={(e) => setEditClientForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Phone *</label>
+                <input
+                  type="text"
+                  value={editClientForm.phone}
+                  onChange={(e) => setEditClientForm(prev => ({ ...prev, phone: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Company Name *</label>
+                  <input
+                    type="text"
+                    value={editClientForm.companyName}
+                    onChange={(e) => setEditClientForm(prev => ({ ...prev, companyName: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Registration Number *</label>
+                  <input
+                    type="text"
+                    value={editClientForm.registrationNumber}
+                    onChange={(e) => setEditClientForm(prev => ({ ...prev, registrationNumber: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Contact Person *</label>
+                  <input
+                    type="text"
+                    value={editClientForm.contactPerson}
+                    onChange={(e) => setEditClientForm(prev => ({ ...prev, contactPerson: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Phone *</label>
+                  <input
+                    type="text"
+                    value={editClientForm.phone}
+                    onChange={(e) => setEditClientForm(prev => ({ ...prev, phone: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Company Address</label>
+                <input
+                  type="text"
+                  value={editClientForm.address}
+                  onChange={(e) => setEditClientForm(prev => ({ ...prev, address: e.target.value }))}
+                />
+              </div>
+            </>
+          )}
+
+          {editClientForm.type === 'individual' && (
+            <div className="form-group">
+              <label>Address</label>
+              <input
+                type="text"
+                value={editClientForm.address}
+                onChange={(e) => setEditClientForm(prev => ({ ...prev, address: e.target.value }))}
+              />
+            </div>
+          )}
+
           <div className="form-group">
             <label>Security Deposit Paid</label>
             <select
               value={editClientForm.securityDepositPaid ? 'yes' : 'no'}
-              onChange={(e) => setEditClientForm({ securityDepositPaid: e.target.value === 'yes' })}
+              onChange={(e) => setEditClientForm(prev => ({ ...prev, securityDepositPaid: e.target.value === 'yes' }))}
             >
               <option value="no">Not Paid</option>
               <option value="yes">Paid</option>
             </select>
           </div>
+
+          <div className="form-group">
+            <label>Property (for document context)</label>
+            <select
+              value={editClientForm.property}
+              onChange={(e) => setEditClientForm(prev => ({ ...prev, property: e.target.value }))}
+            >
+              <option value="">Select property (optional)</option>
+              {properties.map(property => {
+                const id = property.ID || property.id;
+                const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                return (
+                  <option key={id} value={label}>{label}</option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
+            <h4 style={{ margin: '0 0 8px 0' }}>Replace documents (optional)</h4>
+            <p style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#6b7280' }}>Upload a file to replace an existing document. Leave empty to keep current.</p>
+            {(editClientForm.type === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS).map((doc) => (
+              <div key={doc.key} className="form-group" style={{ marginBottom: '12px' }}>
+                <label>{doc.label}</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <input
+                    ref={(el) => { if (el) editClientFileInputRefs.current[doc.key] = el; }}
+                    type="file"
+                    accept=".pdf,image/*"
+                    style={{ maxWidth: '100%' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      setEditClientDocFiles(prev => ({ ...prev, [doc.key]: file || undefined }));
+                    }}
+                  />
+                  {editClientDocFiles[doc.key] && (
+                    <>
+                      <span style={{ fontSize: '13px', color: '#374151' }}>{editClientDocFiles[doc.key].name}</span>
+                      <button
+                        type="button"
+                        style={{ padding: '4px 10px', fontSize: '12px' }}
+                        onClick={() => {
+                          const inputEl = editClientFileInputRefs.current[doc.key];
+                          if (inputEl) inputEl.value = '';
+                          setEditClientDocFiles(prev => {
+                            const next = { ...prev };
+                            delete next[doc.key];
+                            return next;
+                          });
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div className="modal-footer">
             <button
               type="button"
@@ -3516,6 +3721,7 @@ const AdministrativeDashboard = () => {
               onClick={() => {
                 setShowEditClientModal(false);
                 setEditingClient(null);
+                setEditClientDocFiles({});
               }}
             >
               Cancel
