@@ -421,7 +421,7 @@ const TechnicianDashboard = () => {
         if (taskId) {
           await technicianService.updateMaintenanceRequest(taskId, {
             status: taskForm.status || 'Pending',
-            estimatedCost: taskForm.estimatedCost || 0,
+            estimatedCost: Number(taskForm.estimatedCost) || 0,
             assigned: taskForm.assigned || '',
             priority: taskForm.priority || 'normal',
             issue: taskForm.issue || '',
@@ -434,7 +434,7 @@ const TechnicianDashboard = () => {
             issue: taskForm.issue || 'Maintenance Task',
             priority: taskForm.priority || 'normal',
             status: taskForm.status || 'Pending',
-            estimatedCost: taskForm.estimatedCost || 0,
+            estimatedCost: Number(taskForm.estimatedCost) || 0,
             assigned: taskForm.assigned || '',
             photos: taskForm.photos || []
           };
@@ -451,8 +451,8 @@ const TechnicianDashboard = () => {
           property: taskForm.property || '',
           issue: taskForm.issue || 'Maintenance Task',
           priority: taskForm.priority || 'normal',
-          estimatedHours: taskForm.estimatedHours || 0,
-          estimatedCost: taskForm.estimatedCost || 0,
+          estimatedHours: Number(taskForm.estimatedHours) || 0,
+          estimatedCost: Number(taskForm.estimatedCost) || 0,
           assigned: taskForm.assigned || '',
           photos: taskForm.photos || []
         };
@@ -3515,8 +3515,8 @@ const TechnicianDashboard = () => {
                 <input
                   type="number"
                       id="task-cost"
-                      value={taskForm.estimatedCost || 0}
-                  onChange={(e) => setTaskForm({...taskForm, estimatedCost: parseFloat(e.target.value) || 0})}
+                      value={taskForm.estimatedCost === '' || taskForm.estimatedCost === 0 ? '' : taskForm.estimatedCost}
+                  onChange={(e) => setTaskForm({...taskForm, estimatedCost: e.target.value === '' ? '' : (parseFloat(e.target.value) || 0)})}
                   min="0"
                   step="0.01"
                       placeholder="0.00"

@@ -101,13 +101,14 @@ export const technicianService = {
   },
 
   createMaintenanceRequest: async (requestData) => {
+    const cost = Number(requestData?.estimatedCost) || 0;
     if (requestData && Array.isArray(requestData.photos) && requestData.photos.length > 0) {
       const formData = new FormData();
       formData.append('property', requestData.property || '');
       formData.append('issue', requestData.issue || '');
       formData.append('priority', requestData.priority || 'normal');
       formData.append('status', requestData.status || 'Pending');
-      formData.append('estimatedCost', String(requestData.estimatedCost || 0));
+      formData.append('estimatedCost', String(cost));
       if (requestData.assigned) formData.append('assigned', requestData.assigned);
       requestData.photos.forEach((file) => {
         if (file) formData.append('photos', file);
@@ -120,7 +121,7 @@ export const technicianService = {
     return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestData),
+      body: JSON.stringify({ ...requestData, estimatedCost: cost }),
     });
   },
 
@@ -195,13 +196,15 @@ export const technicianService = {
   },
 
   createTask: async (taskData) => {
+    const hours = Number(taskData?.estimatedHours) || 0;
+    const cost = Number(taskData?.estimatedCost) || 0;
     if (taskData && Array.isArray(taskData.photos) && taskData.photos.length > 0) {
       const formData = new FormData();
       formData.append('property', taskData.property || '');
       formData.append('issue', taskData.issue || '');
       formData.append('priority', taskData.priority || 'normal');
-      formData.append('estimatedHours', String(taskData.estimatedHours || 0));
-      formData.append('estimatedCost', String(taskData.estimatedCost || 0));
+      formData.append('estimatedHours', String(hours));
+      formData.append('estimatedCost', String(cost));
       if (taskData.assigned) formData.append('assigned', taskData.assigned);
       taskData.photos.forEach((file) => {
         if (file) formData.append('photos', file);
@@ -214,7 +217,7 @@ export const technicianService = {
     return apiRequest(buildApiUrl('/api/technician/tasks'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(taskData),
+      body: JSON.stringify({ ...taskData, estimatedHours: hours, estimatedCost: cost }),
     });
   },
 
