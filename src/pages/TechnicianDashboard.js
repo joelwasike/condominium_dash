@@ -470,7 +470,7 @@ const TechnicianDashboard = () => {
       setShowTaskModal(false);
       setSelectedTask(null);
       setTaskContext('task');
-      setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0, photos: [] });
+      setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
       loadData(); // Reload data to show updated/created task
     } catch (error) {
       console.error('Error updating/creating task:', error);
@@ -1347,6 +1347,8 @@ const TechnicianDashboard = () => {
 
     const handleUpdateMaintenance = async (maintenance) => {
       // Reuse the task modal to update estimated hours/cost and status
+      const existingPhotoURLs = maintenance.photos || maintenance.Photos || maintenance.photoURLs || maintenance.PhotoURLs || [];
+      const photoArray = Array.isArray(existingPhotoURLs) ? existingPhotoURLs : (typeof existingPhotoURLs === 'string' ? JSON.parse(existingPhotoURLs || '[]') : []);
       setShowTaskModal(true);
       setTaskContext('maintenance');
       setSelectedTask(maintenance);
@@ -1358,6 +1360,7 @@ const TechnicianDashboard = () => {
         estimatedHours: maintenance.estimatedHours || maintenance.EstimatedHours || 0,
         estimatedCost: maintenance.estimatedCost || maintenance.EstimatedCost || 0,
         assigned: maintenance.assigned || maintenance.Assigned || maintenance.assignedTo || maintenance.AssignedTo || '',
+        existingPhotoURLs: photoArray,
       });
     };
 
@@ -1428,6 +1431,7 @@ const TechnicianDashboard = () => {
                 estimatedCost: 0,
                 assigned: '',
                 photos: [],
+                existingPhotoURLs: [],
               });
               setShowTaskModal(true);
             }}
@@ -1958,7 +1962,7 @@ const TechnicianDashboard = () => {
           className="sa-primary-cta"
           onClick={() => {
             setSelectedTask(null);
-            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [] });
+            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
             setShowTaskModal(true);
           }}
         >
@@ -3369,7 +3373,7 @@ const TechnicianDashboard = () => {
           setShowTaskModal(false);
           setSelectedTask(null);
           setTaskContext('task');
-          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [] });
+          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -3380,7 +3384,7 @@ const TechnicianDashboard = () => {
                   setShowTaskModal(false);
                   setSelectedTask(null);
                   setTaskContext('task');
-                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [] });
+                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
                 }}
               >
                 ×
@@ -3531,6 +3535,28 @@ const TechnicianDashboard = () => {
                 />
               </div>
             </div>
+            {selectedTask && taskContext === 'maintenance' && (taskForm.existingPhotoURLs?.length > 0) && (
+              <div className="form-group">
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Maintenance photos</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
+                  {(taskForm.existingPhotoURLs || []).map((url, index) => {
+                    const src = typeof url === 'string' ? url : (url?.url || url?.src || '');
+                    if (!src) return null;
+                    return (
+                      <div key={index} style={{ borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
+                        <img
+                          src={src}
+                          alt={`Photo ${index + 1}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                          onClick={() => window.open(src, '_blank')}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {!selectedTask && (
               <div className="form-group">
                 <label htmlFor="task-photos">Upload one or more photos (optional)</label>
@@ -3585,7 +3611,7 @@ const TechnicianDashboard = () => {
                     setShowTaskModal(false);
                     setSelectedTask(null);
                     setTaskContext('task');
-                    setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [] });
+                    setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
                   }}
                 >
                     Cancel
