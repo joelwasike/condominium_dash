@@ -120,21 +120,25 @@ export const tenantService = {
     return await response.json();
   },
 
-  // Transfer payment request
+  // Transfer payment request (files = array of document URLs from Cloudinary)
   transferPaymentRequest: async (transferData) => {
     const url = buildApiUrl('/api/tenant/payments/transfer');
+    const body = {
+      property: transferData.property || '',
+      recipientIDCardNumber: transferData.recipientIdCard,
+      recipientEntryDate: transferData.entryDate,
+      recipientName: transferData.recipientName,
+      recipientEmail: transferData.recipientEmail,
+      recipientPhone: transferData.recipientPhone,
+      relationship: transferData.relationship,
+      reason: transferData.reason
+    };
+    if (Array.isArray(transferData.files) && transferData.files.length > 0) {
+      body.files = transferData.files;
+    }
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify({
-        property: transferData.property || '',
-        recipientIDCardNumber: transferData.recipientIdCard,
-        recipientEntryDate: transferData.entryDate,
-        recipientName: transferData.recipientName,
-        recipientEmail: transferData.recipientEmail,
-        recipientPhone: transferData.recipientPhone,
-        relationship: transferData.relationship,
-        reason: transferData.reason
-      })
+      body: JSON.stringify(body)
     });
   },
 

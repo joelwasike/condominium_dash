@@ -43,6 +43,17 @@ import { cloudinaryService } from '../services/cloudinaryService';
 import '../components/RoleLayout.css';
 import './SalesManagerDashboard.css';
 
+// Same document list as Add New Client (individual) – required for transfer recipient
+const TRANSFER_INDIVIDUAL_DOCUMENTS = [
+  { key: 'id_document', label: 'CNI, passport or identity certificate' },
+  { key: 'employment_contract', label: 'Employment contract' },
+  { key: 'work_certificate', label: 'Certificate of work' },
+  { key: 'pay_slips', label: 'Last three pay slips' },
+  { key: 'last_utility_receipt', label: 'Last receipt (CIE or SODECI)' },
+  { key: 'last_rent_receipts', label: 'Last rent receipts' },
+  { key: 'rib', label: 'RIB' },
+];
+
 const TenantDashboard = () => {
   const addMonths = (date, months) => {
     const base = new Date(date);
@@ -106,6 +117,8 @@ const TenantDashboard = () => {
     entryDate: '',
     reason: ''
   });
+  const [transferDocFiles, setTransferDocFiles] = useState({});
+  const transferDocFileInputRefs = useRef({});
   const [loading, setLoading] = useState(false);
   const [overviewData, setOverviewData] = useState(null);
   const [leaseInfo, setLeaseInfo] = useState(null);
@@ -826,35 +839,57 @@ const TenantDashboard = () => {
         setLoading(false);
         return;
       }
-      
-      // Prepare transfer data according to backend API requirements
+
+      const requiredDocs = TRANSFER_INDIVIDUAL_DOCUMENTS;
+      const missingDocs = requiredDocs.filter(doc => !transferDocFiles[doc.key]);
+      if (missingDocs.length > 0) {
+        addNotification('Please upload all required documents for the person being transferred to.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      const fileUrls = [];
+      for (const doc of requiredDocs) {
+        const file = transferDocFiles[doc.key];
+        if (file) {
+          const result = await cloudinaryService.uploadFile(file, 'real-estate-transfer-docs');
+          if (result.success && result.url) {
+            fileUrls.push(result.url);
+          } else {
+            addNotification(result.error || `Failed to upload ${doc.label}`, 'error');
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       const transferData = {
         property: property.trim(),
         recipientIdCard: transferPaymentForm.recipientIdCard.trim(),
         entryDate: transferPaymentForm.entryDate,
-        // Optional fields (may be used by backend for notifications or records)
         recipientName: transferPaymentForm.recipientName.trim(),
         recipientEmail: transferPaymentForm.recipientEmail.trim(),
         recipientPhone: transferPaymentForm.recipientPhone.trim(),
         relationship: transferPaymentForm.relationship,
-        reason: transferPaymentForm.reason.trim()
+        reason: transferPaymentForm.reason.trim(),
+        files: fileUrls
       };
-      
-      console.log('Submitting transfer request with data:', transferData);
-      
+
       await tenantService.transferPaymentRequest(transferData);
-      
+
       addNotification('Payment transfer request submitted successfully!', 'success');
-      
-      setTransferPaymentForm({ 
-        recipientName: '', 
-        recipientEmail: '', 
-        recipientPhone: '', 
-        relationship: '', 
+
+      setTransferPaymentForm({
+        recipientName: '',
+        recipientEmail: '',
+        recipientPhone: '',
+        relationship: '',
         recipientIdCard: '',
         entryDate: '',
-        reason: '' 
+        reason: ''
       });
+      setTransferDocFiles({});
+      Object.values(transferDocFileInputRefs.current).forEach(el => { if (el) el.value = ''; });
       setShowTransferPaymentModal(false);
     } catch (error) {
       console.error('Error submitting payment transfer request:', error);
@@ -2374,6 +2409,52 @@ Thank you for your payment!
                     rows="3"
                     required
                   />
+                </div>
+
+                <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
+                  <h4 style={{ margin: '0 0 8px 0' }}>Parts to Supply (individual)</h4>
+                  <p style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    Upload the same documents required to create a new client for the person being transferred to.
+                  </p>
+                  {TRANSFER_INDIVIDUAL_DOCUMENTS.map((doc) => (
+                    <div key={doc.key} className="form-group" style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', marginBottom: '4px' }}>{doc.label} *</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <input
+                          ref={(el) => { if (el) transferDocFileInputRefs.current[doc.key] = el; }}
+                          type="file"
+                          accept=".pdf,image/*"
+                          required={!transferDocFiles[doc.key]}
+                          style={{ maxWidth: '100%' }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            setTransferDocFiles(prev => ({ ...prev, [doc.key]: file }));
+                          }}
+                        />
+                        {transferDocFiles[doc.key] && (
+                          <>
+                            <span style={{ fontSize: '13px', color: '#374151' }}>{transferDocFiles[doc.key].name}</span>
+                            <button
+                              type="button"
+                              className="action-button secondary"
+                              style={{ padding: '4px 10px', fontSize: '12px' }}
+                              onClick={() => {
+                                const inputEl = transferDocFileInputRefs.current[doc.key];
+                                if (inputEl) inputEl.value = '';
+                                setTransferDocFiles(prev => {
+                                  const next = { ...prev };
+                                  delete next[doc.key];
+                                  return next;
+                                });
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <div style={{ 

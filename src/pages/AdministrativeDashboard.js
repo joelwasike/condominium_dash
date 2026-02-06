@@ -148,6 +148,8 @@ const AdministrativeDashboard = () => {
   const [terminationTab, setTerminationTab] = useState('receipt'); // 'receipt', 'pending', 'made'
   const [showTerminationDetailModal, setShowTerminationDetailModal] = useState(false);
   const [selectedTerminationForDetail, setSelectedTerminationForDetail] = useState(null);
+  const [showTransferDocsModal, setShowTransferDocsModal] = useState(false);
+  const [selectedTransferForDocs, setSelectedTransferForDocs] = useState(null);
   const [inventoryList, setInventoryList] = useState([]); // State of Entry / Exit filled by technicians
   const [historyData, setHistoryData] = useState({
     clients: [],
@@ -2070,7 +2072,6 @@ const AdministrativeDashboard = () => {
                   <th>Properties</th>
                   <th>Current Client</th>
                   <th>New Client</th>
-                  <th>Files</th>
                   <th>Request Date</th>
                   <th>Status</th>
                   <th>Action</th>
@@ -2084,9 +2085,8 @@ const AdministrativeDashboard = () => {
                   const currentClient = transfer.currentClient || transfer.Tenant || transfer.tenant || 'N/A';
                   const currentClientYears = transfer.currentClientYears || 5;
                   const newClient = transfer.newClient || transfer.RecipientName || transfer.recipientName || 'N/A';
-                  const files = transfer.files || transfer.Files || [];
                   const requestDate = transfer.requestDate || transfer.createdAt || transfer.CreatedAt;
-                  
+
                   return (
                     <tr key={transferId || `transfer-${index}`}>
                       <td>{index + 1}</td>
@@ -2099,21 +2099,6 @@ const AdministrativeDashboard = () => {
                       </td>
                       <td>{newClient}</td>
                       <td>
-                        {files && files.length > 0 ? (
-                          <button
-                            className="table-action-button view"
-                            onClick={() => {
-                              addNotification('Viewing files...', 'info');
-                            }}
-                            style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #16a34a', padding: '6px 12px' }}
-                          >
-                            View ({files.length})
-                          </button>
-                        ) : (
-                          <span style={{ color: '#9ca3af' }}>—</span>
-                        )}
-                      </td>
-                      <td>
                         {requestDate
                           ? new Date(requestDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
                           : 'N/A'}
@@ -2124,30 +2109,44 @@ const AdministrativeDashboard = () => {
                         </span>
                       </td>
                       <td>
-                        {isPending ? (
-                          <div className="sa-row-actions" style={{ gap: '8px' }}>
-                            <button
-                              className="table-action-button edit"
-                              onClick={() => handleApproveTransfer(transferId)}
-                              disabled={loading}
-                              style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', padding: '6px 12px' }}
-                            >
-                              Accept
-                            </button>
-                            <button
-                              className="table-action-button delete"
-                              onClick={() => handleRejectTransfer(transferId)}
-                              disabled={loading}
-                              style={{ backgroundColor: '#dc2626', color: 'white', border: 'none', padding: '6px 12px' }}
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                            {status === 'Approved' || status === 'Accepted' ? '✓ Completed' : status === 'Rejected' || status === 'Refused' ? '✗ Refused' : status}
-                          </span>
-                        )}
+                        <div className="sa-row-actions" style={{ gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="table-action-button view"
+                            onClick={() => {
+                              setSelectedTransferForDocs(transfer);
+                              setShowTransferDocsModal(true);
+                            }}
+                            style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #16a34a', padding: '6px 12px' }}
+                          >
+                            View documents
+                          </button>
+                          {isPending && (
+                            <>
+                              <button
+                                className="table-action-button edit"
+                                onClick={() => handleApproveTransfer(transferId)}
+                                disabled={loading}
+                                style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', padding: '6px 12px' }}
+                              >
+                                Accept
+                              </button>
+                              <button
+                                className="table-action-button delete"
+                                onClick={() => handleRejectTransfer(transferId)}
+                                disabled={loading}
+                                style={{ backgroundColor: '#dc2626', color: 'white', border: 'none', padding: '6px 12px' }}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {!isPending && (
+                            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                              {status === 'Approved' || status === 'Accepted' ? '✓ Completed' : status === 'Rejected' || status === 'Refused' ? '✗ Refused' : status}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -3163,6 +3162,44 @@ const AdministrativeDashboard = () => {
           </>
         )}
       </Modal>
+
+      {showTransferDocsModal && selectedTransferForDocs && (
+        <div className="modal-overlay" onClick={() => { setShowTransferDocsModal(false); setSelectedTransferForDocs(null); }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3>Transfer documents</h3>
+              <button className="modal-close" onClick={() => { setShowTransferDocsModal(false); setSelectedTransferForDocs(null); }}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ margin: '0 0 16px 0', color: '#6b7280', fontSize: '0.875rem' }}>
+                Documents uploaded by the tenant for the person being transferred to (same as Add New Client – individual).
+              </p>
+              {(() => {
+                const files = selectedTransferForDocs.files || selectedTransferForDocs.Files || [];
+                const urlList = Array.isArray(files) ? files : [];
+                if (urlList.length === 0) {
+                  return <p style={{ margin: 0, color: '#9ca3af' }}>No documents uploaded.</p>;
+                }
+                return (
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {urlList.map((url, i) => {
+                      const label = INDIVIDUAL_DOCUMENTS[i] ? INDIVIDUAL_DOCUMENTS[i].label : `Document ${i + 1}`;
+                      return (
+                        <li key={i} style={{ marginBottom: '12px', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
+                          <span style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#374151' }}>{label}</span>
+                          <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontSize: '0.875rem' }}>
+                            View document
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showRejectModal && (
         <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
