@@ -441,7 +441,13 @@ const TechnicianDashboard = () => {
             photos: taskForm.photos || []
           };
           await technicianService.createMaintenanceRequest(maintenanceData);
-          addNotification('Maintenance created successfully', 'success');
+          const hadPhotos = (maintenanceData.photos && maintenanceData.photos.length) > 0;
+          addNotification(
+            hadPhotos
+              ? 'Maintenance created. To add photos, edit this request and attach images.'
+              : 'Maintenance created successfully',
+            'success'
+          );
         }
       } else if (taskId) {
         // Update existing task
