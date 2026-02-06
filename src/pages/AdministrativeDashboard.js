@@ -138,6 +138,7 @@ const AdministrativeDashboard = () => {
   const [leaseSearchText, setLeaseSearchText] = useState('');
   const [showEditLeaseModal, setShowEditLeaseModal] = useState(false);
   const [editingLease, setEditingLease] = useState(null);
+  const [editLeaseStatus, setEditLeaseStatus] = useState('');
   const [editLeaseDocumentFile, setEditLeaseDocumentFile] = useState(null);
   const editLeaseFileInputRef = useRef(null);
   const [mutationSearchText, setMutationSearchText] = useState('');
@@ -796,23 +797,33 @@ const AdministrativeDashboard = () => {
     }
   };
 
-  const handleEditLeaseDocumentUpload = async () => {
-    if (!editingLease || !editLeaseDocumentFile) {
-      addNotification('Please select a document to upload', 'error');
+  const handleEditLeaseSave = async () => {
+    if (!editingLease) return;
+    const leaseId = editingLease.id || editingLease.ID;
+    const currentStatus = editingLease.status || editingLease.Status || '';
+    const statusChanged = editLeaseStatus !== '' && editLeaseStatus !== currentStatus;
+    if (!statusChanged && !editLeaseDocumentFile) {
+      addNotification('Change the status and/or add a document to save', 'error');
       return;
     }
-    const leaseId = editingLease.id || editingLease.ID;
     try {
-      await adminService.uploadLeaseDocument(leaseId, editLeaseDocumentFile);
-      addNotification('Lease document uploaded successfully', 'success');
+      if (statusChanged) {
+        await adminService.updateLeaseStatus(leaseId, editLeaseStatus);
+        addNotification('Lease status updated successfully', 'success');
+      }
+      if (editLeaseDocumentFile) {
+        await adminService.uploadLeaseDocument(leaseId, editLeaseDocumentFile);
+        addNotification(statusChanged ? 'Status and document saved' : 'Lease document uploaded successfully', 'success');
+      }
       setShowEditLeaseModal(false);
       setEditingLease(null);
+      setEditLeaseStatus('');
       setEditLeaseDocumentFile(null);
       if (editLeaseFileInputRef.current) editLeaseFileInputRef.current.value = '';
       loadData();
     } catch (error) {
-      console.error('Error uploading lease document:', error);
-      addNotification(error?.message || 'Failed to upload lease document', 'error');
+      console.error('Error saving lease:', error);
+      addNotification(error?.message || 'Failed to save lease', 'error');
     }
   };
 
@@ -1566,6 +1577,7 @@ const AdministrativeDashboard = () => {
                               className="table-action-button edit"
                               onClick={() => {
                                 setEditingLease(lease);
+                                setEditLeaseStatus(lease.status || lease.Status || '');
                                 setEditLeaseDocumentFile(null);
                                 setShowEditLeaseModal(true);
                               }}
@@ -3081,10 +3093,11 @@ const AdministrativeDashboard = () => {
         onClose={() => {
           setShowEditLeaseModal(false);
           setEditingLease(null);
+          setEditLeaseStatus('');
           setEditLeaseDocumentFile(null);
           if (editLeaseFileInputRef.current) editLeaseFileInputRef.current.value = '';
         }}
-        title="Edit Lease Contract — Add Document"
+        title="Edit Lease Contract"
       >
         {editingLease && (
           <>
@@ -3092,6 +3105,24 @@ const AdministrativeDashboard = () => {
               <p style={{ margin: 0, color: '#6b7280' }}>
                 <strong>Tenant:</strong> {editingLease.tenant || editingLease.Tenant || 'N/A'} · <strong>Property:</strong> {editingLease.property || editingLease.Property || 'N/A'}
               </p>
+            </div>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label htmlFor="edit-lease-status">Status</label>
+              <select
+                id="edit-lease-status"
+                value={editLeaseStatus}
+                onChange={(e) => setEditLeaseStatus(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px' }}
+              >
+                <option value="Created">Lease contract being created</option>
+                <option value="Pending Management Signature">Lease contract pending signature by management</option>
+                <option value="Pending Owner Signature">Pending signature by owner</option>
+                <option value="Pending Signature">Pending signature</option>
+                <option value="Active">Active lease contract (Valid)</option>
+                <option value="Approved by management">Approved by management</option>
+                <option value="Valid">Valid</option>
+                <option value="Completed">Completed</option>
+              </select>
             </div>
             <div className="form-group">
               <label htmlFor="edit-lease-document">Lease Document (PDF/Image)</label>
@@ -3110,6 +3141,7 @@ const AdministrativeDashboard = () => {
                 onClick={() => {
                   setShowEditLeaseModal(false);
                   setEditingLease(null);
+                  setEditLeaseStatus('');
                   setEditLeaseDocumentFile(null);
                   if (editLeaseFileInputRef.current) editLeaseFileInputRef.current.value = '';
                 }}
@@ -3119,10 +3151,13 @@ const AdministrativeDashboard = () => {
               <button
                 type="button"
                 className="action-button primary"
-                onClick={handleEditLeaseDocumentUpload}
-                disabled={!editLeaseDocumentFile}
+                onClick={handleEditLeaseSave}
+                disabled={
+                  !editLeaseDocumentFile &&
+                  (editLeaseStatus === '' || editLeaseStatus === (editingLease.status || editingLease.Status || ''))
+                }
               >
-                Upload Document
+                Save
               </button>
             </div>
           </>
