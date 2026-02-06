@@ -78,6 +78,8 @@ const AdministrativeDashboard = () => {
   });
   const [editClientDocFiles, setEditClientDocFiles] = useState({});
   const editClientFileInputRefs = useRef({});
+  const [editClientExistingDocuments, setEditClientExistingDocuments] = useState([]);
+  const [editClientDocsLoading, setEditClientDocsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   
@@ -119,7 +121,6 @@ const AdministrativeDashboard = () => {
     clientId: '',
     property: '',
     applicationFees: true,
-    transferOrResubscription: false,
     sodeci: false,
     cie10: false,
     cie15: false
@@ -176,7 +177,6 @@ const AdministrativeDashboard = () => {
       clientId: String(clientId),
       property: '',
       applicationFees: true,
-      transferOrResubscription: false,
       sodeci: false,
       cie10: false,
       cie15: false
@@ -199,7 +199,7 @@ const AdministrativeDashboard = () => {
     }
   };
 
-  const openEditClient = (client) => {
+  const openEditClient = async (client) => {
     setEditingClient(client);
     const type = (client.Type || client.type || 'individual').toLowerCase();
     setEditClientForm({
@@ -215,7 +215,21 @@ const AdministrativeDashboard = () => {
       property: client.Property || client.property || ''
     });
     setEditClientDocFiles({});
+    setEditClientExistingDocuments([]);
     setShowEditClientModal(true);
+    const tenantName = type === 'company' ? (client.CompanyName || client.companyName || '') : (client.Name || client.name || '');
+    if (tenantName) {
+      setEditClientDocsLoading(true);
+      try {
+        const docs = await adminService.getDocuments({ tenant: tenantName });
+        setEditClientExistingDocuments(Array.isArray(docs) ? docs : []);
+      } catch (err) {
+        console.error('Error loading client documents:', err);
+        setEditClientExistingDocuments([]);
+      } finally {
+        setEditClientDocsLoading(false);
+      }
+    }
   };
 
   const handleEditClientSubmit = async (e) => {
@@ -2451,7 +2465,6 @@ const AdministrativeDashboard = () => {
                 clientId: '',
                 property: '',
                 applicationFees: true,
-                transferOrResubscription: false,
                 sodeci: false,
                 cie10: false,
                 cie15: false
@@ -3110,7 +3123,6 @@ const AdministrativeDashboard = () => {
             clientId: '',
             property: '',
             applicationFees: true,
-            transferOrResubscription: false,
             sodeci: false,
             cie10: false,
             cie15: false
@@ -3170,7 +3182,6 @@ const AdministrativeDashboard = () => {
                 tenant: tenantName,
                 property: clientDocForm.property,
                 applicationFees: clientDocForm.applicationFees,
-                transferOrResubscription: clientDocForm.transferOrResubscription,
                 sodeci: clientDocForm.sodeci,
                 cie10a: clientDocForm.cie10,
                 cie15a: clientDocForm.cie15,
@@ -3182,7 +3193,6 @@ const AdministrativeDashboard = () => {
                 clientId: '',
                 property: '',
                 applicationFees: true,
-                transferOrResubscription: false,
                 sodeci: false,
                 cie10: false,
                 cie15: false
@@ -3358,35 +3368,32 @@ const AdministrativeDashboard = () => {
             <label className="application-fee-item">
               <input
                 type="checkbox"
-                checked={clientDocForm.transferOrResubscription}
-                onChange={(e) => setClientDocForm({ ...clientDocForm, transferOrResubscription: e.target.checked })}
-              />
-              <span>Transfer or Re-subscription (optional)</span>
-            </label>
-            <label className="application-fee-item">
-              <input
-                type="checkbox"
                 checked={clientDocForm.sodeci}
                 onChange={(e) => setClientDocForm({ ...clientDocForm, sodeci: e.target.checked })}
               />
               <span>SODECI: 35,000 FCFA</span>
             </label>
-            <label className="application-fee-item">
-              <input
-                type="checkbox"
-                checked={clientDocForm.cie10}
-                onChange={(e) => setClientDocForm({ ...clientDocForm, cie10: e.target.checked })}
-              />
-              <span>CIE: 10A 37 375 FCFA</span>
-            </label>
-            <label className="application-fee-item">
-              <input
-                type="checkbox"
-                checked={clientDocForm.cie15}
-                onChange={(e) => setClientDocForm({ ...clientDocForm, cie15: e.target.checked })}
-              />
-              <span>CIE: 15A + 60 420 FCFA</span>
-            </label>
+            <div className="application-fee-item" style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <span style={{ marginRight: '8px', fontWeight: '500' }}>CIE:</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="cieChoice"
+                  checked={clientDocForm.cie10}
+                  onChange={() => setClientDocForm({ ...clientDocForm, cie10: true, cie15: false })}
+                />
+                <span>10A – 37 375 FCFA</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="cieChoice"
+                  checked={clientDocForm.cie15}
+                  onChange={() => setClientDocForm({ ...clientDocForm, cie10: false, cie15: true })}
+                />
+                <span>15A + 60 420 FCFA</span>
+              </label>
+            </div>
           </div>
           </div>
 
@@ -3448,7 +3455,6 @@ const AdministrativeDashboard = () => {
                   clientId: '',
                   property: '',
                 applicationFees: true,
-                  transferOrResubscription: false,
                   sodeci: false,
                   cie10: false,
                   cie15: false
@@ -3488,7 +3494,6 @@ const AdministrativeDashboard = () => {
             <div style={{ display: 'grid', gap: '8px' }}>
               <div><strong>Property:</strong> {selectedChecklist.property || selectedChecklist.Property || 'N/A'}</div>
               <div><strong>Application fees:</strong> {selectedChecklist.applicationFees ? 'Yes' : 'No'}</div>
-              <div><strong>Transfer/Re-subscription:</strong> {selectedChecklist.transferOrResubscription ? 'Yes' : 'No'}</div>
               <div><strong>SODECI:</strong> {selectedChecklist.sodeci ? 'Yes' : 'No'}</div>
               <div><strong>CIE 10A:</strong> {selectedChecklist.cie10a ? 'Yes' : 'No'}</div>
               <div><strong>CIE 15A:</strong> {selectedChecklist.cie15a ? 'Yes' : 'No'}</div>
@@ -3530,6 +3535,7 @@ const AdministrativeDashboard = () => {
           setShowEditClientModal(false);
           setEditingClient(null);
           setEditClientDocFiles({});
+          setEditClientExistingDocuments([]);
         }}
         title="Edit Client"
         size="md"
@@ -3673,45 +3679,83 @@ const AdministrativeDashboard = () => {
           </div>
 
           <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
-            <h4 style={{ margin: '0 0 8px 0' }}>Replace documents (optional)</h4>
-            <p style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#6b7280' }}>Upload a file to replace an existing document. Leave empty to keep current.</p>
-            {(editClientForm.type === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS).map((doc) => (
-              <div key={doc.key} className="form-group" style={{ marginBottom: '12px' }}>
-                <label>{doc.label}</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <input
-                    ref={(el) => { if (el) editClientFileInputRefs.current[doc.key] = el; }}
-                    type="file"
-                    accept=".pdf,image/*"
-                    style={{ maxWidth: '100%' }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      setEditClientDocFiles(prev => ({ ...prev, [doc.key]: file || undefined }));
-                    }}
-                  />
-                  {editClientDocFiles[doc.key] && (
-                    <>
-                      <span style={{ fontSize: '13px', color: '#374151' }}>{editClientDocFiles[doc.key].name}</span>
+            <h4 style={{ margin: '0 0 8px 0' }}>Documents</h4>
+            <p style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#6b7280' }}>View existing documents or upload a new file to replace one.</p>
+            {editClientDocsLoading ? (
+              <div style={{ padding: '12px 0', color: '#6b7280' }}>Loading documents...</div>
+            ) : (
+              (editClientForm.type === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS).map((doc) => {
+                const existingDoc = (editClientExistingDocuments || []).find(
+                  (d) => (d.Type || d.type || '').trim() === (doc.label || '').trim()
+                );
+                const hasNewFile = Boolean(editClientDocFiles[doc.key]);
+                return (
+                  <div key={doc.key} className="form-group" style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid #e5e7eb' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>{doc.label}</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      {existingDoc && (existingDoc.URL || existingDoc.url) && (
+                        <>
+                          <a
+                            href={existingDoc.URL || existingDoc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'none' }}
+                          >
+                            View current
+                          </a>
+                          <span style={{ color: '#9ca3af' }}>|</span>
+                        </>
+                      )}
                       <button
                         type="button"
-                        style={{ padding: '4px 10px', fontSize: '12px' }}
-                        onClick={() => {
-                          const inputEl = editClientFileInputRefs.current[doc.key];
-                          if (inputEl) inputEl.value = '';
-                          setEditClientDocFiles(prev => {
-                            const next = { ...prev };
-                            delete next[doc.key];
-                            return next;
-                          });
+                        onClick={() => editClientFileInputRefs.current[doc.key]?.click()}
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: '12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          color: '#374151'
                         }}
                       >
-                        Remove
+                        {existingDoc ? 'Edit / Replace' : 'Upload'}
                       </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
+                      <input
+                        ref={(el) => { if (el) editClientFileInputRefs.current[doc.key] = el; }}
+                        type="file"
+                        accept=".pdf,image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          setEditClientDocFiles(prev => ({ ...prev, [doc.key]: file || undefined }));
+                        }}
+                      />
+                      {hasNewFile && (
+                        <>
+                          <span style={{ fontSize: '13px', color: '#374151' }}>{editClientDocFiles[doc.key].name}</span>
+                          <button
+                            type="button"
+                            style={{ padding: '4px 10px', fontSize: '12px' }}
+                            onClick={() => {
+                              const inputEl = editClientFileInputRefs.current[doc.key];
+                              if (inputEl) inputEl.value = '';
+                              setEditClientDocFiles(prev => {
+                                const next = { ...prev };
+                                delete next[doc.key];
+                                return next;
+                              });
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
 
           <div className="modal-footer">
@@ -3722,6 +3766,7 @@ const AdministrativeDashboard = () => {
                 setShowEditClientModal(false);
                 setEditingClient(null);
                 setEditClientDocFiles({});
+                setEditClientExistingDocuments([]);
               }}
             >
               Cancel
