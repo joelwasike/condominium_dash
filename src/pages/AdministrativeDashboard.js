@@ -2248,6 +2248,7 @@ const AdministrativeDashboard = () => {
                 <th>Property</th>
                 <th>Unit Number</th>
                 <th>Request Date</th>
+                <th>Inventory check date</th>
                 <th>Status</th>
                 <th>Inventory Status</th>
                 <th />
@@ -2256,7 +2257,7 @@ const AdministrativeDashboard = () => {
             <tbody>
               {filteredTerminations.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="sa-table-empty">
+                  <td colSpan={9} className="sa-table-empty">
                     No {terminationTab} termination requests found
                   </td>
                 </tr>
@@ -2271,6 +2272,11 @@ const AdministrativeDashboard = () => {
                       {termination.requestDate || termination.RequestDate || termination.createdAt || termination.CreatedAt
                         ? new Date(termination.requestDate || termination.RequestDate || termination.createdAt || termination.CreatedAt).toLocaleDateString()
                         : 'N/A'}
+                    </td>
+                    <td>
+                      {termination.inventoryCheckDate
+                        ? new Date(termination.inventoryCheckDate).toLocaleDateString()
+                        : '—'}
                     </td>
                     <td>
                       <span className={`sa-status-pill ${(termination.status || termination.Status || 'pending').toLowerCase().replace(' ', '-')}`}>
