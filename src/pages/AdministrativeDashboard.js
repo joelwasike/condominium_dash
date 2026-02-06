@@ -658,7 +658,6 @@ const AdministrativeDashboard = () => {
       { id: 'lease-contract', label: 'Lease Contract', icon: FileCheck },
       { id: 'demand-mutation', label: 'Demand of Mutation', icon: ArrowRightLeft },
       { id: 'termination', label: 'Termination', icon: LogOut },
-      { id: 'state-of-entry-exit', label: 'State of Entry / Exit', icon: ClipboardList },
       { id: 'history', label: 'History', icon: History },
       { id: 'reports', label: 'Report', icon: TrendingUp },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
@@ -2732,8 +2731,6 @@ const AdministrativeDashboard = () => {
         return renderTransfers(); // Reuse existing function, will update it
       case 'termination':
         return renderTermination();
-      case 'state-of-entry-exit':
-        return renderStateOfEntryExit();
       case 'history':
         return renderHistory();
       case 'reports':
