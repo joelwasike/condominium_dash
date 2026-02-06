@@ -1592,26 +1592,6 @@ Thank you for your payment!
         })
       : technicianContacts;
 
-    // Group filtered contacts by category
-    const groupedContacts = filteredContacts.reduce((acc, contact) => {
-      const category = contact.Category || contact.category || 'other';
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push(contact);
-      return acc;
-    }, {});
-
-    const categoryLabels = {
-      plumber: 'Plumbers',
-      electrician: 'Electricians',
-      carpenter: 'Carpenters',
-      painter: 'Painters',
-      hvac: 'HVAC Technicians',
-      locksmith: 'Locksmiths',
-      other: 'Other Technicians'
-    };
-
     return (
       <div className="sa-section-card">
         <div className="sa-section-header">
@@ -1655,135 +1635,146 @@ Thank you for your payment!
         ) : filteredContacts.length === 0 ? (
           <div className="sa-table-empty">No technicians match your search</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginTop: '24px' }}>
-            {Object.entries(groupedContacts).map(([category, contacts]) => (
-              <div key={category}>
-                <h3 style={{ marginBottom: '16px', color: '#1f2937', fontSize: '1.25rem', fontWeight: '600' }}>
-                  {categoryLabels[category] || category.charAt(0).toUpperCase() + category.slice(1)}
-                </h3>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(3, 1fr)', 
-                  gap: '20px',
-                  alignItems: 'stretch'
-                }}>
-                  {contacts.map((contact) => {
-                    const contactId = contact.ID || contact.id;
-                    const name = contact.Name || contact.name || 'Unknown';
-                    const phone = contact.Phone || contact.phone || '';
-                    const email = contact.Email || contact.email || '';
-                    const address = contact.Address || contact.address || '';
-                    const description = contact.Description || contact.description || '';
-                    const categoryName = contact.Category || contact.category || '';
-                    const photoUrl = contact.PhotoURL || contact.photoURL || contact.photoUrl || '';
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: '24px',
+              marginTop: '24px',
+              alignItems: 'stretch',
+            }}
+          >
+            {filteredContacts.map((contact) => {
+              const contactId = contact.ID || contact.id;
+              const name = contact.Name || contact.name || 'Unknown';
+              const phone = contact.Phone || contact.phone || '';
+              const email = contact.Email || contact.email || '';
+              const address = contact.Address || contact.address || '';
+              const description = contact.Description || contact.description || '';
+              const categoryName = contact.Category || contact.category || '';
+              const photoUrl = contact.PhotoURL || contact.photoURL || contact.photoUrl || '';
 
-                    return (
-                      <div 
-                        key={contactId} 
-                        style={{
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          padding: '20px',
-                          backgroundColor: '#ffffff',
-                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                          transition: 'box-shadow 0.2s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)'}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {photoUrl && (
-                              <img
-                                src={photoUrl}
-                                alt={`${name} photo`}
-                                style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
-                                onClick={() => window.open(photoUrl, '_blank')}
-                              />
-                            )}
-                            <h4 style={{ margin: 0, color: '#1f2937', fontSize: '1.1rem', fontWeight: '600' }}>
-                              {name}
-                            </h4>
-                          </div>
-                          <span style={{
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            backgroundColor: '#f3f4f6',
-                            color: '#6b7280',
-                            fontSize: '0.75rem',
-                            textTransform: 'capitalize'
-                          }}>
-                            {categoryName}
-                          </span>
+              return (
+                <div
+                  key={contactId}
+                  style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+                    transition: 'box-shadow 0.2s',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: '0',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '12px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                      {photoUrl ? (
+                        <img
+                          src={photoUrl}
+                          alt={`${name}`}
+                          style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                          onClick={() => window.open(photoUrl, '_blank')}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {(name || 'U').charAt(0).toUpperCase()}
                         </div>
+                      )}
+                      <h4 style={{ margin: 0, color: '#1f2937', fontSize: '1.05rem', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {name}
+                      </h4>
+                    </div>
+                    <span
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: '#f3f4f6',
+                        color: '#6b7280',
+                        fontSize: '0.7rem',
+                        textTransform: 'capitalize',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {categoryName || '—'}
+                    </span>
+                  </div>
 
-                        {phone && (
-                          <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Phone size={16} color="#6b7280" />
-                            <span style={{ color: '#374151', flex: 1 }}>{phone}</span>
-                            <button
-                              onClick={() => copyToClipboard(phone)}
-                              style={{
-                                padding: '6px 10px',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '6px',
-                                backgroundColor: '#ffffff',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                fontSize: '0.875rem',
-                                color: '#374151',
-                                transition: 'all 0.2s'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#f9fafb';
-                                e.currentTarget.style.borderColor = '#9ca3af';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#ffffff';
-                                e.currentTarget.style.borderColor = '#d1d5db';
-                              }}
-                              title="Copy phone number"
-                            >
-                              <Copy size={14} />
-                              Copy
-                            </button>
-                          </div>
-                        )}
+                  {phone && (
+                    <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                      <Phone size={16} color="#6b7280" style={{ flexShrink: 0 }} />
+                      <span style={{ color: '#374151', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{phone}</span>
+                      <button
+                        onClick={() => copyToClipboard(phone)}
+                        style={{
+                          padding: '6px 10px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          backgroundColor: '#ffffff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '0.8rem',
+                          color: '#374151',
+                          flexShrink: 0,
+                        }}
+                        title="Copy phone number"
+                      >
+                        <Copy size={14} />
+                        Copy
+                      </button>
+                    </div>
+                  )}
 
-                        {email && (
-                          <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Email:</span>
-                            <a 
-                              href={`mailto:${email}`}
-                              style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.875rem' }}
-                            >
-                              {email}
-                            </a>
-                          </div>
-                        )}
+                  {email && (
+                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                      <span style={{ color: '#6b7280', fontSize: '0.8rem', flexShrink: 0 }}>Email:</span>
+                      <a href={`mailto:${email}`} style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {email}
+                      </a>
+                    </div>
+                  )}
 
-                        {address && (
-                          <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                            <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Address:</span>
-                            <span style={{ color: '#374151', fontSize: '0.875rem', flex: 1 }}>{address}</span>
-                          </div>
-                        )}
+                  {address && (
+                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px', flexShrink: 0 }}>
+                      <span style={{ color: '#6b7280', fontSize: '0.8rem', flexShrink: 0 }}>Address:</span>
+                      <span style={{ color: '#374151', fontSize: '0.85rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{address}</span>
+                    </div>
+                  )}
 
-                        {description && (
-                          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem', lineHeight: '1.5' }}>
-                              {description}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {description && (
+                    <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                      <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem', lineHeight: '1.45', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {description}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

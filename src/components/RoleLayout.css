@@ -198,7 +198,10 @@
   overflow: hidden;
 }
 
-.role-topbar {
+.role-topbar,
+.role-layout .role-topbar,
+.role-layout header.role-topbar,
+.role-layout .technician-topbar {
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -206,10 +209,13 @@
   padding: 24px 32px;
   background: #ffffff;
   box-shadow: 0 12px 32px rgba(18, 36, 104, 0.08);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Push menu toggle to the left so language, notifications and profile stay on the right */
-.role-topbar > .mobile-menu-toggle {
+.role-topbar > .mobile-menu-toggle,
+.role-layout .role-topbar > .mobile-menu-toggle {
   margin-right: auto;
 }
 
@@ -240,11 +246,14 @@
   outline: none;
 }
 
-.topbar-actions {
+/* Language, notifications and profile always on the right in all dashboards */
+.topbar-actions,
+.role-layout .topbar-actions,
+.role-topbar .topbar-actions {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-left: auto;
+  margin-left: auto !important;
   flex-shrink: 0;
 }
 
@@ -457,7 +466,7 @@
 
   .topbar-actions {
     gap: 8px;
-    margin-left: auto;
+    margin-left: auto !important;
   }
 
   .topbar-profile {
