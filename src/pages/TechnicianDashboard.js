@@ -429,12 +429,14 @@ const TechnicianDashboard = () => {
           });
           addNotification('Maintenance updated successfully', 'success');
         } else {
+          const costRaw = taskForm.estimatedCost;
+          const estimatedCost = (typeof costRaw === 'number' && Number.isFinite(costRaw)) ? costRaw : (Number(costRaw) || 0);
           const maintenanceData = {
             property: taskForm.property || '',
             issue: taskForm.issue || 'Maintenance Task',
             priority: taskForm.priority || 'normal',
             status: taskForm.status || 'Pending',
-            estimatedCost: Number(taskForm.estimatedCost) || 0,
+            estimatedCost,
             assigned: taskForm.assigned || '',
             photos: taskForm.photos || []
           };

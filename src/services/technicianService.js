@@ -101,15 +101,17 @@ export const technicianService = {
   },
 
   createMaintenanceRequest: async (requestData) => {
-    const cost = Number(requestData?.estimatedCost) || 0;
+    // Coerce to number so we never send a string that could cause "invalid character '-' in numeric literal"
+    const cost = Number(requestData?.estimatedCost);
+    const numCost = Number.isFinite(cost) ? cost : 0;
     if (requestData && Array.isArray(requestData.photos) && requestData.photos.length > 0) {
       const formData = new FormData();
-      formData.append('property', requestData.property || '');
-      formData.append('issue', requestData.issue || '');
-      formData.append('priority', requestData.priority || 'normal');
-      formData.append('status', requestData.status || 'Pending');
-      formData.append('estimatedCost', String(cost));
-      if (requestData.assigned) formData.append('assigned', requestData.assigned);
+      formData.append('property', String(requestData.property || ''));
+      formData.append('issue', String(requestData.issue || ''));
+      formData.append('priority', String(requestData.priority || 'normal'));
+      formData.append('status', String(requestData.status || 'Pending'));
+      formData.append('estimatedCost', String(numCost));
+      if (requestData.assigned) formData.append('assigned', String(requestData.assigned));
       requestData.photos.forEach((file) => {
         if (file) formData.append('photos', file);
       });
@@ -118,10 +120,19 @@ export const technicianService = {
         body: formData,
       });
     }
+    // Send only expected fields with correct types; never spread requestData (could contain bad values)
+    const jsonBody = {
+      property: String(requestData?.property ?? ''),
+      issue: String(requestData?.issue ?? ''),
+      priority: String(requestData?.priority ?? 'normal'),
+      status: String(requestData?.status ?? 'Pending'),
+      estimatedCost: numCost,
+      assigned: String(requestData?.assigned ?? ''),
+    };
     return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...requestData, estimatedCost: cost }),
+      body: JSON.stringify(jsonBody),
     });
   },
 
