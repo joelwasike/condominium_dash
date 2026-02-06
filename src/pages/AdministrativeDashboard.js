@@ -136,6 +136,10 @@ const AdministrativeDashboard = () => {
   const [clientStatusFilter, setClientStatusFilter] = useState(''); // 'in-progress', 'accepted', 'refused'
   const [clientSearchText, setClientSearchText] = useState('');
   const [leaseSearchText, setLeaseSearchText] = useState('');
+  const [showEditLeaseModal, setShowEditLeaseModal] = useState(false);
+  const [editingLease, setEditingLease] = useState(null);
+  const [editLeaseDocumentFile, setEditLeaseDocumentFile] = useState(null);
+  const editLeaseFileInputRef = useRef(null);
   const [mutationSearchText, setMutationSearchText] = useState('');
   const [mutationTab, setMutationTab] = useState('receipt'); // 'receipt', 'in-progress', 'accepted', 'refused'
   const [terminations, setTerminations] = useState([]);
@@ -792,14 +796,23 @@ const AdministrativeDashboard = () => {
     }
   };
 
-  const handleGenerateLeaseDocument = async (id) => {
+  const handleEditLeaseDocumentUpload = async () => {
+    if (!editingLease || !editLeaseDocumentFile) {
+      addNotification('Please select a document to upload', 'error');
+      return;
+    }
+    const leaseId = editingLease.id || editingLease.ID;
     try {
-      await adminService.generateLeaseDocument(id);
-      addNotification('Lease document generated successfully', 'success');
+      await adminService.uploadLeaseDocument(leaseId, editLeaseDocumentFile);
+      addNotification('Lease document uploaded successfully', 'success');
+      setShowEditLeaseModal(false);
+      setEditingLease(null);
+      setEditLeaseDocumentFile(null);
+      if (editLeaseFileInputRef.current) editLeaseFileInputRef.current.value = '';
       loadData();
     } catch (error) {
-      console.error('Error generating lease document:', error);
-      addNotification('Failed to generate lease document', 'error');
+      console.error('Error uploading lease document:', error);
+      addNotification(error?.message || 'Failed to upload lease document', 'error');
     }
   };
 
@@ -1525,7 +1538,7 @@ const AdministrativeDashboard = () => {
                       </td>
                       <td>
                         <div className="sa-row-actions" style={{ gap: '8px' }}>
-                          {documentURL ? (
+                          {documentURL && (
                             <>
                               <button
                                 className="table-action-button view"
@@ -1547,15 +1560,21 @@ const AdministrativeDashboard = () => {
                                 Download
                               </button>
                             </>
-                          ) : (
+                          )}
+                          {leaseTab === 'in-progress' && (
                             <button
                               className="table-action-button edit"
-                              onClick={() => handleGenerateLeaseDocument(lease.id || lease.ID)}
+                              onClick={() => {
+                                setEditingLease(lease);
+                                setEditLeaseDocumentFile(null);
+                                setShowEditLeaseModal(true);
+                              }}
                               style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', padding: '6px 12px' }}
                             >
-                              Generate
+                              Edit
                             </button>
                           )}
+                          {!documentURL && leaseTab !== 'in-progress' && <span style={{ color: '#9ca3af' }}>—</span>}
                         </div>
                       </td>
                     </tr>
@@ -2887,13 +2906,7 @@ const AdministrativeDashboard = () => {
                 rent: parseFloat(leaseForm.rent || formData.get('rent')),
                 status: formData.get('leaseStatus') || 'Pending Management Signature'
               };
-              const created = await adminService.createLease(newLease);
-              const leaseId = created?.id || created?.ID;
-              const fileInput = e.target.querySelector('input[name="leaseDocument"]');
-              const leaseFile = fileInput?.files?.[0];
-              if (leaseId && leaseFile) {
-                await adminService.uploadLeaseDocument(leaseId, leaseFile);
-              }
+              await adminService.createLease(newLease);
               addNotification('Lease created successfully', 'success');
               setLeaseTab('in-progress');
               setShowLeaseModal(false);
@@ -3052,10 +3065,6 @@ const AdministrativeDashboard = () => {
               <input type="date" id="lease-end" name="end" required />
             </div>
           </div>
-          <div className="form-group">
-            <label htmlFor="lease-document">Lease Document (PDF/Image)</label>
-            <input type="file" id="lease-document" name="leaseDocument" accept=".pdf,image/*" />
-          </div>
           <div className="modal-footer">
             <button type="button" className="action-button secondary" onClick={() => setShowLeaseModal(false)}>
               Cancel
@@ -3065,6 +3074,59 @@ const AdministrativeDashboard = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={showEditLeaseModal}
+        onClose={() => {
+          setShowEditLeaseModal(false);
+          setEditingLease(null);
+          setEditLeaseDocumentFile(null);
+          if (editLeaseFileInputRef.current) editLeaseFileInputRef.current.value = '';
+        }}
+        title="Edit Lease Contract — Add Document"
+      >
+        {editingLease && (
+          <>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <p style={{ margin: 0, color: '#6b7280' }}>
+                <strong>Tenant:</strong> {editingLease.tenant || editingLease.Tenant || 'N/A'} · <strong>Property:</strong> {editingLease.property || editingLease.Property || 'N/A'}
+              </p>
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-lease-document">Lease Document (PDF/Image)</label>
+              <input
+                ref={editLeaseFileInputRef}
+                type="file"
+                id="edit-lease-document"
+                accept=".pdf,image/*"
+                onChange={(e) => setEditLeaseDocumentFile(e.target.files?.[0] || null)}
+              />
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="action-button secondary"
+                onClick={() => {
+                  setShowEditLeaseModal(false);
+                  setEditingLease(null);
+                  setEditLeaseDocumentFile(null);
+                  if (editLeaseFileInputRef.current) editLeaseFileInputRef.current.value = '';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="action-button primary"
+                onClick={handleEditLeaseDocumentUpload}
+                disabled={!editLeaseDocumentFile}
+              >
+                Upload Document
+              </button>
+            </div>
+          </>
+        )}
       </Modal>
 
       {showRejectModal && (
