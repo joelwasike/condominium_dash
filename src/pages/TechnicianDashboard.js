@@ -2787,7 +2787,7 @@ const TechnicianDashboard = () => {
       const statusExit = (tenant.ExitInventoryStatus || tenant.exitInventoryStatus || '').toString().toLowerCase();
       const status = stateEntryView === 'entry' ? statusEntry : statusExit;
       const dateEntry = tenant.DepositPaidDate || tenant.InventoryRequestDate || '';
-      const dateExit = tenant.TerminationRequestDate || tenant.InventoryCheckDate || tenant.inventoryCheckDate || '';
+      const dateExit = tenant.TerminationRequestDate || tenant.terminationRequestDate || tenant.requestDate || tenant.RequestDate || tenant.createdAt || tenant.CreatedAt || tenant.InventoryCheckDate || tenant.inventoryCheckDate || '';
       const tenantDate = stateEntryView === 'entry' ? toDateOnly(dateEntry) : toDateOnly(dateExit);
 
       if (stateEntryNameFilter && !name.includes(stateEntryNameFilter.trim().toLowerCase())) return false;
@@ -2869,7 +2869,7 @@ const TechnicianDashboard = () => {
                 <th>No</th>
                 <th>Tenant Name</th>
                 <th>Property</th>
-                <th>Unit Number</th>
+                {stateEntryView === 'entry' && <th>Unit Number</th>}
                 {stateEntryView === 'entry' ? (
                   <>
                     <th>Deposit Paid Date</th>
@@ -2890,7 +2890,7 @@ const TechnicianDashboard = () => {
             <tbody>
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={stateEntryView === 'exit' ? 9 : 8} className="sa-table-empty">
+                  <td colSpan={stateEntryView === 'exit' ? 8 : 8} className="sa-table-empty">
                     {stateEntryView === 'entry'
                       ? 'No entry inventory requests found. Use filters or add an Entry inventory from the popup.'
                       : 'No exit requests found. Use filters or add an Exit inventory from the popup.'}
@@ -2925,13 +2925,15 @@ const TechnicianDashboard = () => {
                   </tr>
                 ))
               ) : (
-                filteredList.map((tenant, index) => (
+                filteredList.map((tenant, index) => {
+                  const termRequestDate = tenant.TerminationRequestDate || tenant.terminationRequestDate || tenant.requestDate || tenant.RequestDate || tenant.createdAt || tenant.CreatedAt;
+                  const termRequestDateStr = termRequestDate ? (() => { const d = new Date(termRequestDate); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(); })() : '—';
+                  return (
                   <tr key={tenant.ID || tenant.id}>
                     <td>{index + 1}</td>
                     <td>{tenant.Name || tenant.name || 'N/A'}</td>
                     <td>{tenant.Property || tenant.property || 'N/A'}</td>
-                    <td>{tenant.UnitNumber || tenant.unitNumber || '—'}</td>
-                    <td>{tenant.TerminationRequestDate ? new Date(tenant.TerminationRequestDate).toLocaleDateString() : 'N/A'}</td>
+                    <td>{termRequestDateStr}</td>
                     <td>
                       {tenant.InventoryCheckDate || tenant.inventoryCheckDate
                         ? new Date(tenant.InventoryCheckDate || tenant.inventoryCheckDate).toLocaleDateString()
@@ -2960,7 +2962,8 @@ const TechnicianDashboard = () => {
                       </button>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
