@@ -2297,6 +2297,14 @@ const TechnicianDashboard = () => {
 
   // Render Quotes Section - List quotes being validated and validated quotes
   const renderQuotes = () => {
+    const isWorkStatusFilter = quoteStatusFilter === 'work_started' || quoteStatusFilter === 'work_not_started';
+    const workStartedForQuote = (q) => {
+      const quoteMaintenanceId = q.MaintenanceID || q.maintenanceId;
+      return quoteMaintenanceId && works.some(
+        w => String(w.ID || w.id) === String(quoteMaintenanceId) && (w.Status || w.status) === 'In Progress'
+      );
+    };
+
     const filteredQuotes = quotes.filter(q => {
       const status = (q.Status || q.status || '').toLowerCase();
       const property = (q.Property || q.property || '').toLowerCase();
@@ -2307,7 +2315,10 @@ const TechnicianDashboard = () => {
 
       if (quoteStatusFilter) {
         const expected = quoteStatusFilter.toLowerCase();
-        if (expected !== status) return false;
+        if (isWorkStatusFilter) {
+          // Work Started / Work Not Started: only include validated quotes; work filter applied below
+          if (status !== 'approved' && status !== 'validated') return false;
+        } else if (expected !== status) return false;
       }
       if (quoteDateFilter && normalizedDate !== quoteDateFilter) return false;
       if (quotePropertyFilter && !property.includes(quotePropertyFilter.toLowerCase())) return false;
@@ -2319,13 +2330,19 @@ const TechnicianDashboard = () => {
     });
 
     const quotesToValidate = filteredQuotes.filter(q => {
+      if (isWorkStatusFilter) return false; // Work status filter shows only validated quotes
       const status = (q.Status || q.status || '').toLowerCase();
       return status === 'sent' || status === 'pending';
     });
-    const validatedQuotes = filteredQuotes.filter(q => {
+    let validatedQuotes = filteredQuotes.filter(q => {
       const status = (q.Status || q.status || '').toLowerCase();
       return status === 'approved' || status === 'validated';
     });
+    if (quoteStatusFilter === 'work_started') {
+      validatedQuotes = validatedQuotes.filter(q => workStartedForQuote(q));
+    } else if (quoteStatusFilter === 'work_not_started') {
+      validatedQuotes = validatedQuotes.filter(q => !workStartedForQuote(q));
+    }
 
     return (
       <div className="sa-section-card">
@@ -2346,6 +2363,8 @@ const TechnicianDashboard = () => {
             <option value="sent">Being Validated</option>
             <option value="approved">Validated</option>
             <option value="rejected">Rejected</option>
+            <option value="work_started">Work Started</option>
+            <option value="work_not_started">Work Not Started</option>
           </select>
           <input
             type="date"
