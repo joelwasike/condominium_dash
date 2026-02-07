@@ -184,7 +184,48 @@ const TechnicianDashboard = () => {
       };
     });
   }, [inventoryFormData.propertyType, inventoryFormData.numberOfRooms, INSPECTION_ITEMS, getRoomList]);
-  
+
+  // Auto-select property type when property (address) is selected on inventory form (Entry/Exit) – e.g. when opening from list row or when user changes property
+  useEffect(() => {
+    if (!showInventoryFormModal || !inventoryFormData.propertyAddress || !companyProperties?.length) return;
+    const selectedProperty = companyProperties.find(
+      p => (p.Address || p.address) === inventoryFormData.propertyAddress
+    );
+    if (!selectedProperty) return;
+    const bedrooms = selectedProperty.Bedrooms ?? selectedProperty.bedrooms;
+    const bathrooms = selectedProperty.Bathrooms ?? selectedProperty.bathrooms;
+    const propTypeRaw =
+      selectedProperty.Type ||
+      selectedProperty.type ||
+      selectedProperty.BuildingType ||
+      selectedProperty.buildingType ||
+      selectedProperty.PropertyType ||
+      selectedProperty.propertyType ||
+      '';
+    const typeLower = String(propTypeRaw).toLowerCase();
+    const inferredType = typeLower.includes('studio')
+      ? 'Studio'
+      : typeLower.includes('duplex')
+        ? 'Duplex'
+        : typeLower.includes('villa')
+          ? 'Villa'
+          : typeLower.includes('apartment')
+            ? 'Apartment'
+            : bedrooms
+              ? 'Apartment'
+              : '';
+    if (!inferredType) return;
+    setInventoryFormData(prev => {
+      if (prev.propertyType === inferredType && (bedrooms == null || prev.numberOfRooms === Number(bedrooms)) && (bathrooms == null || prev.numberOfBathrooms === Number(bathrooms))) return prev;
+      return {
+        ...prev,
+        propertyType: inferredType,
+        numberOfRooms: bedrooms !== undefined && bedrooms !== null ? Number(bedrooms) : (inferredType === 'Studio' ? 1 : prev.numberOfRooms),
+        numberOfBathrooms: bathrooms !== undefined && bathrooms !== null ? Number(bathrooms) : prev.numberOfBathrooms,
+      };
+    });
+  }, [showInventoryFormModal, inventoryFormData.propertyAddress, companyProperties]);
+
   // Filter states
   const [quoteStatusFilter, setQuoteStatusFilter] = useState('');
   const [quoteDateFilter, setQuoteDateFilter] = useState('');
