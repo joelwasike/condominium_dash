@@ -346,14 +346,97 @@ export const technicianService = {
     });
   },
 
-  // Cost of Work
+  // Cost of Work (owners = landlords)
   getCostOfWorkOwners: async () => {
-    return apiRequest(buildApiUrl('/api/technician/cost-of-work/owners'), { method: 'GET' });
+    const primaryUrl = buildApiUrl('/api/technician/cost-of-work/owners');
+    try {
+      const data = await apiRequest(primaryUrl, { method: 'GET' });
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.owners)) return data.owners;
+      if (data && Array.isArray(data.landlords)) return data.landlords;
+      return [];
+    } catch (err) {
+      if (err.message && (err.message.includes('404') || err.message.includes('not found'))) {
+        try {
+          const landlords = await apiRequest(buildApiUrl('/api/technician/landlords'), { method: 'GET' });
+          const list = Array.isArray(landlords) ? landlords : [];
+          return list.map((l) => ({
+            id: l.id ?? l.ID,
+            ID: l.ID ?? l.id,
+            name: l.name ?? l.Name ?? l.email ?? l.Email ?? 'Owner',
+            Name: l.Name ?? l.name ?? l.Email ?? l.email ?? 'Owner',
+            email: l.email ?? l.Email ?? '',
+            Email: l.Email ?? l.email ?? '',
+            numberOfBuildings: l.numberOfBuildings ?? l.NumberOfBuildings ?? 0,
+            numberOfProperty: l.numberOfProperty ?? l.NumberOfProperty ?? l.totalProperties ?? l.propertiesCount ?? 0,
+            numberOfWork: l.numberOfWork ?? l.NumberOfWork ?? 0,
+            totalCost: l.totalCost ?? l.TotalCost ?? 0,
+          }));
+        } catch {
+          try {
+            const landlords = await apiRequest(buildApiUrl('/api/admin/landlords'), { method: 'GET' });
+            const list = Array.isArray(landlords) ? landlords : [];
+            return list.map((l) => ({
+              id: l.id ?? l.ID,
+              ID: l.ID ?? l.id,
+              name: l.name ?? l.Name ?? l.email ?? l.Email ?? 'Owner',
+              Name: l.Name ?? l.name ?? l.Email ?? l.email ?? 'Owner',
+              email: l.email ?? l.Email ?? '',
+              Email: l.Email ?? l.email ?? '',
+              numberOfBuildings: l.numberOfBuildings ?? l.NumberOfBuildings ?? 0,
+              numberOfProperty: l.numberOfProperty ?? l.NumberOfProperty ?? l.totalProperties ?? l.propertiesCount ?? 0,
+              numberOfWork: l.numberOfWork ?? l.NumberOfWork ?? 0,
+              totalCost: l.totalCost ?? l.TotalCost ?? 0,
+            }));
+          } catch {
+            return [];
+          }
+        }
+      }
+      throw err;
+    }
   },
   getCostOfWorkOwnerProperties: async (ownerId) => {
-    return apiRequest(buildApiUrl(`/api/technician/cost-of-work/owners/${encodeURIComponent(ownerId)}/properties`), { method: 'GET' });
+    try {
+      const data = await apiRequest(buildApiUrl(`/api/technician/cost-of-work/owners/${encodeURIComponent(ownerId)}/properties`), { method: 'GET' });
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      if (err.message && (err.message.includes('404') || err.message.includes('not found'))) {
+        try {
+          const data = await apiRequest(buildApiUrl(`/api/technician/landlords/${encodeURIComponent(ownerId)}/properties`), { method: 'GET' });
+          const list = Array.isArray(data) ? data : [];
+          return list.map((p) => ({
+            id: p.id ?? p.ID,
+            ID: p.ID ?? p.id,
+            ownerId,
+            name: p.name ?? p.Name ?? p.address ?? p.Address ?? 'Property',
+            Name: p.Name ?? p.name ?? p.Address ?? p.address ?? 'Property',
+            address: p.address ?? p.Address ?? '',
+            Address: p.Address ?? p.address ?? '',
+            numberOfWork: p.numberOfWork ?? p.NumberOfWork ?? 0,
+            description: p.description ?? p.Description ?? (p.name || p.Name || '') + (p.address || p.Address ? ` – ${p.address || p.Address}` : ''),
+          }));
+        } catch {
+          return [];
+        }
+      }
+      throw err;
+    }
   },
   getCostOfWorkPropertyWorks: async (propertyId) => {
-    return apiRequest(buildApiUrl(`/api/technician/cost-of-work/properties/${encodeURIComponent(propertyId)}/works`), { method: 'GET' });
+    try {
+      const data = await apiRequest(buildApiUrl(`/api/technician/cost-of-work/properties/${encodeURIComponent(propertyId)}/works`), { method: 'GET' });
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      if (err.message && (err.message.includes('404') || err.message.includes('not found'))) {
+        try {
+          const data = await apiRequest(buildApiUrl(`/api/technician/properties/${encodeURIComponent(propertyId)}/works`), { method: 'GET' });
+          return Array.isArray(data) ? data : [];
+        } catch {
+          return [];
+        }
+      }
+      throw err;
+    }
   },
 };
