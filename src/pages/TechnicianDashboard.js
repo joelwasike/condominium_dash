@@ -4160,7 +4160,7 @@ const TechnicianDashboard = () => {
                 try {
                   setLoading(true);
 
-                  // Validate mandatory checklist fields + photos
+                  // Validate mandatory checklist fields (photos are optional)
                   const rooms = inventoryFormData.formData?.rooms || {};
                   const roomNames = Object.keys(rooms);
                   if (roomNames.length === 0) {
@@ -4174,11 +4174,6 @@ const TechnicianDashboard = () => {
                       const it = items[item.key] || {};
                       if (!it.condition) {
                         addNotification(`Missing condition: ${roomName} → ${item.label}`, 'error');
-                        return;
-                      }
-                      const photos = it.photos || [];
-                      if (!Array.isArray(photos) || photos.length === 0) {
-                        addNotification(`Missing photo(s): ${roomName} → ${item.label}`, 'error');
                         return;
                       }
                     }
@@ -4568,7 +4563,7 @@ const TechnicianDashboard = () => {
                                 <th style={{ width: '22%' }}>Item</th>
                                 <th style={{ width: '22%' }}>Condition *</th>
                                 <th>Remarks</th>
-                                <th style={{ width: '22%' }}>Photos *</th>
+                                <th style={{ width: '22%' }}>Photos (optional)</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -4658,7 +4653,6 @@ const TechnicianDashboard = () => {
                                             },
                                           }));
                                         }}
-                                        required
                                       />
                                       <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
                                         {Array.isArray(itemState.photos) && itemState.photos.length > 0
