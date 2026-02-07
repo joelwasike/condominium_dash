@@ -244,6 +244,14 @@ const TechnicianDashboard = () => {
   const [stateEntryPropertyFilter, setStateEntryPropertyFilter] = useState('');
   const [stateEntryStatusFilter, setStateEntryStatusFilter] = useState('');
   const [stateEntryDateFilter, setStateEntryDateFilter] = useState('');
+
+  // Cost of Work: owners -> properties -> works
+  const [costOfWorkView, setCostOfWorkView] = useState('owners'); // 'owners' | 'properties' | 'works'
+  const [selectedCostOwner, setSelectedCostOwner] = useState(null);
+  const [selectedCostProperty, setSelectedCostProperty] = useState(null);
+  const [costOfWorkOwners, setCostOfWorkOwners] = useState([]);
+  const [costOfWorkProperties, setCostOfWorkProperties] = useState([]);
+  const [costOfWorkWorks, setCostOfWorkWorks] = useState([]);
   
   // Helper data for Inventory Form (Entry / Exit)
   const currentInventoryTenants =
@@ -979,6 +987,20 @@ const TechnicianDashboard = () => {
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Load Cost of Work owners when Cost of Work tab is active; reset drill-down when entering tab
+  useEffect(() => {
+    if (activeTab === 'cost-of-work') {
+      setCostOfWorkView('owners');
+      setSelectedCostOwner(null);
+      setSelectedCostProperty(null);
+      setCostOfWorkProperties([]);
+      setCostOfWorkWorks([]);
+      technicianService.getCostOfWorkOwners()
+        .then(data => setCostOfWorkOwners(Array.isArray(data) ? data : []))
+        .catch(() => setCostOfWorkOwners([]));
+    }
+  }, [activeTab]);
+
 
   const tabs = useMemo(
     () => [
@@ -986,6 +1008,7 @@ const TechnicianDashboard = () => {
       { id: 'maintenance', label: 'Maintenance', icon: Wrench },
       { id: 'quotes', label: 'The Quotes', icon: DollarSign },
       { id: 'works', label: 'Works', icon: HardHat },
+      { id: 'cost-of-work', label: 'Cost of Work', icon: BarChart2 },
       { id: 'state-entry', label: 'State of Entry / Exit', icon: LogIn },
       { id: 'worker-contacts', label: 'Contact of Workers', icon: Phone },
       { id: 'history', label: 'History', icon: History },
@@ -3264,6 +3287,227 @@ const TechnicianDashboard = () => {
     );
   };
 
+  // Cost of Work: Level 1 = owners table, Level 2 = property containers (no images), Level 3 = works table
+  const renderCostOfWork = () => {
+    const handleSelectOwner = async (owner) => {
+      setSelectedCostOwner(owner);
+      setCostOfWorkView('properties');
+      try {
+        const data = await technicianService.getCostOfWorkOwnerProperties(owner.id || owner.ID);
+        setCostOfWorkProperties(Array.isArray(data) ? data : []);
+      } catch {
+        setCostOfWorkProperties([]);
+      }
+    };
+    const handleSelectProperty = async (property) => {
+      setSelectedCostProperty(property);
+      setCostOfWorkView('works');
+      try {
+        const data = await technicianService.getCostOfWorkPropertyWorks(property.id || property.ID);
+        setCostOfWorkWorks(Array.isArray(data) ? data : []);
+      } catch {
+        setCostOfWorkWorks([]);
+      }
+    };
+    const goBackToOwners = () => {
+      setCostOfWorkView('owners');
+      setSelectedCostOwner(null);
+      setSelectedCostProperty(null);
+      setCostOfWorkProperties([]);
+      setCostOfWorkWorks([]);
+    };
+    const goBackToProperties = () => {
+      setCostOfWorkView('properties');
+      setSelectedCostProperty(null);
+      setCostOfWorkWorks([]);
+    };
+
+    if (costOfWorkView === 'owners') {
+      return (
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <div>
+              <h3>Cost of Work</h3>
+              <p>View owners, their properties, and work costs</p>
+            </div>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Name <span style={{ opacity: 0.6, fontSize: '0.75em' }}>▼</span></th>
+                  <th>Email <span style={{ opacity: 0.6, fontSize: '0.75em' }}>▼</span></th>
+                  <th>Number of building <span style={{ opacity: 0.6, fontSize: '0.75em' }}>▼</span></th>
+                  <th>Number of property <span style={{ opacity: 0.6, fontSize: '0.75em' }}>▼</span></th>
+                  <th>Number of work <span style={{ opacity: 0.6, fontSize: '0.75em' }}>▼</span></th>
+                  <th>Total Cost <span style={{ opacity: 0.6, fontSize: '0.75em' }}>▼</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {costOfWorkOwners.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="sa-table-empty">No owners found</td>
+                  </tr>
+                ) : (
+                  costOfWorkOwners.map((owner) => (
+                    <tr
+                      key={owner.id || owner.ID}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleSelectOwner(owner)}
+                    >
+                      <td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+                          {owner.name || owner.Name || 'N/A'}
+                        </span>
+                      </td>
+                      <td>{owner.email || owner.Email || '—'}</td>
+                      <td>{owner.numberOfBuildings ?? owner.NumberOfBuildings ?? 0}</td>
+                      <td>{owner.numberOfProperty ?? owner.NumberOfProperty ?? 0}</td>
+                      <td>{owner.numberOfWork ?? owner.NumberOfWork ?? 0}</td>
+                      <td>{(owner.totalCost ?? owner.TotalCost ?? 0).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    if (costOfWorkView === 'properties') {
+      const ownerName = selectedCostOwner?.name || selectedCostOwner?.Name || 'Owner';
+      return (
+        <div className="sa-section-card">
+          <div className="sa-section-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <button type="button" className="action-button secondary" onClick={goBackToOwners} style={{ marginRight: '8px' }}>
+                ← Back
+              </button>
+              <span style={{ color: '#6b7280' }}>Cost of Work → {ownerName}</span>
+            </div>
+            <div>
+              <h3>Properties</h3>
+              <p>Select a property to view works and costs</p>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            {costOfWorkProperties.length === 0 ? (
+              <div className="sa-table-empty" style={{ gridColumn: '1 / -1', padding: '24px' }}>No properties found for this owner</div>
+            ) : (
+              costOfWorkProperties.map((prop) => (
+                <div
+                  key={prop.id || prop.ID}
+                  onClick={() => handleSelectProperty(prop)}
+                  style={{
+                    padding: '20px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    transition: 'box-shadow 0.2s, border-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                    e.currentTarget.style.borderColor = '#9ca3af';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }}
+                >
+                  <div style={{ fontWeight: '600', fontSize: '1.1rem', marginBottom: '8px', color: '#111827' }}>
+                    {prop.name || prop.Name || 'Property'}
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '4px' }}>
+                    {prop.address || prop.Address || prop.description || prop.Description || '—'}
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: '8px' }}>
+                    Number of work: <strong>{prop.numberOfWork ?? prop.NumberOfWork ?? 0}</strong>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // costOfWorkView === 'works'
+    const propertyName = selectedCostProperty?.name || selectedCostProperty?.Name || 'Property';
+    const totalWork = costOfWorkWorks.length;
+    const priorityPillClass = (p) => {
+      const v = (p || '').toLowerCase();
+      if (v === 'urgent') return 'urgent';
+      if (v === 'moyen' || v === 'medium') return 'in-progress';
+      if (v === 'faible' || v === 'low') return 'pending';
+      return 'pending';
+    };
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <button type="button" className="action-button secondary" onClick={goBackToProperties}>
+              ← Back
+            </button>
+            <span style={{ color: '#6b7280' }}>
+              Cost of Work → {selectedCostOwner?.name || selectedCostOwner?.Name || 'Owner'} → {propertyName}
+            </span>
+          </div>
+          <div>
+            <h3>{propertyName}</h3>
+            <p>Total of work: {totalWork}</p>
+          </div>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th style={{ width: '40px' }} />
+                <th>Date</th>
+                <th>Apartment</th>
+                <th>Price</th>
+                <th>Technician</th>
+                <th>Kind of work</th>
+                <th>Priority</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {costOfWorkWorks.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="sa-table-empty">No works found for this property</td>
+                </tr>
+              ) : (
+                costOfWorkWorks.map((work) => (
+                  <tr key={work.id || work.ID}>
+                    <td><input type="checkbox" readOnly /></td>
+                    <td>{work.date ? new Date(work.date).toLocaleDateString() : '—'}</td>
+                    <td>{work.apartment || work.Apartment || '—'}</td>
+                    <td>{(work.price ?? work.Price ?? 0).toLocaleString()}F</td>
+                    <td>{work.technician || work.Technician || '—'}</td>
+                    <td>{work.kindOfWork || work.KindOfWork || '—'}</td>
+                    <td>
+                      <span className={`sa-status-pill ${priorityPillClass(work.priority || work.Priority)}`}>
+                        {work.priority || work.Priority || '—'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="sa-status-pill completed">
+                        {work.status || work.Status || '—'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -3274,6 +3518,8 @@ const TechnicianDashboard = () => {
         return renderQuotes();
       case 'works':
         return renderWorks();
+      case 'cost-of-work':
+        return renderCostOfWork();
       case 'state-entry':
         return renderStateEntry();
       case 'worker-contacts':

@@ -345,4 +345,15 @@ export const technicianService = {
       method: 'GET',
     });
   },
+
+  // Cost of Work
+  getCostOfWorkOwners: async () => {
+    return apiRequest(buildApiUrl('/api/technician/cost-of-work/owners'), { method: 'GET' });
+  },
+  getCostOfWorkOwnerProperties: async (ownerId) => {
+    return apiRequest(buildApiUrl(`/api/technician/cost-of-work/owners/${encodeURIComponent(ownerId)}/properties`), { method: 'GET' });
+  },
+  getCostOfWorkPropertyWorks: async (propertyId) => {
+    return apiRequest(buildApiUrl(`/api/technician/cost-of-work/properties/${encodeURIComponent(propertyId)}/works`), { method: 'GET' });
+  },
 };
