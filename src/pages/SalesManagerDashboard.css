@@ -586,6 +586,18 @@
   gap: 8px;
 }
 
+.sa-tenant-detail-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sa-tenant-detail-quick-actions .sa-outline-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* === Alerts Page === */
 .sa-alerts-page {
   display: flex;

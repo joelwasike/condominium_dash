@@ -43,10 +43,19 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
-  // Get full tenant details by ID (client + property + alerts)
+  // Get full tenant details by ID (client + property + alerts + maintenances + payments + notes)
   getClient: async (clientId) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}`);
     return await apiRequest(url);
+  },
+
+  // Add private note about a tenant
+  addClientNote: async (clientId, { note }) => {
+    const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}/notes`);
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    });
   },
 
   // Get approved client applications for onboarding

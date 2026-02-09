@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download, ArrowLeft, Mail, Phone, MapPin, DollarSign } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download, ArrowLeft, Mail, Phone, MapPin, DollarSign, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -226,6 +226,8 @@ const SalesManagerDashboard = () => {
   const [selectedTenantId, setSelectedTenantId] = useState(null);
   const [tenantDetail, setTenantDetail] = useState(null);
   const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
+  const [privateNoteInput, setPrivateNoteInput] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
 
   // Edit states
   const [showEditClientModal, setShowEditClientModal] = useState(false);
@@ -2184,7 +2186,31 @@ const SalesManagerDashboard = () => {
     }
     const prop = tenantDetail?.property;
     const alertList = Array.isArray(tenantDetail?.alerts) ? tenantDetail.alerts : [];
+    const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances : [];
+    const paymentsList = Array.isArray(tenantDetail?.payments) ? tenantDetail.payments : [];
+    const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes : [];
     const name = c.Name || c.name || 'N/A';
+
+    const handleAddPrivateNote = async () => {
+      const note = (privateNoteInput || '').trim();
+      if (!note || !selectedTenantId) return;
+      setAddingNote(true);
+      try {
+        await salesManagerService.addClientNote(selectedTenantId, { note });
+        setPrivateNoteInput('');
+        const data = await salesManagerService.getClient(selectedTenantId);
+        setTenantDetail(data);
+        addNotification('Note added', 'success');
+      } catch (err) {
+        addNotification(err?.message || 'Failed to add note', 'error');
+      } finally {
+        setAddingNote(false);
+      }
+    };
+
+    const handleQuickAction = (action) => {
+      addNotification(`${action} – feature coming soon`, 'info');
+    };
     const email = c.Email || c.email || '';
     const phone = c.Phone || c.phone || '';
     const status = c.Status || c.status || 'Unknown';
@@ -2268,6 +2294,13 @@ const SalesManagerDashboard = () => {
                 </div>
               )}
             </dl>
+            <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FileCheck size={16} />
+              Files & documents
+            </h4>
+            <p className="sa-cell-sub" style={{ margin: 0 }}>
+              No files uploaded yet. ID and other tenant documents can be added here for viewing.
+            </p>
           </div>
 
           <div className="sa-section-card sa-tenant-detail-card">
@@ -2355,6 +2388,126 @@ const SalesManagerDashboard = () => {
             ) : (
               <p className="sa-cell-sub">No alerts for this tenant.</p>
             )}
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <Wrench size={18} />
+              Maintenances requested
+            </h3>
+            {maintenancesList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {maintenancesList.map((m, idx) => (
+                  <li key={m.ID || m.id || idx} className="sa-tenant-detail-alert-item">
+                    <div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div>
+                    <div className="sa-tenant-detail-alert-meta">
+                      {(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}
+                      {m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No maintenance requests for this tenant.</p>
+            )}
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <Receipt size={18} />
+              Recent payment history
+            </h3>
+            {paymentsList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {paymentsList.slice(0, 10).map((p, idx) => (
+                  <li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+                    <div className="sa-tenant-detail-alert-title">
+                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
+                    </div>
+                    <div className="sa-tenant-detail-alert-meta">
+                      {p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}
+                      {(p.Method || p.method) && ` · ${p.Method || p.method}`}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No payment history for this tenant.</p>
+            )}
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <StickyNote size={18} />
+              Private notes
+            </h3>
+            <textarea
+              value={privateNoteInput}
+              onChange={(e) => setPrivateNoteInput(e.target.value)}
+              placeholder="Add a note for future reference (visible only to sales managers)..."
+              rows={2}
+              className="sa-tenant-detail-notes-input"
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginBottom: '10px' }}
+            />
+            <button
+              type="button"
+              className="sa-primary-cta"
+              onClick={handleAddPrivateNote}
+              disabled={!privateNoteInput.trim() || addingNote}
+              style={{ marginBottom: '16px' }}
+            >
+              {addingNote ? 'Adding…' : 'Add note'}
+            </button>
+            {privateNotesList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {privateNotesList.map((n) => (
+                  <li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}>
+                    <div className="sa-tenant-detail-alert-title">{n.note ?? n.Note}</div>
+                    <div className="sa-tenant-detail-alert-meta">
+                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No private notes yet.</p>
+            )}
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <AlertCircle size={18} />
+              Quick actions
+            </h3>
+            <div className="sa-tenant-detail-quick-actions">
+              <button
+                type="button"
+                className="sa-outline-button"
+                onClick={() => handleQuickAction('Generate Receipt')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Receipt size={16} />
+                Generate Receipt
+              </button>
+              <button
+                type="button"
+                className="sa-outline-button"
+                onClick={() => handleQuickAction('Send Reminder SMS')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <MessageSquare size={16} />
+                Send Reminder SMS
+              </button>
+              <button
+                type="button"
+                className="sa-outline-button"
+                onClick={() => handleQuickAction('Report Incident')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <AlertCircle size={16} />
+                Report Incident
+              </button>
+            </div>
           </div>
         </div>
 
