@@ -480,6 +480,112 @@
   cursor: pointer;
 }
 
+/* === Tenant detail page (theme-aligned) === */
+.sa-tenant-detail-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sa-tenant-detail-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #2563eb 0%, #0ea5e9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.sa-tenant-detail-hero h2 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  color: #111827;
+}
+
+.sa-tenant-detail-hero .sa-tenant-detail-meta {
+  font-size: 0.875rem;
+  color: #6b7280;
+  display: block;
+  margin-top: 4px;
+}
+
+.sa-tenant-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.sa-tenant-detail-card h3 {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sa-tenant-detail-dl {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.sa-tenant-detail-dl dt {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.sa-tenant-detail-dl dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.sa-tenant-detail-dl dd.sa-tenant-detail-value-bold {
+  font-weight: 600;
+}
+
+.sa-tenant-detail-alert-item {
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 3px solid #f59e0b;
+}
+
+.sa-tenant-detail-alert-item .sa-tenant-detail-alert-title {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.sa-tenant-detail-alert-item .sa-tenant-detail-alert-meta {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.sa-tenant-detail-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sa-tenant-detail-footer .sa-tenant-detail-updated {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.sa-tenant-detail-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* === Alerts Page === */
 .sa-alerts-page {
   display: flex;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download, ArrowLeft, Mail, Phone, MapPin, DollarSign } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -222,6 +222,11 @@ const SalesManagerDashboard = () => {
   const [alertTypeFilter, setAlertTypeFilter] = useState('');
   const [salesTypeFilter, setSalesTypeFilter] = useState(''); // Filter for sales properties by type
   
+  // Tenant detail view (when a tenant row is clicked)
+  const [selectedTenantId, setSelectedTenantId] = useState(null);
+  const [tenantDetail, setTenantDetail] = useState(null);
+  const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
+
   // Edit states
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
@@ -363,6 +368,30 @@ const SalesManagerDashboard = () => {
     };
     loadApprovedClientDocs();
   }, [selectedApprovedClientId, addNotification]);
+
+  // Fetch full tenant details when a tenant is selected for detail view
+  useEffect(() => {
+    if (!selectedTenantId) {
+      setTenantDetail(null);
+      return;
+    }
+    let cancelled = false;
+    const loadTenantDetail = async () => {
+      setTenantDetailLoading(true);
+      setTenantDetail(null);
+      try {
+        const data = await salesManagerService.getClient(selectedTenantId);
+        if (!cancelled) setTenantDetail(data);
+      } catch (err) {
+        console.error('Failed to load tenant details:', err);
+        if (!cancelled) addNotification(err?.message || 'Failed to load tenant details', 'error');
+      } finally {
+        if (!cancelled) setTenantDetailLoading(false);
+      }
+    };
+    loadTenantDetail();
+    return () => { cancelled = true; };
+  }, [selectedTenantId]);
 
   // Load advertisements when advertisements or overview tab is active
   useEffect(() => {
@@ -2124,6 +2153,234 @@ const SalesManagerDashboard = () => {
     });
   }, [clients, clientStatusFilter, clientPropertyFilter, clientSearchText]);
 
+  const renderTenantDetail = () => {
+    if (tenantDetailLoading) {
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
+            <p className="sa-cell-sub" style={{ margin: 0 }}>Loading tenant details…</p>
+          </div>
+        </div>
+      );
+    }
+    const c = tenantDetail?.client;
+    if (!c) {
+      return (
+        <div className="sa-clients-page">
+          <button
+            type="button"
+            className="sa-outline-button sa-tenant-detail-back-btn"
+            onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
+            style={{ marginBottom: '16px' }}
+          >
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+          <div className="sa-section-card">
+            <p className="sa-cell-sub" style={{ margin: 0 }}>Tenant not found or failed to load.</p>
+          </div>
+        </div>
+      );
+    }
+    const prop = tenantDetail?.property;
+    const alertList = Array.isArray(tenantDetail?.alerts) ? tenantDetail.alerts : [];
+    const name = c.Name || c.name || 'N/A';
+    const email = c.Email || c.email || '';
+    const phone = c.Phone || c.phone || '';
+    const status = c.Status || c.status || 'Unknown';
+    const propertyAddr = c.Property || c.property || '—';
+    const unitNumber = c.UnitNumber ?? c.unitNumber ?? '—';
+    const amount = c.Amount ?? c.amount ?? 0;
+    const lastPayment = c.LastPayment ?? c.lastPayment;
+    const createdAt = c.CreatedAt ?? c.createdAt;
+    const updatedAt = c.UpdatedAt ?? c.updatedAt;
+
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header" style={{ marginBottom: '20px' }}>
+          <button
+            type="button"
+            className="sa-outline-button sa-tenant-detail-back-btn"
+            onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
+          >
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+        </div>
+
+        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+          <div className="sa-tenant-detail-hero">
+            <div className="sa-tenant-detail-avatar">
+              {(name || 'T').charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h2>{name}</h2>
+              <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`} style={{ marginRight: '8px' }}>
+                {status}
+              </span>
+              {propertyAddr && propertyAddr !== '—' && (
+                <span className="sa-tenant-detail-meta">
+                  <MapPin size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                  {propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="sa-tenant-detail-grid">
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <Users size={18} />
+              Personal information
+            </h3>
+            <dl className="sa-tenant-detail-dl">
+              <div>
+                <dt>Name</dt>
+                <dd>{name}</dd>
+              </div>
+              {email && (
+                <div>
+                  <dt>Email</dt>
+                  <dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Mail size={14} /> {email}
+                  </dd>
+                </div>
+              )}
+              {phone && (
+                <div>
+                  <dt>Phone</dt>
+                  <dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Phone size={14} /> {phone}
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt>Status</dt>
+                <dd>
+                  <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`}>{status}</span>
+                </dd>
+              </div>
+              {createdAt && (
+                <div>
+                  <dt>Member since</dt>
+                  <dd>{new Date(createdAt).toLocaleDateString()}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <DollarSign size={18} />
+              Rent & payment
+            </h3>
+            <dl className="sa-tenant-detail-dl">
+              <div>
+                <dt>Property</dt>
+                <dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <MapPin size={14} /> {propertyAddr}
+                </dd>
+              </div>
+              {unitNumber && unitNumber !== '—' && (
+                <div>
+                  <dt>Unit</dt>
+                  <dd>{unitNumber}</dd>
+                </div>
+              )}
+              <div>
+                <dt>Monthly rent</dt>
+                <dd className="sa-tenant-detail-value-bold">{Number(amount).toLocaleString()} XOF</dd>
+              </div>
+              <div>
+                <dt>Last payment</dt>
+                <dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</dd>
+              </div>
+            </dl>
+          </div>
+
+          {prop && (
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3>
+                <Building size={18} />
+                Property details
+              </h3>
+              <dl className="sa-tenant-detail-dl">
+                <div>
+                  <dt>Type</dt>
+                  <dd>{prop.type || prop.Type || '—'}</dd>
+                </div>
+                {(prop.bedrooms ?? prop.Bedrooms) != null && (
+                  <div>
+                    <dt>Bedrooms</dt>
+                    <dd>{prop.bedrooms ?? prop.Bedrooms}</dd>
+                  </div>
+                )}
+                {(prop.bathrooms ?? prop.Bathrooms) != null && (
+                  <div>
+                    <dt>Bathrooms</dt>
+                    <dd>{prop.bathrooms ?? prop.Bathrooms}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt>Property status</dt>
+                  <dd>
+                    <span className={`sa-status-pill ${(prop.status || prop.Status || '').toLowerCase()}`}>
+                      {prop.status || prop.Status || '—'}
+                    </span>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
+          <div className="sa-section-card sa-tenant-detail-card" style={alertList.length ? undefined : { gridColumn: '1 / -1' }}>
+            <h3>
+              <AlertTriangle size={18} />
+              Alerts & activity
+            </h3>
+            {alertList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {alertList.map((alert, idx) => (
+                  <li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item">
+                    <div className="sa-tenant-detail-alert-title">{alert.Title || alert.title || 'Alert'}</div>
+                    {alert.Message && <div className="sa-cell-sub" style={{ marginBottom: '4px' }}>{alert.Message}</div>}
+                    <div className="sa-tenant-detail-alert-meta">
+                      {(alert.Urgency || alert.urgency || '').toLowerCase()} · {alert.Status || alert.status || 'Open'}
+                      {alert.Amount != null && ` · ${Number(alert.Amount).toLocaleString()} XOF`}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No alerts for this tenant.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-tenant-detail-footer">
+            <span className="sa-tenant-detail-updated">
+              Last updated: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}
+            </span>
+            <button
+              type="button"
+              className="sa-primary-cta"
+              onClick={() => {
+                setEditingClient(c);
+                setShowEditClientModal(true);
+                setSelectedTenantId(null);
+                setTenantDetail(null);
+              }}
+            >
+              Edit tenant
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderClients = () => (
     <div className="sa-clients-page">
       <div className="sa-clients-header">
@@ -2223,9 +2480,18 @@ const SalesManagerDashboard = () => {
           </thead>
           <tbody>
             {filteredClients.length > 0 ? (
-              filteredClients.map(client => (
-              <tr key={client.ID}>
-                <td>
+              filteredClients.map(client => {
+                const clientId = client.id ?? client.ID;
+                return (
+              <tr
+                key={clientId ?? client.Email ?? client.email}
+                onClick={() => clientId != null && setSelectedTenantId(clientId)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (clientId != null) setSelectedTenantId(clientId); } }}
+                style={{ cursor: clientId != null ? 'pointer' : 'default' }}
+              >
+                <td onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" />
                 </td>
                     <td>
@@ -2248,11 +2514,12 @@ const SalesManagerDashboard = () => {
                         <span className="sa-cell-sub">{client.Email || client.email || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="sa-row-actions">
+                    <td className="sa-row-actions" onClick={(e) => e.stopPropagation()}>
                       <button className="sa-icon-button" onClick={() => handleEditClient(client)} title="Edit">✏️</button>
                 </td>
               </tr>
-            ))
+                );
+              })
             ) : (
               <tr>
                   <td colSpan={8} className="sa-table-empty">No tenants found. Start the backend to see real data.</td>
@@ -2733,6 +3000,7 @@ const SalesManagerDashboard = () => {
       case 'sales-tracking':
         return renderSalesTracking();
       case 'clients':
+        if (selectedTenantId) return renderTenantDetail();
         return renderClients();
       case 'property-management':
         return renderPropertyManagement();

@@ -43,6 +43,12 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Get full tenant details by ID (client + property + alerts)
+  getClient: async (clientId) => {
+    const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}`);
+    return await apiRequest(url);
+  },
+
   // Get approved client applications for onboarding
   getApprovedClients: async () => {
     const url = buildApiUrl('/api/salesmanager/approved-clients');
