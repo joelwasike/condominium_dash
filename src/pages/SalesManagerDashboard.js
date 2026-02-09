@@ -1728,6 +1728,15 @@ const SalesManagerDashboard = () => {
       // Check all possible field name variations
       return property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
     };
+    // Filled units per property (same logic as occupancy page)
+    const getFilledUnits = (property) => {
+      const n = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+      const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
+      if (filled !== undefined && filled !== null) return Number(filled);
+      const status = (property.Status || property.status || '').toLowerCase();
+      if (n <= 1) return status === 'occupied' ? 1 : 0;
+      return 0;
+    };
 
     const ownersWithProperties = owners.map((owner) => {
       const ownerId = getOwnerId(owner);
@@ -1776,8 +1785,10 @@ const SalesManagerDashboard = () => {
                   <th>No</th>
                   <th>Owner</th>
                   <th>Email</th>
-                  <th>Number of units</th>
                   <th>Properties</th>
+                  <th>Number of units</th>
+                  <th>Occupied units</th>
+                  <th>Non-occupied units</th>
                 </tr>
               </thead>
               <tbody>
@@ -1785,6 +1796,14 @@ const SalesManagerDashboard = () => {
                   const ownerId = getOwnerId(owner);
                   const totalUnits = ownerProperties.reduce(
                     (sum, p) => sum + (p.NumberOfUnits ?? p.numberOfUnits ?? 0),
+                    0
+                  );
+                  const occupiedUnits = ownerProperties.reduce(
+                    (sum, p) => sum + getFilledUnits(p),
+                    0
+                  );
+                  const nonOccupiedUnits = ownerProperties.reduce(
+                    (sum, p) => sum + Math.max(0, (p.NumberOfUnits ?? p.numberOfUnits ?? 1) - getFilledUnits(p)),
                     0
                   );
                   const isExpanded =
@@ -1807,12 +1826,14 @@ const SalesManagerDashboard = () => {
                           </span>
                         </td>
                         <td>{owner.email || owner.Email || 'N/A'}</td>
-                        <td>{totalUnits}</td>
                         <td>{ownerProperties.length}</td>
+                        <td>{totalUnits}</td>
+                        <td>{occupiedUnits}</td>
+                        <td>{nonOccupiedUnits}</td>
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan={5} style={{ background: '#f9fafb' }}>
+                          <td colSpan={7} style={{ background: '#f9fafb' }}>
                             {ownerProperties.length > 0 ? (
                               <div style={{ padding: '12px 8px' }}>
                                 <h4
