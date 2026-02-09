@@ -1061,6 +1061,19 @@ const SalesManagerDashboard = () => {
       return;
     }
 
+    const numUnits = propertyData.numberOfUnits || 1;
+    const filledUnitsRaw = formData.get('filledUnits');
+    const filledUnits = filledUnitsRaw !== null && filledUnitsRaw !== '' ? parseInt(filledUnitsRaw, 10) : undefined;
+    if (numUnits > 1) {
+      propertyData.filledUnits = filledUnits ?? 0;
+      if (propertyData.status === 'Occupied') {
+        if (filledUnits === undefined || filledUnits === null || filledUnits !== numUnits) {
+          addNotification('To set status as Occupied, all units must be full. Set "Filled units" equal to Number of units (' + numUnits + ').', 'error');
+          return;
+        }
+      }
+    }
+
     try {
       setLoading(true);
       await salesManagerService.createProperty(propertyData);
@@ -1093,11 +1106,18 @@ const SalesManagerDashboard = () => {
     }
     if (formData.get('status')) updateData.status = formData.get('status').trim();
     if (formData.get('rent')) updateData.rent = parseFloat(formData.get('rent'));
+    let numUnits = editingProperty.NumberOfUnits ?? editingProperty.numberOfUnits ?? 1;
     if (formData.get('numberOfUnits')) {
-      const numUnits = parseInt(formData.get('numberOfUnits'));
-      if (numUnits >= 1) {
-        updateData.numberOfUnits = numUnits;
+      const parsed = parseInt(formData.get('numberOfUnits'));
+      if (parsed >= 1) {
+        updateData.numberOfUnits = parsed;
+        numUnits = parsed;
       }
+    }
+    const filledUnitsRaw = formData.get('filledUnits');
+    if (filledUnitsRaw !== null && filledUnitsRaw !== '') {
+      const filled = parseInt(filledUnitsRaw, 10);
+      if (!Number.isNaN(filled) && filled >= 0) updateData.filledUnits = filled;
     }
     if (formData.get('bedrooms')) updateData.bedrooms = parseInt(formData.get('bedrooms'));
     if (formData.get('bathrooms')) updateData.bathrooms = parseFloat(formData.get('bathrooms'));
@@ -1111,6 +1131,16 @@ const SalesManagerDashboard = () => {
     if (updateData.status && updateData.status !== 'Vacant' && updateData.status !== 'Occupied') {
       addNotification('Status must be either "Vacant" or "Occupied"', 'error');
       return;
+    }
+
+    const effectiveStatus = updateData.status ?? editingProperty.Status ?? editingProperty.status ?? '';
+    const effectiveFilled = updateData.filledUnits ?? editingProperty.filledUnits ?? editingProperty.occupiedUnits ?? editingProperty.FilledUnits ?? editingProperty.OccupiedUnits;
+    if (effectiveStatus.toLowerCase() === 'occupied' && numUnits > 1) {
+      const filled = effectiveFilled !== undefined && effectiveFilled !== null ? Number(effectiveFilled) : (updateData.filledUnits !== undefined ? updateData.filledUnits : undefined);
+      if (filled === undefined || filled !== numUnits) {
+        addNotification('To set status as Occupied, all units must be full. Set "Filled units" equal to Number of units (' + numUnits + ').', 'error');
+        return;
+      }
     }
 
     try {
@@ -1491,12 +1521,23 @@ const SalesManagerDashboard = () => {
 
   const renderOccupancy = () => {
     const totalProperties = properties.length;
-    const occupiedCount = properties.filter(
-      property => ((property.Status || '').toLowerCase() === 'occupied')
-    ).length;
-    const vacantCount = properties.filter(
-      property => ((property.Status || '').toLowerCase() === 'vacant')
-    ).length;
+    // Helper: filled units (from API or derived). Property is "fully occupied" only when filledUnits >= numberOfUnits.
+    const getFilledUnits = (property) => {
+      const n = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+      const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
+      if (filled !== undefined && filled !== null) return Number(filled);
+      const status = (property.Status || property.status || '').toLowerCase();
+      if (n <= 1) return status === 'occupied' ? 1 : 0;
+      return 0;
+    };
+    const isFullyOccupied = (property) => {
+      const total = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+      const filled = getFilledUnits(property);
+      return total > 0 && filled >= total;
+    };
+    const fullyOccupiedCount = properties.filter(isFullyOccupied).length;
+    const occupiedCount = fullyOccupiedCount;
+    const vacantCount = totalProperties - fullyOccupiedCount;
     const occupancyRate = totalProperties > 0 ? Math.round((occupiedCount / totalProperties) * 100) : 0;
 
     return (
@@ -1585,6 +1626,7 @@ const SalesManagerDashboard = () => {
                   <th>Property</th>
                 <th>Type</th>
                 <th>Status</th>
+                <th>Units (filled / total)</th>
                 <th>Property Type</th>
                 <th>Tenant</th>
                 <th>Rent</th>
@@ -1596,6 +1638,10 @@ const SalesManagerDashboard = () => {
               {properties.length > 0 ? (
                   properties.map(property => {
                     const propertyId = property.ID || property.id;
+                    const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+                    const filledUnits = getFilledUnits(property);
+                    const remaining = Math.max(0, totalUnits - filledUnits);
+                    const isFull = totalUnits > 0 && filledUnits >= totalUnits;
                     return (
                       <tr key={propertyId}>
                         <td>
@@ -1615,10 +1661,20 @@ const SalesManagerDashboard = () => {
                           </div>
                         </td>
                         <td>
-                          <span className={`sa-status-pill ${(property.Status || property.status || 'unknown').toLowerCase()}`}>
-                            {property.Status || property.status || 'Unknown'}
-                      </span>
-                    </td>
+                          <span className={`sa-status-pill ${isFull ? 'occupied' : 'vacant'}`}>
+                            {isFull ? 'Occupied' : (remaining > 0 ? 'Partially filled' : (property.Status || property.status || 'Unknown'))}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="sa-cell-main">
+                            <span className="sa-cell-title">{filledUnits} / {totalUnits}</span>
+                            {remaining > 0 && (
+                              <span className="sa-cell-sub" style={{ display: 'block', fontSize: '0.8rem', color: '#6b7280' }}>
+                                {remaining} remaining
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td>
                           <div className="sa-cell-main">
                             <span className="sa-cell-title">{property.PropertyType || property.propertyType || 'N/A'}</span>
@@ -1654,7 +1710,7 @@ const SalesManagerDashboard = () => {
                   })
               ) : (
                 <tr>
-                    <td colSpan={9} className="sa-table-empty">No properties found. Create your first property to get started.</td>
+                    <td colSpan={10} className="sa-table-empty">No properties found. Create your first property to get started.</td>
                 </tr>
               )}
             </tbody>
@@ -1720,13 +1776,17 @@ const SalesManagerDashboard = () => {
                   <th>No</th>
                   <th>Owner</th>
                   <th>Email</th>
-                  <th>Phone</th>
+                  <th>Number of units</th>
                   <th>Properties</th>
                 </tr>
               </thead>
               <tbody>
                 {ownersWithProperties.map(({ owner, properties: ownerProperties }, index) => {
                   const ownerId = getOwnerId(owner);
+                  const totalUnits = ownerProperties.reduce(
+                    (sum, p) => sum + (p.NumberOfUnits ?? p.numberOfUnits ?? 0),
+                    0
+                  );
                   const isExpanded =
                     expandedOwnerId && ownerId && String(expandedOwnerId) === String(ownerId);
                   return (
@@ -1747,7 +1807,7 @@ const SalesManagerDashboard = () => {
                           </span>
                         </td>
                         <td>{owner.email || owner.Email || 'N/A'}</td>
-                        <td>{owner.phone || owner.Phone || 'N/A'}</td>
+                        <td>{totalUnits}</td>
                         <td>{ownerProperties.length}</td>
                       </tr>
                       {isExpanded && (
@@ -3599,7 +3659,7 @@ const SalesManagerDashboard = () => {
                       <option value="Occupied">Occupied</option>
                     </select>
                   </div>
-                  <div className="form-group">
+                    <div className="form-group">
                     <label htmlFor="create-number-of-units">Number of Units *</label>
                     <input
                       type="number"
@@ -3612,6 +3672,20 @@ const SalesManagerDashboard = () => {
                     />
                     <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                       Total number of units in this property (e.g., 100 for an apartment building)
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="create-filled-units">Filled units</label>
+                    <input
+                      type="number"
+                      name="filledUnits"
+                      id="create-filled-units"
+                      min="0"
+                      defaultValue="0"
+                      placeholder="0"
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                      When status is Occupied and there are multiple units, this must equal Number of units.
                     </small>
                   </div>
                 </div>
@@ -3811,6 +3885,21 @@ const SalesManagerDashboard = () => {
                       Total number of units in this property
                     </small>
                   </div>
+                  {(editingProperty.NumberOfUnits || editingProperty.numberOfUnits || 1) > 1 && (
+                    <div className="form-group">
+                      <label htmlFor="edit-filled-units">Filled units</label>
+                      <input
+                        type="number"
+                        name="filledUnits"
+                        id="edit-filled-units"
+                        min="0"
+                        defaultValue={editingProperty.filledUnits ?? editingProperty.occupiedUnits ?? editingProperty.FilledUnits ?? editingProperty.OccupiedUnits ?? 0}
+                      />
+                      <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                        Status Occupied requires this to equal Number of units
+                      </small>
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-row">
