@@ -259,6 +259,7 @@ const SalesManagerDashboard = () => {
   const [createPropertyImages, setCreatePropertyImages] = useState([]); // URLs for new property images (Cloudinary)
   const [editPropertyImages, setEditPropertyImages] = useState([]); // URLs for edit property images (Cloudinary)
   const [uploadingImage, setUploadingImage] = useState(false); // Loading state for image upload
+  const [selectedPropertyDetail, setSelectedPropertyDetail] = useState(null); // Property shown in detail modal
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -2052,24 +2053,22 @@ const SalesManagerDashboard = () => {
                                 <table className="sa-table nested-table">
                                   <thead>
                                     <tr>
-                                      <th></th>
                                       <th>Address</th>
                                       <th>Type</th>
                                       <th>Status</th>
                                       <th>Rent</th>
                                       <th>Bedrooms</th>
                                       <th>Bathrooms</th>
+                                      <th></th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {ownerProperties.map((property, pIndex) => (
-                                      <tr key={`owner-${ownerId}-property-${pIndex}`}>
-                                        <td>
-                                          <div className="sa-row-actions">
-                                            <button type="button" className="table-action-button edit" onClick={(e) => { e.stopPropagation(); setEditingProperty(property); setShowPropertyBuildingType((property.Type || property.type) === 'Apartment'); setSelectedPropertyType(property.PropertyType || property.propertyType || ''); setEditPropertyImages(parsePropertyImages(property.Images || property.images)); setShowEditPropertyModal(true); }}>Edit</button>
-                                            <button type="button" className="table-action-button contact" onClick={(e) => { e.stopPropagation(); openScheduleVisit(property.Address || property.address); }}>Schedule</button>
-                                          </div>
-                                        </td>
+                                      <tr
+                                        key={`owner-${ownerId}-property-${pIndex}`}
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => setSelectedPropertyDetail(property)}
+                                      >
                                         <td>{property.Address || property.address || 'N/A'}</td>
                                         <td>{property.Type || property.type || 'N/A'}</td>
                                         <td>{property.Status || property.status || 'N/A'}</td>
@@ -2080,6 +2079,12 @@ const SalesManagerDashboard = () => {
                                         </td>
                                         <td>{property.Bedrooms || property.bedrooms || 0}</td>
                                         <td>{property.Bathrooms || property.bathrooms || 0}</td>
+                                        <td onClick={(e) => e.stopPropagation()}>
+                                          <div className="sa-row-actions">
+                                            <button type="button" className="table-action-button edit" onClick={() => { setEditingProperty(property); setShowPropertyBuildingType((property.Type || property.type) === 'Apartment'); setSelectedPropertyType(property.PropertyType || property.propertyType || ''); setEditPropertyImages(parsePropertyImages(property.Images || property.images)); setShowEditPropertyModal(true); }}>Edit</button>
+                                            <button type="button" className="table-action-button contact" onClick={() => openScheduleVisit(property.Address || property.address)}>Schedule</button>
+                                          </div>
+                                        </td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -2122,25 +2127,23 @@ const SalesManagerDashboard = () => {
                 <thead>
                 <tr>
                     <th>No</th>
-                    <th></th>
                     <th>Address</th>
                     <th>Type</th>
                     <th>Status</th>
                     <th>Rent</th>
                     <th>Bedrooms</th>
                     <th>Bathrooms</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {unassignedProperties.map((property, index) => (
-                    <tr key={`unassigned-${property.ID || property.id || index}`}>
+                    <tr
+                      key={`unassigned-${property.ID || property.id || index}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedPropertyDetail(property)}
+                    >
                       <td>{index + 1}</td>
-                      <td>
-                        <div className="sa-row-actions">
-                          <button type="button" className="table-action-button edit" onClick={() => { setEditingProperty(property); setShowPropertyBuildingType((property.Type || property.type) === 'Apartment'); setSelectedPropertyType(property.PropertyType || property.propertyType || ''); setEditPropertyImages(parsePropertyImages(property.Images || property.images)); setShowEditPropertyModal(true); }}>Edit</button>
-                          <button type="button" className="table-action-button contact" onClick={() => openScheduleVisit(property.Address || property.address)}>Schedule</button>
-                        </div>
-                      </td>
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{property.Address || property.address || 'N/A'}</span>
                       </td>
@@ -2157,6 +2160,12 @@ const SalesManagerDashboard = () => {
                       </td>
                       <td>{property.Bedrooms || property.bedrooms || 0}</td>
                       <td>{property.Bathrooms || property.bathrooms || 0}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="sa-row-actions">
+                          <button type="button" className="table-action-button edit" onClick={() => { setEditingProperty(property); setShowPropertyBuildingType((property.Type || property.type) === 'Apartment'); setSelectedPropertyType(property.PropertyType || property.propertyType || ''); setEditPropertyImages(parsePropertyImages(property.Images || property.images)); setShowEditPropertyModal(true); }}>Edit</button>
+                          <button type="button" className="table-action-button contact" onClick={() => openScheduleVisit(property.Address || property.address)}>Schedule</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -3607,6 +3616,57 @@ const SalesManagerDashboard = () => {
           </div>
         )}
       </RoleLayout>
+
+      {/* Property Detail Modal - click on a property row to view full data + images */}
+      {selectedPropertyDetail && (
+        <div className="modal-overlay" onClick={() => setSelectedPropertyDetail(null)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
+            <div className="modal-header">
+              <h3>Property details</h3>
+              <button className="modal-close" onClick={() => setSelectedPropertyDetail(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
+                <div><strong>Address</strong>: {selectedPropertyDetail.Address || selectedPropertyDetail.address || 'N/A'}</div>
+                <div><strong>Type</strong>: {selectedPropertyDetail.Type || selectedPropertyDetail.type || 'N/A'}</div>
+                <div><strong>Property type</strong>: {selectedPropertyDetail.PropertyType || selectedPropertyDetail.propertyType || 'N/A'}</div>
+                {(selectedPropertyDetail.BuildingType || selectedPropertyDetail.buildingType) && (
+                  <div><strong>Building type</strong>: {selectedPropertyDetail.BuildingType || selectedPropertyDetail.buildingType}</div>
+                )}
+                <div><strong>Status</strong>: {selectedPropertyDetail.Status || selectedPropertyDetail.status || 'N/A'}</div>
+                <div><strong>Rent / Price</strong>: {typeof (selectedPropertyDetail.Rent || selectedPropertyDetail.rent) === 'number' ? (selectedPropertyDetail.Rent || selectedPropertyDetail.rent).toLocaleString() : (selectedPropertyDetail.Rent || selectedPropertyDetail.rent || 'N/A')} XOF</div>
+                <div><strong>Bedrooms</strong>: {selectedPropertyDetail.Bedrooms ?? selectedPropertyDetail.bedrooms ?? 0}</div>
+                <div><strong>Bathrooms</strong>: {selectedPropertyDetail.Bathrooms ?? selectedPropertyDetail.bathrooms ?? 0}</div>
+                <div><strong>Number of units</strong>: {selectedPropertyDetail.NumberOfUnits ?? selectedPropertyDetail.numberOfUnits ?? 1}</div>
+                <div><strong>Filled units</strong>: {selectedPropertyDetail.FilledUnits ?? selectedPropertyDetail.filledUnits ?? selectedPropertyDetail.occupiedUnits ?? 0}</div>
+                <div><strong>Urgency</strong>: {selectedPropertyDetail.Urgency || selectedPropertyDetail.urgency || 'normal'}</div>
+                {(selectedPropertyDetail.Tenant || selectedPropertyDetail.tenant) && (
+                  <div><strong>Tenant</strong>: {selectedPropertyDetail.Tenant || selectedPropertyDetail.tenant}</div>
+                )}
+              </div>
+              {(() => {
+                const imgs = parsePropertyImages(selectedPropertyDetail.Images || selectedPropertyDetail.images);
+                if (imgs.length === 0) return null;
+                return (
+                  <div style={{ marginTop: '16px' }}>
+                    <strong>Images</strong>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px' }}>
+                      {imgs.map((url, i) => (
+                        <img key={i} src={url} alt="" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8 }} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="modal-footer" style={{ borderTop: '1px solid #e5e7eb', padding: '12px 20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button type="button" className="action-button secondary" onClick={() => setSelectedPropertyDetail(null)}>Close</button>
+              <button type="button" className="action-button primary" onClick={() => { setSelectedPropertyDetail(null); setEditingProperty(selectedPropertyDetail); setShowPropertyBuildingType((selectedPropertyDetail.Type || selectedPropertyDetail.type) === 'Apartment'); setSelectedPropertyType(selectedPropertyDetail.PropertyType || selectedPropertyDetail.propertyType || ''); setEditPropertyImages(parsePropertyImages(selectedPropertyDetail.Images || selectedPropertyDetail.images)); setShowEditPropertyModal(true); }}>Edit</button>
+              <button type="button" className="action-button primary" onClick={() => { setSelectedPropertyDetail(null); openScheduleVisit(selectedPropertyDetail.Address || selectedPropertyDetail.address); }}>Schedule visit</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Schedule Visit / Update Visit Status / Follow-up modals */}
       {showScheduleVisitModal && (
