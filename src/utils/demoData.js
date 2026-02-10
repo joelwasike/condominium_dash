@@ -307,8 +307,6 @@ export const getDemoDataForRole = (role) => {
       return getAccountingDemoData();
     case 'agency_director':
       return getAgencyDirectorDemoData();
-    case 'commercial':
-      return getCommercialDemoData();
     case 'technician':
       return getTechnicianDemoData();
     case 'admin':

@@ -177,6 +177,105 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Listings overview (listing/visit metrics, moved from commercial)
+  getListingsOverview: async () => {
+    const url = buildApiUrl('/api/salesmanager/listings-overview');
+    return await apiRequest(url);
+  },
+
+  // Listings
+  listListings: async (filters = {}) => {
+    let url = buildApiUrl('/api/salesmanager/listings');
+    const queryParams = new URLSearchParams();
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.type) queryParams.append('type', filters.type);
+    if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    return await apiRequest(url);
+  },
+
+  createListing: async (listingData) => {
+    const url = buildApiUrl('/api/salesmanager/listings');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(listingData),
+    });
+  },
+
+  updateListing: async (id, listingData) => {
+    const url = buildApiUrl(`/api/salesmanager/listings/${id}`);
+    return await apiRequest(url, {
+      method: 'PUT',
+      body: JSON.stringify(listingData),
+    });
+  },
+
+  // Visits
+  listVisits: async (filters = {}) => {
+    let url = buildApiUrl('/api/salesmanager/visits');
+    const queryParams = new URLSearchParams();
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.property) queryParams.append('property', filters.property);
+    if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    return await apiRequest(url);
+  },
+
+  scheduleVisit: async (visitData) => {
+    const url = buildApiUrl('/api/salesmanager/visits');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(visitData),
+    });
+  },
+
+  updateVisitStatus: async (id, status, notes) => {
+    const url = buildApiUrl(`/api/salesmanager/visits/${id}/status`);
+    return await apiRequest(url, {
+      method: 'PUT',
+      body: JSON.stringify({ status, notes }),
+    });
+  },
+
+  // Interested clients history
+  getInterestedClientsHistory: async () => {
+    const url = buildApiUrl('/api/salesmanager/clients/history');
+    return await apiRequest(url);
+  },
+
+  // Visit requests
+  listRequests: async (filters = {}) => {
+    let url = buildApiUrl('/api/salesmanager/requests');
+    const queryParams = new URLSearchParams();
+    if (filters.status) queryParams.append('status', filters.status);
+    if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    return await apiRequest(url);
+  },
+
+  createVisitRequest: async (requestData) => {
+    const url = buildApiUrl('/api/salesmanager/requests');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+  },
+
+  updateVisitRequest: async (id, status) => {
+    const url = buildApiUrl(`/api/salesmanager/requests/${id}`);
+    return await apiRequest(url, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  followUpVisitRequest: async (id, message) => {
+    const url = buildApiUrl(`/api/salesmanager/requests/${id}/follow-up`);
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  },
+
   // Get owners (landlords) for property assignment
   getOwners: async () => {
     const url = buildApiUrl('/api/salesmanager/owners');

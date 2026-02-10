@@ -4,7 +4,6 @@ import './App.css';
 
 // Import Dashboard Components
 import TenantDashboard from './pages/TenantDashboard';
-import SalesDashboard from './pages/SalesDashboard';
 import AdministrativeDashboard from './pages/AdministrativeDashboard';
 import AccountingDashboard from './pages/AccountingDashboard';
 import SalesManagerDashboard from './pages/SalesManagerDashboard';
@@ -53,7 +52,6 @@ function App() {
   const getDashboardRoute = (role) => {
     switch (role) {
       case 'tenant': return '/tenant';
-      case 'commercial': return '/sales';
       case 'admin': return '/administrative';
       case 'accounting': return '/accounting';
       case 'salesmanager': return '/sales-manager';
@@ -148,14 +146,6 @@ function App() {
             <ProtectedRoute requiredRole="tenant">
               <DashboardLayout>
                 <TenantDashboard />
-              </DashboardLayout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/sales" element={
-            <ProtectedRoute requiredRole="commercial">
-              <DashboardLayout>
-                <SalesDashboard />
               </DashboardLayout>
             </ProtectedRoute>
           } />

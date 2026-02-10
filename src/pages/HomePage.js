@@ -20,13 +20,6 @@ const HomePage = () => {
       color: '#38a169'
     },
     {
-      title: 'Sales Dashboard',
-      description: 'Manage property listings, visits, and client relationships',
-      icon: FileText,
-      path: '/sales',
-      color: '#d69e2e'
-    },
-    {
       title: 'Administrative Dashboard',
       description: 'Handle document verification and administrative tasks',
       icon: DollarSign,

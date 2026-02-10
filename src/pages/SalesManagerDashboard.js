@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download, ArrowLeft, Mail, Phone, MapPin, DollarSign, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, Building2, Calendar, ClipboardList, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download, ArrowLeft, Mail, Phone, MapPin, DollarSign, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -17,7 +17,7 @@ import { salesManagerService } from '../services/salesManagerService';
 import { messagingService } from '../services/messagingService';
 import { cloudinaryService, validateFileType, validateFileSize } from '../services/cloudinaryService';
 import { API_CONFIG } from '../config/api';
-import { isDemoMode, getSalesManagerDemoData } from '../utils/demoData';
+import { isDemoMode, getSalesManagerDemoData, getCommercialDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
 import { t, getLanguage } from '../utils/i18n';
@@ -137,6 +137,28 @@ const SalesManagerDashboard = () => {
   const [approvedClientDocuments, setApprovedClientDocuments] = useState([]);
   const [approvedClientChecklist, setApprovedClientChecklist] = useState(null);
   const [loadingApprovedDocs, setLoadingApprovedDocs] = useState(false);
+
+  // Listings / Visits / Requests (moved from commercial)
+  const [showAddListingModal, setShowAddListingModal] = useState(false);
+  const [showEditListingModal, setShowEditListingModal] = useState(false);
+  const [showScheduleVisitModal, setShowScheduleVisitModal] = useState(false);
+  const [showUpdateVisitStatusModal, setShowUpdateVisitStatusModal] = useState(false);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [selectedVisit, setSelectedVisit] = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [visitProperty, setVisitProperty] = useState('');
+  const [listings, setListings] = useState([]);
+  const [visits, setVisits] = useState({ upcoming: [], done: [], all: [] });
+  const [requests, setRequests] = useState([]);
+  const [listingStatusFilter, setListingStatusFilter] = useState('');
+  const [listingTypeFilter, setListingTypeFilter] = useState('');
+  const [visitStatusFilter, setVisitStatusFilter] = useState('');
+  const [visitTab, setVisitTab] = useState('all');
+  const [requestStatusFilter, setRequestStatusFilter] = useState('');
+  const [listOverviewData, setListOverviewData] = useState(null);
+  const [showBuildingType, setShowBuildingType] = useState(false);
+  const [editShowBuildingType, setEditShowBuildingType] = useState(false);
   
   // API Data States
   const [overviewData, setOverviewData] = useState(null);
@@ -242,7 +264,7 @@ const SalesManagerDashboard = () => {
   const [showEditPropertyModal, setShowEditPropertyModal] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
   const [expandedOwnerId, setExpandedOwnerId] = useState(null); // For property management owner expansion
-  const [showBuildingType, setShowBuildingType] = useState(false); // For showing building type field when type is Apartment
+  const [showPropertyBuildingType, setShowPropertyBuildingType] = useState(false); // For property form: show building type when type is Apartment
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -341,6 +363,43 @@ const SalesManagerDashboard = () => {
     }
   };
 
+  // Load listings, visits, requests (moved from commercial)
+  const loadListingsData = useCallback(async () => {
+    try {
+      if (isDemoMode()) {
+        const demoData = getCommercialDemoData();
+        setListOverviewData(demoData.overview);
+        setListings(demoData.listings || []);
+        setVisits(demoData.visits || { upcoming: [], done: [], all: [] });
+        setRequests(demoData.requests || []);
+        return;
+      }
+      const [overview, listingsData, visitsData, requestsData] = await Promise.all([
+        salesManagerService.getListingsOverview().catch(() => null),
+        salesManagerService.listListings({ status: listingStatusFilter || undefined, type: listingTypeFilter || undefined }).catch(() => []),
+        salesManagerService.listVisits({ status: visitStatusFilter || undefined }).catch(() => ({ upcoming: [], done: [], all: [] })),
+        salesManagerService.listRequests({ status: requestStatusFilter || undefined }).catch(() => []),
+      ]);
+      setListOverviewData(overview);
+      setListings(Array.isArray(listingsData) ? listingsData : []);
+      if (Array.isArray(visitsData)) {
+        setVisits({ upcoming: [], done: [], all: visitsData });
+      } else if (visitsData && typeof visitsData === 'object') {
+        setVisits({
+          upcoming: Array.isArray(visitsData.upcoming) ? visitsData.upcoming : [],
+          done: Array.isArray(visitsData.done) ? visitsData.done : [],
+          all: Array.isArray(visitsData.all) ? visitsData.all : [],
+        });
+      } else {
+        setVisits({ upcoming: [], done: [], all: [] });
+      }
+      setRequests(Array.isArray(requestsData) ? requestsData : []);
+    } catch (error) {
+      console.error('Failed to load listings/visits/requests:', error);
+      addNotification('Failed to load listing data', 'error');
+    }
+  }, [listingStatusFilter, listingTypeFilter, visitStatusFilter, requestStatusFilter]);
+
   // Reload data when filters change
   useEffect(() => {
     loadData();
@@ -403,6 +462,13 @@ const SalesManagerDashboard = () => {
       loadAdvertisements();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load listings/visits/requests when on those tabs
+  useEffect(() => {
+    if (activeTab === 'listings' || activeTab === 'visits' || activeTab === 'requests') {
+      loadListingsData();
+    }
+  }, [activeTab, loadListingsData]);
 
 
   // Scroll to bottom of messages
@@ -662,6 +728,9 @@ const SalesManagerDashboard = () => {
       { id: 'overview', label: 'Overview', icon: TrendingUp },
       { id: 'occupancy', label: 'Occupancy', icon: Building },
       { id: 'sales-tracking', label: 'Sales Tracking', icon: FileText },
+      { id: 'listings', label: 'Listings', icon: Building2 },
+      { id: 'visits', label: 'Visits', icon: Calendar },
+      { id: 'requests', label: 'Requests', icon: ClipboardList },
       { id: 'clients', label: 'Tenant Management', icon: Users },
       { id: 'property-management', label: 'Property Management', icon: Building },
       { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
@@ -671,6 +740,129 @@ const SalesManagerDashboard = () => {
     ],
     []
   );
+
+  // Listings / Visits / Requests handlers (moved from commercial)
+  const openAddListingModal = () => {
+    setSelectedListing(null);
+    setShowBuildingType(false);
+    setShowAddListingModal(true);
+  };
+  const openEditListing = (listing) => {
+    setSelectedListing(listing);
+    setEditShowBuildingType((listing.Type || listing.type || '') === 'Apartment');
+    setShowEditListingModal(true);
+  };
+  const openScheduleVisit = (property = '') => {
+    setVisitProperty(property);
+    setShowScheduleVisitModal(true);
+  };
+  const openUpdateVisitStatus = (visit) => {
+    setSelectedVisit(visit);
+    setShowUpdateVisitStatusModal(true);
+  };
+  const openFollowUp = (request) => {
+    setSelectedRequest(request);
+    setShowFollowUpModal(true);
+  };
+  const closeEditListingModal = () => {
+    setShowEditListingModal(false);
+    setSelectedListing(null);
+  };
+  const closeScheduleVisitModal = () => {
+    setShowScheduleVisitModal(false);
+    setVisitProperty('');
+  };
+  const closeUpdateVisitStatusModal = () => {
+    setShowUpdateVisitStatusModal(false);
+    setSelectedVisit(null);
+  };
+  const closeFollowUpModal = () => {
+    setShowFollowUpModal(false);
+    setSelectedRequest(null);
+  };
+  const handleAddListing = useCallback(async (listingData) => {
+    setLoading(true);
+    try {
+      await salesManagerService.createListing(listingData);
+      addNotification('Listing added successfully!', 'success');
+      setShowAddListingModal(false);
+      loadListingsData();
+    } catch (error) {
+      console.error('Error adding listing:', error);
+      addNotification('Failed to add listing', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addNotification, loadListingsData]);
+  const handleEditListing = useCallback(async (listingData) => {
+    if (!selectedListing) return;
+    setLoading(true);
+    try {
+      const listingId = selectedListing.ID || selectedListing.id;
+      await salesManagerService.updateListing(listingId, listingData);
+      addNotification('Listing updated successfully!', 'success');
+      closeEditListingModal();
+      loadListingsData();
+    } catch (error) {
+      console.error('Error updating listing:', error);
+      addNotification('Failed to update listing', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addNotification, loadListingsData, selectedListing]);
+  const handleScheduleVisit = useCallback(async (visitData) => {
+    setLoading(true);
+    try {
+      await salesManagerService.scheduleVisit(visitData);
+      addNotification('Visit scheduled successfully!', 'success');
+      closeScheduleVisitModal();
+      loadListingsData();
+    } catch (error) {
+      console.error('Error scheduling visit:', error);
+      addNotification('Failed to schedule visit', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addNotification, loadListingsData]);
+  const handleUpdateVisitStatus = useCallback(async (status, notes) => {
+    if (!selectedVisit) return;
+    setLoading(true);
+    try {
+      const visitId = selectedVisit.ID || selectedVisit.id;
+      await salesManagerService.updateVisitStatus(visitId, status, notes);
+      addNotification('Visit status updated successfully!', 'success');
+      closeUpdateVisitStatusModal();
+      loadListingsData();
+    } catch (error) {
+      console.error('Error updating visit status:', error);
+      addNotification('Failed to update visit status', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addNotification, loadListingsData, selectedVisit]);
+  const handleApproveRequest = useCallback(async (requestId) => {
+    try {
+      await salesManagerService.updateVisitRequest(requestId, 'Approved');
+      addNotification('Request approved successfully!', 'success');
+      loadListingsData();
+    } catch (error) {
+      console.error('Error approving request:', error);
+      addNotification('Failed to approve request', 'error');
+    }
+  }, [addNotification, loadListingsData]);
+  const handleFollowUpRequest = useCallback(async (message) => {
+    if (!selectedRequest) return;
+    try {
+      const requestId = selectedRequest.ID || selectedRequest.id;
+      await salesManagerService.followUpVisitRequest(requestId, message);
+      addNotification('Follow-up sent successfully!', 'success');
+      closeFollowUpModal();
+      loadListingsData();
+    } catch (error) {
+      console.error('Error sending follow-up:', error);
+      addNotification('Failed to send follow-up', 'error');
+    }
+  }, [addNotification, loadListingsData, selectedRequest]);
 
   // No mock data - using real API data only
 
@@ -1729,7 +1921,7 @@ const SalesManagerDashboard = () => {
                             className="sa-action-button"
                             onClick={() => {
                               setEditingProperty(property);
-                              setShowBuildingType((property.Type || property.type) === 'Apartment');
+                              setShowPropertyBuildingType((property.Type || property.type) === 'Apartment');
                               setSelectedPropertyType(property.PropertyType || property.propertyType || '');
                               setShowEditPropertyModal(true);
                             }}
@@ -3166,6 +3358,295 @@ const SalesManagerDashboard = () => {
     );
   };
 
+  const renderListings = () => {
+    const displayListings = Array.isArray(listings) ? listings : [];
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>Property Listings</h3>
+            <p>Manage portfolio availability and pricing</p>
+          </div>
+          <button className="sa-primary-cta" onClick={openAddListingModal}>
+            <Plus size={18} />
+            Add Listing
+          </button>
+        </div>
+        <div className="sa-filters-section">
+          <select className="sa-filter-select" value={listingStatusFilter} onChange={(e) => setListingStatusFilter(e.target.value)}>
+            <option value="">All Status</option>
+            <option value="Published">Published</option>
+            <option value="Draft">Draft</option>
+            <option value="Sold">Sold</option>
+            <option value="Rented">Rented</option>
+          </select>
+          <select className="sa-filter-select" value={listingTypeFilter} onChange={(e) => setListingTypeFilter(e.target.value)}>
+            <option value="">All Types</option>
+            <option value="Apartment">Apartment</option>
+            <option value="House">House</option>
+            <option value="Studio">Studio</option>
+            <option value="Condo">Condo</option>
+          </select>
+        </div>
+        {loading ? (
+          <div className="sa-table-empty">Loading listings...</div>
+        ) : displayListings.length === 0 ? (
+          <div className="sa-table-empty">No listings available</div>
+        ) : (
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th>Details</th>
+                  <th>Price</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayListings.map((listing, index) => {
+                  const listingId = listing.ID || listing.id || `listing-${index}`;
+                  const address = listing.Address || listing.address || 'Unnamed Property';
+                  const city = listing.City || listing.city || listing.District || listing.district || 'N/A';
+                  const type = listing.Type || listing.type || 'N/A';
+                  const propertyType = listing.PropertyType || listing.propertyType || 'N/A';
+                  const buildingType = listing.BuildingType || listing.buildingType || null;
+                  const bedrooms = listing.Bedrooms || listing.bedrooms || 0;
+                  const bathrooms = listing.Bathrooms || listing.bathrooms || 0;
+                  const price = listing.Price || listing.price || 'N/A';
+                  const status = listing.Status || listing.status || 'Published';
+                  const updatedAt = listing.UpdatedAt || listing.updatedAt;
+                  return (
+                    <tr key={listingId}>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{address}</span>
+                          <span className="sa-cell-sub">{city}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{type} {buildingType ? `(${buildingType})` : ''}</span>
+                          <span className="sa-cell-sub">{propertyType} • {bedrooms} bd / {bathrooms} ba</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{price}</span>
+                          <span className="sa-cell-sub">{updatedAt ? `Updated ${new Date(updatedAt).toLocaleDateString()}` : 'Update pending'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`sa-status-pill ${status.toLowerCase()}`}>{status}</span>
+                      </td>
+                      <td>
+                        <div className="sa-row-actions">
+                          <button className="table-action-button edit" onClick={() => openEditListing(listing)}>Edit</button>
+                          <button className="table-action-button contact" onClick={() => openScheduleVisit(address)}>Schedule</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderVisits = () => {
+    const visitsToDisplay = visitTab === 'upcoming' ? visits.upcoming : visitTab === 'done' ? visits.done : visits.all;
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>Visit Management</h3>
+            <p>Schedule and track property viewings</p>
+          </div>
+          <button className="sa-primary-cta" onClick={() => openScheduleVisit()}>
+            <Plus size={18} />
+            Schedule Visit
+          </button>
+        </div>
+        <div className="sa-filters-section">
+          <div className="sa-transactions-tabs">
+            <button className={`sa-subtab-button ${visitTab === 'all' ? 'active' : ''}`} onClick={() => setVisitTab('all')}>All ({visits.all.length})</button>
+            <button className={`sa-subtab-button ${visitTab === 'upcoming' ? 'active' : ''}`} onClick={() => setVisitTab('upcoming')}>Upcoming ({visits.upcoming.length})</button>
+            <button className={`sa-subtab-button ${visitTab === 'done' ? 'active' : ''}`} onClick={() => setVisitTab('done')}>Done ({visits.done.length})</button>
+          </div>
+          <select className="sa-filter-select" value={visitStatusFilter} onChange={(e) => setVisitStatusFilter(e.target.value)}>
+            <option value="">All Status</option>
+            <option value="Scheduled">Scheduled</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="No-show">No-show</option>
+          </select>
+        </div>
+        {loading ? (
+          <div className="sa-table-empty">Loading visits...</div>
+        ) : visitsToDisplay.length === 0 ? (
+          <div className="sa-table-empty">No visits scheduled</div>
+        ) : (
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th>Client</th>
+                  <th>Scheduled</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {visitsToDisplay.map((visit, index) => {
+                  const visitId = visit.ID || visit.id || `visit-${index}`;
+                  const property = visit.Property || visit.property || visit.Address || visit.address || 'Property';
+                  const client = visit.Client || visit.client || visit.ClientName || visit.clientName || 'Client';
+                  const clientEmail = visit.ClientEmail || visit.clientEmail || '';
+                  const clientPhone = visit.ClientPhone || visit.clientPhone || '';
+                  const visitDate = visit.VisitDate || visit.visitDate || visit.Date || visit.date || visit.ScheduledAt || visit.scheduledAt;
+                  const visitTime = visit.VisitTime || visit.visitTime || visit.Time || visit.time;
+                  const status = visit.Status || visit.status || 'Scheduled';
+                  const formattedDate = visitDate ? new Date(visitDate).toLocaleDateString() : 'N/A';
+                  const formattedTime = visitTime ? visitTime : (visitDate ? new Date(visitDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A');
+                  return (
+                    <tr key={visitId}>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{property}</span>
+                          <span className="sa-cell-sub">{visit.Agent || visit.agent || 'Pending assignment'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{client}</span>
+                          <span className="sa-cell-sub">{clientEmail || clientPhone || 'N/A'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{formattedDate}</span>
+                          <span className="sa-cell-sub">{formattedTime}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`sa-status-pill ${status.toLowerCase().replace('-', '')}`}>{status}</span>
+                      </td>
+                      <td>
+                        <div className="sa-row-actions">
+                          {status === 'Scheduled' && (
+                            <button className="table-action-button edit" onClick={() => openUpdateVisitStatus(visit)}>Update Status</button>
+                          )}
+                          <button className="table-action-button view" onClick={() => openScheduleVisit(property)}>Reschedule</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderRequests = () => {
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h3>Visit Requests</h3>
+            <p>Manage incoming requests from prospective tenants</p>
+          </div>
+        </div>
+        <div className="sa-filters-section">
+          <select className="sa-filter-select" value={requestStatusFilter} onChange={(e) => setRequestStatusFilter(e.target.value)}>
+            <option value="">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Scheduled">Scheduled</option>
+          </select>
+        </div>
+        {loading ? (
+          <div className="sa-table-empty">Loading requests...</div>
+        ) : requests.length === 0 ? (
+          <div className="sa-table-empty">No requests received</div>
+        ) : (
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Property</th>
+                  <th>Requested</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((request, index) => {
+                  const requestId = request.ID || request.id || `request-${index}`;
+                  const clientName = request.ClientName || request.clientName || 'Client';
+                  const clientEmail = request.ClientEmail || request.clientEmail || '';
+                  const clientPhone = request.ClientPhone || request.clientPhone || '';
+                  const property = request.Property || request.property || 'Property';
+                  const status = request.Status || request.status || 'Pending';
+                  const createdAt = request.CreatedAt || request.createdAt;
+                  const preferredDate = request.PreferredDate || request.preferredDate;
+                  const followUpCount = request.followUpCount || request.FollowUpCount || 0;
+                  return (
+                    <tr key={requestId}>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{clientName}</span>
+                          <span className="sa-cell-sub">{clientEmail || clientPhone || 'N/A'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{property}</span>
+                          <span className="sa-cell-sub">{request.City || request.city || request.District || request.district || 'N/A'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="sa-cell-main">
+                          <span className="sa-cell-title">{createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}</span>
+                          <span className="sa-cell-sub">{preferredDate ? `Preferred: ${new Date(preferredDate).toLocaleDateString()}` : ''}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`sa-status-pill ${status.toLowerCase()}`}>{status}</span>
+                        {followUpCount > 0 && (
+                          <span className="sa-cell-sub" style={{ display: 'block', marginTop: '4px' }}>{followUpCount} follow-up{followUpCount > 1 ? 's' : ''}</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="sa-row-actions">
+                          {status === 'Pending' && (
+                            <>
+                              <button className="table-action-button edit" onClick={() => handleApproveRequest(requestId)}>Approve</button>
+                              <button className="table-action-button contact" onClick={() => openFollowUp(request)}>Follow-up</button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -3174,6 +3655,12 @@ const SalesManagerDashboard = () => {
         return renderOccupancy();
       case 'sales-tracking':
         return renderSalesTracking();
+      case 'listings':
+        return renderListings();
+      case 'visits':
+        return renderVisits();
+      case 'requests':
+        return renderRequests();
       case 'clients':
         if (selectedTenantId) return renderTenantDetail();
         return renderClients();
@@ -3228,6 +3715,328 @@ const SalesManagerDashboard = () => {
           </div>
         )}
       </RoleLayout>
+
+      {/* Listings / Visits / Requests modals (moved from commercial) */}
+      {showAddListingModal && (
+        <div className="modal-overlay" onClick={() => setShowAddListingModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add New Listing</h3>
+              <button className="modal-close" onClick={() => setShowAddListingModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form className="modal-form" onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                handleAddListing({
+                  address: formData.get('address'),
+                  type: formData.get('type'),
+                  propertyType: formData.get('propertyType'),
+                  buildingType: formData.get('buildingType') || null,
+                  bedrooms: Number(formData.get('bedrooms')),
+                  bathrooms: Number(formData.get('bathrooms')),
+                  price: formData.get('price'),
+                  description: formData.get('description'),
+                  status: formData.get('status') || 'Published',
+                });
+              }}>
+                <div className="form-group">
+                  <label htmlFor="add-address">Property Address *</label>
+                  <input id="add-address" name="address" placeholder="e.g., 123 Main Street" required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="add-type">Building Type *</label>
+                  <select id="add-type" name="type" required onChange={(e) => setShowBuildingType(e.target.value === 'Apartment')}>
+                    <option value="">Select Building Type</option>
+                    <option value="Apartment">Apartment</option>
+                    <option value="House">House</option>
+                    <option value="Studio">Studio</option>
+                    <option value="Condo">Condo</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="add-property-type">Property Type (For Sale or Rent) *</label>
+                  <select id="add-property-type" name="propertyType" required>
+                    <option value="">Select Property Type</option>
+                    <option value="For Sale">For Sale</option>
+                    <option value="For Rent">For Rent</option>
+                  </select>
+                </div>
+                {showBuildingType && (
+                  <div className="form-group">
+                    <label htmlFor="add-building-type">Building Type (if Apartment) *</label>
+                    <select id="add-building-type" name="buildingType" required>
+                      <option value="">Select Building Type</option>
+                      <option value="High-rise">High-rise</option>
+                      <option value="Low-rise">Low-rise</option>
+                      <option value="Duplex">Duplex</option>
+                      <option value="Townhouse">Townhouse</option>
+                      <option value="Penthouse">Penthouse</option>
+                    </select>
+                  </div>
+                )}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="add-bedrooms">Bedrooms *</label>
+                    <input id="add-bedrooms" name="bedrooms" type="number" min="0" required />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="add-bathrooms">Bathrooms *</label>
+                    <input id="add-bathrooms" name="bathrooms" type="number" min="0" step="0.5" required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="add-price">Monthly Rent *</label>
+                  <input id="add-price" name="price" placeholder="e.g., 1,200 XOF/month" required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="add-status">Status *</label>
+                  <select id="add-status" name="status" required>
+                    <option value="Published">Published</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Sold">Sold</option>
+                    <option value="Rented">Rented</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="add-description">Description</label>
+                  <textarea id="add-description" name="description" rows="4" placeholder="Describe the property features, amenities, etc." />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowAddListingModal(false)}>Cancel</button>
+                  <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Adding...' : 'Add Listing'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditListingModal && selectedListing && (
+        <div className="modal-overlay" onClick={closeEditListingModal}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Listing</h3>
+              <button className="modal-close" onClick={closeEditListingModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <form className="modal-form" onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                handleEditListing({
+                  address: formData.get('address'),
+                  type: formData.get('type'),
+                  propertyType: formData.get('propertyType'),
+                  buildingType: formData.get('buildingType') || null,
+                  bedrooms: Number(formData.get('bedrooms')),
+                  bathrooms: Number(formData.get('bathrooms')),
+                  price: formData.get('price'),
+                  description: formData.get('description'),
+                  status: formData.get('status'),
+                });
+              }}>
+                <div className="form-group">
+                  <label htmlFor="edit-address">Property Address *</label>
+                  <input id="edit-address" name="address" defaultValue={selectedListing.Address || selectedListing.address} required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-type">Building Type *</label>
+                  <select id="edit-type" name="type" defaultValue={selectedListing.Type || selectedListing.type} required onChange={(e) => setEditShowBuildingType(e.target.value === 'Apartment')}>
+                    <option value="">Select Building Type</option>
+                    <option value="Apartment">Apartment</option>
+                    <option value="House">House</option>
+                    <option value="Studio">Studio</option>
+                    <option value="Condo">Condo</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-property-type">Property Type (For Sale or Rent) *</label>
+                  <select id="edit-property-type" name="propertyType" defaultValue={selectedListing.PropertyType || selectedListing.propertyType || ''} required>
+                    <option value="">Select Property Type</option>
+                    <option value="For Sale">For Sale</option>
+                    <option value="For Rent">For Rent</option>
+                  </select>
+                </div>
+                {editShowBuildingType && (
+                  <div className="form-group">
+                    <label htmlFor="edit-building-type">Building Type (if Apartment) *</label>
+                    <select id="edit-building-type" name="buildingType" defaultValue={selectedListing.BuildingType || selectedListing.buildingType || ''} required>
+                      <option value="">Select Building Type</option>
+                      <option value="High-rise">High-rise</option>
+                      <option value="Low-rise">Low-rise</option>
+                      <option value="Duplex">Duplex</option>
+                      <option value="Townhouse">Townhouse</option>
+                      <option value="Penthouse">Penthouse</option>
+                    </select>
+                  </div>
+                )}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-bedrooms">Bedrooms *</label>
+                    <input id="edit-bedrooms" name="bedrooms" type="number" min="0" defaultValue={selectedListing.Bedrooms || selectedListing.bedrooms} required />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-bathrooms">Bathrooms *</label>
+                    <input id="edit-bathrooms" name="bathrooms" type="number" min="0" step="0.5" defaultValue={selectedListing.Bathrooms || selectedListing.bathrooms} required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-price">Monthly Rent *</label>
+                  <input id="edit-price" name="price" defaultValue={selectedListing.Price || selectedListing.price} required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-status">Status *</label>
+                  <select id="edit-status" name="status" defaultValue={selectedListing.Status || selectedListing.status} required>
+                    <option value="Published">Published</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Sold">Sold</option>
+                    <option value="Rented">Rented</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-description">Description</label>
+                  <textarea id="edit-description" name="description" rows="4" defaultValue={selectedListing.Description || selectedListing.description} placeholder="Describe the property features, amenities, etc." />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={closeEditListingModal}>Cancel</button>
+                  <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Updating...' : 'Update Listing'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showScheduleVisitModal && (
+        <div className="modal-overlay" onClick={closeScheduleVisitModal}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Schedule Visit</h3>
+              <button className="modal-close" onClick={closeScheduleVisitModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <form className="modal-form" onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                handleScheduleVisit({
+                  property: formData.get('property'),
+                  clientName: formData.get('clientName'),
+                  clientEmail: formData.get('clientEmail'),
+                  clientPhone: formData.get('clientPhone'),
+                  visitDate: formData.get('visitDate'),
+                  visitTime: formData.get('visitTime'),
+                  notes: formData.get('notes'),
+                });
+              }}>
+                <div className="form-group">
+                  <label htmlFor="visit-property">Property *</label>
+                  <select id="visit-property" name="property" defaultValue={visitProperty} required>
+                    <option value="">Select Property</option>
+                    {listings.map((listing, index) => {
+                      const address = listing.Address || listing.address;
+                      const listingId = listing.ID || listing.id || `listing-${index}`;
+                      return <option key={listingId} value={address}>{address}</option>;
+                    })}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="visit-client-name">Client Name *</label>
+                  <input id="visit-client-name" name="clientName" placeholder="Full name" required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="visit-client-email">Client Email *</label>
+                  <input id="visit-client-email" name="clientEmail" type="email" placeholder="email@example.com" required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="visit-client-phone">Client Phone *</label>
+                  <input id="visit-client-phone" name="clientPhone" type="tel" placeholder="Phone number" required />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="visit-date">Visit Date *</label>
+                    <input id="visit-date" name="visitDate" type="date" required />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="visit-time">Visit Time *</label>
+                    <input id="visit-time" name="visitTime" type="time" required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="visit-notes">Notes</label>
+                  <textarea id="visit-notes" name="notes" rows="3" placeholder="Any special requirements or notes for the visit" />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={closeScheduleVisitModal}>Cancel</button>
+                  <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Scheduling...' : 'Schedule Visit'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUpdateVisitStatusModal && selectedVisit && (
+        <div className="modal-overlay" onClick={closeUpdateVisitStatusModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Update Visit Status</h3>
+              <button className="modal-close" onClick={closeUpdateVisitStatusModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <form className="modal-form" onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                handleUpdateVisitStatus(formData.get('status'), formData.get('notes'));
+              }}>
+                <div className="form-group">
+                  <label htmlFor="visit-status">Status *</label>
+                  <select id="visit-status" name="status" required>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="No-show">No-show</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="visit-status-notes">Notes</label>
+                  <textarea id="visit-status-notes" name="notes" rows="3" placeholder="Additional notes about the visit status..." />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={closeUpdateVisitStatusModal}>Cancel</button>
+                  <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Updating...' : 'Update Status'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showFollowUpModal && selectedRequest && (
+        <div className="modal-overlay" onClick={closeFollowUpModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Send Follow-up</h3>
+              <button className="modal-close" onClick={closeFollowUpModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <form className="modal-form" onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                handleFollowUpRequest(formData.get('message'));
+              }}>
+                <div className="form-group">
+                  <label htmlFor="follow-up-message">Message *</label>
+                  <textarea id="follow-up-message" name="message" rows="4" placeholder="Please let us know your preferred visit time..." required />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={closeFollowUpModal}>Cancel</button>
+                  <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Sending...' : 'Send Follow-up'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Password Display Modal */}
       {showPasswordModal && passwordData && (
@@ -4143,7 +4952,7 @@ const SalesManagerDashboard = () => {
                       name="type" 
                       id="create-type" 
                       required
-                      onChange={(e) => setShowBuildingType(e.target.value === 'Apartment')}
+                      onChange={(e) => setShowPropertyBuildingType(e.target.value === 'Apartment')}
                     >
                       <option value="">Select Building Type</option>
                       <option value="Apartment">Apartment</option>
@@ -4168,7 +4977,7 @@ const SalesManagerDashboard = () => {
                       <option value="For Rent">For Rent</option>
                     </select>
                   </div>
-                  {showBuildingType && (
+                  {showPropertyBuildingType && (
                     <div className="form-group">
                       <label htmlFor="create-building-type">Building Type (if Apartment) *</label>
                       <select name="buildingType" id="create-building-type" required>
@@ -4356,7 +5165,7 @@ const SalesManagerDashboard = () => {
                       name="type" 
                       id="edit-type" 
                       defaultValue={editingProperty.Type || editingProperty.type || ''}
-                      onChange={(e) => setShowBuildingType(e.target.value === 'Apartment')}
+                      onChange={(e) => setShowPropertyBuildingType(e.target.value === 'Apartment')}
                     >
                       <option value="">Select Building Type</option>
                       <option value="Apartment">Apartment</option>
@@ -4381,7 +5190,7 @@ const SalesManagerDashboard = () => {
                       <option value="For Rent">For Rent</option>
                     </select>
                   </div>
-                  {(showBuildingType || (editingProperty.Type || editingProperty.type) === 'Apartment') && (
+                  {(showPropertyBuildingType || (editingProperty.Type || editingProperty.type) === 'Apartment') && (
                     <div className="form-group">
                       <label htmlFor="edit-building-type">Building Type (if Apartment)</label>
                       <select name="buildingType" id="edit-building-type" defaultValue={editingProperty.BuildingType || editingProperty.buildingType || ''}>

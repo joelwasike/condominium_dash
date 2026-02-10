@@ -12,7 +12,6 @@ const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
   const getRoleDisplayName = (role) => {
     const roleMap = {
       'tenant': 'Tenant',
-      'commercial': 'Commercial Dashboard',
       'admin': 'Administrative Agent',
       'accounting': 'Accounting',
       'salesmanager': 'Sales Manager',
@@ -32,7 +31,6 @@ const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
     // Navigate to the appropriate dashboard
     const roleRoutes = {
       'tenant': '/tenant',
-      'commercial': '/sales',
       'admin': '/administrative',
       'accounting': '/accounting',
       'salesmanager': '/sales-manager',
@@ -89,7 +87,6 @@ const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
             className="role-selector"
           >
             <option value="tenant">Tenant</option>
-            <option value="commercial">Commercial Dashboard</option>
             <option value="admin">Administrative Agent</option>
             <option value="accounting">Accounting</option>
             <option value="salesmanager">Sales Manager</option>

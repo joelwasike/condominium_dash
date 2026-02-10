@@ -27,7 +27,6 @@ const LoginPage = ({ onLogin }) => {
     { value: 'accounting', label: 'Accounting' },
     { value: 'technician', label: 'Technician' },
     { value: 'admin', label: 'Administrative Agent' },
-    { value: 'commercial', label: 'Commercial' },
     { value: 'superadmin', label: 'Super Admin' },
     { value: 'agency_director', label: 'Agency Director' }
   ];
@@ -36,7 +35,6 @@ const LoginPage = ({ onLogin }) => {
   const getDashboardRoute = (role) => {
     switch (role) {
       case 'tenant': return '/tenant';
-      case 'commercial': return '/sales';
       case 'admin': return '/administrative';
       case 'accounting': return '/accounting';
       case 'salesmanager': return '/sales-manager';

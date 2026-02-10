@@ -15,7 +15,6 @@ const roleLabels = {
   accounting: 'Accounting',
   salesmanager: 'Sales Manager',
   superadmin: 'Super Admin',
-  commercial: 'Commercial Manager'
 };
 
 const RoleLayout = ({
@@ -48,7 +47,6 @@ const RoleLayout = ({
     // Navigate to appropriate dashboard based on role
     const roleRoutes = {
       'tenant': '/tenant',
-      'commercial': '/sales',
       'admin': '/administrative',
       'accounting': '/accounting',
       'salesmanager': '/sales-manager',
@@ -83,7 +81,6 @@ const RoleLayout = ({
     
     const roleRoutes = {
       'tenant': '/tenant',
-      'commercial': '/sales',
       'admin': '/administrative',
       'accounting': '/accounting',
       'salesmanager': '/sales-manager',

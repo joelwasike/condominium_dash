@@ -10,15 +10,16 @@ export const API_CONFIG = {
       PROPERTIES: '/api/salesmanager/properties',
       CLIENTS: '/api/salesmanager/clients',
       ALERTS: '/api/salesmanager/alerts',
+      LISTINGS_OVERVIEW: '/api/salesmanager/listings-overview',
+      LISTINGS: '/api/salesmanager/listings',
+      VISITS: '/api/salesmanager/visits',
+      REQUESTS: '/api/salesmanager/requests',
+      CLIENTS_HISTORY: '/api/salesmanager/clients/history',
     },
     // Other roles (for future use)
     TENANT: {
       PAYMENTS: '/api/tenant/payments',
       MAINTENANCE: '/api/tenant/maintenance',
-    },
-    COMMERCIAL: {
-      LISTINGS: '/api/commercial/listings',
-      VISITS: '/api/commercial/visits',
     },
     TECHNICIAN: {
       INVENTORIES: '/api/technician/inventories',

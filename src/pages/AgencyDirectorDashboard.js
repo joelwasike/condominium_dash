@@ -1376,7 +1376,6 @@ const AgencyDirectorDashboard = () => {
               }} 
               required
             >
-              <option value="commercial">Commercial</option>
               <option value="technician">Technician</option>
               <option value="accounting">Accounting</option>
               <option value="admin">Admin</option>
@@ -3819,7 +3818,6 @@ const AgencyDirectorDashboard = () => {
               }} 
               required
             >
-              <option value="commercial">Commercial</option>
               <option value="technician">Technician</option>
               <option value="accounting">Accounting</option>
               <option value="admin">Admin</option>
