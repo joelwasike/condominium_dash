@@ -260,6 +260,7 @@ const SalesManagerDashboard = () => {
   const [editPropertyImages, setEditPropertyImages] = useState([]); // URLs for edit property images (Cloudinary)
   const [uploadingImage, setUploadingImage] = useState(false); // Loading state for image upload
   const [selectedPropertyDetail, setSelectedPropertyDetail] = useState(null); // Property shown in detail modal
+  const [expandedImageUrl, setExpandedImageUrl] = useState(null); // Full-size image overlay (lightbox)
   
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -3650,9 +3651,17 @@ const SalesManagerDashboard = () => {
                 return (
                   <div style={{ marginTop: '16px' }}>
                     <strong>Images</strong>
+                    <small style={{ display: 'block', color: '#6b7280', marginTop: '4px' }}>Click an image to expand</small>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px' }}>
                       {imgs.map((url, i) => (
-                        <img key={i} src={url} alt="" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8 }} />
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setExpandedImageUrl(url)}
+                          style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden' }}
+                        >
+                          <img src={url} alt="" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -3665,6 +3674,30 @@ const SalesManagerDashboard = () => {
               <button type="button" className="action-button primary" onClick={() => { setSelectedPropertyDetail(null); openScheduleVisit(selectedPropertyDetail.Address || selectedPropertyDetail.address); }}>Schedule visit</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Expanded image lightbox - click image in property detail to expand */}
+      {expandedImageUrl && (
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 10001, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setExpandedImageUrl(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setExpandedImageUrl(null)}
+            style={{ position: 'absolute', top: 16, right: 16, background: '#fff', border: 'none', borderRadius: 8, width: 40, height: 40, fontSize: 24, cursor: 'pointer', lineHeight: 1, zIndex: 1 }}
+            aria-label="Close"
+          >
+            ×
+          </button>
+          <img
+            src={expandedImageUrl}
+            alt=""
+            style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain' }}
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 
