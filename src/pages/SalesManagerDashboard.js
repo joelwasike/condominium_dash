@@ -726,11 +726,11 @@ const SalesManagerDashboard = () => {
   const tabs = useMemo(
     () => [
       { id: 'overview', label: 'Overview', icon: TrendingUp },
-      { id: 'occupancy', label: 'Occupancy', icon: Building },
-      { id: 'sales-tracking', label: 'Sales Tracking', icon: FileText },
       { id: 'listings', label: 'Listings', icon: Building2 },
       { id: 'visits', label: 'Visits', icon: Calendar },
       { id: 'requests', label: 'Requests', icon: ClipboardList },
+      { id: 'occupancy', label: 'Occupancy', icon: Building },
+      { id: 'sales-tracking', label: 'Sales Tracking', icon: FileText },
       { id: 'clients', label: 'Tenant Management', icon: Users },
       { id: 'property-management', label: 'Property Management', icon: Building },
       { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
