@@ -228,6 +228,8 @@ const SalesManagerDashboard = () => {
   const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
   const [privateNoteInput, setPrivateNoteInput] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+  const [maintenanceDetail, setMaintenanceDetail] = useState(null);
+  const [maintenanceDetailLoading, setMaintenanceDetailLoading] = useState(false);
 
   // Edit states
   const [showEditClientModal, setShowEditClientModal] = useState(false);
@@ -2397,15 +2399,35 @@ const SalesManagerDashboard = () => {
             </h3>
             {maintenancesList.length > 0 ? (
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {maintenancesList.map((m, idx) => (
-                  <li key={m.ID || m.id || idx} className="sa-tenant-detail-alert-item">
-                    <div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div>
-                    <div className="sa-tenant-detail-alert-meta">
-                      {(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}
-                      {m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}
-                    </div>
-                  </li>
-                ))}
+                {maintenancesList.map((m, idx) => {
+                  const mid = m.ID ?? m.id;
+                  const openMaintenanceDetail = () => {
+                    if (mid == null) return;
+                    setMaintenanceDetailLoading(true);
+                    setMaintenanceDetail(null);
+                    salesManagerService.getMaintenance(mid)
+                      .then((data) => setMaintenanceDetail(data))
+                      .catch((err) => addNotification(err?.message || 'Failed to load maintenance details', 'error'))
+                      .finally(() => setMaintenanceDetailLoading(false));
+                  };
+                  return (
+                    <li
+                      key={mid ?? idx}
+                      className="sa-tenant-detail-alert-item"
+                      role="button"
+                      tabIndex={0}
+                      onClick={openMaintenanceDetail}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMaintenanceDetail(); } }}
+                      style={{ cursor: mid != null ? 'pointer' : 'default' }}
+                    >
+                      <div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div>
+                      <div className="sa-tenant-detail-alert-meta">
+                        {(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}
+                        {m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="sa-cell-sub">No maintenance requests for this tenant.</p>
@@ -3339,6 +3361,75 @@ const SalesManagerDashboard = () => {
               >
                 I've Copied the Passwords
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Maintenance detail modal (when clicking a maintenance in tenant detail) */}
+      {(maintenanceDetail != null || maintenanceDetailLoading) && (
+        <div className="modal-overlay" onClick={() => { if (!maintenanceDetailLoading) { setMaintenanceDetail(null); } }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Maintenance request details</h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setMaintenanceDetail(null)}
+                disabled={maintenanceDetailLoading}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              {maintenanceDetailLoading ? (
+                <p className="sa-cell-sub" style={{ margin: 0 }}>Loading…</p>
+              ) : maintenanceDetail ? (
+                <div className="sa-tenant-detail-dl" style={{ display: 'grid', gap: '12px' }}>
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Property</dt><dd style={{ margin: 0 }}>{maintenanceDetail.property ?? maintenanceDetail.Property ?? '—'}</dd></div>
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Tenant</dt><dd style={{ margin: 0 }}>{maintenanceDetail.tenant ?? maintenanceDetail.Tenant ?? '—'}</dd></div>
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Title</dt><dd style={{ margin: 0 }}>{maintenanceDetail.title ?? maintenanceDetail.Title ?? maintenanceDetail.issue ?? maintenanceDetail.Issue ?? '—'}</dd></div>
+                  {(maintenanceDetail.description ?? maintenanceDetail.Description) && (
+                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Description</dt><dd style={{ margin: 0 }}>{maintenanceDetail.description ?? maintenanceDetail.Description}</dd></div>
+                  )}
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Priority</dt><dd style={{ margin: 0 }}><span className={`sa-status-pill ${(maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '').toLowerCase()}`}>{maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '—'}</span></dd></div>
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Status</dt><dd style={{ margin: 0 }}><span className={`sa-status-pill ${(maintenanceDetail.status ?? maintenanceDetail.Status ?? '').toLowerCase().replace(/\s+/g, '-')}`}>{maintenanceDetail.status ?? maintenanceDetail.Status ?? '—'}</span></dd></div>
+                  {(maintenanceDetail.assigned ?? maintenanceDetail.Assigned) && (
+                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Assigned to</dt><dd style={{ margin: 0 }}>{maintenanceDetail.assigned ?? maintenanceDetail.Assigned}</dd></div>
+                  )}
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Date reported</dt><dd style={{ margin: 0 }}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : (maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—')}</dd></div>
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Created</dt><dd style={{ margin: 0 }}>{maintenanceDetail.createdAt ? new Date(maintenanceDetail.createdAt).toLocaleString() : (maintenanceDetail.CreatedAt ? new Date(maintenanceDetail.CreatedAt).toLocaleString() : '—')}</dd></div>
+                  {(maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours) != null && (
+                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Estimated hours</dt><dd style={{ margin: 0 }}>{maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours}</dd></div>
+                  )}
+                  {(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost) != null && (
+                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Estimated cost</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost).toLocaleString()} XOF</dd></div>
+                  )}
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Quote generated</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.quoteGenerated ?? maintenanceDetail.QuoteGenerated) ? 'Yes' : 'No'}</dd></div>
+                  {(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate) && (
+                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Work start date</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate).toLocaleDateString()}</dd></div>
+                  )}
+                  {(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate) && (
+                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Work end date</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate).toLocaleDateString()}</dd></div>
+                  )}
+                  {(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt) && (
+                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Completed at</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt).toLocaleString()}</dd></div>
+                  )}
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Archived</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.archived ?? maintenanceDetail.Archived) ? 'Yes' : 'No'}</dd></div>
+                  {Array.isArray(maintenanceDetail.photos ?? maintenanceDetail.Photos) && (maintenanceDetail.photos ?? maintenanceDetail.Photos).length > 0 && (
+                    <div>
+                      <dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '8px' }}>Photos</dt>
+                      <dd style={{ margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {(maintenanceDetail.photos ?? maintenanceDetail.Photos).map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                            <img src={url} alt={`Photo ${i + 1}`} style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                          </a>
+                        ))}
+                      </dd>
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

@@ -49,6 +49,12 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Get full maintenance request by ID (for tenant detail view)
+  getMaintenance: async (maintenanceId) => {
+    const url = buildApiUrl(`/api/salesmanager/maintenances/${maintenanceId}`);
+    return await apiRequest(url);
+  },
+
   // Add private note about a tenant
   addClientNote: async (clientId, { note }) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}/notes`);
