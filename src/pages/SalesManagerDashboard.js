@@ -255,6 +255,16 @@ const SalesManagerDashboard = () => {
   const [showEditPropertyModal, setShowEditPropertyModal] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
   const [expandedOwnerId, setExpandedOwnerId] = useState(null); // For property management owner expansion
+  // Property Management sub-views: owner list -> owner assets (renting/selling) -> building payment
+  const [pmView, setPmView] = useState('list'); // 'list' | 'owner-detail' | 'building-detail'
+  const [pmOwnerId, setPmOwnerId] = useState(null);
+  const [pmOwnerName, setPmOwnerName] = useState('');
+  const [ownerAssets, setOwnerAssets] = useState(null); // { ownerName, renting: [], selling: [] }
+  const [pmPropertyId, setPmPropertyId] = useState(null);
+  const [pmBuildingName, setPmBuildingName] = useState('');
+  const [buildingDetail, setBuildingDetail] = useState(null); // { buildingName, units: [], unpaidTenants: [] }
+  const [propertyManagementSearch, setPropertyManagementSearch] = useState(''); // Filter owners by name
+  const [pmLoading, setPmLoading] = useState(false); // Loading owner assets or building detail
   const [showPropertyBuildingType, setShowPropertyBuildingType] = useState(false); // For property form: show building type when type is Apartment
   const [createPropertyImages, setCreatePropertyImages] = useState([]); // URLs for new property images (Cloudinary)
   const [editPropertyImages, setEditPropertyImages] = useState([]); // URLs for edit property images (Cloudinary)
@@ -1927,50 +1937,225 @@ const SalesManagerDashboard = () => {
     );
   };
 
-  // Property Management - Owners and their properties
+  // Property Management - Owners list, owner assets (renting/selling), building payment
+  const getOwnerId = (owner) => owner.id || owner.ID;
+  const getPropertyOwnerId = (property) => property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
+
+  const handleSeeOwner = async (owner) => {
+    const ownerId = getOwnerId(owner);
+    if (!ownerId) return;
+    setPmLoading(true);
+    try {
+      const data = await salesManagerService.getOwnerAssets(ownerId);
+      setOwnerAssets(data);
+      setPmOwnerId(ownerId);
+      setPmOwnerName(data.ownerName || owner.name || owner.Name || 'Owner');
+      setPmView('owner-detail');
+    } catch (err) {
+      console.error('Failed to load owner assets:', err);
+      addNotification('Failed to load owner assets', 'error');
+    } finally {
+      setPmLoading(false);
+    }
+  };
+
+  const handleViewBuilding = async (property) => {
+    const propId = property.id || property.ID;
+    if (!propId) return;
+    setPmLoading(true);
+    try {
+      const data = await salesManagerService.getPropertyBuildingDetail(propId);
+      setBuildingDetail(data);
+      setPmPropertyId(propId);
+      setPmBuildingName(data.buildingName || property.building || property.Address || property.address || 'Building');
+      setPmView('building-detail');
+    } catch (err) {
+      console.error('Failed to load building detail:', err);
+      addNotification('Failed to load building detail', 'error');
+    } finally {
+      setPmLoading(false);
+    }
+  };
+
   const renderPropertyManagement = () => {
-    const getOwnerId = (owner) => owner.id || owner.ID;
-    const getPropertyOwnerId = (property) => {
-      // Check all possible field name variations
-      return property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
-    };
-    // Filled units per property (same logic as occupancy page)
-    const getFilledUnits = (property) => {
-      const n = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
-      const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
-      if (filled !== undefined && filled !== null) return Number(filled);
-      const status = (property.Status || property.status || '').toLowerCase();
-      if (n <= 1) return status === 'occupied' ? 1 : 0;
-      return 0;
-    };
+    // Filter owners by search (member name)
+    const searchLower = (propertyManagementSearch || '').trim().toLowerCase();
+    const filteredOwners = searchLower
+      ? owners.filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower))
+      : owners;
 
-    const ownersWithProperties = owners.map((owner) => {
-      const ownerId = getOwnerId(owner);
-      const ownedProperties = properties.filter((property) => {
-        const landlordId = getPropertyOwnerId(property);
-        return landlordId && ownerId && String(landlordId) === String(ownerId);
-      });
-      return { owner, properties: ownedProperties };
-    });
+    // Building payment view – "PAYMENT MANAGEMENT FOR [Building name]"
+    if (pmView === 'building-detail' && buildingDetail) {
+      const units = buildingDetail.units || [];
+      const unpaidTenants = buildingDetail.unpaidTenants || [];
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => setPmView('owner-detail')}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>PAYMENT MANAGEMENT FOR {pmBuildingName.toUpperCase()}</h2>
+              </div>
+            </div>
+          </div>
+          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Tenants</th>
+                    <th>appartments</th>
+                    <th>rent price</th>
+                    <th>arrièrés</th>
+                    <th>statut</th>
+                    <th>Contacts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {units.map((row, i) => (
+                    <tr key={i}>
+                      <td>{row.tenant || '—'}</td>
+                      <td>{row.unitNumber || '—'}</td>
+                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} fcfa</td>
+                      <td>{typeof row.arrears === 'number' ? row.arrears.toLocaleString() : row.arrears ?? '0'}</td>
+                      <td>{row.status || 'up to date'}</td>
+                      <td>{row.contacts || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {unpaidTenants.length > 0 && (
+              <div style={{ marginTop: '16px', padding: '12px', background: '#fef2f2', borderRadius: '8px' }}>
+                <div style={{ color: '#dc2626', fontWeight: 600, marginBottom: '8px' }}>UNPAID TENANTS</div>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }}>SEND SMS</button>
+                  <button type="button" className="table-action-button contact">SEND EMAIL</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
 
-    // Properties without an owner assigned
-    const unassignedProperties = properties.filter((property) => {
-      const landlordId = getPropertyOwnerId(property);
-      return !landlordId;
-    });
+    // Owner assets view – "The assets under the management of [Owner name]"
+    if (pmView === 'owner-detail' && ownerAssets) {
+      const renting = ownerAssets.renting || [];
+      const selling = ownerAssets.selling || [];
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setOwnerAssets(null); }}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>The assets under the management of {pmOwnerName}</h2>
+              </div>
+            </div>
+          </div>
+          {pmLoading && <p style={{ marginTop: 8 }}>Loading…</p>}
+          {renting.length > 0 && (
+            <div className="sa-section-card" style={{ marginTop: '20px' }}>
+              <h3 style={{ marginBottom: '12px', fontSize: '1.1rem' }}>renting</h3>
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Building</th>
+                      <th>appartments</th>
+                      <th>Occupied</th>
+                      <th>Localisation</th>
+                      <th>Revenue</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {renting.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.building || '—'}</td>
+                        <td>{row.apartments ?? '—'}</td>
+                        <td>{row.occupied ?? '—'}</td>
+                        <td>{row.localisation || '—'}</td>
+                        <td>{typeof row.revenue === 'number' ? row.revenue.toLocaleString() : row.revenue ?? '0'} F</td>
+                        <td>
+                          <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }} onClick={() => handleViewBuilding(row)}>Voir</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {selling.length > 0 && (
+            <div className="sa-section-card" style={{ marginTop: '20px' }}>
+              <h3 style={{ marginBottom: '12px', fontSize: '1.1rem' }}>Selling</h3>
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Building</th>
+                      <th>pièce or m²</th>
+                      <th>statut</th>
+                      <th>Localisation</th>
+                      <th>price</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selling.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.building || '—'}</td>
+                        <td>{row.piecesOrM2 ?? '—'}</td>
+                        <td>{row.statut || '—'}</td>
+                        <td>{row.localisation || '—'}</td>
+                        <td>{typeof row.price === 'number' ? row.price.toLocaleString() : row.price ?? '—'}</td>
+                        <td>
+                          <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }} onClick={() => handleViewBuilding(row)}>Voir</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {renting.length === 0 && selling.length === 0 && !pmLoading && (
+            <div className="sa-section-card" style={{ marginTop: '20px' }}>
+              <p className="sa-table-empty">No renting or selling assets for this owner.</p>
+            </div>
+          )}
+        </div>
+      );
+    }
 
+    // Owner list – columns: Owners list, number of assets managed, Number of total tenants, Revenue, Action (See)
+    const unassignedProperties = properties.filter((p) => !getPropertyOwnerId(p));
     return (
       <div className="sa-clients-page">
         <div className="sa-clients-header">
           <div>
-            <h2>Property Management</h2>
-            <p>{owners.length} owners found</p>
+            <h2>Owner list management</h2>
+            <p>{filteredOwners.length} owners found</p>
           </div>
-          <div className="sa-clients-header-right">
-            <button 
-              className="sa-primary-cta"
-              onClick={() => setShowCreatePropertyModal(true)}
-            >
+          <div className="sa-clients-header-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
+              <input
+                type="text"
+                placeholder="Rechercher par nom de membre"
+                value={propertyManagementSearch}
+                onChange={(e) => setPropertyManagementSearch(e.target.value)}
+                style={{ padding: '8px 12px 8px 36px', border: '1px solid #e5e7eb', borderRadius: '8px', minWidth: '220px' }}
+              />
+            </div>
+            <button className="sa-primary-cta" onClick={() => setShowCreatePropertyModal(true)}>
               <Plus size={16} />
               Add Property
             </button>
@@ -1980,129 +2165,50 @@ const SalesManagerDashboard = () => {
         <div className="sa-section-card" style={{ marginTop: '20px' }}>
           <div className="sa-section-header">
             <div>
-              <h3>Owners</h3>
-              <p>Click an owner to view all properties they own.</p>
+              <h3>Owners list</h3>
+              <p>Click See to view assets under management for each owner.</p>
             </div>
           </div>
           <div className="sa-table-wrapper">
             <table className="sa-table">
               <thead>
                 <tr>
-                  <th>No</th>
-                  <th>Owner</th>
-                  <th>Email</th>
-                  <th>Properties</th>
-                  <th>Number of units</th>
-                  <th>Occupied units</th>
-                  <th>Non-occupied units</th>
+                  <th>Owners list</th>
+                  <th>number of assets managed</th>
+                  <th>Number of total tenants</th>
+                  <th>Revenue</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {ownersWithProperties.map(({ owner, properties: ownerProperties }, index) => {
+                {filteredOwners.map((owner, index) => {
                   const ownerId = getOwnerId(owner);
-                  const totalUnits = ownerProperties.reduce(
-                    (sum, p) => sum + (p.NumberOfUnits ?? p.numberOfUnits ?? 0),
-                    0
-                  );
-                  const occupiedUnits = ownerProperties.reduce(
-                    (sum, p) => sum + getFilledUnits(p),
-                    0
-                  );
-                  const nonOccupiedUnits = ownerProperties.reduce(
-                    (sum, p) => sum + Math.max(0, (p.NumberOfUnits ?? p.numberOfUnits ?? 1) - getFilledUnits(p)),
-                    0
-                  );
-                  const isExpanded =
-                    expandedOwnerId && ownerId && String(expandedOwnerId) === String(ownerId);
+                  const numAssets = owner.numberOfAssetsManaged ?? owner.numberOfAssets ?? 0;
+                  const numTenants = owner.numberOfTenants ?? owner.numberOfTenants ?? 0;
+                  const revenue = owner.revenue ?? 0;
                   return (
-                    <React.Fragment key={`owner-${ownerId || index}`}>
-                      <tr
-                        className="clickable-row"
-                        onClick={() =>
-                          setExpandedOwnerId((prev) =>
-                            prev && ownerId && String(prev) === String(ownerId) ? null : ownerId
-                          )
-                        }
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <td>{index + 1}</td>
-                        <td className="sa-cell-main">
-                          <span className="sa-cell-title">
-                            {owner.name || owner.Name || 'N/A'}
-                          </span>
-                        </td>
-                        <td>{owner.email || owner.Email || 'N/A'}</td>
-                        <td>{ownerProperties.length}</td>
-                        <td>{totalUnits}</td>
-                        <td>{occupiedUnits}</td>
-                        <td>{nonOccupiedUnits}</td>
-                      </tr>
-                      {isExpanded && (
-                        <tr>
-                          <td colSpan={7} style={{ background: '#f9fafb' }}>
-                            {ownerProperties.length > 0 ? (
-                              <div style={{ padding: '12px 8px' }}>
-                                <h4
-                                  style={{
-                                    margin: '0 0 8px',
-                                    fontSize: '0.95rem',
-                                    color: '#374151',
-                                  }}
-                                >
-                                  Properties owned by {owner.name || owner.Name || 'Owner'}
-                                </h4>
-                                <table className="sa-table nested-table">
-                                  <thead>
-                                    <tr>
-                                      <th>Address</th>
-                                      <th>Type</th>
-                                      <th>Status</th>
-                                      <th>Rent</th>
-                                      <th>Bedrooms</th>
-                                      <th>Bathrooms</th>
-                                      <th></th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {ownerProperties.map((property, pIndex) => (
-                                      <tr
-                                        key={`owner-${ownerId}-property-${pIndex}`}
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => setSelectedPropertyDetail(property)}
-                                      >
-                                        <td>{property.Address || property.address || 'N/A'}</td>
-                                        <td>{property.Type || property.type || 'N/A'}</td>
-                                        <td>{property.Status || property.status || 'N/A'}</td>
-                                        <td>
-                                          {typeof (property.Rent || property.rent) === 'number'
-                                            ? (property.Rent || property.rent).toLocaleString()
-                                            : property.Rent || property.rent || 'N/A'}
-                                        </td>
-                                        <td>{property.Bedrooms || property.bedrooms || 0}</td>
-                                        <td>{property.Bathrooms || property.bathrooms || 0}</td>
-                                        <td onClick={(e) => e.stopPropagation()}>
-                                          <div className="sa-row-actions">
-                                            <button type="button" className="table-action-button edit" onClick={() => { setEditingProperty(property); setShowPropertyBuildingType((property.Type || property.type) === 'Apartment'); setSelectedPropertyType(property.PropertyType || property.propertyType || ''); setEditPropertyImages(parsePropertyImages(property.Images || property.images)); setShowEditPropertyModal(true); }}>Edit</button>
-                                            <button type="button" className="table-action-button contact" onClick={() => openScheduleVisit(property.Address || property.address)}>Schedule</button>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            ) : (
-                              <div className="sa-table-empty" style={{ padding: '12px 8px' }}>
-                                No properties linked to this owner yet.
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
+                    <tr key={ownerId || index}>
+                      <td className="sa-cell-main">
+                        <span className="sa-cell-title">{owner.name || owner.Name || 'N/A'}</span>
+                      </td>
+                      <td>{numAssets}</td>
+                      <td>{numTenants}</td>
+                      <td>{typeof revenue === 'number' ? revenue.toLocaleString() : revenue} F</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="table-action-button edit"
+                          style={{ background: '#22c55e', color: '#fff' }}
+                          onClick={() => handleSeeOwner(owner)}
+                          disabled={pmLoading}
+                        >
+                          See
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })}
-                {owners.length === 0 && (
+                {filteredOwners.length === 0 && (
                   <tr>
                     <td colSpan={5} className="sa-table-empty">
                       No owners found. Ask the Agency Director to add property owners.
@@ -2114,7 +2220,6 @@ const SalesManagerDashboard = () => {
           </div>
         </div>
 
-        {/* Unassigned Properties Section */}
         {unassignedProperties.length > 0 && (
           <div className="sa-section-card" style={{ marginTop: '20px' }}>
             <div className="sa-section-header">
@@ -2176,7 +2281,7 @@ const SalesManagerDashboard = () => {
         )}
       </div>
     );
-  };
+  }; // end renderPropertyManagement
 
   // Sales Tracking - Properties that are strictly for sale
   const renderSalesTracking = () => {

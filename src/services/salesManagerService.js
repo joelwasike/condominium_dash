@@ -276,9 +276,21 @@ export const salesManagerService = {
     });
   },
 
-  // Get owners (landlords) for property assignment
+  // Get owners (landlords) for property assignment (includes numberOfAssetsManaged, numberOfTenants, revenue)
   getOwners: async () => {
     const url = buildApiUrl('/api/salesmanager/owners');
+    return await apiRequest(url);
+  },
+
+  // Get assets (properties) under management of an owner – renting and selling tables
+  getOwnerAssets: async (ownerId) => {
+    const url = buildApiUrl(`/api/salesmanager/owners/${ownerId}/properties`);
+    return await apiRequest(url);
+  },
+
+  // Get building payment-management data (units, tenants, arrears, unpaid list) for a property
+  getPropertyBuildingDetail: async (propertyId) => {
+    const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/building-detail`);
     return await apiRequest(url);
   },
 
