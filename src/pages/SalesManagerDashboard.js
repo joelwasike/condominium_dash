@@ -2007,10 +2007,10 @@ const SalesManagerDashboard = () => {
                 <thead>
                   <tr>
                     <th>Tenants</th>
-                    <th>appartments</th>
-                    <th>rent price</th>
-                    <th>arrièrés</th>
-                    <th>statut</th>
+                    <th>Apartments</th>
+                    <th>Rent price</th>
+                    <th>Arrears</th>
+                    <th>Status</th>
                     <th>Contacts</th>
                   </tr>
                 </thead>
@@ -2021,7 +2021,7 @@ const SalesManagerDashboard = () => {
                       <td>{row.unitNumber || '—'}</td>
                       <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} fcfa</td>
                       <td>{typeof row.arrears === 'number' ? row.arrears.toLocaleString() : row.arrears ?? '0'}</td>
-                      <td>{row.status || 'up to date'}</td>
+                      <td>{row.status || 'Up to date'}</td>
                       <td>{row.contacts || '—'}</td>
                     </tr>
                   ))}
@@ -2062,17 +2062,17 @@ const SalesManagerDashboard = () => {
           {pmLoading && <p style={{ marginTop: 8 }}>Loading…</p>}
           {renting.length > 0 && (
             <div className="sa-section-card" style={{ marginTop: '20px' }}>
-              <h3 style={{ marginBottom: '12px', fontSize: '1.1rem' }}>renting</h3>
+              <h3 style={{ marginBottom: '12px', fontSize: '1.1rem' }}>Renting</h3>
               <div className="sa-table-wrapper">
                 <table className="sa-table">
                   <thead>
                     <tr>
                       <th>Building</th>
-                      <th>appartments</th>
-                      <th>Occupied</th>
-                      <th>Localisation</th>
-                      <th>Revenue</th>
-                      <th>Action</th>
+<th>Apartments</th>
+                    <th>Occupied</th>
+                    <th>Location</th>
+                    <th>Revenue</th>
+                    <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2084,7 +2084,7 @@ const SalesManagerDashboard = () => {
                         <td>{row.localisation || '—'}</td>
                         <td>{typeof row.revenue === 'number' ? row.revenue.toLocaleString() : row.revenue ?? '0'} F</td>
                         <td>
-                          <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }} onClick={() => handleViewBuilding(row)}>Voir</button>
+                          <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }} onClick={() => handleViewBuilding(row)}>View</button>
                         </td>
                       </tr>
                     ))}
@@ -2101,10 +2101,10 @@ const SalesManagerDashboard = () => {
                   <thead>
                     <tr>
                       <th>Building</th>
-                      <th>pièce or m²</th>
-                      <th>statut</th>
-                      <th>Localisation</th>
-                      <th>price</th>
+                      <th>Piece or m²</th>
+                      <th>Status</th>
+                      <th>Location</th>
+                      <th>Price</th>
                       <th>Action</th>
                     </tr>
                   </thead>
@@ -2117,7 +2117,7 @@ const SalesManagerDashboard = () => {
                         <td>{row.localisation || '—'}</td>
                         <td>{typeof row.price === 'number' ? row.price.toLocaleString() : row.price ?? '—'}</td>
                         <td>
-                          <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }} onClick={() => handleViewBuilding(row)}>Voir</button>
+                          <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }} onClick={() => handleViewBuilding(row)}>View</button>
                         </td>
                       </tr>
                     ))}
@@ -2149,7 +2149,7 @@ const SalesManagerDashboard = () => {
               <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
               <input
                 type="text"
-                placeholder="Rechercher par nom de membre"
+                placeholder="Search by member name"
                 value={propertyManagementSearch}
                 onChange={(e) => setPropertyManagementSearch(e.target.value)}
                 style={{ padding: '8px 12px 8px 36px', border: '1px solid #e5e7eb', borderRadius: '8px', minWidth: '220px' }}
