@@ -9,6 +9,12 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Get single property with units (for edit form)
+  getProperty: async (propertyId) => {
+    const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.PROPERTIES}/${propertyId}`);
+    return await apiRequest(url);
+  },
+
   // Get all properties (with optional query filters)
   getProperties: async (filters = {}) => {
     let url = buildApiUrl(API_CONFIG.ENDPOINTS.SALES_MANAGER.PROPERTIES);

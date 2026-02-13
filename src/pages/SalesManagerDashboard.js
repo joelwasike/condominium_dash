@@ -267,6 +267,10 @@ const SalesManagerDashboard = () => {
   const [pmLoading, setPmLoading] = useState(false); // Loading owner assets or building detail
   const [showPropertyBuildingType, setShowPropertyBuildingType] = useState(false); // For property form: show building type when type is Apartment
   const [createPropertyImages, setCreatePropertyImages] = useState([]); // URLs for new property images (Cloudinary)
+  const [createPropertyNumberOfUnits, setCreatePropertyNumberOfUnits] = useState(1);
+  const [createPropertyUnits, setCreatePropertyUnits] = useState([{ unitNumber: '1', rent: '', bedrooms: 1, bathrooms: 1, status: 'Vacant', tenant: '' }]);
+  const [editPropertyUnits, setEditPropertyUnits] = useState([]);
+  const [editPropertyNumberOfUnits, setEditPropertyNumberOfUnits] = useState(1);
   const [editPropertyImages, setEditPropertyImages] = useState([]); // URLs for edit property images (Cloudinary)
   const [uploadingImage, setUploadingImage] = useState(false); // Loading state for image upload
   const [selectedPropertyDetail, setSelectedPropertyDetail] = useState(null); // Property shown in detail modal
@@ -279,6 +283,77 @@ const SalesManagerDashboard = () => {
   const [chatInput, setChatInput] = useState('');
   const isLoadingUsersRef = useRef(false);
   const messagesEndRef = useRef(null);
+
+  // Reset create property unit form when opening create modal
+  useEffect(() => {
+    if (showCreatePropertyModal) {
+      setCreatePropertyNumberOfUnits(1);
+      setCreatePropertyUnits([{ unitNumber: '1', rent: '', bedrooms: 1, bathrooms: 1, status: 'Vacant', tenant: '' }]);
+    }
+  }, [showCreatePropertyModal]);
+
+  const setCreatePropertyUnitsCount = useCallback((n) => {
+    const num = Math.max(1, parseInt(n, 10) || 1);
+    setCreatePropertyNumberOfUnits(num);
+    setCreatePropertyUnits(prev => {
+      const next = [];
+      for (let i = 0; i < num; i++) {
+        if (i < prev.length) {
+          next.push({ ...prev[i], unitNumber: prev[i].unitNumber || String(i + 1) });
+        } else {
+          next.push({ unitNumber: String(i + 1), rent: '', bedrooms: 1, bathrooms: 1, status: 'Vacant', tenant: '' });
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const updateCreatePropertyUnit = useCallback((index, field, value) => {
+    setCreatePropertyUnits(prev => prev.map((u, i) => i === index ? { ...u, [field]: value } : u));
+  }, []);
+
+  const openEditPropertyModal = useCallback(async (property) => {
+    const id = property?.id ?? property?.ID;
+    if (!id) return;
+    try {
+      const full = await salesManagerService.getProperty(id);
+      setEditingProperty(full);
+      setShowPropertyBuildingType((full.type || full.Type) === 'Apartment');
+      setSelectedPropertyType(full.propertyType || full.PropertyType || '');
+      setEditPropertyImages(parsePropertyImages(full.images || full.Images));
+      const units = (full.units || []).map(u => ({
+        unitNumber: u.unitNumber || u.UnitNumber || '',
+        rent: u.rent ?? u.Rent ?? '',
+        bedrooms: u.bedrooms ?? u.Bedrooms ?? 1,
+        bathrooms: u.bathrooms ?? u.Bathrooms ?? 1,
+        status: u.status || u.Status || 'Vacant',
+        tenant: u.tenant ?? (u.Tenant != null ? u.Tenant : ''),
+      }));
+      setEditPropertyUnits(units.length ? units : [{ unitNumber: '1', rent: full.rent ?? '', bedrooms: full.bedrooms ?? 0, bathrooms: full.bathrooms ?? 1, status: 'Vacant', tenant: '' }]);
+      setEditPropertyNumberOfUnits(units.length || 1);
+      setShowEditPropertyModal(true);
+    } catch (err) {
+      console.error('Failed to load property for edit:', err);
+      addNotification('Failed to load property details', 'error');
+    }
+  }, [addNotification]);
+
+  const updateEditPropertyUnit = useCallback((index, field, value) => {
+    setEditPropertyUnits(prev => prev.map((u, i) => i === index ? { ...u, [field]: value } : u));
+  }, []);
+
+  const setEditPropertyUnitsCount = useCallback((n) => {
+    const num = Math.max(1, parseInt(n, 10) || 1);
+    setEditPropertyNumberOfUnits(num);
+    setEditPropertyUnits(prev => {
+      const next = [];
+      for (let i = 0; i < num; i++) {
+        if (i < prev.length) next.push({ ...prev[i], unitNumber: prev[i].unitNumber || String(i + 1) });
+        else next.push({ unitNumber: String(i + 1), rent: '', bedrooms: 1, bathrooms: 1, status: 'Vacant', tenant: '' });
+      }
+      return next;
+    });
+  }, []);
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1238,54 +1313,60 @@ const SalesManagerDashboard = () => {
   const handleCreateProperty = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    
+    const numUnits = createPropertyNumberOfUnits;
+    const unitsPayload = createPropertyUnits.slice(0, numUnits).map(u => ({
+      unitNumber: String(u.unitNumber || '').trim(),
+      rent: parseFloat(u.rent) || 0,
+      bedrooms: parseInt(u.bedrooms, 10) || 0,
+      bathrooms: parseFloat(u.bathrooms) || 1,
+      status: u.status === 'Occupied' ? 'Occupied' : 'Vacant',
+      tenant: (u.status === 'Occupied' && u.tenant) ? String(u.tenant).trim() : null,
+    }));
+
     const propertyData = {
       address: formData.get('address')?.trim(),
       type: formData.get('type')?.trim(),
       propertyType: formData.get('propertyType')?.trim(),
       buildingType: formData.get('buildingType')?.trim() || null,
       status: formData.get('status')?.trim(),
-      rent: formData.get('rent') ? parseFloat(formData.get('rent')) : undefined,
-      numberOfUnits: formData.get('numberOfUnits') ? parseInt(formData.get('numberOfUnits')) : 1,
-      bedrooms: formData.get('bedrooms') ? parseInt(formData.get('bedrooms')) : undefined,
+      numberOfUnits: numUnits,
+      bedrooms: formData.get('bedrooms') ? parseInt(formData.get('bedrooms'), 10) : undefined,
       bathrooms: formData.get('bathrooms') ? parseFloat(formData.get('bathrooms')) : undefined,
       urgency: formData.get('urgency')?.trim() || 'normal',
-      tenant: formData.get('tenant')?.trim() || null,
-      landlord_id: formData.get('owner') ? parseInt(formData.get('owner')) : null,
+      landlord_id: formData.get('owner') ? parseInt(formData.get('owner'), 10) : null,
     };
 
-    // Validate required fields
-    if (!propertyData.address || !propertyData.type || !propertyData.propertyType || !propertyData.status || !propertyData.rent || !propertyData.numberOfUnits || propertyData.numberOfUnits < 1) {
-      addNotification('Please fill in all required fields (Address, Type, Property Type, Status, Number of Units (at least 1), ' + (propertyData.propertyType === 'For Sale' ? 'Total Price' : 'Monthly Rent') + ')', 'error');
-      return;
+    if (numUnits > 1) {
+      if (unitsPayload.length !== numUnits || unitsPayload.some(u => !u.unitNumber)) {
+        addNotification('Each unit must have a name/label (e.g. F1, House A, 101).', 'error');
+        return;
+      }
+      propertyData.units = unitsPayload;
+      propertyData.rent = 0;
+    } else {
+      const single = unitsPayload[0];
+      if (single) {
+        propertyData.units = [{ ...single, unitNumber: single.unitNumber || '1' }];
+        propertyData.rent = single.rent;
+      } else {
+        propertyData.rent = formData.get('rent') ? parseFloat(formData.get('rent')) : 0;
+      }
     }
 
-    // Validate building type if type is Apartment
+    if (!propertyData.address || !propertyData.type || !propertyData.propertyType || !propertyData.status || propertyData.numberOfUnits < 1) {
+      addNotification('Please fill in Address, Type, Property Type, Status, and Number of Units.', 'error');
+      return;
+    }
     if (propertyData.type === 'Apartment' && !propertyData.buildingType) {
       addNotification('Building Type is required when Type is Apartment', 'error');
       return;
     }
-
-    // Validate status
     if (propertyData.status !== 'Vacant' && propertyData.status !== 'Occupied') {
       addNotification('Status must be either "Vacant" or "Occupied"', 'error');
       return;
     }
-
     if (createPropertyImages.length > 0) {
       propertyData.images = createPropertyImages;
-    }
-    const numUnits = propertyData.numberOfUnits || 1;
-    const filledUnitsRaw = formData.get('filledUnits');
-    const filledUnits = filledUnitsRaw !== null && filledUnitsRaw !== '' ? parseInt(filledUnitsRaw, 10) : undefined;
-    if (numUnits > 1) {
-      propertyData.filledUnits = filledUnits ?? 0;
-      if (propertyData.status === 'Occupied') {
-        if (filledUnits === undefined || filledUnits === null || filledUnits !== numUnits) {
-          addNotification('To set status as Occupied, all units must be full. Set "Filled units" equal to Number of units (' + numUnits + ').', 'error');
-          return;
-        }
-      }
     }
 
     try {
@@ -1310,8 +1391,6 @@ const SalesManagerDashboard = () => {
 
     const formData = new FormData(e.target);
     const updateData = {};
-    
-    // Only include fields that are provided
     if (formData.get('address')) updateData.address = formData.get('address').trim();
     if (formData.get('type')) updateData.type = formData.get('type').trim();
     if (formData.get('propertyType')) updateData.propertyType = formData.get('propertyType').trim();
@@ -1320,43 +1399,31 @@ const SalesManagerDashboard = () => {
       updateData.buildingType = buildingType || null;
     }
     if (formData.get('status')) updateData.status = formData.get('status').trim();
-    if (formData.get('rent')) updateData.rent = parseFloat(formData.get('rent'));
-    let numUnits = editingProperty.NumberOfUnits ?? editingProperty.numberOfUnits ?? 1;
-    if (formData.get('numberOfUnits')) {
-      const parsed = parseInt(formData.get('numberOfUnits'));
-      if (parsed >= 1) {
-        updateData.numberOfUnits = parsed;
-        numUnits = parsed;
-      }
-    }
-    const filledUnitsRaw = formData.get('filledUnits');
-    if (filledUnitsRaw !== null && filledUnitsRaw !== '') {
-      const filled = parseInt(filledUnitsRaw, 10);
-      if (!Number.isNaN(filled) && filled >= 0) updateData.filledUnits = filled;
-    }
-    if (formData.get('bedrooms')) updateData.bedrooms = parseInt(formData.get('bedrooms'));
+    if (formData.get('bedrooms')) updateData.bedrooms = parseInt(formData.get('bedrooms'), 10);
     if (formData.get('bathrooms')) updateData.bathrooms = parseFloat(formData.get('bathrooms'));
     if (formData.get('urgency')) updateData.urgency = formData.get('urgency').trim();
-    if (formData.get('tenant')) {
-      const tenant = formData.get('tenant').trim();
-      updateData.tenant = tenant || null;
-    }
     updateData.images = editPropertyImages;
 
-    // Validate status if provided
+    const numUnits = editPropertyNumberOfUnits;
+    const unitsPayload = editPropertyUnits.slice(0, numUnits).map(u => ({
+      unitNumber: String(u.unitNumber || '').trim(),
+      rent: parseFloat(u.rent) || 0,
+      bedrooms: parseInt(u.bedrooms, 10) || 0,
+      bathrooms: parseFloat(u.bathrooms) || 1,
+      status: u.status === 'Occupied' ? 'Occupied' : 'Vacant',
+      tenant: (u.status === 'Occupied' && u.tenant) ? String(u.tenant).trim() : null,
+    }));
+    if (unitsPayload.length > 0) {
+      if (unitsPayload.some(u => !u.unitNumber)) {
+        addNotification('Each unit must have a name (e.g. F1, House A).', 'error');
+        return;
+      }
+      updateData.units = unitsPayload;
+    }
+
     if (updateData.status && updateData.status !== 'Vacant' && updateData.status !== 'Occupied') {
       addNotification('Status must be either "Vacant" or "Occupied"', 'error');
       return;
-    }
-
-    const effectiveStatus = updateData.status ?? editingProperty.Status ?? editingProperty.status ?? '';
-    const effectiveFilled = updateData.filledUnits ?? editingProperty.filledUnits ?? editingProperty.occupiedUnits ?? editingProperty.FilledUnits ?? editingProperty.OccupiedUnits;
-    if (effectiveStatus.toLowerCase() === 'occupied' && numUnits > 1) {
-      const filled = effectiveFilled !== undefined && effectiveFilled !== null ? Number(effectiveFilled) : (updateData.filledUnits !== undefined ? updateData.filledUnits : undefined);
-      if (filled === undefined || filled !== numUnits) {
-        addNotification('To set status as Occupied, all units must be full. Set "Filled units" equal to Number of units (' + numUnits + ').', 'error');
-        return;
-      }
     }
 
     try {
@@ -1910,12 +1977,7 @@ const SalesManagerDashboard = () => {
                     <td>
                           <button
                             className="sa-action-button"
-                            onClick={() => {
-                              setEditingProperty(property);
-                              setShowPropertyBuildingType((property.Type || property.type) === 'Apartment');
-                              setSelectedPropertyType(property.PropertyType || property.propertyType || '');
-                              setShowEditPropertyModal(true);
-                            }}
+                            onClick={() => openEditPropertyModal(property)}
                             title="Edit Property"
                           >
                             ✏️
@@ -2268,7 +2330,7 @@ const SalesManagerDashboard = () => {
                       <td>{property.Bathrooms || property.bathrooms || 0}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="sa-row-actions">
-                          <button type="button" className="table-action-button edit" onClick={() => { setEditingProperty(property); setShowPropertyBuildingType((property.Type || property.type) === 'Apartment'); setSelectedPropertyType(property.PropertyType || property.propertyType || ''); setEditPropertyImages(parsePropertyImages(property.Images || property.images)); setShowEditPropertyModal(true); }}>Edit</button>
+                          <button type="button" className="table-action-button edit" onClick={() => openEditPropertyModal(property)}>Edit</button>
                           <button type="button" className="table-action-button contact" onClick={() => openScheduleVisit(property.Address || property.address)}>Schedule</button>
                         </div>
                       </td>
@@ -3775,7 +3837,7 @@ const SalesManagerDashboard = () => {
             </div>
             <div className="modal-footer" style={{ borderTop: '1px solid #e5e7eb', padding: '12px 20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button type="button" className="action-button secondary" onClick={() => setSelectedPropertyDetail(null)}>Close</button>
-              <button type="button" className="action-button primary" onClick={() => { setSelectedPropertyDetail(null); setEditingProperty(selectedPropertyDetail); setShowPropertyBuildingType((selectedPropertyDetail.Type || selectedPropertyDetail.type) === 'Apartment'); setSelectedPropertyType(selectedPropertyDetail.PropertyType || selectedPropertyDetail.propertyType || ''); setEditPropertyImages(parsePropertyImages(selectedPropertyDetail.Images || selectedPropertyDetail.images)); setShowEditPropertyModal(true); }}>Edit</button>
+              <button type="button" className="action-button primary" onClick={() => { setSelectedPropertyDetail(null); openEditPropertyModal(selectedPropertyDetail); }}>Edit</button>
               <button type="button" className="action-button primary" onClick={() => { setSelectedPropertyDetail(null); openScheduleVisit(selectedPropertyDetail.Address || selectedPropertyDetail.address); }}>Schedule visit</button>
             </div>
           </div>
@@ -4911,45 +4973,112 @@ const SalesManagerDashboard = () => {
                       id="create-number-of-units"
                       required
                       min="1"
-                      defaultValue="1"
-                      placeholder="e.g., 100 for an apartment building"
+                      value={createPropertyNumberOfUnits}
+                      onChange={(e) => setCreatePropertyUnitsCount(e.target.value)}
+                      placeholder="e.g. 10"
                     />
                     <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                      Total number of units in this property (e.g., 100 for an apartment building)
-                    </small>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="create-filled-units">Filled units</label>
-                    <input
-                      type="number"
-                      name="filledUnits"
-                      id="create-filled-units"
-                      min="0"
-                      defaultValue="0"
-                      placeholder="0"
-                    />
-                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                      When status is Occupied and there are multiple units, this must equal Number of units.
+                      Total number of units/apartments. You will define each unit below (name, rent, bedrooms, status, tenant).
                     </small>
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="create-rent">
-                      {selectedPropertyType === 'For Sale' ? 'Total Price (XOF)' : 'Monthly Rent (XOF)'} *
-                    </label>
-                    <input
-                      type="number"
-                      name="rent"
-                      id="create-rent"
-                      step="0.01"
-                      min="0"
-                      required
-                      placeholder="0.00"
-                    />
+                {createPropertyNumberOfUnits > 0 && (
+                  <div className="form-group" style={{ marginTop: '16px' }}>
+                    <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Unit details</label>
+                    <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '12px' }}>
+                      Enter name (e.g. F1, House A, 101), bedrooms, rent, and status for each unit. If filled, select the tenant.
+                    </p>
+                    <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px' }}>
+                      {createPropertyUnits.slice(0, createPropertyNumberOfUnits).map((unit, index) => (
+                        <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                          <div style={{ fontWeight: 600, marginBottom: '8px', color: '#374151' }}>Unit {index + 1}</div>
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label>Unit name *</label>
+                              <input
+                                type="text"
+                                value={unit.unitNumber}
+                                onChange={(e) => updateCreatePropertyUnit(index, 'unitNumber', e.target.value)}
+                                placeholder="e.g. F1, House A, 101"
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Bedrooms</label>
+                              <select
+                                value={unit.bedrooms}
+                                onChange={(e) => updateCreatePropertyUnit(index, 'bedrooms', parseInt(e.target.value, 10))}
+                              >
+                                {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                              </select>
+                            </div>
+                            <div className="form-group">
+                              <label>{selectedPropertyType === 'For Sale' ? 'Price (XOF)' : 'Rent (XOF)'} *</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={unit.rent}
+                                onChange={(e) => updateCreatePropertyUnit(index, 'rent', e.target.value)}
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label>Status</label>
+                              <select
+                                value={unit.status}
+                                onChange={(e) => updateCreatePropertyUnit(index, 'status', e.target.value)}
+                              >
+                                <option value="Vacant">Vacant</option>
+                                <option value="Occupied">Filled</option>
+                              </select>
+                            </div>
+                            {unit.status === 'Occupied' && (
+                              <div className="form-group" style={{ flex: 1 }}>
+                                <label>Tenant</label>
+                                <select
+                                  value={unit.tenant || ''}
+                                  onChange={(e) => updateCreatePropertyUnit(index, 'tenant', e.target.value)}
+                                >
+                                  <option value="">Select tenant</option>
+                                  {clients.map(c => (
+                                    <option key={c.id || c.ID} value={c.name || c.Name || c.email || c.Email}>
+                                      {c.name || c.Name || c.email || c.Email}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {createPropertyNumberOfUnits === 1 && (
+                  <div className="form-row" style={{ marginTop: '12px' }}>
+                    <div className="form-group">
+                      <label>Total rent (from unit above)</label>
+                      <input type="text" readOnly value={createPropertyUnits[0]?.rent ? `${Number(createPropertyUnits[0].rent).toLocaleString()} XOF` : '—'} style={{ background: '#f3f4f6' }} />
+                    </div>
+                  </div>
+                )}
+                {createPropertyNumberOfUnits > 1 && (
+                  <div className="form-row" style={{ marginTop: '12px' }}>
+                    <div className="form-group">
+                      <label>Total rent (sum of all units)</label>
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${createPropertyUnits.slice(0, createPropertyNumberOfUnits).reduce((s, u) => s + (parseFloat(u.rent) || 0), 0).toLocaleString()} XOF`}
+                        style={{ background: '#f3f4f6' }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="form-row">
                   <div className="form-group">
@@ -4983,15 +5112,6 @@ const SalesManagerDashboard = () => {
                       <option value="high">High</option>
                       <option value="urgent">Urgent</option>
                     </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="create-tenant">Tenant (if Occupied)</label>
-                    <input
-                      type="text"
-                      name="tenant"
-                      id="create-tenant"
-                      placeholder="John Doe"
-                    />
                   </div>
                 </div>
 
@@ -5145,69 +5265,92 @@ const SalesManagerDashboard = () => {
                       name="numberOfUnits"
                       id="edit-number-of-units"
                       min="1"
-                      defaultValue={editingProperty.NumberOfUnits || editingProperty.numberOfUnits || 1}
+                      value={editPropertyNumberOfUnits}
+                      onChange={(e) => setEditPropertyUnitsCount(e.target.value)}
                     />
-                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                      Total number of units in this property
-                    </small>
                   </div>
-                  {(editingProperty.NumberOfUnits || editingProperty.numberOfUnits || 1) > 1 && (
-                    <div className="form-group">
-                      <label htmlFor="edit-filled-units">Filled units</label>
-                      <input
-                        type="number"
-                        name="filledUnits"
-                        id="edit-filled-units"
-                        min="0"
-                        defaultValue={editingProperty.filledUnits ?? editingProperty.occupiedUnits ?? editingProperty.FilledUnits ?? editingProperty.OccupiedUnits ?? 0}
-                      />
-                      <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                        Status Occupied requires this to equal Number of units
-                      </small>
+                </div>
+
+                {editPropertyNumberOfUnits > 0 && (
+                  <div className="form-group" style={{ marginTop: '16px' }}>
+                    <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Unit details</label>
+                    <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px' }}>
+                      {editPropertyUnits.slice(0, editPropertyNumberOfUnits).map((unit, index) => (
+                        <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                          <div style={{ fontWeight: 600, marginBottom: '8px', color: '#374151' }}>Unit {index + 1}</div>
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label>Unit name *</label>
+                              <input
+                                type="text"
+                                value={unit.unitNumber}
+                                onChange={(e) => updateEditPropertyUnit(index, 'unitNumber', e.target.value)}
+                                placeholder="e.g. F1, House A"
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Bedrooms</label>
+                              <select value={unit.bedrooms} onChange={(e) => updateEditPropertyUnit(index, 'bedrooms', parseInt(e.target.value, 10))}>
+                                {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                              </select>
+                            </div>
+                            <div className="form-group">
+                              <label>Rent (XOF) *</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={unit.rent}
+                                onChange={(e) => updateEditPropertyUnit(index, 'rent', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label>Status</label>
+                              <select value={unit.status} onChange={(e) => updateEditPropertyUnit(index, 'status', e.target.value)}>
+                                <option value="Vacant">Vacant</option>
+                                <option value="Occupied">Filled</option>
+                              </select>
+                            </div>
+                            {unit.status === 'Occupied' && (
+                              <div className="form-group" style={{ flex: 1 }}>
+                                <label>Tenant</label>
+                                <select value={unit.tenant || ''} onChange={(e) => updateEditPropertyUnit(index, 'tenant', e.target.value)}>
+                                  <option value="">Select tenant</option>
+                                  {clients.map(c => (
+                                    <option key={c.id || c.ID} value={c.name || c.Name || c.email || c.Email}>{c.name || c.Name || c.email || c.Email}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                <div className="form-row">
+                <div className="form-row" style={{ marginTop: '12px' }}>
                   <div className="form-group">
-                    <label htmlFor="edit-rent">
-                      {(selectedPropertyType || editingProperty.PropertyType || editingProperty.propertyType) === 'For Sale' ? 'Total Price (XOF)' : 'Monthly Rent (XOF)'}
-                    </label>
+                    <label>Total rent (sum of units)</label>
                     <input
-                      type="number"
-                      name="rent"
-                      id="edit-rent"
-                      step="0.01"
-                      min="0"
-                      defaultValue={editingProperty.Rent || editingProperty.rent || ''}
-                      placeholder="0.00"
+                      type="text"
+                      readOnly
+                      value={`${editPropertyUnits.slice(0, editPropertyNumberOfUnits).reduce((s, u) => s + (parseFloat(u.rent) || 0), 0).toLocaleString()} XOF`}
+                      style={{ background: '#f3f4f6' }}
                     />
                   </div>
                 </div>
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="edit-bedrooms">Bedrooms</label>
-                    <input
-                      type="number"
-                      name="bedrooms"
-                      id="edit-bedrooms"
-                      min="0"
-                      defaultValue={editingProperty.Bedrooms || editingProperty.bedrooms || ''}
-                      placeholder="2"
-                    />
+                    <label htmlFor="edit-bedrooms">Default Bedrooms</label>
+                    <input type="number" name="bedrooms" id="edit-bedrooms" min="0" defaultValue={editingProperty.Bedrooms || editingProperty.bedrooms || ''} placeholder="2" />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="edit-bathrooms">Bathrooms</label>
-                    <input
-                      type="number"
-                      name="bathrooms"
-                      id="edit-bathrooms"
-                      step="0.5"
-                      min="0"
-                      defaultValue={editingProperty.Bathrooms || editingProperty.bathrooms || ''}
-                      placeholder="1.5"
-                    />
+                    <label htmlFor="edit-bathrooms">Default Bathrooms</label>
+                    <input type="number" name="bathrooms" id="edit-bathrooms" step="0.5" min="0" defaultValue={editingProperty.Bathrooms || editingProperty.bathrooms || ''} placeholder="1.5" />
                   </div>
                 </div>
 
@@ -5219,16 +5362,6 @@ const SalesManagerDashboard = () => {
                       <option value="high">High</option>
                       <option value="urgent">Urgent</option>
                     </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="edit-tenant">Tenant</label>
-                    <input
-                      type="text"
-                      name="tenant"
-                      id="edit-tenant"
-                      defaultValue={editingProperty.Tenant || editingProperty.tenant || ''}
-                      placeholder="John Doe"
-                    />
                   </div>
                 </div>
 
