@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect, Component } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
-
-// Import Dashboard Components
 import TenantDashboard from './pages/TenantDashboard';
 import AdministrativeDashboard from './pages/AdministrativeDashboard';
 import AccountingDashboard from './pages/AccountingDashboard';
@@ -17,9 +15,31 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import CheckoutPage from './pages/CheckoutPage';
 import ReceiptPage from './pages/ReceiptPage';
-
-// Import Layout  Components
 import ChatBubble from './components/ChatBubble';
+
+class AppErrorBoundary extends Component {
+  state = { hasError: false, error: null };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('App error:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'sans-serif' }}>
+          <h1>Something went wrong</h1>
+          <p>{this.state.error?.message || 'Please refresh the page or try again later.'}</p>
+          <button type="button" onClick={() => window.location.reload()} style={{ padding: '8px 16px', marginTop: '12px', cursor: 'pointer' }}>
+            Reload page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function App() {
   const [user, setUser] = useState(null);
@@ -106,6 +126,7 @@ function App() {
   }
 
   return (
+    <AppErrorBoundary>
     <Router>
       <div className="App">
         <Routes>
@@ -227,6 +248,7 @@ function App() {
         </Routes>
       </div>
     </Router>
+    </AppErrorBoundary>
   );
 }
 

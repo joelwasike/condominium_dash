@@ -312,6 +312,14 @@ const SalesManagerDashboard = () => {
     setCreatePropertyUnits(prev => prev.map((u, i) => i === index ? { ...u, [field]: value } : u));
   }, []);
 
+  const addNotification = useCallback((message, type = 'info') => {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 3000);
+  }, []);
+
   const openEditPropertyModal = useCallback(async (property) => {
     const id = property?.id ?? property?.ID;
     if (!id) return;
@@ -353,14 +361,6 @@ const SalesManagerDashboard = () => {
       }
       return next;
     });
-  }, []);
-
-  const addNotification = useCallback((message, type = 'info') => {
-    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 3000);
   }, []);
 
   // Load data from API
