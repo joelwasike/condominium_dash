@@ -300,6 +300,15 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Add apartment/unit to a building (Property Management)
+  addApartmentToBuilding: async (propertyId, payload) => {
+    const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/units`);
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Import clients/tenants from Excel or CSV
   // Note: Backend endpoint accepts .xlsx, .xls, and .csv files
   importClientsFromExcel: async (file) => {

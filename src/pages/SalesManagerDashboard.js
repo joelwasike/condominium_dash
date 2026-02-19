@@ -256,14 +256,21 @@ const SalesManagerDashboard = () => {
   const [editingProperty, setEditingProperty] = useState(null);
   const [expandedOwnerId, setExpandedOwnerId] = useState(null); // For property management owner expansion
   // Property Management sub-views: owner list -> owner assets (renting/selling) -> building payment
-  const [pmView, setPmView] = useState('list'); // 'list' | 'owner-detail' | 'building-detail'
+  const [pmView, setPmView] = useState('list'); // 'list' | 'owner-detail' | 'building-detail' | 'villa-detail' | 'land-detail'
   const [pmOwnerId, setPmOwnerId] = useState(null);
   const [pmOwnerName, setPmOwnerName] = useState('');
-  const [ownerAssets, setOwnerAssets] = useState(null); // { ownerName, renting: [], selling: [] }
+  const [ownerAssets, setOwnerAssets] = useState(null); // { ownerName, assets: [] }
   const [pmPropertyId, setPmPropertyId] = useState(null);
   const [pmBuildingName, setPmBuildingName] = useState('');
-  const [buildingDetail, setBuildingDetail] = useState(null); // { buildingName, units: [], unpaidTenants: [] }
-  const [propertyManagementSearch, setPropertyManagementSearch] = useState(''); // Filter owners by name
+  const [buildingDetail, setBuildingDetail] = useState(null); // { buildingName, units: [], totalApartments, images }
+  const [propertyManagementSearch, setPropertyManagementSearch] = useState('');
+  const [showAddBuildingModal, setShowAddBuildingModal] = useState(false);
+  const [showAddVillaModal, setShowAddVillaModal] = useState(false);
+  const [showAddLandModal, setShowAddLandModal] = useState(false);
+  const [showAddApartmentModal, setShowAddApartmentModal] = useState(false);
+  const [landDetail, setLandDetail] = useState(null); // for land-detail view
+  const [pmAddFormImages, setPmAddFormImages] = useState([]); // images for Add Building / Add Land
+  const [addApartmentPicture, setAddApartmentPicture] = useState(''); // Filter owners by name
   const [pmLoading, setPmLoading] = useState(false); // Loading owner assets or building detail
   const [showPropertyBuildingType, setShowPropertyBuildingType] = useState(false); // For property form: show building type when type is Apartment
   const [createPropertyImages, setCreatePropertyImages] = useState([]); // URLs for new property images (Cloudinary)
@@ -871,6 +878,23 @@ const SalesManagerDashboard = () => {
     }
   };
 
+  const handlePmAddFormImageUpload = async (files) => {
+    if (!files || files.length === 0) return;
+    setUploadingImage(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (!file.type || !file.type.startsWith('image/')) continue;
+        const result = await cloudinaryService.uploadFile(file, 'property-images');
+        if (result.success && result.url) setPmAddFormImages(prev => [...prev, result.url]);
+      }
+    } catch (err) {
+      console.error('Image upload error:', err);
+      addNotification('Failed to upload image', 'error');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleScheduleVisit = useCallback(async (visitData) => {
     setLoading(true);
     try {
@@ -1382,6 +1406,208 @@ const SalesManagerDashboard = () => {
       addNotification(error.message || 'Failed to create property', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddBuilding = async (e) => {
+    e.preventDefault();
+    if (!pmOwnerId) {
+      addNotification('No owner selected.', 'error');
+      return;
+    }
+    const formData = new FormData(e.target);
+    const name = formData.get('buildingName')?.trim();
+    const city = formData.get('buildingCity')?.trim();
+    const neighborhood = formData.get('buildingNeighborhood')?.trim();
+    const typeR = formData.get('buildingTypeR')?.trim();
+    if (!name) {
+      addNotification('Name of building is required.', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      await salesManagerService.createProperty({
+        address: name,
+        type: 'Building',
+        propertyType: 'For Rent',
+        status: 'Vacant',
+        numberOfUnits: 0,
+        rent: 0,
+        landlord_id: pmOwnerId,
+        city: city || '',
+        neighborhood: neighborhood || '',
+        typeR: typeR || '',
+        images: pmAddFormImages,
+      });
+      addNotification('Building created successfully', 'success');
+      setShowAddBuildingModal(false);
+      setPmAddFormImages([]);
+      const data = await salesManagerService.getOwnerAssets(pmOwnerId);
+      setOwnerAssets(data);
+    } catch (err) {
+      addNotification(err.message || 'Failed to create building', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddVilla = async (e) => {
+    e.preventDefault();
+    if (!pmOwnerId) {
+      addNotification('No owner selected.', 'error');
+      return;
+    }
+    const formData = new FormData(e.target);
+    const preciseLocation = formData.get('villaPreciseLocation')?.trim();
+    const typeR = formData.get('villaTypeR')?.trim();
+    const address = formData.get('villaAddress')?.trim();
+    const livingRooms = formData.get('villaLivingRooms')?.trim();
+    const bedrooms = formData.get('villaBedrooms')?.trim();
+    const bathrooms = formData.get('villaBathrooms')?.trim();
+    const visitorWc = formData.get('villaVisitorWc')?.trim();
+    const courtyard = formData.get('villaCourtyard') ? 'yes' : '';
+    const garage = formData.get('villaGarage') ? 'yes' : '';
+    const garden = formData.get('villaGarden') ? 'yes' : '';
+    const airConditioning = formData.get('villaAirConditioning') ? 'yes' : '';
+    const swimmingPool = formData.get('villaSwimmingPool') ? 'yes' : '';
+    const monthlyRent = parseFloat(formData.get('villaMonthlyRent')) || 0;
+    const extra = JSON.stringify({
+      pieces: { livingRooms, bedrooms, bathrooms, visitorWc },
+      equipment: [courtyard, garage, garden, airConditioning, swimmingPool].filter(Boolean),
+    });
+    setLoading(true);
+    try {
+      await salesManagerService.createProperty({
+        address: address || preciseLocation || 'Villa',
+        type: 'Villa',
+        propertyType: 'For Rent',
+        status: 'Vacant',
+        numberOfUnits: 1,
+        rent: monthlyRent,
+        landlord_id: pmOwnerId,
+        city: preciseLocation?.split('–')[0]?.trim() || '',
+        neighborhood: preciseLocation?.split('–')[1]?.trim() || '',
+        typeR: typeR || '',
+        extra,
+        units: [{ unitNumber: '1', rent: monthlyRent, status: 'Vacant' }],
+      });
+      addNotification('Villa created successfully', 'success');
+      setShowAddVillaModal(false);
+      const data = await salesManagerService.getOwnerAssets(pmOwnerId);
+      setOwnerAssets(data);
+    } catch (err) {
+      addNotification(err.message || 'Failed to create villa', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddLand = async (e) => {
+    e.preventDefault();
+    if (!pmOwnerId) {
+      addNotification('No owner selected.', 'error');
+      return;
+    }
+    const formData = new FormData(e.target);
+    const name = formData.get('landName')?.trim();
+    const superficie = parseFloat(formData.get('landSuperficie')) || 0;
+    const city = formData.get('landCity')?.trim();
+    const neighborhood = formData.get('landNeighborhood')?.trim();
+    const documents = formData.get('landDocuments')?.trim();
+    const price = parseFloat(formData.get('landPrice')) || 0;
+    if (!name) {
+      addNotification('Name of land is required.', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      await salesManagerService.createProperty({
+        address: name,
+        type: 'Land',
+        propertyType: 'For Sale',
+        status: 'Vacant',
+        numberOfUnits: 0,
+        rent: price,
+        landlord_id: pmOwnerId,
+        city: city || '',
+        neighborhood: neighborhood || '',
+        superficie,
+        documents: documents || '',
+      });
+      addNotification('Land created successfully', 'success');
+      setShowAddLandModal(false);
+      const data = await salesManagerService.getOwnerAssets(pmOwnerId);
+      setOwnerAssets(data);
+    } catch (err) {
+      addNotification(err.message || 'Failed to create land', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddApartment = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const name = formData.get('apartmentName')?.trim();
+    const rent = parseFloat(formData.get('apartmentRent')) || 0;
+    const features = JSON.stringify({
+      floor: formData.get('apartmentFloor')?.trim(),
+      standardRooms: formData.get('apartmentStandardRooms')?.trim(),
+      selfContainedRooms: formData.get('apartmentSelfContainedRooms')?.trim(),
+      bathroom: formData.get('apartmentBathroom')?.trim(),
+      guestToilet: formData.get('apartmentGuestToilet')?.trim(),
+      livingRoom: formData.get('apartmentLivingRoom')?.trim(),
+      kitchen: formData.get('apartmentKitchen')?.trim(),
+      balcony: formData.get('apartmentBalcony')?.trim(),
+      parking: formData.get('apartmentParking')?.trim(),
+    });
+    if (pmPropertyId && (pmView === 'building-detail' || pmView === 'villa-detail')) {
+      setLoading(true);
+      try {
+        await salesManagerService.addApartmentToBuilding(pmPropertyId, {
+          name: name || 'Unit',
+          features,
+          picture: addApartmentPicture,
+          rent,
+          status: 'Vacant',
+        });
+        addNotification('Apartment added successfully', 'success');
+        setShowAddApartmentModal(false);
+        setAddApartmentPicture('');
+        const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
+        setBuildingDetail(data);
+      } catch (err) {
+        addNotification(err.message || 'Failed to add apartment', 'error');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      if (!pmOwnerId) {
+        addNotification('No owner selected.', 'error');
+        return;
+      }
+      setLoading(true);
+      try {
+        await salesManagerService.createProperty({
+          address: name || 'Apartment',
+          type: 'Apartment',
+          propertyType: 'For Rent',
+          status: 'Vacant',
+          numberOfUnits: 1,
+          rent,
+          landlord_id: pmOwnerId,
+          units: [{ unitNumber: name || '1', rent, status: 'Vacant', features, picture: addApartmentPicture }],
+        });
+        addNotification('Apartment created successfully', 'success');
+        setShowAddApartmentModal(false);
+        setAddApartmentPicture('');
+        const data = await salesManagerService.getOwnerAssets(pmOwnerId);
+        setOwnerAssets(data);
+      } catch (err) {
+        addNotification(err.message || 'Failed to create apartment', 'error');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -2029,7 +2255,7 @@ const SalesManagerDashboard = () => {
       const data = await salesManagerService.getPropertyBuildingDetail(propId);
       setBuildingDetail(data);
       setPmPropertyId(propId);
-      setPmBuildingName(data.buildingName || property.building || property.Address || property.address || 'Building');
+      setPmBuildingName(data.buildingName || property.name || property.building || property.Address || property.address || 'Building');
       setPmView('building-detail');
     } catch (err) {
       console.error('Failed to load building detail:', err);
@@ -2039,6 +2265,31 @@ const SalesManagerDashboard = () => {
     }
   };
 
+  const handleViewVilla = async (property) => {
+    const propId = property.id || property.ID;
+    if (!propId) return;
+    setPmLoading(true);
+    try {
+      const data = await salesManagerService.getPropertyBuildingDetail(propId);
+      setBuildingDetail(data);
+      setPmPropertyId(propId);
+      setPmBuildingName(data.buildingName || property.name || property.building || property.Address || property.address || 'Villa');
+      setPmView('villa-detail');
+    } catch (err) {
+      console.error('Failed to load villa detail:', err);
+      addNotification('Failed to load villa detail', 'error');
+    } finally {
+      setPmLoading(false);
+    }
+  };
+
+  const handleViewLand = (property) => {
+    setLandDetail(property);
+    setPmPropertyId(property.id || property.ID);
+    setPmBuildingName(property.name || property.building || property.Address || property.address || 'Land');
+    setPmView('land-detail');
+  };
+
   const renderPropertyManagement = () => {
     // Filter owners by search (member name)
     const searchLower = (propertyManagementSearch || '').trim().toLowerCase();
@@ -2046,10 +2297,12 @@ const SalesManagerDashboard = () => {
       ? owners.filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower))
       : owners;
 
-    // Building payment view – "PAYMENT MANAGEMENT FOR [Building name]"
+    // Building management view – "Building X management" (image, total apartments, ADD APPARTMENT, table)
     if (pmView === 'building-detail' && buildingDetail) {
       const units = buildingDetail.units || [];
-      const unpaidTenants = buildingDetail.unpaidTenants || [];
+      const totalApartments = buildingDetail.totalApartments ?? units.length;
+      const images = buildingDetail.images || [];
+      const firstImage = images[0];
       return (
         <div className="sa-clients-page">
           <div className="sa-clients-header">
@@ -2059,8 +2312,80 @@ const SalesManagerDashboard = () => {
                 Back
               </button>
               <div>
-                <h2>PAYMENT MANAGEMENT FOR {pmBuildingName.toUpperCase()}</h2>
+                <h2>Building {pmBuildingName} management</h2>
               </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
+            {firstImage && (
+              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            )}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
+              <p style={{ margin: 0, color: '#6b7280' }}>Total of appartments: <strong>{totalApartments}</strong></p>
+            </div>
+            <button type="button" className="sa-primary-cta" onClick={() => setShowAddApartmentModal(true)}>ADD APPARTMENT</button>
+          </div>
+          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Appartements</th>
+                    <th>Type</th>
+                    <th>tenant</th>
+                    <th>price of rent</th>
+                    <th>Enter date</th>
+                    <th>Statut</th>
+                    <th>Edit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {units.map((row, i) => (
+                    <tr key={row.id || i}>
+                      <td>{row.unitNumber || row.name || `Appartment ${i + 1}`}</td>
+                      <td>{row.type || '—'}</td>
+                      <td>{row.tenant || '—'}</td>
+                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
+                      <td>{row.enterDate || '—'}</td>
+                      <td>{row.status || row.statut || '—'}</td>
+                      <td><button type="button" className="table-action-button contact" style={{ padding: '4px 8px' }}>⋯</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Villa management view – "Villa X management" (same layout as building)
+    if (pmView === 'villa-detail' && buildingDetail) {
+      const units = buildingDetail.units || [];
+      const totalApartments = buildingDetail.totalApartments ?? units.length;
+      const images = buildingDetail.images || [];
+      const firstImage = images[0];
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => setPmView('owner-detail')}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>Villa {pmBuildingName} management</h2>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
+            {firstImage && (
+              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            )}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
+              <p style={{ margin: 0, color: '#6b7280' }}>BIG HOUSE</p>
             </div>
           </div>
           <div className="sa-section-card" style={{ marginTop: '20px' }}>
@@ -2068,143 +2393,137 @@ const SalesManagerDashboard = () => {
               <table className="sa-table">
                 <thead>
                   <tr>
-                    <th>Tenants</th>
-                    <th>Apartments</th>
-                    <th>Rent price</th>
-                    <th>Arrears</th>
-                    <th>Status</th>
-                    <th>Contacts</th>
+                    <th>Villa</th>
+                    <th>Type</th>
+                    <th>tenant</th>
+                    <th>price of rent</th>
+                    <th>Enter date</th>
+                    <th>Statut</th>
+                    <th>Edit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {units.map((row, i) => (
-                    <tr key={i}>
+                    <tr key={row.id || i}>
+                      <td>VILLA</td>
+                      <td>{row.type || '—'}</td>
                       <td>{row.tenant || '—'}</td>
-                      <td>{row.unitNumber || '—'}</td>
-                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} fcfa</td>
-                      <td>{typeof row.arrears === 'number' ? row.arrears.toLocaleString() : row.arrears ?? '0'}</td>
-                      <td>{row.status || 'Up to date'}</td>
-                      <td>{row.contacts || '—'}</td>
+                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
+                      <td>{row.enterDate || '—'}</td>
+                      <td>{row.status || row.statut || '—'}</td>
+                      <td><button type="button" className="table-action-button contact" style={{ padding: '4px 8px' }}>⋯</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {unpaidTenants.length > 0 && (
-              <div style={{ marginTop: '16px', padding: '12px', background: '#fef2f2', borderRadius: '8px' }}>
-                <div style={{ color: '#dc2626', fontWeight: 600, marginBottom: '8px' }}>UNPAID TENANTS</div>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }}>SEND SMS</button>
-                  <button type="button" className="table-action-button contact">SEND EMAIL</button>
-                </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Land detail view (read-only summary)
+    if (pmView === 'land-detail' && landDetail) {
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('owner-detail'); setLandDetail(null); }}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>Land: {pmBuildingName}</h2>
               </div>
+            </div>
+          </div>
+          <div className="sa-section-card" style={{ marginTop: '20px', padding: '20px' }}>
+            <p><strong>Name:</strong> {landDetail.name || landDetail.Address || '—'}</p>
+            <p><strong>Location:</strong> {landDetail.location || landDetail.City || '—'}</p>
+            <p><strong>Statut:</strong> {landDetail.statut || 'For sell'}</p>
+            <p><strong>Price:</strong> {typeof landDetail.rentPrice === 'number' ? landDetail.rentPrice.toLocaleString() : landDetail.rentPrice ?? '—'}</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Owner assets view – "Owner X assets management" with ADD BUILDING / VILLA / LAND / APPARTMENT and single table
+    if (pmView === 'owner-detail' && ownerAssets) {
+      const assets = ownerAssets.assets || [];
+      const handleAssetClick = (asset) => {
+        const type = (asset.type || '').toLowerCase();
+        if (type === 'building') handleViewBuilding(asset);
+        else if (type === 'villa') handleViewVilla(asset);
+        else if (type === 'land') handleViewLand(asset);
+        else handleViewBuilding(asset);
+      };
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setOwnerAssets(null); setPmOwnerId(null); setPmOwnerName(''); }}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>{pmOwnerName} assets management</h2>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
+            <button type="button" className="sa-primary-cta" onClick={() => setShowAddBuildingModal(true)}>ADD BUILDING</button>
+            <button type="button" className="sa-primary-cta" onClick={() => setShowAddApartmentModal(true)}>ADD APPARTMENT</button>
+            <button type="button" className="sa-primary-cta" onClick={() => setShowAddVillaModal(true)}>ADD VILLA</button>
+            <button type="button" className="sa-primary-cta" onClick={() => setShowAddLandModal(true)}>ADD LAND</button>
+          </div>
+          {pmLoading && <p style={{ marginTop: 8 }}>Loading…</p>}
+          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>PROPERTY</th>
+                    <th>APPARTMENTS</th>
+                    <th>RENT PRICE</th>
+                    <th>LOCATION</th>
+                    <th>OCCUPANCY</th>
+                    <th>STATUT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assets.map((row) => (
+                    <tr
+                      key={row.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleAssetClick(row)}
+                      className="clickable-row"
+                    >
+                      <td className="sa-cell-main">{row.name || row.building || '—'}</td>
+                      <td>{row.apartmentsDisplay ?? row.apartments ?? '—'}</td>
+                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice ?? '—'}</td>
+                      <td>{row.location || row.localisation || '—'}</td>
+                      <td>{row.occupancy ?? '—'}</td>
+                      <td>{row.statut ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {assets.length === 0 && !pmLoading && (
+              <p className="sa-table-empty">No assets for this owner.</p>
             )}
           </div>
         </div>
       );
     }
 
-    // Owner assets view – "The assets under the management of [Owner name]"
-    if (pmView === 'owner-detail' && ownerAssets) {
-      const renting = ownerAssets.renting || [];
-      const selling = ownerAssets.selling || [];
-      return (
-        <div className="sa-clients-page">
-          <div className="sa-clients-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setOwnerAssets(null); }}>
-                <ArrowLeft size={18} />
-                Back
-              </button>
-              <div>
-                <h2>The assets under the management of {pmOwnerName}</h2>
-              </div>
-            </div>
-          </div>
-          {pmLoading && <p style={{ marginTop: 8 }}>Loading…</p>}
-          {renting.length > 0 && (
-            <div className="sa-section-card" style={{ marginTop: '20px' }}>
-              <h3 style={{ marginBottom: '12px', fontSize: '1.1rem' }}>Renting</h3>
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Building</th>
-<th>Apartments</th>
-                    <th>Occupied</th>
-                    <th>Location</th>
-                    <th>Revenue</th>
-                    <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {renting.map((row) => (
-                      <tr key={row.id}>
-                        <td>{row.building || '—'}</td>
-                        <td>{row.apartments ?? '—'}</td>
-                        <td>{row.occupied ?? '—'}</td>
-                        <td>{row.localisation || '—'}</td>
-                        <td>{typeof row.revenue === 'number' ? row.revenue.toLocaleString() : row.revenue ?? '0'} F</td>
-                        <td>
-                          <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }} onClick={() => handleViewBuilding(row)}>View</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          {selling.length > 0 && (
-            <div className="sa-section-card" style={{ marginTop: '20px' }}>
-              <h3 style={{ marginBottom: '12px', fontSize: '1.1rem' }}>Selling</h3>
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Building</th>
-                      <th>Piece or m²</th>
-                      <th>Status</th>
-                      <th>Location</th>
-                      <th>Price</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selling.map((row) => (
-                      <tr key={row.id}>
-                        <td>{row.building || '—'}</td>
-                        <td>{row.piecesOrM2 ?? '—'}</td>
-                        <td>{row.statut || '—'}</td>
-                        <td>{row.localisation || '—'}</td>
-                        <td>{typeof row.price === 'number' ? row.price.toLocaleString() : row.price ?? '—'}</td>
-                        <td>
-                          <button type="button" className="table-action-button edit" style={{ background: '#22c55e', color: '#fff' }} onClick={() => handleViewBuilding(row)}>View</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          {renting.length === 0 && selling.length === 0 && !pmLoading && (
-            <div className="sa-section-card" style={{ marginTop: '20px' }}>
-              <p className="sa-table-empty">No renting or selling assets for this owner.</p>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Owner list – columns: Owners list, number of assets managed, Number of total tenants, Revenue, Action (See)
+    // Property Management entry – columns: Name, Total of assets, Property for sell, Property for manage, Occupancy, Income (this month)
     const unassignedProperties = properties.filter((p) => !getPropertyOwnerId(p));
     return (
       <div className="sa-clients-page">
         <div className="sa-clients-header">
           <div>
-            <h2>Owner list management</h2>
-            <p>{filteredOwners.length} owners found</p>
+            <h2>PROPERTY MANAGEMENT</h2>
           </div>
           <div className="sa-clients-header-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ position: 'relative' }}>
@@ -2217,62 +2536,51 @@ const SalesManagerDashboard = () => {
                 style={{ padding: '8px 12px 8px 36px', border: '1px solid #e5e7eb', borderRadius: '8px', minWidth: '220px' }}
               />
             </div>
-            <button className="sa-primary-cta" onClick={() => setShowCreatePropertyModal(true)}>
-              <Plus size={16} />
-              Add Property
-            </button>
           </div>
         </div>
 
         <div className="sa-section-card" style={{ marginTop: '20px' }}>
-          <div className="sa-section-header">
-            <div>
-              <h3>Owners list</h3>
-              <p>Click See to view assets under management for each owner.</p>
-            </div>
-          </div>
           <div className="sa-table-wrapper">
             <table className="sa-table">
               <thead>
                 <tr>
-                  <th>Owners list</th>
-                  <th>number of assets managed</th>
-                  <th>Number of total tenants</th>
-                  <th>Revenue</th>
-                  <th>Action</th>
+                  <th>Name</th>
+                  <th>Total of assets</th>
+                  <th>Property for sell</th>
+                  <th>Property for manage</th>
+                  <th>Occupancy</th>
+                  <th>Income (this month)</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOwners.map((owner, index) => {
                   const ownerId = getOwnerId(owner);
-                  const numAssets = owner.numberOfAssetsManaged ?? owner.numberOfAssets ?? 0;
-                  const numTenants = owner.numberOfTenants ?? owner.numberOfTenants ?? 0;
-                  const revenue = owner.revenue ?? 0;
+                  const totalOfAssets = owner.totalOfAssets ?? owner.numberOfAssetsManaged ?? 0;
+                  const propertyForSell = owner.propertyForSell ?? 0;
+                  const propertyForManage = owner.propertyForManage ?? 0;
+                  const occupancy = owner.occupancy ?? '0/0';
+                  const incomeThisMonth = owner.incomeThisMonth ?? owner.revenue ?? 0;
                   return (
-                    <tr key={ownerId || index}>
+                    <tr
+                      key={ownerId || index}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleSeeOwner(owner)}
+                      className="clickable-row"
+                    >
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{owner.name || owner.Name || 'N/A'}</span>
                       </td>
-                      <td>{numAssets}</td>
-                      <td>{numTenants}</td>
-                      <td>{typeof revenue === 'number' ? revenue.toLocaleString() : revenue} F</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="table-action-button edit"
-                          style={{ background: '#22c55e', color: '#fff' }}
-                          onClick={() => handleSeeOwner(owner)}
-                          disabled={pmLoading}
-                        >
-                          See
-                        </button>
-                      </td>
+                      <td>{totalOfAssets}</td>
+                      <td>{propertyForSell}</td>
+                      <td>{propertyForManage}</td>
+                      <td>{occupancy}</td>
+                      <td>{typeof incomeThisMonth === 'number' ? incomeThisMonth.toLocaleString() : incomeThisMonth}</td>
                     </tr>
                   );
                 })}
                 {filteredOwners.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="sa-table-empty">
+                    <td colSpan={6} className="sa-table-empty">
                       No owners found. Ask the Agency Director to add property owners.
                     </td>
                   </tr>
@@ -5170,6 +5478,276 @@ const SalesManagerDashboard = () => {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Building Modal (Property Management) */}
+      {showAddBuildingModal && (
+        <div className="modal-overlay" onClick={() => { setShowAddBuildingModal(false); setPmAddFormImages([]); }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Building</h3>
+              <button className="modal-close" onClick={() => { setShowAddBuildingModal(false); setPmAddFormImages([]); }}>×</button>
+            </div>
+            <form onSubmit={handleAddBuilding}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Name of building *</label>
+                  <input type="text" name="buildingName" required placeholder="e.g. Building A" />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>City</label>
+                    <input type="text" name="buildingCity" placeholder="e.g. Abidjan" />
+                  </div>
+                  <div className="form-group">
+                    <label>Neighborhood</label>
+                    <input type="text" name="buildingNeighborhood" placeholder="e.g. Cocody" />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Type of building (R+...)</label>
+                  <select name="buildingTypeR">
+                    <option value="">Select</option>
+                    <option value="R+1">R+1</option>
+                    <option value="R+2">R+2</option>
+                    <option value="R+3">R+3</option>
+                    <option value="R+4">R+4</option>
+                    <option value="R+5">R+5</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Pictures</label>
+                  <input type="file" accept="image/*" multiple disabled={uploadingImage} onChange={(e) => { const f = e.target.files; if (f?.length) handlePmAddFormImageUpload(f); e.target.value = ''; }} />
+                  {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
+                  {pmAddFormImages.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {pmAddFormImages.map((url, i) => (
+                        <div key={i} style={{ position: 'relative' }}>
+                          <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
+                          <button type="button" onClick={() => setPmAddFormImages(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="action-button secondary" onClick={() => { setShowAddBuildingModal(false); setPmAddFormImages([]); }}>Cancel</button>
+                <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Creating...' : 'Add Building'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Villa Modal (Property Management) */}
+      {showAddVillaModal && (
+        <div className="modal-overlay" onClick={() => setShowAddVillaModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Villa</h3>
+              <button className="modal-close" onClick={() => setShowAddVillaModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleAddVilla}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Precise location (Municipality + district) *</label>
+                  <input type="text" name="villaPreciseLocation" placeholder="e.g. Cocody – Angré/ Riviera" />
+                </div>
+                <div className="form-group">
+                  <label>Type of property (Villa R+)</label>
+                  <select name="villaTypeR">
+                    <option value="">Select</option>
+                    <option value="R+1">R+1</option>
+                    <option value="R+2">R+2</option>
+                    <option value="R+3">R+3</option>
+                    <option value="R+4">R+4</option>
+                    <option value="R+5">R+5</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Address of the property</label>
+                  <input type="text" name="villaAddress" placeholder="Full address" />
+                </div>
+                <div style={{ marginBottom: '12px', fontWeight: 600 }}>Total number of pieces</div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Living rooms</label>
+                    <input type="text" name="villaLivingRooms" placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Bedrooms</label>
+                    <input type="text" name="villaBedrooms" placeholder="e.g. 3" />
+                  </div>
+                  <div className="form-group">
+                    <label>Bathrooms / WC</label>
+                    <input type="text" name="villaBathrooms" placeholder="e.g. 2" />
+                  </div>
+                  <div className="form-group">
+                    <label>Visitor WC</label>
+                    <input type="text" name="villaVisitorWc" placeholder="e.g. 1" />
+                  </div>
+                </div>
+                <div style={{ marginBottom: '8px', fontWeight: 600 }}>Main equipment</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><input type="checkbox" name="villaCourtyard" /> Courtyard</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><input type="checkbox" name="villaGarage" /> Garage</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><input type="checkbox" name="villaGarden" /> Garden</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><input type="checkbox" name="villaAirConditioning" /> Air conditioning</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><input type="checkbox" name="villaSwimmingPool" /> Swimming pool</label>
+                </div>
+                <div className="form-group">
+                  <label>Monthly rent (F CFA)</label>
+                  <input type="number" name="villaMonthlyRent" min="0" step="1000" placeholder="e.g. 500000" />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="action-button secondary" onClick={() => setShowAddVillaModal(false)}>Cancel</button>
+                <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Creating...' : 'Add Villa'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Land Modal (Property Management) */}
+      {showAddLandModal && (
+        <div className="modal-overlay" onClick={() => setShowAddLandModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Land</h3>
+              <button className="modal-close" onClick={() => setShowAddLandModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleAddLand}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Name of land *</label>
+                  <input type="text" name="landName" required placeholder="e.g. Land at m'badon" />
+                </div>
+                <div className="form-group">
+                  <label>Superficie (m²)</label>
+                  <input type="number" name="landSuperficie" min="0" step="1" placeholder="e.g. 500" />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>City</label>
+                    <input type="text" name="landCity" placeholder="e.g. Abidjan" />
+                  </div>
+                  <div className="form-group">
+                    <label>Neighborhood</label>
+                    <input type="text" name="landNeighborhood" placeholder="e.g. Cocody" />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Documents available</label>
+                  <select name="landDocuments">
+                    <option value="">Select</option>
+                    <option value="ACD">ACD</option>
+                    <option value="Land title">Land title</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Price (F CFA)</label>
+                  <input type="number" name="landPrice" min="0" step="1000" placeholder="e.g. 50000000" />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="action-button secondary" onClick={() => setShowAddLandModal(false)}>Cancel</button>
+                <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Creating...' : 'Add Land'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Apartment Modal (Property Management – for building or standalone) */}
+      {showAddApartmentModal && (
+        <div className="modal-overlay" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPicture(''); }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{pmPropertyId && (pmView === 'building-detail' || pmView === 'villa-detail') ? 'Add Apartment to ' + pmBuildingName : 'Add Apartment'}</h3>
+              <button className="modal-close" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPicture(''); }}>×</button>
+            </div>
+            <form onSubmit={handleAddApartment}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Name of apartment *</label>
+                  <input type="text" name="apartmentName" required placeholder="e.g. Appartment 1" />
+                </div>
+                <div style={{ marginBottom: '8px', fontWeight: 600 }}>Apartment features</div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Floor</label>
+                    <input type="text" name="apartmentFloor" placeholder="e.g. 2" />
+                  </div>
+                  <div className="form-group">
+                    <label>Standard rooms</label>
+                    <input type="text" name="apartmentStandardRooms" placeholder="e.g. 2" />
+                  </div>
+                  <div className="form-group">
+                    <label>Self-contained rooms</label>
+                    <input type="text" name="apartmentSelfContainedRooms" placeholder="e.g. 1" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Bathroom</label>
+                    <input type="text" name="apartmentBathroom" placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Guest toilet</label>
+                    <input type="text" name="apartmentGuestToilet" placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Living room</label>
+                    <input type="text" name="apartmentLivingRoom" placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Kitchen</label>
+                    <input type="text" name="apartmentKitchen" placeholder="e.g. 1" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Balcony</label>
+                    <input type="text" name="apartmentBalcony" placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Parking</label>
+                    <input type="text" name="apartmentParking" placeholder="e.g. 1" />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Price of rent (F CFA)</label>
+                  <input type="number" name="apartmentRent" min="0" step="1000" placeholder="e.g. 200000" />
+                </div>
+                <div className="form-group">
+                  <label>Apartment picture</label>
+                  <input type="file" accept="image/*" disabled={uploadingImage} onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !file.type?.startsWith('image/')) return;
+                    setUploadingImage(true);
+                    try {
+                      const result = await cloudinaryService.uploadFile(file, 'property-images');
+                      if (result.success && result.url) setAddApartmentPicture(result.url);
+                    } catch (err) {
+                      addNotification('Failed to upload image', 'error');
+                    } finally {
+                      setUploadingImage(false);
+                    }
+                    e.target.value = '';
+                  }} />
+                  {addApartmentPicture && <img src={addApartmentPicture} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="action-button secondary" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPicture(''); }}>Cancel</button>
+                <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Adding...' : 'Add Apartment'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
