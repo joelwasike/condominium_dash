@@ -270,6 +270,7 @@ const SalesManagerDashboard = () => {
   const [showAddApartmentModal, setShowAddApartmentModal] = useState(false);
   const [showEditApartmentModal, setShowEditApartmentModal] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null); // unit from buildingDetail.units (id, unitNumber, type, tenant, rentPrice, etc.)
+  const [editApartmentStatusChoice, setEditApartmentStatusChoice] = useState('Vacant'); // for showing/hiding tenant + enter date in Edit Apartment modal
   const [landDetail, setLandDetail] = useState(null); // for land-detail view
   const [pmAddFormImages, setPmAddFormImages] = useState([]); // images for Add Building / Add Land
   const [addApartmentPicture, setAddApartmentPicture] = useState('');
@@ -1640,9 +1641,9 @@ const SalesManagerDashboard = () => {
       parking: formData.get('editApartmentParking')?.trim(),
     });
     const rent = parseFloat(formData.get('editApartmentRent')) || 0;
-    const tenant = formData.get('editApartmentTenant')?.trim() || null;
     const status = formData.get('editApartmentStatus')?.trim() || 'Vacant';
-    const enterDate = formData.get('editApartmentEnterDate')?.trim() || null;
+    const tenant = status === 'Occupied' ? (formData.get('editApartmentTenant')?.trim() || null) : null;
+    const enterDate = status === 'Occupied' ? (formData.get('editApartmentEnterDate')?.trim() || null) : null;
     setLoading(true);
     try {
       await salesManagerService.updatePropertyUnit(pmPropertyId, editingUnit.id, {
@@ -1652,14 +1653,15 @@ const SalesManagerDashboard = () => {
         features,
         picture: editApartmentPicture || undefined,
         rent,
-        tenant: tenant || undefined,
+        tenant: status === 'Occupied' ? tenant : null,
         status,
-        enterDate: enterDate || undefined,
+        enterDate: status === 'Occupied' ? enterDate : null,
       });
       addNotification('Apartment updated successfully', 'success');
       setShowEditApartmentModal(false);
       setEditingUnit(null);
       setEditApartmentPicture('');
+      setEditApartmentStatusChoice('Vacant');
       const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
       setBuildingDetail(data);
     } catch (err) {
@@ -2412,7 +2414,7 @@ const SalesManagerDashboard = () => {
                           type="button"
                           className="table-action-button contact"
                           style={{ padding: '4px 8px' }}
-                          onClick={(e) => { e.stopPropagation(); setEditingUnit(row); setEditApartmentPicture(row.picture || ''); setShowEditApartmentModal(true); }}
+                          onClick={(e) => { e.stopPropagation(); setEditingUnit(row); setEditApartmentPicture(row.picture || ''); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}
                           title="Edit apartment details"
                         >
                           ⋯
@@ -2484,7 +2486,7 @@ const SalesManagerDashboard = () => {
                           type="button"
                           className="table-action-button contact"
                           style={{ padding: '4px 8px' }}
-                          onClick={(e) => { e.stopPropagation(); setEditingUnit(row); setEditApartmentPicture(row.picture || ''); setShowEditApartmentModal(true); }}
+                          onClick={(e) => { e.stopPropagation(); setEditingUnit(row); setEditApartmentPicture(row.picture || ''); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}
                           title="Edit apartment details"
                         >
                           ⋯
@@ -5839,11 +5841,11 @@ const SalesManagerDashboard = () => {
 
       {/* Edit Apartment Modal (full details aligned with state of entry/exit) */}
       {showEditApartmentModal && editingUnit && (
-        <div className="modal-overlay" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); }}>
+        <div className="modal-overlay" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); setEditApartmentStatusChoice('Vacant'); }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Edit apartment – {editingUnit.unitNumber || 'Unit'}</h3>
-              <button className="modal-close" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); }}>×</button>
+              <button className="modal-close" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); setEditApartmentStatusChoice('Vacant'); }}>×</button>
             </div>
             <form onSubmit={handleEditApartment}>
               <div className="modal-body">
@@ -5931,20 +5933,28 @@ const SalesManagerDashboard = () => {
                     <input type="number" name="editApartmentRent" min="0" step="1000" defaultValue={editingUnit.rentPrice ?? 0} placeholder="e.g. 200000" />
                   </div>
                   <div className="form-group">
-                    <label>Tenant</label>
-                    <input type="text" name="editApartmentTenant" defaultValue={editingUnit.tenant || ''} placeholder="Tenant name" />
-                  </div>
-                  <div className="form-group">
                     <label>Status</label>
-                    <select name="editApartmentStatus" defaultValue={(editingUnit.status || editingUnit.statut || 'Vacant').toString()}>
+                    <select
+                      name="editApartmentStatus"
+                      value={editApartmentStatusChoice}
+                      onChange={(e) => setEditApartmentStatusChoice(e.target.value)}
+                    >
                       <option value="Vacant">Vacant</option>
                       <option value="Occupied">Occupied</option>
                     </select>
                   </div>
-                  <div className="form-group">
-                    <label>Enter date</label>
-                    <input type="date" name="editApartmentEnterDate" defaultValue={editingUnit.enterDate ? (editingUnit.enterDate.includes('/') ? (() => { const p = editingUnit.enterDate.split('/'); if (p.length !== 3) return ''; const y = String(p[2]).length === 2 ? '20' + p[2] : p[2]; return `${y}-${String(p[1]).padStart(2,'0')}-${String(p[0]).padStart(2,'0')}`; })() : editingUnit.enterDate) : ''} />
-                  </div>
+                  {editApartmentStatusChoice === 'Occupied' && (
+                    <>
+                      <div className="form-group">
+                        <label>Tenant</label>
+                        <input type="text" name="editApartmentTenant" defaultValue={editingUnit.tenant || ''} placeholder="Tenant name" />
+                      </div>
+                      <div className="form-group">
+                        <label>Enter date</label>
+                        <input type="date" name="editApartmentEnterDate" defaultValue={editingUnit.enterDate ? (editingUnit.enterDate.includes('/') ? (() => { const p = editingUnit.enterDate.split('/'); if (p.length !== 3) return ''; const y = String(p[2]).length === 2 ? '20' + p[2] : p[2]; return `${y}-${String(p[1]).padStart(2,'0')}-${String(p[0]).padStart(2,'0')}`; })() : editingUnit.enterDate) : ''} />
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="form-group">
                   <label>Apartment picture</label>
@@ -5966,7 +5976,7 @@ const SalesManagerDashboard = () => {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="action-button secondary" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); }}>Cancel</button>
+                <button type="button" className="action-button secondary" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); setEditApartmentStatusChoice('Vacant'); }}>Cancel</button>
                 <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Saving...' : 'Save apartment'}</button>
               </div>
             </form>
