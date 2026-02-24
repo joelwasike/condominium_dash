@@ -2783,9 +2783,8 @@ const SalesManagerDashboard = () => {
   const uniqueProperties = useMemo(() => {
     const props = new Set();
     clients.forEach(client => {
-      if (client.Property) {
-        props.add(client.Property);
-      }
+      const p = client.Property || client.property;
+      if (p) props.add(p);
     });
     return Array.from(props).sort();
   }, [clients]);
@@ -3269,21 +3268,24 @@ const SalesManagerDashboard = () => {
         <div className="sa-metric-card">
           <p className="sa-metric-label">Active Tenants</p>
           <p className="sa-metric-number">
-            {filteredClients.filter(client => client.Status === 'Active').length}
+            {filteredClients.filter(client => (client.Status || client.status || '').toString().toLowerCase() === 'active').length}
             <span className="sa-metric-trend positive">+1.5%</span>
           </p>
         </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Overdue Accounts</p>
           <p className="sa-metric-number">
-            {filteredClients.filter(client => client.Status === 'Overdue').length}
+            {filteredClients.filter(client => (client.Status || client.status || '').toString().toLowerCase() === 'overdue').length}
             <span className="sa-metric-trend negative">-1.5%</span>
           </p>
           </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Waiting List</p>
           <p className="sa-metric-value">
-            {filteredClients.filter(client => client.Status === 'Waiting List').length}
+            {filteredClients.filter(client => {
+              const s = (client.Status || client.status || '').toString().toLowerCase().replace(/\s+/g, ' ');
+              return s === 'waiting list' || s === 'waitinglist';
+            }).length}
           </p>
           </div>
         <div className="sa-metric-card">
