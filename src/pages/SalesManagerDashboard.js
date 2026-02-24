@@ -268,9 +268,12 @@ const SalesManagerDashboard = () => {
   const [showAddVillaModal, setShowAddVillaModal] = useState(false);
   const [showAddLandModal, setShowAddLandModal] = useState(false);
   const [showAddApartmentModal, setShowAddApartmentModal] = useState(false);
+  const [showEditApartmentModal, setShowEditApartmentModal] = useState(false);
+  const [editingUnit, setEditingUnit] = useState(null); // unit from buildingDetail.units (id, unitNumber, type, tenant, rentPrice, etc.)
   const [landDetail, setLandDetail] = useState(null); // for land-detail view
   const [pmAddFormImages, setPmAddFormImages] = useState([]); // images for Add Building / Add Land
-  const [addApartmentPicture, setAddApartmentPicture] = useState(''); // Filter owners by name
+  const [addApartmentPicture, setAddApartmentPicture] = useState('');
+  const [editApartmentPicture, setEditApartmentPicture] = useState('');
   const [pmLoading, setPmLoading] = useState(false); // Loading owner assets or building detail
   const [showPropertyBuildingType, setShowPropertyBuildingType] = useState(false); // For property form: show building type when type is Apartment
   const [createPropertyImages, setCreatePropertyImages] = useState([]); // URLs for new property images (Cloudinary)
@@ -1420,6 +1423,7 @@ const SalesManagerDashboard = () => {
     const city = formData.get('buildingCity')?.trim();
     const neighborhood = formData.get('buildingNeighborhood')?.trim();
     const typeR = formData.get('buildingTypeR')?.trim();
+    const numberOfApartments = Math.max(1, parseInt(formData.get('buildingNumberOfApartments'), 10) || 1);
     if (!name) {
       addNotification('Name of building is required.', 'error');
       return;
@@ -1431,7 +1435,7 @@ const SalesManagerDashboard = () => {
         type: 'Building',
         propertyType: 'For Rent',
         status: 'Vacant',
-        numberOfUnits: 0,
+        numberOfUnits: numberOfApartments,
         rent: 0,
         landlord_id: pmOwnerId,
         city: city || '',
@@ -1608,6 +1612,60 @@ const SalesManagerDashboard = () => {
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const handleEditApartment = async (e) => {
+    e.preventDefault();
+    if (!editingUnit || !pmPropertyId) return;
+    const formData = new FormData(e.target);
+    const unitNumber = formData.get('editApartmentName')?.trim() || editingUnit.unitNumber;
+    const bedrooms = parseInt(formData.get('editApartmentBedrooms'), 10) || 0;
+    const bathrooms = parseFloat(formData.get('editApartmentBathrooms')) || 0;
+    const numberOfKitchens = parseInt(formData.get('editApartmentKitchens'), 10) || 0;
+    const hasSwimmingPool = formData.get('editApartmentSwimmingPool') === 'yes';
+    const propertyType = formData.get('editApartmentPropertyType')?.trim() || '';
+    const features = JSON.stringify({
+      unitType: propertyType || undefined,
+      numberOfKitchens,
+      hasSwimmingPool,
+      floor: formData.get('editApartmentFloor')?.trim(),
+      standardRooms: formData.get('editApartmentStandardRooms')?.trim(),
+      selfContainedRooms: formData.get('editApartmentSelfContainedRooms')?.trim(),
+      bathroom: formData.get('editApartmentBathroom')?.trim(),
+      guestToilet: formData.get('editApartmentGuestToilet')?.trim(),
+      livingRoom: formData.get('editApartmentLivingRoom')?.trim(),
+      kitchen: formData.get('editApartmentKitchen')?.trim(),
+      balcony: formData.get('editApartmentBalcony')?.trim(),
+      parking: formData.get('editApartmentParking')?.trim(),
+    });
+    const rent = parseFloat(formData.get('editApartmentRent')) || 0;
+    const tenant = formData.get('editApartmentTenant')?.trim() || null;
+    const status = formData.get('editApartmentStatus')?.trim() || 'Vacant';
+    const enterDate = formData.get('editApartmentEnterDate')?.trim() || null;
+    setLoading(true);
+    try {
+      await salesManagerService.updatePropertyUnit(pmPropertyId, editingUnit.id, {
+        unitNumber,
+        bedrooms,
+        bathrooms,
+        features,
+        picture: editApartmentPicture || undefined,
+        rent,
+        tenant: tenant || undefined,
+        status,
+        enterDate: enterDate || undefined,
+      });
+      addNotification('Apartment updated successfully', 'success');
+      setShowEditApartmentModal(false);
+      setEditingUnit(null);
+      setEditApartmentPicture('');
+      const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
+      setBuildingDetail(data);
+    } catch (err) {
+      addNotification(err.message || 'Failed to update apartment', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2349,7 +2407,17 @@ const SalesManagerDashboard = () => {
                       <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
                       <td>{row.enterDate || '—'}</td>
                       <td>{row.status || row.statut || '—'}</td>
-                      <td><button type="button" className="table-action-button contact" style={{ padding: '4px 8px' }}>⋯</button></td>
+                      <td>
+                        <button
+                          type="button"
+                          className="table-action-button contact"
+                          style={{ padding: '4px 8px' }}
+                          onClick={(e) => { e.stopPropagation(); setEditingUnit(row); setEditApartmentPicture(row.picture || ''); setShowEditApartmentModal(true); }}
+                          title="Edit apartment details"
+                        >
+                          ⋯
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2411,7 +2479,17 @@ const SalesManagerDashboard = () => {
                       <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
                       <td>{row.enterDate || '—'}</td>
                       <td>{row.status || row.statut || '—'}</td>
-                      <td><button type="button" className="table-action-button contact" style={{ padding: '4px 8px' }}>⋯</button></td>
+                      <td>
+                        <button
+                          type="button"
+                          className="table-action-button contact"
+                          style={{ padding: '4px 8px' }}
+                          onClick={(e) => { e.stopPropagation(); setEditingUnit(row); setEditApartmentPicture(row.picture || ''); setShowEditApartmentModal(true); }}
+                          title="Edit apartment details"
+                        >
+                          ⋯
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -5520,6 +5598,11 @@ const SalesManagerDashboard = () => {
                   </select>
                 </div>
                 <div className="form-group">
+                  <label>Number of apartments in the building *</label>
+                  <input type="number" name="buildingNumberOfApartments" required min="1" defaultValue="1" placeholder="e.g. 10" />
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>You will see all apartments when you open the building. Use Edit on each row to add details (bedrooms, bathrooms, kitchens, etc.).</small>
+                </div>
+                <div className="form-group">
                   <label>Pictures</label>
                   <input type="file" accept="image/*" multiple disabled={uploadingImage} onChange={(e) => { const f = e.target.files; if (f?.length) handlePmAddFormImageUpload(f); e.target.value = ''; }} />
                   {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
@@ -5748,6 +5831,143 @@ const SalesManagerDashboard = () => {
               <div className="modal-footer">
                 <button type="button" className="action-button secondary" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPicture(''); }}>Cancel</button>
                 <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Adding...' : 'Add Apartment'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Apartment Modal (full details aligned with state of entry/exit) */}
+      {showEditApartmentModal && editingUnit && (
+        <div className="modal-overlay" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit apartment – {editingUnit.unitNumber || 'Unit'}</h3>
+              <button className="modal-close" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); }}>×</button>
+            </div>
+            <form onSubmit={handleEditApartment}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Name of apartment *</label>
+                  <input type="text" name="editApartmentName" required defaultValue={editingUnit.unitNumber || ''} placeholder="e.g. Apartment 1" />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Type of property (as in state of entry/exit)</label>
+                    <select name="editApartmentPropertyType" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.unitType || ''; } catch { return ''; } })()) || ''}>
+                      <option value="">Select</option>
+                      <option value="Studio">Studio</option>
+                      <option value="Apartment">Apartment</option>
+                      <option value="Duplex">Duplex</option>
+                      <option value="Villa">Villa</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Number of bedrooms</label>
+                    <input type="number" name="editApartmentBedrooms" min="0" defaultValue={editingUnit.bedrooms ?? 0} placeholder="e.g. 2" />
+                  </div>
+                  <div className="form-group">
+                    <label>Number of bathrooms</label>
+                    <input type="number" name="editApartmentBathrooms" min="0" step="0.5" defaultValue={editingUnit.bathrooms ?? 0} placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Number of kitchens</label>
+                    <input type="number" name="editApartmentKitchens" min="0" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.numberOfKitchens ?? 0; } catch { return 0; } })()) || 0} placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Swimming pool</label>
+                    <select name="editApartmentSwimmingPool" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.hasSwimmingPool ? 'yes' : 'no'; } catch { return 'no'; } })()) || 'no'}>
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginBottom: '8px', fontWeight: 600 }}>Other features (Floor, rooms, etc.)</div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Floor</label>
+                    <input type="text" name="editApartmentFloor" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.floor || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 2" />
+                  </div>
+                  <div className="form-group">
+                    <label>Standard rooms</label>
+                    <input type="text" name="editApartmentStandardRooms" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.standardRooms || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 2" />
+                  </div>
+                  <div className="form-group">
+                    <label>Self-contained rooms</label>
+                    <input type="text" name="editApartmentSelfContainedRooms" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.selfContainedRooms || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Bathroom</label>
+                    <input type="text" name="editApartmentBathroom" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.bathroom || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Guest toilet</label>
+                    <input type="text" name="editApartmentGuestToilet" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.guestToilet || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Living room</label>
+                    <input type="text" name="editApartmentLivingRoom" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.livingRoom || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Kitchen</label>
+                    <input type="text" name="editApartmentKitchen" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.kitchen || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Balcony</label>
+                    <input type="text" name="editApartmentBalcony" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.balcony || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Parking</label>
+                    <input type="text" name="editApartmentParking" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.parking || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Price of rent (F CFA)</label>
+                    <input type="number" name="editApartmentRent" min="0" step="1000" defaultValue={editingUnit.rentPrice ?? 0} placeholder="e.g. 200000" />
+                  </div>
+                  <div className="form-group">
+                    <label>Tenant</label>
+                    <input type="text" name="editApartmentTenant" defaultValue={editingUnit.tenant || ''} placeholder="Tenant name" />
+                  </div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select name="editApartmentStatus" defaultValue={(editingUnit.status || editingUnit.statut || 'Vacant').toString()}>
+                      <option value="Vacant">Vacant</option>
+                      <option value="Occupied">Occupied</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Enter date</label>
+                    <input type="date" name="editApartmentEnterDate" defaultValue={editingUnit.enterDate ? (editingUnit.enterDate.includes('/') ? (() => { const p = editingUnit.enterDate.split('/'); if (p.length !== 3) return ''; const y = String(p[2]).length === 2 ? '20' + p[2] : p[2]; return `${y}-${String(p[1]).padStart(2,'0')}-${String(p[0]).padStart(2,'0')}`; })() : editingUnit.enterDate) : ''} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Apartment picture</label>
+                  <input type="file" accept="image/*" disabled={uploadingImage} onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !file.type?.startsWith('image/')) return;
+                    setUploadingImage(true);
+                    try {
+                      const result = await cloudinaryService.uploadFile(file, 'property-images');
+                      if (result.success && result.url) setEditApartmentPicture(result.url);
+                    } catch (err) {
+                      addNotification('Failed to upload image', 'error');
+                    } finally {
+                      setUploadingImage(false);
+                    }
+                    e.target.value = '';
+                  }} />
+                  {(editApartmentPicture || editingUnit.picture) && <img src={editApartmentPicture || editingUnit.picture} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="action-button secondary" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); }}>Cancel</button>
+                <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Saving...' : 'Save apartment'}</button>
               </div>
             </form>
           </div>

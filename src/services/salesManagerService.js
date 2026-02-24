@@ -309,6 +309,15 @@ export const salesManagerService = {
     });
   },
 
+  // Update apartment/unit details (Edit apartment - full details aligned with state of entry/exit)
+  updatePropertyUnit: async (propertyId, unitId, payload) => {
+    const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/units/${unitId}`);
+    return await apiRequest(url, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Import clients/tenants from Excel or CSV
   // Note: Backend endpoint accepts .xlsx, .xls, and .csv files
   importClientsFromExcel: async (file) => {
