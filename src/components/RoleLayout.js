@@ -336,6 +336,7 @@ const RoleLayout = ({
             </div>
           )}
           {children({ activeId: currentActiveId })}
+          <div className="role-content-spacer" aria-hidden="true" />
         </div>
       </div>
     </div>
