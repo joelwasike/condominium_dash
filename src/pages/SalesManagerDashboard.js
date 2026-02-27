@@ -243,6 +243,8 @@ const SalesManagerDashboard = () => {
   const [occupancySelectedProperty, setOccupancySelectedProperty] = useState(null);
   const [occupancyDetailData, setOccupancyDetailData] = useState(null);
   const [occupancyDetailLoading, setOccupancyDetailLoading] = useState(false);
+  // Occupancy stats from backend (occupied/vacant villa counts)
+  const [occupancyStats, setOccupancyStats] = useState({ occupiedCount: null, vacantCount: null });
   
   // Tenant detail view (when a tenant row is clicked)
   const [selectedTenantId, setSelectedTenantId] = useState(null);
@@ -442,6 +444,10 @@ const SalesManagerDashboard = () => {
         const demoData = getSalesManagerDemoData();
         setOverviewData(demoData.overview);
         setProperties(demoData.properties);
+        setOccupancyStats({
+          occupiedCount: demoData.overview?.occupiedProperties ?? demoData.properties.filter(p => (p.status || p.Status || '').toLowerCase() === 'occupied').length,
+          vacantCount: demoData.overview?.vacantProperties ?? demoData.properties.filter(p => (p.status || p.Status || '').toLowerCase() === 'vacant').length,
+        });
         setClients(demoData.clients);
         setApprovedClients([]);
         setWaitingListClients(demoData.waitingListClients);
@@ -453,7 +459,7 @@ const SalesManagerDashboard = () => {
         return;
       }
       
-      const [overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData] = await Promise.all([
+      const [overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData, occupiedPropsData, vacantPropsData] = await Promise.all([
         salesManagerService.getOverview(),
         salesManagerService.getProperties({
           status: propertyStatusFilter || undefined,
@@ -467,6 +473,8 @@ const SalesManagerDashboard = () => {
         salesManagerService.getAlerts(alertTypeFilter || null),
         salesManagerService.getOwners().catch(() => []),
         salesManagerService.getSalesProperties().catch(() => []),
+        salesManagerService.getPropertiesByOccupancy('Occupied').catch(() => []),
+        salesManagerService.getPropertiesByOccupancy('Vacant').catch(() => []),
       ]);
 
       console.log('Loaded data:', { overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData });
@@ -485,6 +493,10 @@ const SalesManagerDashboard = () => {
 
       setOverviewData(overview);
       setProperties(normalizedProperties);
+      setOccupancyStats({
+        occupiedCount: Array.isArray(occupiedPropsData) ? occupiedPropsData.length : null,
+        vacantCount: Array.isArray(vacantPropsData) ? vacantPropsData.length : null,
+      });
       setClients(Array.isArray(clientsData) ? clientsData : []);
       setApprovedClients(Array.isArray(approvedClientsData) ? approvedClientsData : []);
       setWaitingListClients(Array.isArray(waitingListData) ? waitingListData : []);
@@ -2258,7 +2270,16 @@ const SalesManagerDashboard = () => {
 
   const renderOccupancy = () => {
     const totalProperties = properties.length;
-    // Helper: filled units (from API or derived). Property is "fully occupied" only when filledUnits >= numberOfUnits.
+    // Use backend occupancy counts when available (from getPropertiesByOccupancy API)
+    const occupiedCount = occupancyStats.occupiedCount ?? overviewData?.occupiedProperties ?? null;
+    const vacantCount = occupancyStats.vacantCount ?? overviewData?.vacantProperties ?? null;
+    const occupiedFromBackend = occupiedCount !== null && vacantCount !== null;
+    const effectiveOccupied = occupiedFromBackend ? occupiedCount : properties.filter(p => (p.Status || p.status || '').toLowerCase() === 'occupied').length;
+    const effectiveVacant = occupiedFromBackend ? vacantCount : properties.filter(p => (p.Status || p.status || '').toLowerCase() === 'vacant').length;
+    const totalForRate = effectiveOccupied + effectiveVacant || totalProperties;
+    const occupancyRate = totalForRate > 0 ? Math.round((effectiveOccupied / totalForRate) * 100) : 0;
+
+    // Helper for property table: filled units per property
     const getFilledUnits = (property) => {
       const n = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
       const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
@@ -2267,15 +2288,6 @@ const SalesManagerDashboard = () => {
       if (n <= 1) return status === 'occupied' ? 1 : 0;
       return 0;
     };
-    const isFullyOccupied = (property) => {
-      const total = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
-      const filled = getFilledUnits(property);
-      return total > 0 && filled >= total;
-    };
-    const fullyOccupiedCount = properties.filter(isFullyOccupied).length;
-    const occupiedCount = fullyOccupiedCount;
-    const vacantCount = totalProperties - fullyOccupiedCount;
-    const occupancyRate = totalProperties > 0 ? Math.round((occupiedCount / totalProperties) * 100) : 0;
 
     // Occupancy detail view: single property overview (units, tenants, graph)
     if (occupancyDetailView === 'detail') {
@@ -2444,7 +2456,7 @@ const SalesManagerDashboard = () => {
         <div className="sa-occupancy-metrics">
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Properties</p>
-            <p className="sa-metric-value">{totalProperties}</p>
+            <p className="sa-metric-value">{occupiedFromBackend ? effectiveOccupied + effectiveVacant : totalProperties}</p>
           </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Tenants</p>
@@ -2452,11 +2464,11 @@ const SalesManagerDashboard = () => {
           </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Occupied Villas</p>
-            <p className="sa-metric-value">{occupiedCount}</p>
+            <p className="sa-metric-value">{effectiveOccupied}</p>
           </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Vacant Villas</p>
-            <p className="sa-metric-value">{vacantCount}</p>
+            <p className="sa-metric-value">{effectiveVacant}</p>
           </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Occupancy Rate</p>
