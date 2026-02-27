@@ -1307,10 +1307,20 @@ const SalesManagerDashboard = () => {
               unit = (idx >= 1 && units[idx - 1]) ? units[idx - 1] : units[0];
             }
             if (unit) {
+              const enterDate = moveInDate || new Date().toISOString().split('T')[0];
+              try {
+                await salesManagerService.updatePropertyUnit(propertyId, unit.id, {
+                  tenant: null,
+                  status: 'Vacant',
+                  enterDate: null,
+                });
+              } catch (_) {
+                // Ignore: unit may already be vacant
+              }
               await salesManagerService.updatePropertyUnit(propertyId, unit.id, {
                 tenant: tenantData.name,
                 status: 'Occupied',
-                enterDate: moveInDate || new Date().toISOString().split('T')[0],
+                enterDate,
               });
             }
           } catch (assignErr) {
