@@ -247,15 +247,10 @@ const SalesManagerDashboard = () => {
   // Edit states
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
-  // Assign / remove tenant from building & room (Edit Tenant modal)
-  const [assignOwnerId, setAssignOwnerId] = useState('');
-  const [assignOwnerAssets, setAssignOwnerAssets] = useState([]);
-  const [assignBuildingId, setAssignBuildingId] = useState('');
-  const [assignUnitsList, setAssignUnitsList] = useState([]);
-  const [assignUnitId, setAssignUnitId] = useState('');
-  const [loadingOwnerAssets, setLoadingOwnerAssets] = useState(false);
-  const [loadingAssignUnits, setLoadingAssignUnits] = useState(false);
-  const [assignActionLoading, setAssignActionLoading] = useState(false);
+  // Tenant current unit assignment (auto-loaded when Edit Tenant modal opens); null = not assigned or loading
+  const [tenantAssignment, setTenantAssignment] = useState(null); // { propertyId, unitId, buildingName, unitNumber } | null
+  const [loadingAssignment, setLoadingAssignment] = useState(false);
+  const [removeFromUnitLoading, setRemoveFromUnitLoading] = useState(false);
   const [showUnpaidRentModal, setShowUnpaidRentModal] = useState(false);
   const [editingUnpaidRent, setEditingUnpaidRent] = useState(null);
   
@@ -313,6 +308,50 @@ const SalesManagerDashboard = () => {
       setCreatePropertyUnits([{ unitNumber: '1', rent: '', bedrooms: 1, bathrooms: 1, status: 'Vacant', tenant: '' }]);
     }
   }, [showCreatePropertyModal]);
+
+  // When Edit Tenant modal opens, find which unit this tenant is assigned to (by name)
+  useEffect(() => {
+    if (!showEditClientModal || !editingClient || !owners?.length) {
+      setTenantAssignment(null);
+      setLoadingAssignment(false);
+      return;
+    }
+    const tenantName = (editingClient.Name || editingClient.name || '').trim().toLowerCase();
+    if (!tenantName) {
+      setTenantAssignment(null);
+      setLoadingAssignment(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingAssignment(true);
+    setTenantAssignment(null);
+    (async () => {
+      for (const owner of owners) {
+        if (cancelled) return;
+        try {
+          const data = await salesManagerService.getOwnerAssets(owner.id ?? owner.ID);
+          const list = Array.isArray(data) ? data : (data.assets || data.properties || []);
+          const buildings = list.filter((p) => ['building', 'villa'].includes((p.type ?? p.Type ?? '').toString().toLowerCase()));
+          for (const asset of buildings) {
+            if (cancelled) return;
+            const propId = asset.id ?? asset.ID;
+            if (!propId) continue;
+            const detail = await salesManagerService.getPropertyBuildingDetail(propId);
+            const units = detail.units || [];
+            const match = units.find((u) => (u.tenant || '').trim().toLowerCase() === tenantName);
+            if (match) {
+              if (!cancelled) setTenantAssignment({ propertyId: propId, unitId: match.id, buildingName: detail.buildingName || asset.name || asset.Address || 'Building', unitNumber: match.unitNumber || match.name || '—' });
+              return;
+            }
+          }
+        } catch (_) {
+          // continue next owner
+        }
+      }
+      if (!cancelled) setTenantAssignment(null);
+    })().finally(() => { if (!cancelled) setLoadingAssignment(false); });
+    return () => { cancelled = true; };
+  }, [showEditClientModal, editingClient, owners]);
 
   const setCreatePropertyUnitsCount = useCallback((n) => {
     const num = Math.max(1, parseInt(n, 10) || 1);
@@ -1185,11 +1224,11 @@ const SalesManagerDashboard = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const approvedClientId = formData.get('approvedClientId')?.trim();
-    const property = formData.get('property')?.trim();
+    const propertyIdOrAddress = formData.get('property')?.trim();
     const rent = formData.get('rent');
     const moveInDate = formData.get('moveInDate');
     
-    if (!approvedClientId || !property || !rent || !moveInDate) {
+    if (!approvedClientId || !propertyIdOrAddress || !rent || !moveInDate) {
       addNotification('Please select an approved client and fill all required fields', 'error');
       return;
     }
@@ -1199,6 +1238,11 @@ const SalesManagerDashboard = () => {
       addNotification('Selected approved client not found', 'error');
       return;
     }
+
+    // Property dropdown now stores property ID; resolve for display/API and for unit assignment
+    const selectedProperty = properties.find((p) => String(p.ID || p.id) === String(propertyIdOrAddress));
+    const propertyId = selectedProperty ? (selectedProperty.ID ?? selectedProperty.id) : null;
+    const propertyAddress = selectedProperty ? (selectedProperty.Address || selectedProperty.address || '') : propertyIdOrAddress;
 
     const depositPaid = Boolean(
       approvedClient.SecurityDepositPaid ||
@@ -1233,7 +1277,7 @@ const SalesManagerDashboard = () => {
       name: approvedClient.name || approvedClient.Name || '',
       email: approvedClient.email || approvedClient.Email || '',
       phone: approvedClient.phone || approvedClient.Phone || '',
-      property: property,
+      property: propertyAddress,
       unitNumber: unitNumber || null,
       amount: parseFloat(rent),
       moveInDate: moveInDate,
@@ -1246,6 +1290,34 @@ const SalesManagerDashboard = () => {
       console.log('Creating tenant with data:', tenantData);
       const newClient = await salesManagerService.createClient(tenantData);
       console.log('Created tenant response:', newClient);
+      
+      // Assign tenant to the selected building unit so it shows in Property Management
+      if (unitNumber && propertyId) {
+          try {
+            const buildingDetail = await salesManagerService.getPropertyBuildingDetail(propertyId);
+            const units = buildingDetail?.units || [];
+            const unitLabel = unitNumber.trim().toLowerCase();
+            const unitLabelShort = unitLabel.replace(/^unit\s*/i, '').trim();
+            let unit = units.find((u) => {
+              const uNum = (u.unitNumber || u.name || '').toString().trim().toLowerCase();
+              return uNum === unitLabel || uNum === unitLabelShort;
+            });
+            if (!unit && units.length > 0) {
+              const idx = parseInt(unitNumber.replace(/\D/g, ''), 10);
+              unit = (idx >= 1 && units[idx - 1]) ? units[idx - 1] : units[0];
+            }
+            if (unit) {
+              await salesManagerService.updatePropertyUnit(propertyId, unit.id, {
+                tenant: tenantData.name,
+                status: 'Occupied',
+                enterDate: moveInDate || new Date().toISOString().split('T')[0],
+              });
+            }
+          } catch (assignErr) {
+            console.warn('Tenant created but unit assignment failed:', assignErr);
+            addNotification('Tenant created; could not assign to unit. You can assign from Edit Tenant.', 'warning');
+          }
+      }
       
       // Check if password is returned in the response
       if (newClient.user && newClient.user.password) {
@@ -1327,102 +1399,29 @@ const SalesManagerDashboard = () => {
     }
   };
 
-  const handleAssignOwnerChange = async (e) => {
-    const ownerId = e.target.value || '';
-    setAssignOwnerId(ownerId);
-    setAssignBuildingId('');
-    setAssignUnitId('');
-    setAssignUnitsList([]);
-    if (!ownerId) {
-      setAssignOwnerAssets([]);
-      return;
-    }
-    setLoadingOwnerAssets(true);
-    try {
-      const data = await salesManagerService.getOwnerAssets(ownerId);
-      const list = Array.isArray(data) ? data : (data.properties || data.assets || []);
-      const normalized = list.map((p) => ({ id: p.id ?? p.ID, name: p.name ?? p.Name ?? p.address ?? p.Address ?? p.building ?? 'Building', type: (p.type ?? p.Type ?? '').toString().toLowerCase() }));
-      const buildingsAndVillas = normalized.filter((p) => p.type === 'building' || p.type === 'villa');
-      setAssignOwnerAssets(buildingsAndVillas);
-    } catch (err) {
-      addNotification(err.message || 'Failed to load buildings', 'error');
-      setAssignOwnerAssets([]);
-    } finally {
-      setLoadingOwnerAssets(false);
-    }
-  };
-
-  const handleAssignBuildingChange = async (e) => {
-    const propertyId = e.target.value || '';
-    setAssignBuildingId(propertyId);
-    setAssignUnitId('');
-    if (!propertyId) {
-      setAssignUnitsList([]);
-      return;
-    }
-    setLoadingAssignUnits(true);
-    try {
-      const data = await salesManagerService.getPropertyBuildingDetail(propertyId);
-      const units = data.units || [];
-      setAssignUnitsList(units);
-    } catch (err) {
-      addNotification(err.message || 'Failed to load apartments', 'error');
-      setAssignUnitsList([]);
-    } finally {
-      setLoadingAssignUnits(false);
-    }
-  };
-
-  const handleAssignTenantToUnit = async () => {
-    if (!editingClient || !assignBuildingId || !assignUnitId) return;
-    setAssignActionLoading(true);
-    try {
-      const tenantName = editingClient.Name || editingClient.name || '';
-      await salesManagerService.updatePropertyUnit(assignBuildingId, assignUnitId, {
-        tenant: tenantName,
-        status: 'Occupied',
-        enterDate: new Date().toISOString().split('T')[0],
-      });
-      addNotification(`Tenant assigned to room successfully`, 'success');
-      const data = await salesManagerService.getPropertyBuildingDetail(assignBuildingId);
-      setAssignUnitsList(data.units || []);
-      await loadData();
-    } catch (err) {
-      addNotification(err.message || 'Failed to assign tenant', 'error');
-    } finally {
-      setAssignActionLoading(false);
-    }
-  };
-
   const handleRemoveTenantFromUnit = async () => {
-    if (!editingClient || !assignBuildingId || !assignUnitId) return;
-    setAssignActionLoading(true);
+    if (!tenantAssignment) return;
+    setRemoveFromUnitLoading(true);
     try {
-      await salesManagerService.updatePropertyUnit(assignBuildingId, assignUnitId, {
+      await salesManagerService.updatePropertyUnit(tenantAssignment.propertyId, tenantAssignment.unitId, {
         tenant: null,
         status: 'Vacant',
         enterDate: null,
       });
-      addNotification('Tenant removed from room successfully', 'success');
-      const data = await salesManagerService.getPropertyBuildingDetail(assignBuildingId);
-      setAssignUnitsList(data.units || []);
+      addNotification('Tenant removed from unit. Apartment is now vacant.', 'success');
+      setTenantAssignment(null);
       await loadData();
     } catch (err) {
-      addNotification(err.message || 'Failed to remove tenant', 'error');
+      addNotification(err.message || 'Failed to remove tenant from unit', 'error');
     } finally {
-      setAssignActionLoading(false);
+      setRemoveFromUnitLoading(false);
     }
   };
 
-  const resetAssignState = () => {
-    setAssignOwnerId('');
-    setAssignOwnerAssets([]);
-    setAssignBuildingId('');
-    setAssignUnitsList([]);
-    setAssignUnitId('');
-    setLoadingOwnerAssets(false);
-    setLoadingAssignUnits(false);
-    setAssignActionLoading(false);
+  const resetEditClientModalState = () => {
+    setTenantAssignment(null);
+    setLoadingAssignment(false);
+    setRemoveFromUnitLoading(false);
   };
 
   const handleEditUnpaidRent = (unpaidRent) => {
@@ -5011,7 +5010,8 @@ const SalesManagerDashboard = () => {
                     <div className="form-group">
                       <label htmlFor="property">Property</label>
                       <select name="property" id="property" required onChange={(e) => {
-                        const selectedProperty = properties.find(p => (p.Address || p.address) === e.target.value);
+                        const val = e.target.value;
+                        const selectedProperty = val ? properties.find(p => String(p.ID || p.id) === val) : null;
                         if (selectedProperty) {
                           const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
                           const unitSelect = document.getElementById('unitNumber');
@@ -5024,8 +5024,6 @@ const SalesManagerDashboard = () => {
                               unitSelect.appendChild(option);
                             }
                           }
-                          
-                          // Auto-fill rent field with property's rent value
                           const rentInput = document.getElementsByName('rent')[0];
                           if (rentInput) {
                             const propertyRent = selectedProperty.Rent || selectedProperty.rent || 0;
@@ -5042,9 +5040,9 @@ const SalesManagerDashboard = () => {
                             const numberOfUnits = property.NumberOfUnits || property.numberOfUnits || 1;
                             const displayText = type ? `${address} - ${type} (${numberOfUnits} units)` : `${address} (${numberOfUnits} units)`;
                             return (
-                              <option key={propertyId || `property-${address}`} value={address}>
+                              <option key={propertyId || `property-${address}`} value={propertyId ?? ''}>
                                 {displayText}
-                            </option>
+                              </option>
                             );
                           })
                         ) : (
@@ -5261,7 +5259,7 @@ const SalesManagerDashboard = () => {
         <div className="modal-overlay" onClick={() => {
           setShowEditClientModal(false);
           setEditingClient(null);
-          resetAssignState();
+          resetEditClientModalState();
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -5269,7 +5267,7 @@ const SalesManagerDashboard = () => {
               <button className="modal-close" onClick={() => {
                 setShowEditClientModal(false);
                 setEditingClient(null);
-                resetAssignState();
+                resetEditClientModalState();
               }}>×</button>
             </div>
             <div className="modal-body">
@@ -5341,47 +5339,22 @@ const SalesManagerDashboard = () => {
                 </div>
 
                 <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '20px', paddingTop: '20px' }}>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Assign or remove from building & room</h4>
-                  <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '0.875rem' }}>Select owner, then building, then room number to assign this tenant to a unit or remove them from a unit.</p>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Owner</label>
-                      <select value={assignOwnerId} onChange={handleAssignOwnerChange} disabled={loadingOwnerAssets}>
-                        <option value="">Select owner</option>
-                        {owners.map((o) => (
-                          <option key={o.id ?? o.ID} value={o.id ?? o.ID}>{o.name ?? o.Name ?? 'Owner'}</option>
-                        ))}
-                      </select>
-                      {loadingOwnerAssets && <small style={{ color: '#6b7280' }}>Loading…</small>}
-                    </div>
-                    <div className="form-group">
-                      <label>Building / Villa</label>
-                      <select value={assignBuildingId} onChange={handleAssignBuildingChange} disabled={!assignOwnerId || loadingOwnerAssets || loadingAssignUnits}>
-                        <option value="">Select building or villa</option>
-                        {assignOwnerAssets.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                      {loadingAssignUnits && <small style={{ color: '#6b7280' }}>Loading rooms…</small>}
-                    </div>
-                    <div className="form-group">
-                      <label>Room / Apartment</label>
-                      <select value={assignUnitId} onChange={(e) => setAssignUnitId(e.target.value || '')} disabled={!assignBuildingId || loadingAssignUnits}>
-                        <option value="">Select room</option>
-                        {(assignUnitsList || []).map((u) => (
-                          <option key={u.id} value={u.id}>{u.unitNumber || u.name || `Room ${u.id}`}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap' }}>
-                    <button type="button" className="action-button primary" disabled={!assignUnitId || assignActionLoading} onClick={handleAssignTenantToUnit}>
-                      {assignActionLoading ? 'Processing…' : 'Assign to this room'}
-                    </button>
-                    <button type="button" className="action-button secondary" disabled={!assignUnitId || assignActionLoading} onClick={handleRemoveTenantFromUnit}>
-                      Remove from this room
-                    </button>
-                  </div>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Unit assignment</h4>
+                  {loadingAssignment ? (
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Loading where this tenant is placed…</p>
+                  ) : tenantAssignment ? (
+                    <>
+                      <p style={{ margin: '0 0 12px 0', color: '#374151', fontSize: '0.875rem' }}>
+                        Currently assigned to <strong>{tenantAssignment.buildingName}</strong>, Room <strong>{tenantAssignment.unitNumber}</strong>.
+                      </p>
+                      <button type="button" className="action-button secondary" disabled={removeFromUnitLoading} onClick={handleRemoveTenantFromUnit}>
+                        {removeFromUnitLoading ? 'Removing…' : 'Remove tenant from this unit'}
+                      </button>
+                      <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#6b7280' }}>The apartment will be set to vacant.</span>
+                    </>
+                  ) : (
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>This tenant is not assigned to any apartment unit.</p>
+                  )}
                 </div>
 
                 <div className="modal-footer">
@@ -5391,7 +5364,7 @@ const SalesManagerDashboard = () => {
                     onClick={() => {
                       setShowEditClientModal(false);
                       setEditingClient(null);
-                      resetAssignState();
+                      resetEditClientModalState();
                     }}
                   >
                     Cancel
