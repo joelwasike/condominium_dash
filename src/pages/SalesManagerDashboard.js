@@ -3061,37 +3061,37 @@ const SalesManagerDashboard = () => {
     return Array.from(props).sort();
   }, [clients]);
 
+  // Normalize status for filter comparison (e.g. "Waiting List" and "waiting list" match)
+  const normalizeStatus = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
+  const statusMatches = (clientStatus, filterStatus) => {
+    const a = normalizeStatus(clientStatus);
+    const b = normalizeStatus(filterStatus);
+    return a === b || a.replace(/\s/g, '') === b.replace(/\s/g, '');
+  };
+
   // Filter clients based on filters
   const filteredClients = useMemo(() => {
     return clients.filter(client => {
       // Status filter
       if (clientStatusFilter) {
-        const clientStatus = ((client.Status || client.status) || '').toLowerCase().replace(' ', '-');
-        const filterStatus = clientStatusFilter.toLowerCase();
-        if (clientStatus !== filterStatus && !clientStatus.includes(filterStatus)) {
-          return false;
-        }
+        const clientStatus = (client.Status || client.status || '').toString();
+        if (!statusMatches(clientStatus, clientStatusFilter)) return false;
       }
 
-      // Property filter
+      // Property filter (substring match)
       if (clientPropertyFilter) {
         const clientProperty = ((client.Property || client.property) || '').toLowerCase();
-        const filterProperty = clientPropertyFilter.toLowerCase();
-        if (clientProperty !== filterProperty && !clientProperty.includes(filterProperty)) {
-          return false;
-        }
+        const filterProperty = clientPropertyFilter.toLowerCase().trim();
+        if (!clientProperty.includes(filterProperty)) return false;
       }
 
-      // Search text filter
+      // Search text filter (name, email, phone)
       if (clientSearchText) {
-        const searchLower = clientSearchText.toLowerCase();
+        const searchLower = clientSearchText.toLowerCase().trim();
         const name = ((client.Name || client.name) || '').toLowerCase();
         const email = ((client.Email || client.email) || '').toLowerCase();
         const phone = ((client.Phone || client.phone) || '').toLowerCase();
-        
-        if (!name.includes(searchLower) && !email.includes(searchLower) && !phone.includes(searchLower)) {
-          return false;
-        }
+        if (!name.includes(searchLower) && !email.includes(searchLower) && !phone.includes(searchLower)) return false;
       }
 
       return true;
@@ -3571,11 +3571,50 @@ const SalesManagerDashboard = () => {
         </div>
       </div>
 
-      <div className="sa-transactions-filters">
-        <button className="sa-filter-button">
-          <Filter size={16} />
-          Filter
-        </button>
+      <div className="sa-transactions-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+        <Filter size={16} style={{ color: '#6b7280' }} />
+        <select
+          value={clientStatusFilter}
+          onChange={(e) => setClientStatusFilter(e.target.value)}
+          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '140px', fontSize: '0.875rem' }}
+          aria-label="Filter by status"
+        >
+          <option value="">All statuses</option>
+          <option value="Active">Active</option>
+          <option value="Overdue">Overdue</option>
+          <option value="Waiting List">Waiting List</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+        <input
+          type="text"
+          placeholder="Search by name, email, phone"
+          value={clientSearchText}
+          onChange={(e) => setClientSearchText(e.target.value)}
+          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '200px', fontSize: '0.875rem' }}
+          aria-label="Search tenants"
+        />
+        <input
+          type="text"
+          placeholder="Filter by property"
+          value={clientPropertyFilter}
+          onChange={(e) => setClientPropertyFilter(e.target.value)}
+          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '180px', fontSize: '0.875rem' }}
+          aria-label="Filter by property"
+        />
+        {(clientStatusFilter || clientPropertyFilter || clientSearchText) && (
+          <button
+            type="button"
+            className="action-button secondary"
+            style={{ padding: '8px 14px', fontSize: '0.875rem' }}
+            onClick={() => {
+              setClientStatusFilter('');
+              setClientPropertyFilter('');
+              setClientSearchText('');
+            }}
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       <div className="sa-section-card">
