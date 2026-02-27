@@ -324,6 +324,12 @@ export const salesManagerService = {
     });
   },
 
+  // Delete apartment/unit from a building or villa
+  deletePropertyUnit: async (propertyId, unitId) => {
+    const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/units/${unitId}`);
+    return await apiRequest(url, { method: 'DELETE' });
+  },
+
   // Import clients/tenants from Excel or CSV
   // Note: Backend endpoint accepts .xlsx, .xls, and .csv files
   importClientsFromExcel: async (file) => {

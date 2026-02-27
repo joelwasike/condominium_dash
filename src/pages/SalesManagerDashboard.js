@@ -2568,6 +2568,30 @@ const SalesManagerDashboard = () => {
                           >
                             Edit
                           </button>
+                          <button
+                            type="button"
+                            className="table-action-button"
+                            style={{ background: '#ef4444', color: '#fff', padding: '6px 12px' }}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const label = row.unitNumber || row.name || `Apartment ${i + 1}`;
+                              if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
+                              setPmLoading(true);
+                              try {
+                                await salesManagerService.deletePropertyUnit(pmPropertyId, row.id);
+                                addNotification('Unit deleted successfully', 'success');
+                                const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
+                                setBuildingDetail(data);
+                              } catch (err) {
+                                addNotification(err.message || 'Failed to delete unit', 'error');
+                              } finally {
+                                setPmLoading(false);
+                              }
+                            }}
+                            disabled={pmLoading}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -2649,6 +2673,30 @@ const SalesManagerDashboard = () => {
                             title="Edit apartment details"
                           >
                             Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="table-action-button"
+                            style={{ background: '#ef4444', color: '#fff', padding: '6px 12px' }}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const label = row.unitNumber || row.name || `Unit ${i + 1}`;
+                              if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
+                              setPmLoading(true);
+                              try {
+                                await salesManagerService.deletePropertyUnit(pmPropertyId, row.id);
+                                addNotification('Unit deleted successfully', 'success');
+                                const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
+                                setBuildingDetail(data);
+                              } catch (err) {
+                                addNotification(err.message || 'Failed to delete unit', 'error');
+                              } finally {
+                                setPmLoading(false);
+                              }
+                            }}
+                            disabled={pmLoading}
+                          >
+                            Delete
                           </button>
                         </div>
                       </td>
