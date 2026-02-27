@@ -2445,13 +2445,17 @@ const SalesManagerDashboard = () => {
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Properties</p>
             <p className="sa-metric-value">{totalProperties}</p>
-            </div>
+          </div>
           <div className="sa-metric-card">
-            <p className="sa-metric-label">Occupied</p>
+            <p className="sa-metric-label">Total Tenants</p>
+            <p className="sa-metric-value">{clients.length}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Occupied Villas</p>
             <p className="sa-metric-value">{occupiedCount}</p>
-            </div>
+          </div>
           <div className="sa-metric-card">
-            <p className="sa-metric-label">Vacant</p>
+            <p className="sa-metric-label">Vacant Villas</p>
             <p className="sa-metric-value">{vacantCount}</p>
           </div>
           <div className="sa-metric-card">
