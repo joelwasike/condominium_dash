@@ -273,8 +273,10 @@ const SalesManagerDashboard = () => {
   const [editApartmentStatusChoice, setEditApartmentStatusChoice] = useState('Vacant'); // for showing/hiding tenant + enter date in Edit Apartment modal
   const [landDetail, setLandDetail] = useState(null); // for land-detail view
   const [pmAddFormImages, setPmAddFormImages] = useState([]); // images for Add Building / Add Land
-  const [addApartmentPicture, setAddApartmentPicture] = useState('');
-  const [editApartmentPicture, setEditApartmentPicture] = useState('');
+  const [addApartmentPictures, setAddApartmentPictures] = useState([]); // multiple photos for Add Apartment
+  const [editApartmentPictures, setEditApartmentPictures] = useState([]); // multiple photos for Edit Apartment
+  const [showViewApartmentModal, setShowViewApartmentModal] = useState(false);
+  const [viewingUnit, setViewingUnit] = useState(null); // unit row for View Apartment modal
   const [pmLoading, setPmLoading] = useState(false); // Loading owner assets or building detail
   const [showPropertyBuildingType, setShowPropertyBuildingType] = useState(false); // For property form: show building type when type is Apartment
   const [createPropertyImages, setCreatePropertyImages] = useState([]); // URLs for new property images (Cloudinary)
@@ -859,6 +861,17 @@ const SalesManagerDashboard = () => {
       return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
+    }
+  };
+
+  const parseUnitPictures = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return typeof val === 'string' && val.trim() ? [val.trim()] : [];
     }
   };
 
@@ -1572,13 +1585,13 @@ const SalesManagerDashboard = () => {
         await salesManagerService.addApartmentToBuilding(pmPropertyId, {
           name: name || 'Unit',
           features,
-          picture: addApartmentPicture,
+          picture: addApartmentPictures.length > 0 ? JSON.stringify(addApartmentPictures) : undefined,
           rent,
           status: 'Vacant',
         });
         addNotification('Apartment added successfully', 'success');
         setShowAddApartmentModal(false);
-        setAddApartmentPicture('');
+        setAddApartmentPictures([]);
         const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
         setBuildingDetail(data);
       } catch (err) {
@@ -1601,11 +1614,11 @@ const SalesManagerDashboard = () => {
           numberOfUnits: 1,
           rent,
           landlord_id: pmOwnerId,
-          units: [{ unitNumber: name || '1', rent, status: 'Vacant', features, picture: addApartmentPicture }],
+          units: [{ unitNumber: name || '1', rent, status: 'Vacant', features, picture: addApartmentPictures.length > 0 ? JSON.stringify(addApartmentPictures) : undefined }],
         });
         addNotification('Apartment created successfully', 'success');
         setShowAddApartmentModal(false);
-        setAddApartmentPicture('');
+        setAddApartmentPictures([]);
         const data = await salesManagerService.getOwnerAssets(pmOwnerId);
         setOwnerAssets(data);
       } catch (err) {
@@ -1651,7 +1664,7 @@ const SalesManagerDashboard = () => {
         bedrooms,
         bathrooms,
         features,
-        picture: editApartmentPicture || undefined,
+        picture: editApartmentPictures.length > 0 ? JSON.stringify(editApartmentPictures) : undefined,
         rent,
         tenant: status === 'Occupied' ? tenant : null,
         status,
@@ -1660,7 +1673,7 @@ const SalesManagerDashboard = () => {
       addNotification('Apartment updated successfully', 'success');
       setShowEditApartmentModal(false);
       setEditingUnit(null);
-      setEditApartmentPicture('');
+      setEditApartmentPictures([]);
       setEditApartmentStatusChoice('Vacant');
       const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
       setBuildingDetail(data);
@@ -2397,7 +2410,7 @@ const SalesManagerDashboard = () => {
                     <th>price of rent</th>
                     <th>Enter date</th>
                     <th>Statut</th>
-                    <th>Edit</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2409,16 +2422,26 @@ const SalesManagerDashboard = () => {
                       <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
                       <td>{row.enterDate || '—'}</td>
                       <td>{row.status || row.statut || '—'}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="table-action-button contact"
-                          style={{ padding: '4px 8px' }}
-                          onClick={(e) => { e.stopPropagation(); setEditingUnit(row); setEditApartmentPicture(row.picture || ''); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}
-                          title="Edit apartment details"
-                        >
-                          ⋯
-                        </button>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="table-action-button edit"
+                            style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
+                            onClick={() => { setViewingUnit(row); setShowViewApartmentModal(true); }}
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            className="table-action-button contact"
+                            style={{ padding: '6px 12px' }}
+                            onClick={() => { setEditingUnit(row); setEditApartmentPictures(parseUnitPictures(row.picture)); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}
+                            title="Edit apartment details"
+                          >
+                            Edit
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -2469,7 +2492,7 @@ const SalesManagerDashboard = () => {
                     <th>price of rent</th>
                     <th>Enter date</th>
                     <th>Statut</th>
-                    <th>Edit</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2481,16 +2504,26 @@ const SalesManagerDashboard = () => {
                       <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
                       <td>{row.enterDate || '—'}</td>
                       <td>{row.status || row.statut || '—'}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="table-action-button contact"
-                          style={{ padding: '4px 8px' }}
-                          onClick={(e) => { e.stopPropagation(); setEditingUnit(row); setEditApartmentPicture(row.picture || ''); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}
-                          title="Edit apartment details"
-                        >
-                          ⋯
-                        </button>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="table-action-button edit"
+                            style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
+                            onClick={() => { setViewingUnit(row); setShowViewApartmentModal(true); }}
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            className="table-action-button contact"
+                            style={{ padding: '6px 12px' }}
+                            onClick={() => { setEditingUnit(row); setEditApartmentPictures(parseUnitPictures(row.picture)); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}
+                            title="Edit apartment details"
+                          >
+                            Edit
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -5793,11 +5826,11 @@ const SalesManagerDashboard = () => {
 
       {/* Add Apartment Modal (Property Management – for building or standalone) */}
       {showAddApartmentModal && (
-        <div className="modal-overlay" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPicture(''); }}>
+        <div className="modal-overlay" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPictures([]); }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{pmPropertyId && (pmView === 'building-detail' || pmView === 'villa-detail') ? 'Add Apartment to ' + pmBuildingName : 'Add Apartment'}</h3>
-              <button className="modal-close" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPicture(''); }}>×</button>
+              <button className="modal-close" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPictures([]); }}>×</button>
             </div>
             <form onSubmit={handleAddApartment}>
               <div className="modal-body">
@@ -5853,26 +5886,46 @@ const SalesManagerDashboard = () => {
                   <input type="number" name="apartmentRent" min="0" step="1000" placeholder="e.g. 200000" />
                 </div>
                 <div className="form-group">
-                  <label>Apartment picture</label>
-                  <input type="file" accept="image/*" disabled={uploadingImage} onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file || !file.type?.startsWith('image/')) return;
-                    setUploadingImage(true);
-                    try {
-                      const result = await cloudinaryService.uploadFile(file, 'property-images');
-                      if (result.success && result.url) setAddApartmentPicture(result.url);
-                    } catch (err) {
-                      addNotification('Failed to upload image', 'error');
-                    } finally {
-                      setUploadingImage(false);
-                    }
-                    e.target.value = '';
-                  }} />
-                  {addApartmentPicture && <img src={addApartmentPicture} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />}
+                  <label>Apartment photos</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={uploadingImage}
+                    onChange={async (e) => {
+                      const files = e.target.files;
+                      if (!files?.length) return;
+                      setUploadingImage(true);
+                      try {
+                        for (const file of Array.from(files)) {
+                          if (!file.type?.startsWith('image/')) continue;
+                          const result = await cloudinaryService.uploadFile(file, 'property-images');
+                          if (result.success && result.url) setAddApartmentPictures(prev => [...prev, result.url]);
+                        }
+                      } catch (err) {
+                        addNotification('Failed to upload image', 'error');
+                      } finally {
+                        setUploadingImage(false);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                  <small style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '4px' }}>You can select multiple photos (e.g. 5 or more).</small>
+                  {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
+                  {addApartmentPictures.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {addApartmentPictures.map((url, i) => (
+                        <div key={i} style={{ position: 'relative' }}>
+                          <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
+                          <button type="button" onClick={() => setAddApartmentPictures(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="action-button secondary" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPicture(''); }}>Cancel</button>
+                <button type="button" className="action-button secondary" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPictures([]); }}>Cancel</button>
                 <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Adding...' : 'Add Apartment'}</button>
               </div>
             </form>
@@ -5882,11 +5935,11 @@ const SalesManagerDashboard = () => {
 
       {/* Edit Apartment Modal (full details aligned with state of entry/exit) */}
       {showEditApartmentModal && editingUnit && (
-        <div className="modal-overlay" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); setEditApartmentStatusChoice('Vacant'); }}>
+        <div className="modal-overlay" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPictures([]); setEditApartmentStatusChoice('Vacant'); }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Edit apartment – {editingUnit.unitNumber || 'Unit'}</h3>
-              <button className="modal-close" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); setEditApartmentStatusChoice('Vacant'); }}>×</button>
+              <button className="modal-close" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPictures([]); setEditApartmentStatusChoice('Vacant'); }}>×</button>
             </div>
             <form onSubmit={handleEditApartment}>
               <div className="modal-body">
@@ -5998,29 +6051,95 @@ const SalesManagerDashboard = () => {
                   )}
                 </div>
                 <div className="form-group">
-                  <label>Apartment picture</label>
-                  <input type="file" accept="image/*" disabled={uploadingImage} onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file || !file.type?.startsWith('image/')) return;
-                    setUploadingImage(true);
-                    try {
-                      const result = await cloudinaryService.uploadFile(file, 'property-images');
-                      if (result.success && result.url) setEditApartmentPicture(result.url);
-                    } catch (err) {
-                      addNotification('Failed to upload image', 'error');
-                    } finally {
-                      setUploadingImage(false);
-                    }
-                    e.target.value = '';
-                  }} />
-                  {(editApartmentPicture || editingUnit.picture) && <img src={editApartmentPicture || editingUnit.picture} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />}
+                  <label>Apartment photos</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={uploadingImage}
+                    onChange={async (e) => {
+                      const files = e.target.files;
+                      if (!files?.length) return;
+                      setUploadingImage(true);
+                      try {
+                        for (const file of Array.from(files)) {
+                          if (!file.type?.startsWith('image/')) continue;
+                          const result = await cloudinaryService.uploadFile(file, 'property-images');
+                          if (result.success && result.url) setEditApartmentPictures(prev => [...prev, result.url]);
+                        }
+                      } catch (err) {
+                        addNotification('Failed to upload image', 'error');
+                      } finally {
+                        setUploadingImage(false);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                  <small style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '4px' }}>You can select multiple photos (e.g. 5 or more).</small>
+                  {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
+                  {editApartmentPictures.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {editApartmentPictures.map((url, i) => (
+                        <div key={i} style={{ position: 'relative' }}>
+                          <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
+                          <button type="button" onClick={() => setEditApartmentPictures(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="action-button secondary" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPicture(''); setEditApartmentStatusChoice('Vacant'); }}>Cancel</button>
+                <button type="button" className="action-button secondary" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPictures([]); setEditApartmentStatusChoice('Vacant'); }}>Cancel</button>
                 <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Saving...' : 'Save apartment'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Apartment Modal – full details + clickable photos */}
+      {showViewApartmentModal && viewingUnit && (
+        <div className="modal-overlay" onClick={() => { setShowViewApartmentModal(false); setViewingUnit(null); }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Apartment – {viewingUnit.unitNumber || 'Unit'}</h3>
+              <button className="modal-close" onClick={() => { setShowViewApartmentModal(false); setViewingUnit(null); }}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
+                <div><strong>Name</strong>: {viewingUnit.unitNumber || viewingUnit.name || '—'}</div>
+                <div><strong>Type</strong>: {viewingUnit.type || '—'}</div>
+                <div><strong>Bedrooms</strong>: {viewingUnit.bedrooms ?? '—'}</div>
+                <div><strong>Bathrooms</strong>: {viewingUnit.bathrooms ?? '—'}</div>
+                <div><strong>Rent</strong>: {typeof viewingUnit.rentPrice === 'number' ? viewingUnit.rentPrice.toLocaleString() : viewingUnit.rentPrice ?? '—'} F CFA</div>
+                <div><strong>Tenant</strong>: {viewingUnit.tenant || '—'}</div>
+                <div><strong>Status</strong>: {viewingUnit.status || viewingUnit.statut || '—'}</div>
+                <div><strong>Enter date</strong>: {viewingUnit.enterDate || '—'}</div>
+              </div>
+              {parseUnitPictures(viewingUnit.picture).length > 0 && (
+                <div style={{ marginTop: '16px' }}>
+                  <strong>Photos</strong>
+                  <small style={{ display: 'block', color: '#6b7280', marginTop: '4px' }}>Click an image to expand</small>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px' }}>
+                    {parseUnitPictures(viewingUnit.picture).map((url, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setExpandedImageUrl(url)}
+                        style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden' }}
+                      >
+                        <img src={url} alt="" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer" style={{ borderTop: '1px solid #e5e7eb', padding: '12px 20px' }}>
+              <button type="button" className="action-button secondary" onClick={() => { setShowViewApartmentModal(false); setViewingUnit(null); }}>Close</button>
+              <button type="button" className="action-button primary" onClick={() => { setShowViewApartmentModal(false); setViewingUnit(null); setEditingUnit(viewingUnit); setEditApartmentPictures(parseUnitPictures(viewingUnit.picture)); setEditApartmentStatusChoice((viewingUnit.status || viewingUnit.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}>Edit</button>
+            </div>
           </div>
         </div>
       )}
