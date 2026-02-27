@@ -2285,6 +2285,19 @@ const SalesManagerDashboard = () => {
     }).length;
     const villaOccupancyRate = totalVillas > 0 ? Math.round((occupiedVillas / totalVillas) * 100) : 0;
 
+    // All properties (for overall metrics)
+    const occupiedProperties = properties.filter(p => {
+      const total = p.NumberOfUnits ?? p.numberOfUnits ?? 1;
+      const filled = getFilledUnits(p);
+      return total > 0 && filled >= total;
+    }).length;
+    const vacantProperties = properties.filter(p => {
+      const total = p.NumberOfUnits ?? p.numberOfUnits ?? 1;
+      const filled = getFilledUnits(p);
+      return total === 0 || filled < total;
+    }).length;
+    const occupancyRate = totalProperties > 0 ? Math.round((occupiedProperties / totalProperties) * 100) : 0;
+
     // Occupancy detail view: single property overview (units, tenants, graph)
     if (occupancyDetailView === 'detail') {
       const detail = occupancyDetailData || {};
@@ -2451,12 +2464,24 @@ const SalesManagerDashboard = () => {
 
         <div className="sa-occupancy-metrics">
           <div className="sa-metric-card">
+            <p className="sa-metric-label">Total Properties</p>
+            <p className="sa-metric-value">{totalProperties}</p>
+          </div>
+          <div className="sa-metric-card">
             <p className="sa-metric-label">Total Villas</p>
             <p className="sa-metric-value">{totalVillas}</p>
           </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Tenants</p>
             <p className="sa-metric-value">{clients.length}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Occupied Properties</p>
+            <p className="sa-metric-value">{occupiedProperties}</p>
+          </div>
+          <div className="sa-metric-card">
+            <p className="sa-metric-label">Vacant Properties</p>
+            <p className="sa-metric-value">{vacantProperties}</p>
           </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Occupied Villas</p>
@@ -2468,7 +2493,7 @@ const SalesManagerDashboard = () => {
           </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Occupancy Rate</p>
-            <p className="sa-metric-value">{villaOccupancyRate}%</p>
+            <p className="sa-metric-value">{occupancyRate}%</p>
           </div>
         </div>
 
