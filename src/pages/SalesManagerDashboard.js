@@ -2367,15 +2367,21 @@ const SalesManagerDashboard = () => {
                     </thead>
                     <tbody>
                       {occupiedUnits.length > 0 ? (
-                        occupiedUnits.map((u, i) => (
+                        occupiedUnits.map((u, i) => {
+                          const tenantName = u.tenant || u.Tenant || '';
+                          return (
                           <tr key={u.id || i}>
-                            <td>{u.unitNumber || u.name || `Unit ${i + 1}`}</td>
-                            <td>{u.tenant || '—'}</td>
+                            <td>
+                              {u.unitNumber || u.name || `Unit ${i + 1}`}
+                              {tenantName ? <span style={{ color: '#6b7280', fontSize: '0.875rem' }}> – {tenantName}</span> : null}
+                            </td>
+                            <td>{tenantName || '—'}</td>
                             <td>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
                             <td>{u.enterDate || '—'}</td>
                             <td><span className="sa-status-pill occupied">{u.status || u.statut || 'Occupied'}</span></td>
                           </tr>
-                        ))
+                          );
+                        })
                       ) : (
                         <tr><td colSpan={5} className="sa-table-empty">No occupied units</td></tr>
                       )}
