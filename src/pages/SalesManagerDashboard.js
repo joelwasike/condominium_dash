@@ -2337,7 +2337,6 @@ const SalesManagerDashboard = () => {
                 <th>Status</th>
                 <th>Units (filled / total)</th>
                 <th>Property Type</th>
-                <th>Tenant</th>
                 <th>Rent</th>
                 <th>Urgency</th>
                 <th>Actions</th>
@@ -2389,7 +2388,6 @@ const SalesManagerDashboard = () => {
                             <span className="sa-cell-title">{property.PropertyType || property.propertyType || 'N/A'}</span>
                           </div>
                         </td>
-                        <td>{property.Tenant || property.tenant || 'No tenant'}</td>
                         <td>{property.Rent || property.rent ? `${property.Rent || property.rent} XOF/month` : 'N/A'}</td>
                         <td>
                           {property.Urgency || property.urgency ? (
@@ -2414,7 +2412,7 @@ const SalesManagerDashboard = () => {
                   })
               ) : (
                 <tr>
-                    <td colSpan={10} className="sa-table-empty">No properties found. Create your first property to get started.</td>
+                    <td colSpan={9} className="sa-table-empty">No properties found. Create your first property to get started.</td>
                 </tr>
               )}
             </tbody>
