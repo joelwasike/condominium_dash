@@ -1408,7 +1408,18 @@ const SalesManagerDashboard = () => {
         status: 'Vacant',
         enterDate: null,
       });
-      addNotification('Tenant removed from unit. Apartment is now vacant.', 'success');
+      if (editingClient) {
+        const clientId = editingClient.ID ?? editingClient.id;
+        if (clientId) {
+          try {
+            await salesManagerService.updateClient(clientId, { status: 'Inactive' });
+          } catch (clientErr) {
+            console.warn('Unit cleared but could not set tenant status to Inactive:', clientErr);
+            addNotification('Tenant removed from unit; could not set status to Inactive.', 'warning');
+          }
+        }
+      }
+      addNotification('Tenant removed from unit. Apartment is now vacant and tenant status set to Inactive.', 'success');
       setTenantAssignment(null);
       await loadData();
     } catch (err) {
@@ -5350,7 +5361,7 @@ const SalesManagerDashboard = () => {
                       <button type="button" className="action-button secondary" disabled={removeFromUnitLoading} onClick={handleRemoveTenantFromUnit}>
                         {removeFromUnitLoading ? 'Removing…' : 'Remove tenant from this unit'}
                       </button>
-                      <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#6b7280' }}>The apartment will be set to vacant.</span>
+                      <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#6b7280' }}>The apartment will be set to vacant and the tenant status to Inactive.</span>
                     </>
                   ) : (
                     <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>This tenant is not assigned to any apartment unit.</p>
