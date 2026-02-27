@@ -8,7 +8,10 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
@@ -234,6 +237,12 @@ const SalesManagerDashboard = () => {
   const [propertyUrgencyFilter, setPropertyUrgencyFilter] = useState('');
   const [alertTypeFilter, setAlertTypeFilter] = useState('');
   const [salesTypeFilter, setSalesTypeFilter] = useState(''); // Filter for sales properties by type
+
+  // Occupancy page: detail view when user clicks a property (building/apartment)
+  const [occupancyDetailView, setOccupancyDetailView] = useState('list'); // 'list' | 'detail'
+  const [occupancySelectedProperty, setOccupancySelectedProperty] = useState(null);
+  const [occupancyDetailData, setOccupancyDetailData] = useState(null);
+  const [occupancyDetailLoading, setOccupancyDetailLoading] = useState(false);
   
   // Tenant detail view (when a tenant row is clicked)
   const [selectedTenantId, setSelectedTenantId] = useState(null);
@@ -2228,6 +2237,25 @@ const SalesManagerDashboard = () => {
   );
   };
 
+  const handleOpenOccupancyDetail = async (property) => {
+    const propertyId = property.ID ?? property.id;
+    if (!propertyId) return;
+    setOccupancySelectedProperty(property);
+    setOccupancyDetailView('detail');
+    setOccupancyDetailData(null);
+    setOccupancyDetailLoading(true);
+    try {
+      const data = await salesManagerService.getPropertyBuildingDetail(propertyId);
+      setOccupancyDetailData(data);
+    } catch (err) {
+      console.error('Failed to load property occupancy detail:', err);
+      addNotification('Could not load property details. It may have no units.', 'error');
+      setOccupancyDetailData({ units: [], buildingName: property.Address || property.address || 'Property', totalApartments: 0, images: [] });
+    } finally {
+      setOccupancyDetailLoading(false);
+    }
+  };
+
   const renderOccupancy = () => {
     const totalProperties = properties.length;
     // Helper: filled units (from API or derived). Property is "fully occupied" only when filledUnits >= numberOfUnits.
@@ -2248,6 +2276,153 @@ const SalesManagerDashboard = () => {
     const occupiedCount = fullyOccupiedCount;
     const vacantCount = totalProperties - fullyOccupiedCount;
     const occupancyRate = totalProperties > 0 ? Math.round((occupiedCount / totalProperties) * 100) : 0;
+
+    // Occupancy detail view: single property overview (units, tenants, graph)
+    if (occupancyDetailView === 'detail') {
+      const detail = occupancyDetailData || {};
+      const units = detail.units || [];
+      const buildingName = detail.buildingName || occupancySelectedProperty?.Address || occupancySelectedProperty?.address || 'Property';
+      const totalUnits = detail.totalApartments ?? units.length;
+      const occupiedUnits = units.filter((u) => (u.status || u.statut || '').toString().toLowerCase() === 'occupied');
+      const vacantUnits = units.filter((u) => (u.status || u.statut || '').toString().toLowerCase() !== 'occupied');
+      const occupiedCountDetail = occupiedUnits.length;
+      const vacantCountDetail = vacantUnits.length;
+      const occupancyRateDetail = totalUnits > 0 ? Math.round((occupiedCountDetail / totalUnits) * 100) : 0;
+      const totalRent = occupiedUnits.reduce((sum, u) => sum + (Number(u.rentPrice) || Number(u.rent) || 0), 0);
+      const pieData = [
+        { name: 'Occupied', value: occupiedCountDetail, color: '#22c55e' },
+        { name: 'Vacant', value: vacantCountDetail, color: '#94a3b8' },
+      ].filter((d) => d.value > 0);
+
+      return (
+        <div className="sa-occupancy-page">
+          <div className="sa-occupancy-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setOccupancyDetailView('list'); setOccupancySelectedProperty(null); setOccupancyDetailData(null); }}>
+              <ArrowLeft size={18} />
+              Back
+            </button>
+            <div>
+              <h2>Occupancy: {buildingName}</h2>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>Units, tenants and occupancy overview</p>
+            </div>
+          </div>
+          {occupancyDetailLoading ? (
+            <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
+              <p className="sa-cell-sub" style={{ margin: 0 }}>Loading…</p>
+            </div>
+          ) : (
+            <>
+              <div className="sa-occupancy-metrics" style={{ marginTop: '20px' }}>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Total Units</p>
+                  <p className="sa-metric-value">{totalUnits}</p>
+                </div>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Occupied</p>
+                  <p className="sa-metric-value">{occupiedCountDetail}</p>
+                </div>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Vacant</p>
+                  <p className="sa-metric-value">{vacantCountDetail}</p>
+                </div>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Occupancy Rate</p>
+                  <p className="sa-metric-value">{occupancyRateDetail}%</p>
+                </div>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Total Rent (monthly)</p>
+                  <p className="sa-metric-value">{totalRent.toLocaleString()} XOF</p>
+                </div>
+              </div>
+              {pieData.length > 0 && (
+                <div className="sa-section-card" style={{ marginTop: '20px' }}>
+                  <h3 style={{ margin: '0 0 16px 0' }}>Occupancy</h3>
+                  <div style={{ width: '100%', maxWidth: 320, height: 240, margin: '0 auto' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}`}>
+                          {pieData.map((entry, index) => (
+                            <Cell key={entry.name} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => [value, 'Units']} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+              <div className="sa-section-card" style={{ marginTop: '20px' }}>
+                <h3 style={{ margin: '0 0 12px 0' }}>Occupied units</h3>
+                <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '0.875rem' }}>Units with current tenants</p>
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Unit</th>
+                        <th>Tenant</th>
+                        <th>Rent</th>
+                        <th>Enter date</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {occupiedUnits.length > 0 ? (
+                        occupiedUnits.map((u, i) => (
+                          <tr key={u.id || i}>
+                            <td>{u.unitNumber || u.name || `Unit ${i + 1}`}</td>
+                            <td>{u.tenant || '—'}</td>
+                            <td>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
+                            <td>{u.enterDate || '—'}</td>
+                            <td><span className="sa-status-pill occupied">{u.status || u.statut || 'Occupied'}</span></td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan={5} className="sa-table-empty">No occupied units</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="sa-section-card" style={{ marginTop: '20px' }}>
+                <h3 style={{ margin: '0 0 12px 0' }}>Vacant units</h3>
+                <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '0.875rem' }}>Available units</p>
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Unit</th>
+                        <th>Rent</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vacantUnits.length > 0 ? (
+                        vacantUnits.map((u, i) => (
+                          <tr key={u.id || i}>
+                            <td>{u.unitNumber || u.name || `Unit ${i + 1}`}</td>
+                            <td>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
+                            <td>{u.type || '—'}</td>
+                            <td><span className="sa-status-pill vacant">{u.status || u.statut || 'Vacant'}</span></td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan={4} className="sa-table-empty">No vacant units</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {totalUnits === 0 && (
+                <div className="sa-section-card" style={{ marginTop: '20px', padding: '24px', textAlign: 'center', color: '#6b7280' }}>
+                  <p style={{ margin: 0 }}>This property has no units in the system yet.</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
 
     return (
       <div className="sa-occupancy-page">
@@ -2351,8 +2526,15 @@ const SalesManagerDashboard = () => {
                     const remaining = Math.max(0, totalUnits - filledUnits);
                     const isFull = totalUnits > 0 && filledUnits >= totalUnits;
                     return (
-                      <tr key={propertyId}>
-                        <td>
+                      <tr
+                        key={propertyId}
+                        onClick={() => handleOpenOccupancyDetail(property)}
+                        style={{ cursor: 'pointer' }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpenOccupancyDetail(property); } }}
+                      >
+                        <td onClick={(e) => e.stopPropagation()}>
                           <input type="checkbox" />
                         </td>
                         <td>
@@ -2398,7 +2580,7 @@ const SalesManagerDashboard = () => {
                         'N/A'
                       )}
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                           <button
                             className="sa-action-button"
                             onClick={() => openEditPropertyModal(property)}
