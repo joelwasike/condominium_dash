@@ -2568,6 +2568,7 @@ const SalesManagerDashboard = () => {
                     <th>LOCATION</th>
                     <th>OCCUPANCY</th>
                     <th>STATUT</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2584,6 +2585,37 @@ const SalesManagerDashboard = () => {
                       <td>{row.location || row.localisation || '—'}</td>
                       <td>{row.occupancy ?? '—'}</td>
                       <td>{row.statut ?? '—'}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="table-action-button edit"
+                            style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
+                            onClick={async () => {
+                              setPmLoading(true);
+                              try {
+                                const full = await salesManagerService.getProperty(row.id);
+                                setSelectedPropertyDetail(full);
+                              } catch (err) {
+                                addNotification('Failed to load property details', 'error');
+                              } finally {
+                                setPmLoading(false);
+                              }
+                            }}
+                            disabled={pmLoading}
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            className="table-action-button edit"
+                            style={{ background: '#22c55e', color: '#fff', padding: '6px 12px' }}
+                            onClick={() => openEditPropertyModal(row)}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -4185,9 +4217,18 @@ const SalesManagerDashboard = () => {
             </div>
             <div className="modal-body" style={{ padding: '20px' }}>
               <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
-                <div><strong>Address</strong>: {selectedPropertyDetail.Address || selectedPropertyDetail.address || 'N/A'}</div>
+                <div><strong>Address / Name</strong>: {selectedPropertyDetail.Address || selectedPropertyDetail.address || 'N/A'}</div>
                 <div><strong>Type</strong>: {selectedPropertyDetail.Type || selectedPropertyDetail.type || 'N/A'}</div>
                 <div><strong>Property type</strong>: {selectedPropertyDetail.PropertyType || selectedPropertyDetail.propertyType || 'N/A'}</div>
+                {(selectedPropertyDetail.City || selectedPropertyDetail.city) && (
+                  <div><strong>City</strong>: {selectedPropertyDetail.City || selectedPropertyDetail.city}</div>
+                )}
+                {(selectedPropertyDetail.Neighborhood || selectedPropertyDetail.neighborhood) && (
+                  <div><strong>Neighborhood</strong>: {selectedPropertyDetail.Neighborhood || selectedPropertyDetail.neighborhood}</div>
+                )}
+                {(selectedPropertyDetail.TypeR || selectedPropertyDetail.typeR) && (
+                  <div><strong>Type (R+)</strong>: {selectedPropertyDetail.TypeR || selectedPropertyDetail.typeR}</div>
+                )}
                 {(selectedPropertyDetail.BuildingType || selectedPropertyDetail.buildingType) && (
                   <div><strong>Building type</strong>: {selectedPropertyDetail.BuildingType || selectedPropertyDetail.buildingType}</div>
                 )}
@@ -6184,6 +6225,7 @@ const SalesManagerDashboard = () => {
                     disabled={uploadingImage}
                     onChange={(e) => { const files = e.target.files; if (files?.length) handlePropertyImageUpload(files, true); e.target.value = ''; }}
                   />
+                  <small style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '4px' }}>You can select multiple photos at once (e.g. 5 or more).</small>
                   {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
                   {editPropertyImages.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
