@@ -193,6 +193,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   height: 100vh;
   background: #ffffff;
   overflow: hidden;
@@ -356,13 +357,17 @@
   box-shadow: 0 4px 8px rgba(17, 24, 39, 0.25);
 }
 
-.role-content {
+.role-content,
+.technician-content {
   flex: 1;
+  min-height: 0;
   padding: 24px 40px;
   display: flex;
   flex-direction: column;
   gap: 24px;
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   background: #ffffff;
 }
 

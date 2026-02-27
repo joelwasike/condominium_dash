@@ -2338,15 +2338,16 @@ const SalesManagerDashboard = () => {
               {pieData.length > 0 && (
                 <div className="sa-section-card" style={{ marginTop: '20px' }}>
                   <h3 style={{ margin: '0 0 16px 0' }}>Occupancy</h3>
-                  <div style={{ width: '100%', maxWidth: 320, height: 240, margin: '0 auto' }}>
+                  <div style={{ width: '100%', maxWidth: 340, height: 260, margin: '0 auto' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}`}>
-                          {pieData.map((entry, index) => (
+                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={72}>
+                          {pieData.map((entry) => (
                             <Cell key={entry.name} fill={entry.color} />
                           ))}
                         </Pie>
                         <Tooltip formatter={(value) => [value, 'Units']} />
+                        <Legend layout="horizontal" align="center" verticalAlign="bottom" />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
