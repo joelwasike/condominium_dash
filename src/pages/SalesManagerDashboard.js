@@ -2283,8 +2283,9 @@ const SalesManagerDashboard = () => {
       const units = detail.units || [];
       const buildingName = detail.buildingName || occupancySelectedProperty?.Address || occupancySelectedProperty?.address || 'Property';
       const totalUnits = detail.totalApartments ?? units.length;
-      const occupiedUnits = units.filter((u) => (u.status || u.statut || '').toString().toLowerCase() === 'occupied');
-      const vacantUnits = units.filter((u) => (u.status || u.statut || '').toString().toLowerCase() !== 'occupied');
+      const isUnitOccupied = (u) => (u.occupancyStatus || u.status || u.statut || '').toString().trim().toLowerCase() === 'occupied';
+      const occupiedUnits = units.filter(isUnitOccupied);
+      const vacantUnits = units.filter((u) => !isUnitOccupied(u));
       const occupiedCountDetail = occupiedUnits.length;
       const vacantCountDetail = vacantUnits.length;
       const occupancyRateDetail = totalUnits > 0 ? Math.round((occupiedCountDetail / totalUnits) * 100) : 0;
