@@ -2774,6 +2774,31 @@ const SalesManagerDashboard = () => {
                           >
                             Edit
                           </button>
+                          <button
+                            type="button"
+                            className="table-action-button"
+                            style={{ background: '#ef4444', color: '#fff', padding: '6px 12px' }}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const name = row.name || row.building || row.address || 'this property';
+                              if (!window.confirm(`Delete "${name}"? This will remove the property and all its units. This action cannot be undone.`)) return;
+                              setPmLoading(true);
+                              try {
+                                await salesManagerService.deleteProperty(row.id);
+                                addNotification('Property deleted successfully', 'success');
+                                const data = await salesManagerService.getOwnerAssets(pmOwnerId);
+                                setOwnerAssets(data);
+                                await loadData();
+                              } catch (err) {
+                                addNotification(err.message || 'Failed to delete property', 'error');
+                              } finally {
+                                setPmLoading(false);
+                              }
+                            }}
+                            disabled={pmLoading}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>

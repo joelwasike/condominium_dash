@@ -177,6 +177,12 @@ export const salesManagerService = {
     });
   },
 
+  // Delete property (and its units)
+  deleteProperty: async (propertyId) => {
+    const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.PROPERTIES}/${propertyId}`);
+    return await apiRequest(url, { method: 'DELETE' });
+  },
+
   // Get advertisements
   getAdvertisements: async () => {
     const url = buildApiUrl('/api/salesmanager/advertisements');
