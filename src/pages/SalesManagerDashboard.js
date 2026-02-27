@@ -247,6 +247,15 @@ const SalesManagerDashboard = () => {
   // Edit states
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
+  // Assign / remove tenant from building & room (Edit Tenant modal)
+  const [assignOwnerId, setAssignOwnerId] = useState('');
+  const [assignOwnerAssets, setAssignOwnerAssets] = useState([]);
+  const [assignBuildingId, setAssignBuildingId] = useState('');
+  const [assignUnitsList, setAssignUnitsList] = useState([]);
+  const [assignUnitId, setAssignUnitId] = useState('');
+  const [loadingOwnerAssets, setLoadingOwnerAssets] = useState(false);
+  const [loadingAssignUnits, setLoadingAssignUnits] = useState(false);
+  const [assignActionLoading, setAssignActionLoading] = useState(false);
   const [showUnpaidRentModal, setShowUnpaidRentModal] = useState(false);
   const [editingUnpaidRent, setEditingUnpaidRent] = useState(null);
   
@@ -1316,6 +1325,104 @@ const SalesManagerDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAssignOwnerChange = async (e) => {
+    const ownerId = e.target.value || '';
+    setAssignOwnerId(ownerId);
+    setAssignBuildingId('');
+    setAssignUnitId('');
+    setAssignUnitsList([]);
+    if (!ownerId) {
+      setAssignOwnerAssets([]);
+      return;
+    }
+    setLoadingOwnerAssets(true);
+    try {
+      const data = await salesManagerService.getOwnerAssets(ownerId);
+      const list = Array.isArray(data) ? data : (data.properties || data.assets || []);
+      const normalized = list.map((p) => ({ id: p.id ?? p.ID, name: p.name ?? p.Name ?? p.address ?? p.Address ?? p.building ?? 'Building', type: (p.type ?? p.Type ?? '').toString().toLowerCase() }));
+      const buildingsAndVillas = normalized.filter((p) => p.type === 'building' || p.type === 'villa');
+      setAssignOwnerAssets(buildingsAndVillas);
+    } catch (err) {
+      addNotification(err.message || 'Failed to load buildings', 'error');
+      setAssignOwnerAssets([]);
+    } finally {
+      setLoadingOwnerAssets(false);
+    }
+  };
+
+  const handleAssignBuildingChange = async (e) => {
+    const propertyId = e.target.value || '';
+    setAssignBuildingId(propertyId);
+    setAssignUnitId('');
+    if (!propertyId) {
+      setAssignUnitsList([]);
+      return;
+    }
+    setLoadingAssignUnits(true);
+    try {
+      const data = await salesManagerService.getPropertyBuildingDetail(propertyId);
+      const units = data.units || [];
+      setAssignUnitsList(units);
+    } catch (err) {
+      addNotification(err.message || 'Failed to load apartments', 'error');
+      setAssignUnitsList([]);
+    } finally {
+      setLoadingAssignUnits(false);
+    }
+  };
+
+  const handleAssignTenantToUnit = async () => {
+    if (!editingClient || !assignBuildingId || !assignUnitId) return;
+    setAssignActionLoading(true);
+    try {
+      const tenantName = editingClient.Name || editingClient.name || '';
+      await salesManagerService.updatePropertyUnit(assignBuildingId, assignUnitId, {
+        tenant: tenantName,
+        status: 'Occupied',
+        enterDate: new Date().toISOString().split('T')[0],
+      });
+      addNotification(`Tenant assigned to room successfully`, 'success');
+      const data = await salesManagerService.getPropertyBuildingDetail(assignBuildingId);
+      setAssignUnitsList(data.units || []);
+      await loadData();
+    } catch (err) {
+      addNotification(err.message || 'Failed to assign tenant', 'error');
+    } finally {
+      setAssignActionLoading(false);
+    }
+  };
+
+  const handleRemoveTenantFromUnit = async () => {
+    if (!editingClient || !assignBuildingId || !assignUnitId) return;
+    setAssignActionLoading(true);
+    try {
+      await salesManagerService.updatePropertyUnit(assignBuildingId, assignUnitId, {
+        tenant: null,
+        status: 'Vacant',
+        enterDate: null,
+      });
+      addNotification('Tenant removed from room successfully', 'success');
+      const data = await salesManagerService.getPropertyBuildingDetail(assignBuildingId);
+      setAssignUnitsList(data.units || []);
+      await loadData();
+    } catch (err) {
+      addNotification(err.message || 'Failed to remove tenant', 'error');
+    } finally {
+      setAssignActionLoading(false);
+    }
+  };
+
+  const resetAssignState = () => {
+    setAssignOwnerId('');
+    setAssignOwnerAssets([]);
+    setAssignBuildingId('');
+    setAssignUnitsList([]);
+    setAssignUnitId('');
+    setLoadingOwnerAssets(false);
+    setLoadingAssignUnits(false);
+    setAssignActionLoading(false);
   };
 
   const handleEditUnpaidRent = (unpaidRent) => {
@@ -5154,6 +5261,7 @@ const SalesManagerDashboard = () => {
         <div className="modal-overlay" onClick={() => {
           setShowEditClientModal(false);
           setEditingClient(null);
+          resetAssignState();
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -5161,6 +5269,7 @@ const SalesManagerDashboard = () => {
               <button className="modal-close" onClick={() => {
                 setShowEditClientModal(false);
                 setEditingClient(null);
+                resetAssignState();
               }}>×</button>
             </div>
             <div className="modal-body">
@@ -5231,6 +5340,50 @@ const SalesManagerDashboard = () => {
                   </div>
                 </div>
 
+                <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '20px', paddingTop: '20px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Assign or remove from building & room</h4>
+                  <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '0.875rem' }}>Select owner, then building, then room number to assign this tenant to a unit or remove them from a unit.</p>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Owner</label>
+                      <select value={assignOwnerId} onChange={handleAssignOwnerChange} disabled={loadingOwnerAssets}>
+                        <option value="">Select owner</option>
+                        {owners.map((o) => (
+                          <option key={o.id ?? o.ID} value={o.id ?? o.ID}>{o.name ?? o.Name ?? 'Owner'}</option>
+                        ))}
+                      </select>
+                      {loadingOwnerAssets && <small style={{ color: '#6b7280' }}>Loading…</small>}
+                    </div>
+                    <div className="form-group">
+                      <label>Building / Villa</label>
+                      <select value={assignBuildingId} onChange={handleAssignBuildingChange} disabled={!assignOwnerId || loadingOwnerAssets || loadingAssignUnits}>
+                        <option value="">Select building or villa</option>
+                        {assignOwnerAssets.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      {loadingAssignUnits && <small style={{ color: '#6b7280' }}>Loading rooms…</small>}
+                    </div>
+                    <div className="form-group">
+                      <label>Room / Apartment</label>
+                      <select value={assignUnitId} onChange={(e) => setAssignUnitId(e.target.value || '')} disabled={!assignBuildingId || loadingAssignUnits}>
+                        <option value="">Select room</option>
+                        {(assignUnitsList || []).map((u) => (
+                          <option key={u.id} value={u.id}>{u.unitNumber || u.name || `Room ${u.id}`}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap' }}>
+                    <button type="button" className="action-button primary" disabled={!assignUnitId || assignActionLoading} onClick={handleAssignTenantToUnit}>
+                      {assignActionLoading ? 'Processing…' : 'Assign to this room'}
+                    </button>
+                    <button type="button" className="action-button secondary" disabled={!assignUnitId || assignActionLoading} onClick={handleRemoveTenantFromUnit}>
+                      Remove from this room
+                    </button>
+                  </div>
+                </div>
+
                 <div className="modal-footer">
                   <button 
                     type="button" 
@@ -5238,6 +5391,7 @@ const SalesManagerDashboard = () => {
                     onClick={() => {
                       setShowEditClientModal(false);
                       setEditingClient(null);
+                      resetAssignState();
                     }}
                   >
                     Cancel
