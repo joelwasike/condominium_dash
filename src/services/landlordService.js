@@ -14,6 +14,15 @@ export const landlordService = {
     return await apiRequest(buildApiUrl('/api/landlord/properties'));
   },
 
+  // Get building/villa detail with units and images (shared property data - try landlord endpoint first, fallback to sales manager)
+  getPropertyBuildingDetail: async (propertyId) => {
+    try {
+      return await apiRequest(buildApiUrl(`/api/landlord/properties/${propertyId}/building-detail`));
+    } catch {
+      return await apiRequest(buildApiUrl(`/api/salesmanager/properties/${propertyId}/building-detail`));
+    }
+  },
+
   addProperty: async (propertyData) => {
     return await apiRequest(buildApiUrl('/api/landlord/properties'), {
       method: 'POST',
@@ -24,6 +33,11 @@ export const landlordService = {
   // Tenants
   getTenants: async () => {
     return await apiRequest(buildApiUrl('/api/landlord/tenants'));
+  },
+
+  // Get full tenant details by ID (same structure as Sales Manager getClient)
+  getTenant: async (tenantId) => {
+    return await apiRequest(buildApiUrl(`/api/landlord/tenants/${tenantId}`));
   },
 
   // Rents

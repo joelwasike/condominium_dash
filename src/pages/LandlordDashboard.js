@@ -15,7 +15,17 @@ import {
   Package,
   BarChart3,
   Settings,
-  Megaphone
+  Megaphone,
+  ArrowLeft,
+  Mail,
+  Phone,
+  MapPin,
+  Building,
+  FileCheck,
+  StickyNote,
+  MessageSquare,
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
@@ -110,6 +120,18 @@ const LandlordDashboard = () => {
   const [expenseEndDate, setExpenseEndDate] = useState('');
   const [paymentSubTab, setPaymentSubTab] = useState('net');
 
+  // Property/Asset flow: buildings list → building detail (apartments, images)
+  const [pmView, setPmView] = useState('list'); // 'list' | 'building-detail' | 'villa-detail'
+  const [buildingDetail, setBuildingDetail] = useState(null);
+  const [pmBuildingName, setPmBuildingName] = useState('');
+  const [pmPropertyId, setPmPropertyId] = useState(null);
+  const [pmLoading, setPmLoading] = useState(false);
+
+  // Tenant detail (same flow as Sales Manager)
+  const [selectedTenantId, setSelectedTenantId] = useState(null);
+  const [tenantDetail, setTenantDetail] = useState(null);
+  const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
+
   const handleKycUpload = (files, userRole) => {
     console.log('KYC files uploaded:', files, 'for role:', userRole);
     addNotification('KYC documents uploaded successfully!', 'success');
@@ -152,7 +174,7 @@ const LandlordDashboard = () => {
       
       const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, claimsData, inventoryData, trackingData, expensesData, quotesData] = await Promise.all([
         landlordService.getOverview(),
-        landlordService.getProperties(),
+        landlordService.getProperties().catch(() => []),
         landlordService.getTenants().catch(() => []),
         landlordService.getPayments(),
         landlordService.getRents().catch(() => null),
@@ -169,7 +191,23 @@ const LandlordDashboard = () => {
       ]);
       
       setOverviewData(overview);
-      setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      let props = Array.isArray(propertiesData) ? propertiesData : (propertiesData?.properties ?? propertiesData?.data ?? []);
+      if (!Array.isArray(props)) props = [];
+      if (props.length === 0) {
+        try {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const ownerId = user.ownerId ?? user.landlordId ?? user.id ?? user.ID;
+          if (ownerId) {
+            const { salesManagerService } = await import('../services/salesManagerService');
+            const ownerAssets = await salesManagerService.getOwnerAssets(ownerId);
+            const assets = ownerAssets?.assets ?? ownerAssets?.properties ?? [];
+            if (Array.isArray(assets) && assets.length > 0) props = assets;
+          }
+        } catch (e) {
+          console.warn('Landlord properties fallback failed:', e);
+        }
+      }
+      setProperties(props);
       setTenants(Array.isArray(tenantsData) ? tenantsData : []);
       setPayments(Array.isArray(paymentsData) ? paymentsData : []);
       setRents(rentsData);
@@ -181,6 +219,7 @@ const LandlordDashboard = () => {
       setMaintenanceQuotes(Array.isArray(quotesData) ? quotesData : []);
     } catch (error) {
       console.error('Error loading landlord data:', error);
+      setProperties([]);
       if (!isDemoMode()) {
         addNotification('Failed to load dashboard data', 'error');
       }
@@ -260,6 +299,30 @@ const LandlordDashboard = () => {
       loadExpenses();
     }
   }, [expensePropertyFilter, expenseStartDate, expenseEndDate, activeTab]);
+
+  // Fetch full tenant details when a tenant is selected (same as Sales Manager)
+  useEffect(() => {
+    if (!selectedTenantId) {
+      setTenantDetail(null);
+      return;
+    }
+    let cancelled = false;
+    const loadTenantDetail = async () => {
+      setTenantDetailLoading(true);
+      setTenantDetail(null);
+      try {
+        const data = await landlordService.getTenant(selectedTenantId);
+        if (!cancelled) setTenantDetail(data);
+      } catch (err) {
+        console.error('Failed to load tenant details:', err);
+        if (!cancelled) addNotification(err?.message || 'Failed to load tenant details', 'error');
+      } finally {
+        if (!cancelled) setTenantDetailLoading(false);
+      }
+    };
+    loadTenantDetail();
+    return () => { cancelled = true; };
+  }, [selectedTenantId]);
   
   // Load chat for a specific user
   const loadChatForUser = useCallback(async (userId) => {
@@ -1078,124 +1141,478 @@ const LandlordDashboard = () => {
         );
   };
       
-  const renderProperties = () => (
-    <div className="sa-clients-page">
-      <div className="sa-clients-header">
-        <div>
-          <h2>Property Management</h2>
-          <p>{properties.length} properties found</p>
-        </div>
-      </div>
-              
-      <div className="sa-table-wrapper">
-        <table className="sa-table">
-            <thead>
-              <tr>
-              <th>No</th>
-                <th>Property Address</th>
-                <th>Type</th>
-                <th>Property Type</th>
-                <th>Bedrooms</th>
-                <th>Bathrooms</th>
-                <th>Rent</th>
-                <th>Status</th>
-              <th />
-              </tr>
-            </thead>
-            <tbody>
-            {properties.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="sa-table-empty">No properties found</td>
-              </tr>
-            ) : (
-              properties.map((property, index) => (
-                <tr key={property.ID || property.id || `property-${index}`}>
-                  <td>{index + 1}</td>
-                  <td className="sa-cell-main">
-                    <span className="sa-cell-title">{property.Address || property.address || 'Unknown Address'}</span>
-                  </td>
-                  <td>
-                    <div className="sa-cell-main">
-                      <span className="sa-cell-title">{property.Type || property.type || 'N/A'}</span>
-                      {property.BuildingType || property.buildingType ? (
-                        <span className="sa-cell-sub">({property.BuildingType || property.buildingType})</span>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td>{property.PropertyType || property.propertyType || 'N/A'}</td>
-                  <td>{property.Bedrooms || property.bedrooms || 0}</td>
-                  <td>{property.Bathrooms || property.bathrooms || 0}</td>
-                  <td>{property.Rent?.toLocaleString() || property.rent?.toLocaleString() || 0} XOF/month</td>
-                  <td>
-                    <span className={`sa-status-pill ${(property.Status || property.status || 'vacant').toLowerCase()}`}>
-                      {property.Status || property.status || 'Vacant'}
-                    </span>
-                  </td>
-                  <td className="sa-row-actions">
-                    <button className="sa-icon-button" title="View">👁️</button>
-                    <button className="sa-icon-button" title="Edit">✏️</button>
-                  </td>
-                </tr>
-              ))
-            )}
-            </tbody>
-          </table>
-        </div>
-    </div>
-  );
+  const handleViewBuilding = async (property) => {
+    const propId = property.id ?? property.ID;
+    if (!propId) return;
+    setPmLoading(true);
+    try {
+      const data = await landlordService.getPropertyBuildingDetail(propId);
+      setBuildingDetail(data);
+      setPmPropertyId(propId);
+      setPmBuildingName(data.buildingName || property.name || property.building || property.Address || property.address || 'Building');
+      setPmView('building-detail');
+    } catch (err) {
+      console.error('Failed to load building detail:', err);
+      addNotification('Failed to load building detail', 'error');
+    } finally {
+      setPmLoading(false);
+    }
+  };
 
-  const renderTenants = () => (
-    <div className="sa-clients-page">
-      <div className="sa-clients-header">
-        <div>
-          <h2>Tenant Management</h2>
-          <p>{tenants.length} tenants found</p>
+  const handleViewVilla = async (property) => {
+    const propId = property.id ?? property.ID;
+    if (!propId) return;
+    setPmLoading(true);
+    try {
+      const data = await landlordService.getPropertyBuildingDetail(propId);
+      setBuildingDetail(data);
+      setPmPropertyId(propId);
+      setPmBuildingName(data.buildingName || property.name || property.building || property.Address || property.address || 'Villa');
+      setPmView('villa-detail');
+    } catch (err) {
+      console.error('Failed to load villa detail:', err);
+      addNotification('Failed to load villa detail', 'error');
+    } finally {
+      setPmLoading(false);
+    }
+  };
+
+  const renderProperties = () => {
+    // Building/Villa detail view – apartments table with images (read-only for landlord)
+    if (pmView === 'building-detail' && buildingDetail) {
+      const units = buildingDetail.units || [];
+      const totalApartments = buildingDetail.totalApartments ?? units.length;
+      const images = buildingDetail.images || [];
+      const firstImage = images[0];
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setBuildingDetail(null); setPmPropertyId(null); setPmBuildingName(''); }}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>Building {pmBuildingName} management</h2>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
+            {firstImage && (
+              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            )}
+            {images.length > 1 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {images.slice(1, 5).map((img, i) => (
+                  <img key={i} src={img} alt={`${pmBuildingName} ${i + 2}`} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />
+                ))}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
+              <p style={{ margin: 0, color: '#6b7280' }}>Total of apartments: <strong>{totalApartments}</strong></p>
+            </div>
+          </div>
+          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Apartments</th>
+                    <th>Type</th>
+                    <th>Tenant</th>
+                    <th>Rent</th>
+                    <th>Enter date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {units.map((row, i) => (
+                    <tr key={row.id || i}>
+                      <td>{row.unitNumber || row.name || `Apartment ${i + 1}`}</td>
+                      <td>{row.type || '—'}</td>
+                      <td>{row.tenant || '—'}</td>
+                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
+                      <td>{row.enterDate || '—'}</td>
+                      <td>{row.status || row.statut || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (pmView === 'villa-detail' && buildingDetail) {
+      const units = buildingDetail.units || [];
+      const totalApartments = buildingDetail.totalApartments ?? units.length;
+      const images = buildingDetail.images || [];
+      const firstImage = images[0];
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setBuildingDetail(null); setPmPropertyId(null); setPmBuildingName(''); }}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>Villa {pmBuildingName} management</h2>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
+            {firstImage && (
+              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            )}
+            {images.length > 1 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {images.slice(1, 5).map((img, i) => (
+                  <img key={i} src={img} alt={`${pmBuildingName} ${i + 2}`} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />
+                ))}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
+              <p style={{ margin: 0, color: '#6b7280' }}>Total of apartments: <strong>{totalApartments}</strong></p>
+            </div>
+          </div>
+          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Villa</th>
+                    <th>Type</th>
+                    <th>Tenant</th>
+                    <th>Rent</th>
+                    <th>Enter date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {units.map((row, i) => (
+                    <tr key={row.id || i}>
+                      <td>{row.unitNumber || row.name || 'VILLA'}</td>
+                      <td>{row.type || '—'}</td>
+                      <td>{row.tenant || '—'}</td>
+                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
+                      <td>{row.enterDate || '—'}</td>
+                      <td>{row.status || row.statut || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Buildings list – click to see apartments
+    const propType = (p) => (p.Type || p.type || p.PropertyType || p.propertyType || '').toString().toLowerCase();
+    const isBuilding = (p) => ['building', 'apartment', 'condo', 'house', 'studio'].some(t => propType(p).includes(t));
+    const isVilla = (p) => propType(p).includes('villa');
+    const buildings = properties.filter(isBuilding);
+    const villas = properties.filter(isVilla);
+    const others = properties.filter(p => !isBuilding(p) && !isVilla(p));
+
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header">
+          <div>
+            <h2>Property & Asset Management</h2>
+            <p>{properties.length} properties found – click a building or villa to see apartments</p>
+          </div>
+        </div>
+        {pmLoading && <p style={{ marginTop: 8 }}>Loading…</p>}
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Apartments</th>
+                  <th>Rent</th>
+                  <th>Location</th>
+                  <th>Occupancy</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {[...buildings, ...villas, ...others].map((property, index) => {
+                  const type = propType(property);
+                  const isV = type.includes('villa');
+                  const handleClick = () => isV ? handleViewVilla(property) : handleViewBuilding(property);
+                  const apartmentsDisplay = property.apartmentsDisplay ?? property.apartments ?? property.NumberOfUnits ?? property.numberOfUnits ?? '—';
+                  return (
+                    <tr
+                      key={property.ID || property.id || `property-${index}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={handleClick}
+                      className="clickable-row"
+                    >
+                      <td className="sa-cell-main">
+                        <span className="sa-cell-title">{property.Address || property.address || property.name || property.building || 'Unknown'}</span>
+                      </td>
+                      <td>{property.Type || property.type || 'N/A'}</td>
+                      <td>{apartmentsDisplay}</td>
+                      <td>{typeof property.rentPrice === 'number' ? property.rentPrice.toLocaleString() : property.Rent?.toLocaleString() || property.rent?.toLocaleString() || '—'}</td>
+                      <td>{property.location || property.localisation || property.Address || property.address || '—'}</td>
+                      <td>{property.occupancy ?? '—'}</td>
+                      <td>{property.statut || property.Status || property.status || '—'}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button type="button" className="sa-icon-button" title="View" onClick={handleClick}>👁️</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {properties.length === 0 && !pmLoading && (
+                  <tr>
+                    <td colSpan={8} className="sa-table-empty">No properties found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-              
-      <div className="sa-table-wrapper">
-        <table className="sa-table">
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Tenant Name</th>
-              <th>Property</th>
-              <th>Rent Amount</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {tenants.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="sa-table-empty">No tenants found</td>
-              </tr>
+    );
+  };
+
+  const renderTenantDetail = () => {
+    if (tenantDetailLoading) {
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
+            <p className="sa-cell-sub" style={{ margin: 0 }}>Loading tenant details…</p>
+          </div>
+        </div>
+      );
+    }
+    const c = tenantDetail?.client;
+    if (!c) {
+      return (
+        <div className="sa-clients-page">
+          <button type="button" className="sa-outline-button sa-tenant-detail-back-btn" onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }} style={{ marginBottom: '16px' }}>
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+          <div className="sa-section-card">
+            <p className="sa-cell-sub" style={{ margin: 0 }}>Tenant not found or failed to load.</p>
+          </div>
+        </div>
+      );
+    }
+    const prop = tenantDetail?.property;
+    const alertList = Array.isArray(tenantDetail?.alerts) ? tenantDetail.alerts : [];
+    const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances : [];
+    const paymentsList = Array.isArray(tenantDetail?.payments) ? tenantDetail.payments : [];
+    const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes : [];
+    const name = c.Name || c.name || 'N/A';
+    const email = c.Email || c.email || '';
+    const phone = c.Phone || c.phone || '';
+    const status = c.Status || c.status || 'Unknown';
+    const propertyAddr = c.Property || c.property || '—';
+    const unitNumber = c.UnitNumber ?? c.unitNumber ?? '—';
+    const amount = c.Amount ?? c.amount ?? 0;
+    const lastPayment = c.LastPayment ?? c.lastPayment;
+    const createdAt = c.CreatedAt ?? c.createdAt;
+    const updatedAt = c.UpdatedAt ?? c.updatedAt;
+
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header" style={{ marginBottom: '20px' }}>
+          <button type="button" className="sa-outline-button sa-tenant-detail-back-btn" onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}>
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+        </div>
+        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+          <div className="sa-tenant-detail-hero">
+            <div className="sa-tenant-detail-avatar">{(name || 'T').charAt(0).toUpperCase()}</div>
+            <div>
+              <h2>{name}</h2>
+              <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`} style={{ marginRight: '8px' }}>{status}</span>
+              {propertyAddr && propertyAddr !== '—' && (
+                <span className="sa-tenant-detail-meta">
+                  <MapPin size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                  {propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="sa-tenant-detail-grid">
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3><Users size={18} /> Personal information</h3>
+            <dl className="sa-tenant-detail-dl">
+              <div><dt>Name</dt><dd>{name}</dd></div>
+              {email && <div><dt>Email</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {email}</dd></div>}
+              {phone && <div><dt>Phone</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</dd></div>}
+              <div><dt>Status</dt><dd><span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`}>{status}</span></dd></div>
+              {createdAt && <div><dt>Member since</dt><dd>{new Date(createdAt).toLocaleDateString()}</dd></div>}
+            </dl>
+            <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}><FileCheck size={16} /> Files & documents</h4>
+            <p className="sa-cell-sub" style={{ margin: 0 }}>No files uploaded yet.</p>
+          </div>
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3><DollarSign size={18} /> Rent & payment</h3>
+            <dl className="sa-tenant-detail-dl">
+              <div><dt>Property</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</dd></div>
+              {unitNumber && unitNumber !== '—' && <div><dt>Unit</dt><dd>{unitNumber}</dd></div>}
+              <div><dt>Monthly rent</dt><dd className="sa-tenant-detail-value-bold">{Number(amount).toLocaleString()} XOF</dd></div>
+              <div><dt>Last payment</dt><dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</dd></div>
+            </dl>
+          </div>
+          {prop && (
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3><Building size={18} /> Property details</h3>
+              <dl className="sa-tenant-detail-dl">
+                <div><dt>Type</dt><dd>{prop.type || prop.Type || '—'}</dd></div>
+                {(prop.bedrooms ?? prop.Bedrooms) != null && <div><dt>Bedrooms</dt><dd>{prop.bedrooms ?? prop.Bedrooms}</dd></div>}
+                {(prop.bathrooms ?? prop.Bathrooms) != null && <div><dt>Bathrooms</dt><dd>{prop.bathrooms ?? prop.Bathrooms}</dd></div>}
+                <div><dt>Property status</dt><dd><span className={`sa-status-pill ${(prop.status || prop.Status || '').toLowerCase()}`}>{prop.status || prop.Status || '—'}</span></dd></div>
+              </dl>
+            </div>
+          )}
+          <div className="sa-section-card sa-tenant-detail-card" style={alertList.length ? undefined : { gridColumn: '1 / -1' }}>
+            <h3><AlertTriangle size={18} /> Alerts & activity</h3>
+            {alertList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {alertList.map((alert, idx) => (
+                  <li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item">
+                    <div className="sa-tenant-detail-alert-title">{alert.Title || alert.title || 'Alert'}</div>
+                    {alert.Message && <div className="sa-cell-sub" style={{ marginBottom: '4px' }}>{alert.Message}</div>}
+                    <div className="sa-tenant-detail-alert-meta">{(alert.Urgency || alert.urgency || '').toLowerCase()} · {alert.Status || alert.status || 'Open'}{alert.Amount != null && ` · ${Number(alert.Amount).toLocaleString()} XOF`}</div>
+                  </li>
+                ))}
+              </ul>
             ) : (
-              tenants.map((tenant, index) => (
-                <tr key={tenant.id || tenant.ID || `tenant-${index}`}>
-                  <td>{index + 1}</td>
-                  <td className="sa-cell-main">
-                    <span className="sa-cell-title">{tenant.name || tenant.Name || 'N/A'}</span>
-                  </td>
-                  <td>{tenant.property || tenant.Property || 'N/A'}</td>
-                  <td>{(tenant.amount || tenant.Amount || 0).toLocaleString()} XOF</td>
-                  <td>
-                    <span className={`sa-status-pill ${(tenant.status || tenant.Status || 'active').toLowerCase().replace(' ', '-')}`}>
-                      {tenant.status || tenant.Status || 'Active'}
-                    </span>
-                  </td>
-                  <td className="sa-row-actions">
-                    <button className="sa-icon-button" title="View">👁️</button>
-                    <button className="sa-icon-button" title="Edit">✏️</button>
-                  </td>
-                </tr>
-              ))
+              <p className="sa-cell-sub">No alerts for this tenant.</p>
             )}
-          </tbody>
-        </table>
+          </div>
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3><Wrench size={18} /> Maintenances requested</h3>
+            {maintenancesList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {maintenancesList.map((m, idx) => (
+                  <li key={m.ID ?? m.id ?? idx} className="sa-tenant-detail-alert-item">
+                    <div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div>
+                    <div className="sa-tenant-detail-alert-meta">{(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}{m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No maintenance requests for this tenant.</p>
+            )}
+          </div>
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3><Receipt size={18} /> Recent payment history</h3>
+            {paymentsList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {paymentsList.slice(0, 10).map((p, idx) => (
+                  <li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+                    <div className="sa-tenant-detail-alert-title">{Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}</div>
+                    <div className="sa-tenant-detail-alert-meta">{p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}{(p.Method || p.method) && ` · ${p.Method || p.method}`}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No payment history for this tenant.</p>
+            )}
+          </div>
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3><StickyNote size={18} /> Private notes</h3>
+            {privateNotesList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {privateNotesList.map((n) => (
+                  <li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}>
+                    <div className="sa-tenant-detail-alert-title">{n.note ?? n.Note}</div>
+                    <div className="sa-tenant-detail-alert-meta">{n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No private notes yet.</p>
+            )}
+          </div>
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3><AlertCircle size={18} /> Quick actions</h3>
+            <div className="sa-tenant-detail-quick-actions">
+              <button type="button" className="sa-outline-button" onClick={() => addNotification('Generate Receipt – feature coming soon', 'info')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Receipt size={16} /> Generate Receipt</button>
+              <button type="button" className="sa-outline-button" onClick={() => addNotification('Send Reminder SMS – feature coming soon', 'info')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={16} /> Send Reminder SMS</button>
+            </div>
+          </div>
+        </div>
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-tenant-detail-footer">
+            <span className="sa-tenant-detail-updated">Last updated: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}</span>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  const renderTenants = () => {
+    if (selectedTenantId) return renderTenantDetail();
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header">
+          <div>
+            <h2>Tenant Management</h2>
+            <p>{tenants.length} tenants found – click a tenant to see full details</p>
+          </div>
+        </div>
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Tenant Name</th>
+                  <th>Property</th>
+                  <th>Rent Amount</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {tenants.map((tenant, index) => {
+                  const tenantId = tenant.id ?? tenant.ID;
+                  const tenantName = tenant.name ?? tenant.Name ?? 'N/A';
+                  return (
+                    <tr
+                      key={tenantId ?? index}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => tenantId && setSelectedTenantId(String(tenantId))}
+                      className="clickable-row"
+                    >
+                      <td>{index + 1}</td>
+                      <td className="sa-cell-main"><span className="sa-cell-title">{tenantName}</span></td>
+                      <td>{tenant.property ?? tenant.Property ?? 'N/A'}</td>
+                      <td>{(tenant.amount ?? tenant.Amount ?? 0).toLocaleString()} XOF</td>
+                      <td><span className={`sa-status-pill ${(tenant.status ?? tenant.Status ?? 'active').toLowerCase().replace(/\s+/g, '-')}`}>{tenant.status ?? tenant.Status ?? 'Active'}</span></td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button type="button" className="sa-icon-button" title="View" onClick={() => tenantId && setSelectedTenantId(String(tenantId))}>👁️</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {tenants.length === 0 && (
+                  <tr><td colSpan={6} className="sa-table-empty">No tenants found</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderDocuments = () => (
     <div className="sa-clients-page">
