@@ -3115,6 +3115,7 @@ const SalesManagerDashboard = () => {
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>Email</th>
                   <th>Total of assets</th>
                   <th>Property for sell</th>
                   <th>Property for manage</th>
@@ -3140,6 +3141,7 @@ const SalesManagerDashboard = () => {
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{owner.name || owner.Name || 'N/A'}</span>
                       </td>
+                      <td>{owner.email || owner.Email || '—'}</td>
                       <td>{totalOfAssets}</td>
                       <td>{propertyForSell}</td>
                       <td>{propertyForManage}</td>
@@ -3150,7 +3152,7 @@ const SalesManagerDashboard = () => {
                 })}
                 {filteredOwners.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="sa-table-empty">
+                    <td colSpan={7} className="sa-table-empty">
                       No owners found. Ask the Agency Director to add property owners.
                     </td>
                   </tr>
