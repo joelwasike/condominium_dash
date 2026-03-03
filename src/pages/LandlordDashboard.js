@@ -119,6 +119,8 @@ const LandlordDashboard = () => {
   const [expenseStartDate, setExpenseStartDate] = useState('');
   const [expenseEndDate, setExpenseEndDate] = useState('');
   const [paymentSubTab, setPaymentSubTab] = useState('net');
+  const [tenantNameFilter, setTenantNameFilter] = useState('');
+  const [tenantPropertyFilter, setTenantPropertyFilter] = useState('');
 
   // Property/Asset flow: buildings list → building detail (apartments, images)
   const [pmView, setPmView] = useState('list'); // 'list' | 'building-detail' | 'villa-detail'
@@ -1560,12 +1562,43 @@ const LandlordDashboard = () => {
 
   const renderTenants = () => {
     if (selectedTenantId) return renderTenantDetail();
+    const filteredTenants = tenants.filter(t => {
+      const name = (t.name ?? t.Name ?? '').toLowerCase();
+      const prop = (t.property ?? t.Property ?? '');
+      const nameMatch = !tenantNameFilter || name.includes(tenantNameFilter.toLowerCase().trim());
+      const propMatch = !tenantPropertyFilter || prop === tenantPropertyFilter;
+      return nameMatch && propMatch;
+    });
+    const tenantProps = tenants.map(t => t.property ?? t.Property).filter(Boolean);
+    const landlordProps = properties.map(p => p.Address ?? p.address ?? p.name).filter(Boolean);
+    const uniqueProperties = [...new Set([...tenantProps, ...landlordProps])].filter(Boolean).sort();
     return (
       <div className="sa-clients-page">
         <div className="sa-clients-header">
           <div>
             <h2>Tenant Management</h2>
-            <p>{tenants.length} tenants found – click a tenant to see full details</p>
+            <p>{filteredTenants.length} tenants found – click a tenant to see full details</p>
+          </div>
+          <div className="sa-clients-header-right">
+            <div className="sa-filters-section">
+            <input
+              type="text"
+              className="sa-filter-select"
+              placeholder="Filter by name..."
+              value={tenantNameFilter}
+              onChange={(e) => setTenantNameFilter(e.target.value)}
+            />
+            <select
+              className="sa-filter-select"
+              value={tenantPropertyFilter}
+              onChange={(e) => setTenantPropertyFilter(e.target.value)}
+            >
+              <option value="">All Properties</option>
+              {uniqueProperties.map(addr => (
+                <option key={addr} value={addr}>{addr}</option>
+              ))}
+            </select>
+            </div>
           </div>
         </div>
         <div className="sa-section-card" style={{ marginTop: '20px' }}>
@@ -1582,7 +1615,7 @@ const LandlordDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {tenants.map((tenant, index) => {
+                {filteredTenants.map((tenant, index) => {
                   const tenantId = tenant.id ?? tenant.ID;
                   const tenantName = tenant.name ?? tenant.Name ?? 'N/A';
                   return (
@@ -1603,7 +1636,7 @@ const LandlordDashboard = () => {
                     </tr>
                   );
                 })}
-                {tenants.length === 0 && (
+                {filteredTenants.length === 0 && (
                   <tr><td colSpan={6} className="sa-table-empty">No tenants found</td></tr>
                 )}
               </tbody>
