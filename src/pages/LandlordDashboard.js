@@ -1339,6 +1339,7 @@ const LandlordDashboard = () => {
                   <th>Type</th>
                   <th>Apartments</th>
                   <th>Rent</th>
+                  <th>Income</th>
                   <th>Location</th>
                   <th>Occupancy</th>
                   <th>Status</th>
@@ -1364,6 +1365,7 @@ const LandlordDashboard = () => {
                       <td>{property.Type || property.type || 'N/A'}</td>
                       <td>{apartmentsDisplay}</td>
                       <td>{typeof property.rentPrice === 'number' ? property.rentPrice.toLocaleString() : property.Rent?.toLocaleString() || property.rent?.toLocaleString() || '—'}</td>
+                      <td>{(property.income ?? property.Income ?? 0).toLocaleString()} XOF</td>
                       <td>{property.location || property.localisation || property.Address || property.address || '—'}</td>
                       <td>{property.occupancy ?? '—'}</td>
                       <td>{property.statut || property.Status || property.status || '—'}</td>
@@ -1375,7 +1377,7 @@ const LandlordDashboard = () => {
                 })}
                 {properties.length === 0 && !pmLoading && (
                   <tr>
-                    <td colSpan={8} className="sa-table-empty">No properties found</td>
+                    <td colSpan={9} className="sa-table-empty">No properties found</td>
                   </tr>
                 )}
               </tbody>
