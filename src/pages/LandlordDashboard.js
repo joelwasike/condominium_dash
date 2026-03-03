@@ -2049,22 +2049,27 @@ const LandlordDashboard = () => {
     const q = selectedQuote;
     if (!q) return null;
 
-    const maintenanceId = q.MaintenanceID ?? q.maintenanceId ?? q.MaintenanceId;
-    const linkedMaintenance = maintenanceId && Array.isArray(maintenances)
-      ? maintenances.find((m) => (m.ID ?? m.id) === maintenanceId)
-      : null;
-
+    // Photos come from: 1) quote.maintenance (API now includes it), 2) linked maintenance from maintenances list
     let photos = [];
-    if (linkedMaintenance) {
-      try {
-        const raw = linkedMaintenance.Photos || linkedMaintenance.photos || linkedMaintenance.PhotoURLs || linkedMaintenance.photoURLs;
-        if (Array.isArray(raw)) {
-          photos = raw;
-        } else if (typeof raw === 'string' && raw.trim()) {
-          photos = JSON.parse(raw) || [];
+    const maint = q.maintenance ?? q.Maintenance;
+    if (maint) {
+      const raw = maint.Photos ?? maint.photos ?? maint.PhotoURLs ?? maint.photoURLs;
+      if (Array.isArray(raw)) photos = raw;
+      else if (typeof raw === 'string' && raw.trim()) {
+        try { photos = JSON.parse(raw) || []; } catch (_) { photos = []; }
+      }
+    }
+    if (photos.length === 0) {
+      const maintenanceId = q.MaintenanceID ?? q.maintenanceId ?? q.MaintenanceId;
+      const linkedMaintenance = maintenanceId && Array.isArray(maintenances)
+        ? maintenances.find((m) => String(m.ID ?? m.id) === String(maintenanceId))
+        : null;
+      if (linkedMaintenance) {
+        const raw = linkedMaintenance.Photos ?? linkedMaintenance.photos ?? linkedMaintenance.PhotoURLs ?? linkedMaintenance.photoURLs;
+        if (Array.isArray(raw)) photos = raw;
+        else if (typeof raw === 'string' && raw.trim()) {
+          try { photos = JSON.parse(raw) || []; } catch (_) { photos = []; }
         }
-      } catch (_) {
-        photos = [];
       }
     }
 
