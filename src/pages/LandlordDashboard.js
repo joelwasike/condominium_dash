@@ -135,6 +135,9 @@ const LandlordDashboard = () => {
   const [tenantDetail, setTenantDetail] = useState(null);
   const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
 
+  // Maintenance detail (Works & Claims - click to view full details)
+  const [selectedMaintenance, setSelectedMaintenance] = useState(null);
+
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setNotifications(prev => [...prev, { id, message, type }]);
@@ -1870,7 +1873,182 @@ const LandlordDashboard = () => {
                   </div>
   );
 
-  const renderWorksAndClaims = () => (
+  const renderMaintenanceDetail = () => {
+    const m = selectedMaintenance;
+    if (!m) return null;
+
+    let photos = [];
+    try {
+      const raw = m.Photos || m.photos || m.PhotoURLs || m.photoURLs;
+      if (Array.isArray(raw)) {
+        photos = raw;
+      } else if (typeof raw === 'string' && raw.trim()) {
+        photos = JSON.parse(raw) || [];
+      }
+    } catch (_) {
+      photos = [];
+    }
+
+    const status = (m.Status || m.status || '').toLowerCase();
+    const canApprove = status !== 'approved' && status !== 'completed';
+
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header" style={{ marginBottom: '20px' }}>
+          <button
+            type="button"
+            className="sa-outline-button sa-tenant-detail-back-btn"
+            onClick={() => setSelectedMaintenance(null)}
+          >
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+        </div>
+        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+          <div className="sa-section-header" style={{ marginBottom: '24px' }}>
+            <div>
+              <h2>Maintenance Request Details</h2>
+              <p>Review all details and approve to authorize work</p>
+            </div>
+            {canApprove && (
+              <button
+                className="sa-primary-cta"
+                style={{ backgroundColor: '#16a34a' }}
+                disabled={loading}
+                onClick={async () => {
+                  try {
+                    await landlordService.approveMaintenance(m.ID || m.id);
+                    addNotification('Maintenance approved successfully', 'success');
+                    setSelectedMaintenance(null);
+                    loadData();
+                  } catch (err) {
+                    console.error('Error approving maintenance:', err);
+                    addNotification(err?.message || 'Failed to approve maintenance', 'error');
+                  }
+                }}
+              >
+                <FileCheck size={18} />
+                Approve Maintenance
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Issue / Description</label>
+              <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap', fontSize: '1rem' }}>
+                {m.Issue || m.issue || 'N/A'}
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+              <div>
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Property</label>
+                <p style={{ margin: 0, color: '#1f2937' }}>{m.Property || m.property || '—'}</p>
+              </div>
+              <div>
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Tenant</label>
+                <p style={{ margin: 0, color: '#1f2937' }}>{m.Tenant || m.tenant || '—'}</p>
+              </div>
+              <div>
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Priority</label>
+                <span className={`sa-status-pill ${(m.Priority || m.priority || 'medium').toLowerCase()}`}>
+                  {m.Priority || m.priority || 'Medium'}
+                </span>
+              </div>
+              <div>
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label>
+                <span className={`sa-status-pill ${status || 'pending'}`}>
+                  {m.Status || m.status || 'Pending'}
+                </span>
+              </div>
+              <div>
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
+                <p style={{ margin: 0, color: '#1f2937' }}>
+                  {m.Date || m.date || m.CreatedAt || m.createdAt
+                    ? new Date(m.Date || m.date || m.CreatedAt || m.createdAt).toLocaleDateString()
+                    : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Estimated Cost</label>
+                <p style={{ margin: 0, color: '#1f2937' }}>
+                  {((m.EstimatedCost ?? m.estimatedCost) || 0).toLocaleString()} XOF
+                </p>
+              </div>
+              <div>
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Estimated Hours</label>
+                <p style={{ margin: 0, color: '#1f2937' }}>
+                  {m.EstimatedHours ?? m.estimatedHours ?? 0} h
+                </p>
+              </div>
+              {(m.Assigned || m.assigned) && (
+                <div>
+                  <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Assigned To</label>
+                  <p style={{ margin: 0, color: '#1f2937' }}>{m.Assigned || m.assigned}</p>
+                </div>
+              )}
+            </div>
+
+            {photos.length > 0 && (
+              <div>
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Photos ({photos.length})</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
+                  {photos.map((photoUrl, index) => {
+                    const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
+                    if (!url) return null;
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          position: 'relative',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          aspectRatio: '1',
+                          backgroundColor: '#f3f4f6',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        <img
+                          src={url}
+                          alt={`Maintenance photo ${index + 1}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => window.open(url, '_blank')}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            const parent = e.target.parentElement;
+                            if (parent && !parent.querySelector('.sa-photo-fallback')) {
+                              const fallback = document.createElement('div');
+                              fallback.className = 'sa-photo-fallback';
+                              fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
+                              fallback.textContent = 'Image not available';
+                              parent.appendChild(fallback);
+                            }
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderWorksAndClaims = () => {
+    if (selectedMaintenance) {
+      return renderMaintenanceDetail();
+    }
+
+    return (
     <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
@@ -1885,7 +2063,7 @@ const LandlordDashboard = () => {
               <div className="sa-section-header">
                 <div>
                   <h3>Maintenance Requests</h3>
-                  <p>Maintenance requests from technicians for your properties – approve to authorize work</p>
+                  <p>Maintenance requests from technicians for your properties – click a row to view details and approve</p>
                 </div>
               </div>
               <div className="sa-table-wrapper">
@@ -1908,7 +2086,12 @@ const LandlordDashboard = () => {
                       const status = (m.Status || m.status || '').toLowerCase();
                       const canApprove = status !== 'approved' && status !== 'completed';
                       return (
-                        <tr key={m.ID || m.id || `maint-${index}`}>
+                        <tr
+                          key={m.ID || m.id || `maint-${index}`}
+                          className="clickable-row"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setSelectedMaintenance(m)}
+                        >
                           <td>{index + 1}</td>
                           <td>{m.Date || m.date ? new Date(m.Date || m.date).toLocaleDateString() : 'N/A'}</td>
                           <td>{m.Property || m.property || 'N/A'}</td>
@@ -1927,7 +2110,7 @@ const LandlordDashboard = () => {
                               {m.Status || m.status || 'Pending'}
                             </span>
                           </td>
-                          <td className="sa-row-actions">
+                          <td className="sa-row-actions" onClick={(e) => e.stopPropagation()}>
                             {canApprove && (
                               <button
                                 className="table-action-button edit"
@@ -2151,7 +2334,8 @@ const LandlordDashboard = () => {
             </div>
           </div>
         );
-      
+  };
+  
   const renderInventory = () => (
     <div className="sa-clients-page">
       <div className="sa-clients-header">
