@@ -78,8 +78,36 @@ export const getLandlordDemoData = () => ({
   claims: [],
   inventory: [],
   businessTracking: {
-    monthlyRent: [450000, 500000, 480000, 520000, 500000, 550000],
-    netPayout: [360000, 400000, 384000, 416000, 400000, 440000]
+    revenueTrends: '+10%',
+    occupancyRate: 80,
+    maintenanceCosts: 240000,
+    roi: 8.5,
+    totalRevenue: 3000000,
+    netProfit: 2760000,
+    revenueByMonth: [
+      { month: 'Sep', revenue: 450000 },
+      { month: 'Oct', revenue: 500000 },
+      { month: 'Nov', revenue: 480000 },
+      { month: 'Dec', revenue: 520000 },
+      { month: 'Jan', revenue: 500000 },
+      { month: 'Feb', revenue: 550000 }
+    ],
+    expensesByMonth: [
+      { month: 'Sep', expenses: 38000 },
+      { month: 'Oct', expenses: 42000 },
+      { month: 'Nov', expenses: 35000 },
+      { month: 'Dec', expenses: 45000 },
+      { month: 'Jan', expenses: 40000 },
+      { month: 'Feb', expenses: 40000 }
+    ],
+    occupancyByMonth: [
+      { month: 'Sep', rate: 75 },
+      { month: 'Oct', rate: 78 },
+      { month: 'Nov', rate: 80 },
+      { month: 'Dec', rate: 80 },
+      { month: 'Jan', rate: 82 },
+      { month: 'Feb', rate: 80 }
+    ]
   },
   expenses: []
 });
