@@ -154,7 +154,7 @@ const LandlordDashboard = () => {
         setProperties(demoData.properties);
         setTenants(demoData.tenants);
         setPayments(demoData.payments);
-        setRents(demoData.overview);
+        setRents(demoData.rents || demoData.overview);
         setWorkOrders(demoData.workOrders);
         setClaims(demoData.claims);
         setInventory(demoData.inventory);
@@ -2209,21 +2209,21 @@ const LandlordDashboard = () => {
                           <span className={`sa-status-pill ${(rent.status || rent.Status || 'approved').toLowerCase()}`}>
                             {rent.status || rent.Status || 'Approved'}
                           </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              </div>
+            </div>
           )}
 
           {rents.pendingRents && rents.pendingRents.length > 0 && (
             <div className="sa-section-card">
               <div className="sa-section-header">
                 <div>
-                  <h3>Pending Rents</h3>
-                  <p>{rents.pendingRents.length} pending rent payments</p>
+                  <h3>Tenants Who Have Not Paid</h3>
+                  <p>{rents.pendingRents.length} unpaid rent payment(s) – Pending and Overdue</p>
                 </div>
               </div>
               <div className="sa-table-wrapper">
@@ -2234,11 +2234,16 @@ const LandlordDashboard = () => {
                       <th>Tenant</th>
                       <th>Property</th>
                       <th>Amount</th>
+                      <th>Due Date</th>
+                      <th>Days Overdue</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rents.pendingRents.map((rent, index) => (
+                    {rents.pendingRents.map((rent, index) => {
+                      const daysOverdue = rent.daysOverdue ?? 0;
+                      const dueDate = rent.date || rent.Date;
+                      return (
                       <tr key={rent.id || rent.ID || `pending-${index}`}>
                         <td>{index + 1}</td>
                         <td className="sa-cell-main">
@@ -2246,13 +2251,22 @@ const LandlordDashboard = () => {
                         </td>
                         <td>{rent.property || rent.Property || 'Unknown'}</td>
                         <td>{(rent.amount || rent.Amount || 0).toLocaleString()} XOF</td>
+                        <td>{dueDate ? new Date(dueDate).toLocaleDateString() : '—'}</td>
+                        <td>
+                          {daysOverdue > 0 ? (
+                            <span style={{ color: '#dc2626', fontWeight: 500 }}>{daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue</span>
+                          ) : (
+                            <span style={{ color: '#6b7280' }}>Due today</span>
+                          )}
+                        </td>
                         <td>
                           <span className={`sa-status-pill ${(rent.status || rent.Status || 'pending').toLowerCase()}`}>
                             {rent.status || rent.Status || 'Pending'}
                           </span>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>

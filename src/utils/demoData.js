@@ -77,6 +77,18 @@ export const getLandlordDemoData = () => ({
   ],
   claims: [],
   inventory: [],
+  rents: {
+    totalCollected: 1250000,
+    totalPending: 150000,
+    collectedRents: [
+      { id: generateId(), date: generateDate(5), tenant: 'John Doe', property: '123 Demo Street', amount: 50000, method: 'Mobile Money', status: 'Approved' },
+      { id: generateId(), date: generateDate(35), tenant: 'Jane Smith', property: '456 Sample Avenue', amount: 75000, method: 'Bank Transfer', status: 'Approved' }
+    ],
+    pendingRents: [
+      { id: generateId(), tenant: 'Pierre Dupont', property: '789 Test Road', amount: 50000, status: 'Overdue', date: generateDate(25), daysOverdue: 25 },
+      { id: generateId(), tenant: 'Marie Martin', property: '101 Demo Building', amount: 60000, status: 'Pending', date: generateDate(5), daysOverdue: 5 }
+    ]
+  },
   businessTracking: {
     revenueTrends: '+10%',
     occupancyRate: 80,
