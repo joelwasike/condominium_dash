@@ -1960,12 +1960,6 @@ const LandlordDashboard = () => {
       <h2>Works & Interventions Management</h2>
       <p>Track maintenance works, interventions, and automatic claims management</p>
         </div>
-        <div className="sa-clients-header-right">
-          <button className="sa-primary-cta" onClick={() => setShowWorkOrderModal(true)} disabled={loading}>
-            <Plus size={16} />
-          Create Work Order
-        </button>
-        </div>
                 </div>
                 
           {/* Pending Maintenance Quotes for Approval */}
@@ -2113,10 +2107,6 @@ const LandlordDashboard = () => {
             <h3>Claims</h3>
                   <p>Property claims and requests</p>
               </div>
-          <button className="sa-primary-cta" onClick={() => setShowClaimModal(true)} disabled={loading}>
-            <Plus size={16} />
-                  Create Claim
-                </button>
               </div>
         <div className="sa-table-wrapper">
           <table className="sa-table">
