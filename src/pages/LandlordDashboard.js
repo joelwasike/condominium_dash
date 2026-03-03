@@ -75,6 +75,7 @@ const LandlordDashboard = () => {
   const [paymentHistory, setPaymentHistory] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
+  const [maintenances, setMaintenances] = useState([]);
   const [maintenanceQuotes, setMaintenanceQuotes] = useState([]);
   const [claims, setClaims] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -156,6 +157,7 @@ const LandlordDashboard = () => {
         setPayments(demoData.payments);
         setRents(demoData.rents || demoData.overview);
         setWorkOrders(demoData.workOrders);
+        setMaintenances(demoData.maintenances || []);
         setClaims(demoData.claims);
         setInventory(demoData.inventory);
         setBusinessTracking(demoData.businessTracking);
@@ -164,13 +166,14 @@ const LandlordDashboard = () => {
         return;
       }
       
-      const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, claimsData, inventoryData, trackingData, expensesData, quotesData] = await Promise.all([
+      const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, maintenancesData, claimsData, inventoryData, trackingData, expensesData, quotesData] = await Promise.all([
         landlordService.getOverview(),
         landlordService.getProperties().catch(() => []),
         landlordService.getTenants().catch(() => []),
         landlordService.getPayments(),
         landlordService.getRents().catch(() => null),
         landlordService.getWorkOrders(),
+        landlordService.getMaintenances().catch(() => []),
         landlordService.getClaims(),
         landlordService.getInventory(),
         landlordService.getBusinessTracking(),
@@ -204,6 +207,7 @@ const LandlordDashboard = () => {
       setPayments(Array.isArray(paymentsData) ? paymentsData : []);
       setRents(rentsData);
       setWorkOrders(Array.isArray(workOrdersData) ? workOrdersData : []);
+      setMaintenances(Array.isArray(maintenancesData) ? maintenancesData : []);
       setClaims(Array.isArray(claimsData) ? claimsData : []);
       setInventory(Array.isArray(inventoryData) ? inventoryData : []);
       setBusinessTracking(trackingData);
@@ -1875,6 +1879,84 @@ const LandlordDashboard = () => {
         </div>
                 </div>
                 
+          {/* Maintenance Requests (from Technician) - Landlord can approve */}
+          {maintenances && maintenances.length > 0 && (
+            <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+              <div className="sa-section-header">
+                <div>
+                  <h3>Maintenance Requests</h3>
+                  <p>Maintenance requests from technicians for your properties – approve to authorize work</p>
+                </div>
+              </div>
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>No</th>
+                      <th>Date</th>
+                      <th>Property</th>
+                      <th>Tenant</th>
+                      <th>Issue</th>
+                      <th>Priority</th>
+                      <th>Est. Cost</th>
+                      <th>Status</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {maintenances.map((m, index) => {
+                      const status = (m.Status || m.status || '').toLowerCase();
+                      const canApprove = status !== 'approved' && status !== 'completed';
+                      return (
+                        <tr key={m.ID || m.id || `maint-${index}`}>
+                          <td>{index + 1}</td>
+                          <td>{m.Date || m.date ? new Date(m.Date || m.date).toLocaleDateString() : 'N/A'}</td>
+                          <td>{m.Property || m.property || 'N/A'}</td>
+                          <td>{m.Tenant || m.tenant || '—'}</td>
+                          <td className="sa-cell-main">
+                            <span className="sa-cell-title">{m.Issue || m.issue || 'N/A'}</span>
+                          </td>
+                          <td>
+                            <span className={`sa-status-pill ${(m.Priority || m.priority || 'medium').toLowerCase()}`}>
+                              {m.Priority || m.priority || 'Medium'}
+                            </span>
+                          </td>
+                          <td>{((m.EstimatedCost ?? m.estimatedCost) || 0).toLocaleString()} XOF</td>
+                          <td>
+                            <span className={`sa-status-pill ${status || 'pending'}`}>
+                              {m.Status || m.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="sa-row-actions">
+                            {canApprove && (
+                              <button
+                                className="table-action-button edit"
+                                style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none', padding: '6px 12px' }}
+                                disabled={loading}
+                                onClick={async () => {
+                                  try {
+                                    await landlordService.approveMaintenance(m.ID || m.id);
+                                    addNotification('Maintenance approved successfully', 'success');
+                                    loadData();
+                                  } catch (err) {
+                                    console.error('Error approving maintenance:', err);
+                                    addNotification(err?.message || 'Failed to approve maintenance', 'error');
+                                  }
+                                }}
+                              >
+                                Approve
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Pending Maintenance Quotes for Approval */}
           {maintenanceQuotes && maintenanceQuotes.length > 0 && (
             <div className="sa-section-card" style={{ marginBottom: '24px' }}>

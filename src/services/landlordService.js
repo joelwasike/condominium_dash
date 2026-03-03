@@ -128,6 +128,17 @@ export const landlordService = {
     });
   },
 
+  // Maintenances (from technician) - visible in Works & Claims
+  getMaintenances: async () => {
+    return await apiRequest(buildApiUrl('/api/landlord/maintenances'));
+  },
+
+  approveMaintenance: async (id) => {
+    return await apiRequest(buildApiUrl(`/api/landlord/maintenances/${id}/approve`), {
+      method: 'POST',
+    });
+  },
+
   // Reports
   downloadReport: async (filters = {}) => {
     let url = buildApiUrl('/api/landlord/reports/download');

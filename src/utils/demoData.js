@@ -75,6 +75,10 @@ export const getLandlordDemoData = () => ({
     { id: generateId(), property: '123 Demo Street', type: 'Maintenance', status: 'In Progress', assignedTo: 'Tech Team', estimatedCost: 25000 },
     { id: generateId(), property: '456 Sample Avenue', type: 'Repair', status: 'Completed', assignedTo: 'Tech Team', estimatedCost: 15000 }
   ],
+  maintenances: [
+    { id: generateId(), property: '123 Demo Street, Apartment 4B', tenant: 'John Doe', issue: 'Leaky faucet in kitchen', priority: 'Medium', status: 'Pending', assigned: 'Tech Team', date: generateDate(2), estimatedCost: 15000, company: 'Demo' },
+    { id: generateId(), property: '456 Sample Avenue, Unit 2A', tenant: 'Jane Smith', issue: 'AC not cooling', priority: 'High', status: 'Approved', assigned: 'Tech Team', date: generateDate(5), estimatedCost: 25000, company: 'Demo' }
+  ],
   claims: [],
   inventory: [],
   rents: {
