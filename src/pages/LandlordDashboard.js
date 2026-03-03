@@ -4,7 +4,6 @@ import {
   FileText,
   DollarSign,
   Users,
-  Upload,
   Plus,
   TrendingUp,
   Wrench,
@@ -28,8 +27,6 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import Modal from '../components/Modal';
-import DocumentUpload from '../components/DocumentUpload';
-import ContractUpload from '../components/ContractUpload';
 import ReportSubmission from '../components/ReportSubmission';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -55,8 +52,6 @@ import { MessageCircle } from 'lucide-react';
 
 const LandlordDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [showKycModal, setShowKycModal] = useState(false);
-  const [showContractModal, setShowContractModal] = useState(false);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
@@ -133,16 +128,6 @@ const LandlordDashboard = () => {
   const [selectedTenantId, setSelectedTenantId] = useState(null);
   const [tenantDetail, setTenantDetail] = useState(null);
   const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
-
-  const handleKycUpload = (files, userRole) => {
-    console.log('KYC files uploaded:', files, 'for role:', userRole);
-    addNotification('KYC documents uploaded successfully!', 'success');
-  };
-
-  const handleContractUpload = (files, contractDetails, userRole) => {
-    console.log('Contract uploaded:', files, contractDetails, 'for role:', userRole);
-    addNotification('Contract uploaded successfully!', 'success');
-  };
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -822,7 +807,6 @@ const LandlordDashboard = () => {
       { id: 'rents', label: t('nav.rentsTracking'), icon: DollarSign },
       { id: 'expenses', label: t('nav.expenses'), icon: FileText },
       { id: 'works', label: t('nav.worksClaims'), icon: Wrench },
-      { id: 'documents', label: t('nav.documents'), icon: FileText },
       { id: 'tracking', label: t('nav.businessTracking'), icon: BarChart3 },
       { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
       { id: 'chat', label: t('nav.messaging'), icon: MessageCircle },
@@ -1648,82 +1632,6 @@ const LandlordDashboard = () => {
       </div>
     );
   };
-
-  const renderDocuments = () => (
-    <div className="sa-clients-page">
-      <div className="sa-clients-header">
-        <div>
-          <h2>Document Management</h2>
-        <p>Upload and manage your property documents and contracts</p>
-                      </div>
-        <div className="sa-clients-header-right">
-        <button 
-            className="sa-primary-cta"
-          onClick={() => setShowKycModal(true)}
-            disabled={loading}
-        >
-            <Upload size={16} />
-          Upload KYC Documents
-        </button>
-        <button 
-            className="sa-primary-cta"
-          onClick={() => setShowContractModal(true)}
-            disabled={loading}
-        >
-            <Plus size={16} />
-          Upload Essential Contract
-        </button>
-        </div>
-                    </div>
-
-      <div className="sa-table-wrapper">
-        <table className="sa-table">
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Document Name</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Upload Date</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>1</td>
-              <td className="sa-cell-main">
-                <span className="sa-cell-title">Property Deed</span>
-              </td>
-              <td>KYC Document</td>
-              <td>
-                <span className="sa-status-pill active">Approved</span>
-              </td>
-              <td>Nov 15, 2024</td>
-              <td className="sa-row-actions">
-                <button className="sa-icon-button" title="View">👁️</button>
-                <button className="sa-icon-button" title="Download">⬇️</button>
-              </td>
-            </tr>
-            <tr>
-              <td>2</td>
-              <td className="sa-cell-main">
-                <span className="sa-cell-title">Lease Agreement</span>
-              </td>
-              <td>Contract</td>
-              <td>
-                <span className="sa-status-pill pending">Pending Review</span>
-              </td>
-              <td>Nov 10, 2024</td>
-              <td className="sa-row-actions">
-                <button className="sa-icon-button" title="View">👁️</button>
-                <button className="sa-icon-button" title="Download">⬇️</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-                </div>
-              </div>
-  );
 
   const renderPayments = () => {
     return (
@@ -2744,8 +2652,6 @@ const LandlordDashboard = () => {
         return renderExpenses();
       case 'works':
         return renderWorksAndClaims();
-      case 'documents':
-        return renderDocuments();
       case 'tracking':
         return renderBusinessTracking();
       case 'advertisements':
@@ -2804,32 +2710,6 @@ const LandlordDashboard = () => {
           </div>
         ))}
       </div>
-
-      <Modal
-        isOpen={showKycModal}
-        onClose={() => setShowKycModal(false)}
-        title="Upload KYC Documents"
-        size="lg"
-      >
-        <DocumentUpload
-          userRole="landlord"
-          onUpload={handleKycUpload}
-          onClose={() => setShowKycModal(false)}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={showContractModal}
-        onClose={() => setShowContractModal(false)}
-        title="Upload Essential Contract"
-        size="xl"
-      >
-        <ContractUpload
-          userRole="landlord"
-          onUpload={handleContractUpload}
-          onClose={() => setShowContractModal(false)}
-        />
-      </Modal>
 
       {/* Create Work Order Modal */}
       <Modal
