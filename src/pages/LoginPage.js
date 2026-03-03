@@ -120,6 +120,8 @@ const LoginPage = ({ onLogin }) => {
       }
 
       if (response.ok && data?.token && data?.user) {
+        // Real login: clear demo mode so real API data is used
+        localStorage.removeItem('demo_mode');
         // Backend now returns user with profilePictureURL so header avatar shows picture without visiting profile
         const userToStore = {
           ...data.user,

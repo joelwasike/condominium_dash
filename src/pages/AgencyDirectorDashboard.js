@@ -102,8 +102,12 @@ const AgencyDirectorDashboard = () => {
     status: 'Vacant',
     units: [] 
   });
-  const [ownerForm, setOwnerForm] = useState({ name: '', email: '', phone: '', password: '', document: null });
-  const [ownerDocumentPreview, setOwnerDocumentPreview] = useState(null);
+  const [ownerForm, setOwnerForm] = useState({
+    name: '', email: '', phone: '', password: '',
+    rentalMandate: null, salesMandate: null, idCopy: null, landTitle: null, propertyPhotos: [],
+    rib: '', commissionAmount: ''
+  });
+  const [ownerDocumentPreviews, setOwnerDocumentPreviews] = useState({});
   
   // Messaging states
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -880,35 +884,63 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
-  // Owner management handlers
+  const getEmptyOwnerForm = () => ({
+    name: '', email: '', phone: '', password: '',
+    rentalMandate: null, salesMandate: null, idCopy: null, landTitle: null, propertyPhotos: [],
+    rib: '', commissionAmount: ''
+  });
+
   const handleOpenAddOwner = () => {
     setEditingOwner(null);
-    setOwnerForm({ name: '', email: '', phone: '', password: '', document: null });
-    setOwnerDocumentPreview(null);
+    setOwnerForm(getEmptyOwnerForm());
+    setOwnerDocumentPreviews({});
     setShowOwnerModal(true);
   };
 
   const handleOpenEditOwner = (owner) => {
     setEditingOwner(owner);
+    const profile = owner.profile || owner.Profile || {};
     setOwnerForm({
       name: owner.name || owner.Name || '',
       email: owner.email || owner.Email || '',
       phone: owner.phone || owner.Phone || '',
-      password: '', // Password is not pre-filled for security
-      document: null
+      password: '',
+      rentalMandate: null, salesMandate: null, idCopy: null, landTitle: null, propertyPhotos: [],
+      rib: profile.rib || profile.RIB || '',
+      commissionAmount: profile.commissionAmount ?? profile.CommissionAmount ?? ''
     });
-    setOwnerDocumentPreview(owner.document || owner.Document || null);
+    setOwnerDocumentPreviews({
+      rentalMandate: profile.rentalMandateURL || profile.RentalMandateURL,
+      salesMandate: profile.salesMandateURL || profile.SalesMandateURL,
+      idCopy: profile.idCopyURL || profile.IDCopyURL,
+      landTitle: profile.landTitleURL || profile.LandTitleURL,
+      propertyPhotos: profile.propertyPhotos ? (typeof profile.propertyPhotos === 'string' ? JSON.parse(profile.propertyPhotos || '[]') : profile.propertyPhotos) : []
+    });
     setShowOwnerModal(true);
   };
-  
-  const handleOwnerDocumentChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setOwnerForm({ ...ownerForm, document: file });
-      // Create preview
+
+  const handleOwnerFileChange = (field, e, isMultiple = false) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (isMultiple) {
+      const fileList = Array.from(files);
+      setOwnerForm(prev => ({ ...prev, [field]: fileList }));
+      const readers = fileList.map(f => {
+        return new Promise((resolve) => {
+          const r = new FileReader();
+          r.onloadend = () => resolve(r.result);
+          r.readAsDataURL(f);
+        });
+      });
+      Promise.all(readers).then(results => {
+        setOwnerDocumentPreviews(prev => ({ ...prev, [field]: results }));
+      });
+    } else {
+      const file = files[0];
+      setOwnerForm(prev => ({ ...prev, [field]: file }));
       const reader = new FileReader();
       reader.onloadend = () => {
-        setOwnerDocumentPreview(reader.result);
+        setOwnerDocumentPreviews(prev => ({ ...prev, [field]: reader.result }));
       };
       reader.readAsDataURL(file);
     }
@@ -918,26 +950,67 @@ const AgencyDirectorDashboard = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      
-      // Upload document if provided
-      let documentUrl = null;
-      if (ownerForm.document) {
-        const { cloudinaryService } = await import('../services/cloudinaryService');
-        const uploadResult = await cloudinaryService.uploadFile(ownerForm.document, 'real-estate-owners');
-        if (uploadResult.success) {
-          documentUrl = uploadResult.url;
-        } else {
-          addNotification('Failed to upload document. Please try again.', 'error');
-          setLoading(false);
-          return;
+      const { cloudinaryService } = await import('../services/cloudinaryService');
+      const folder = 'real-estate-owners';
+
+      const uploadFile = async (file) => {
+        const result = await cloudinaryService.uploadFile(file, folder);
+        return result.success ? result.url : null;
+      };
+
+      let rentalMandateURL = ownerForm.rentalMandate ? await uploadFile(ownerForm.rentalMandate) : null;
+      let salesMandateURL = ownerForm.salesMandate ? await uploadFile(ownerForm.salesMandate) : null;
+      let idCopyURL = ownerForm.idCopy ? await uploadFile(ownerForm.idCopy) : null;
+      let landTitleURL = ownerForm.landTitle ? await uploadFile(ownerForm.landTitle) : null;
+
+      let propertyPhotosUrls = [];
+      if (ownerForm.propertyPhotos && ownerForm.propertyPhotos.length > 0) {
+        for (const f of ownerForm.propertyPhotos) {
+          const url = await uploadFile(f);
+          if (url) propertyPhotosUrls.push(url);
         }
       }
-      
+
+      if (ownerForm.rentalMandate && !rentalMandateURL) {
+        addNotification('Failed to upload Real estate management mandate.', 'error');
+        setLoading(false);
+        return;
+      }
+      if (ownerForm.salesMandate && !salesMandateURL) {
+        addNotification('Failed to upload Sales mandate.', 'error');
+        setLoading(false);
+        return;
+      }
+      if (ownerForm.idCopy && !idCopyURL) {
+        addNotification('Failed to upload Copy of owner\'s ID.', 'error');
+        setLoading(false);
+        return;
+      }
+      if (ownerForm.landTitle && !landTitleURL) {
+        addNotification('Failed to upload Land title/ACD.', 'error');
+        setLoading(false);
+        return;
+      }
+
       const ownerData = {
-        ...ownerForm,
-        document: documentUrl || undefined
+        name: ownerForm.name,
+        email: ownerForm.email,
+        phone: ownerForm.phone || undefined,
+        password: ownerForm.password || undefined,
+        rentalMandateURL: rentalMandateURL || undefined,
+        salesMandateURL: salesMandateURL || undefined,
+        idCopyURL: idCopyURL || undefined,
+        rib: ownerForm.rib || undefined,
+        landTitleURL: landTitleURL || undefined,
+        propertyPhotos: propertyPhotosUrls.length > 0 ? JSON.stringify(propertyPhotosUrls) : undefined,
+        commissionAmount: ownerForm.commissionAmount ? parseFloat(ownerForm.commissionAmount) : undefined
       };
-      
+      if (!editingOwner) {
+        ownerData.password = ownerForm.password;
+      } else if (ownerForm.password) {
+        ownerData.password = ownerForm.password;
+      }
+
       if (editingOwner) {
         await agencyDirectorService.updateOwner(editingOwner.id || editingOwner.ID, ownerData);
         addNotification('Owner updated successfully!', 'success');
@@ -945,17 +1018,15 @@ const AgencyDirectorDashboard = () => {
         await agencyDirectorService.createOwner(ownerData);
         addNotification('Owner created successfully!', 'success');
       }
-      
-      // Reset form and close modal
-      setOwnerForm({ name: '', email: '', phone: '', password: '', document: null });
-      setOwnerDocumentPreview(null);
+
+      setOwnerForm(getEmptyOwnerForm());
+      setOwnerDocumentPreviews({});
       setEditingOwner(null);
       setShowOwnerModal(false);
-      
-      // Reload owners data
+
       const ownersData = await agencyDirectorService.getOwners().catch(() => []);
       setOwners(Array.isArray(ownersData) ? ownersData : []);
-      
+
       setLoading(false);
     } catch (error) {
       console.error('Error saving owner:', error);
@@ -3973,71 +4044,80 @@ const AgencyDirectorDashboard = () => {
       </Modal>
 
       {/* Owner Modal */}
-      <Modal isOpen={showOwnerModal} onClose={() => setShowOwnerModal(false)} title={editingOwner ? 'Edit Owner' : 'Add Owner'}>
-        <form onSubmit={handleSubmitOwner} className="sa-form">
+      <Modal isOpen={showOwnerModal} onClose={() => setShowOwnerModal(false)} title={editingOwner ? 'Edit Owner' : 'Add Owner'} size="lg">
+        <form onSubmit={handleSubmitOwner} className="sa-form" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           <div className="sa-form-group">
             <label>Name *</label>
-            <input 
-              type="text" 
-              value={ownerForm.name} 
-              onChange={(e) => setOwnerForm({...ownerForm, name: e.target.value})} 
-              required 
-            />
+            <input type="text" value={ownerForm.name} onChange={(e) => setOwnerForm({...ownerForm, name: e.target.value})} required />
           </div>
           <div className="sa-form-group">
             <label>Email *</label>
-            <input 
-              type="email" 
-              value={ownerForm.email} 
-              onChange={(e) => setOwnerForm({...ownerForm, email: e.target.value})} 
-              required 
-            />
+            <input type="email" value={ownerForm.email} onChange={(e) => setOwnerForm({...ownerForm, email: e.target.value})} required />
           </div>
           <div className="sa-form-group">
             <label>Phone</label>
-            <input 
-              type="text" 
-              value={ownerForm.phone} 
-              onChange={(e) => setOwnerForm({...ownerForm, phone: e.target.value})} 
-              placeholder="Optional"
-            />
+            <input type="text" value={ownerForm.phone} onChange={(e) => setOwnerForm({...ownerForm, phone: e.target.value})} placeholder="Optional" />
           </div>
           <div className="sa-form-group">
             <label>Password {!editingOwner ? '*' : ''}</label>
-            <input 
-              type="password" 
-              value={ownerForm.password} 
-              onChange={(e) => setOwnerForm({...ownerForm, password: e.target.value})} 
-              required={!editingOwner}
-              placeholder={editingOwner ? 'Leave blank to keep current password' : ''}
-            />
+            <input type="password" value={ownerForm.password} onChange={(e) => setOwnerForm({...ownerForm, password: e.target.value})} required={!editingOwner} placeholder={editingOwner ? 'Leave blank to keep current password' : ''} />
+          </div>
+
+          <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #e5e7eb' }} />
+          <h4 style={{ marginBottom: '16px', fontSize: '1rem' }}>Documents</h4>
+
+          <div className="sa-form-group">
+            <label>Real estate management mandate (rental) <span style={{ color: '#6b7280', fontWeight: 'normal' }}>PDF</span></label>
+            <input type="file" accept=".pdf" onChange={(e) => handleOwnerFileChange('rentalMandate', e)} />
+            {(ownerDocumentPreviews.rentalMandate || ownerForm.rentalMandate) && (
+              <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#059669' }}>{ownerForm.rentalMandate?.name || 'File selected'}</div>
+            )}
           </div>
           <div className="sa-form-group">
-            <label>Document {!editingOwner ? '(Optional)' : ''}</label>
-            <input 
-              type="file" 
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={handleOwnerDocumentChange}
-            />
-            {ownerDocumentPreview && (
+            <label>Sales mandate <span style={{ color: '#6b7280', fontWeight: 'normal' }}>PDF</span></label>
+            <input type="file" accept=".pdf" onChange={(e) => handleOwnerFileChange('salesMandate', e)} />
+            {(ownerDocumentPreviews.salesMandate || ownerForm.salesMandate) && (
+              <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#059669' }}>{ownerForm.salesMandate?.name || 'File selected'}</div>
+            )}
+          </div>
+          <div className="sa-form-group">
+            <label>Copy of owner&apos;s ID <span style={{ color: '#6b7280', fontWeight: 'normal' }}>PNG or JPG</span></label>
+            <input type="file" accept=".png,.jpg,.jpeg" onChange={(e) => handleOwnerFileChange('idCopy', e)} />
+            {(ownerDocumentPreviews.idCopy || ownerForm.idCopy) && (
               <div style={{ marginTop: '8px' }}>
-                {ownerDocumentPreview.startsWith('data:') ? (
-                  <img src={ownerDocumentPreview} alt="Document preview" style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px' }} />
+                {typeof ownerDocumentPreviews.idCopy === 'string' && ownerDocumentPreviews.idCopy.startsWith('data:') ? (
+                  <img src={ownerDocumentPreviews.idCopy} alt="ID preview" style={{ maxWidth: '150px', maxHeight: '100px', borderRadius: '4px', objectFit: 'cover' }} />
                 ) : (
-                  <a href={ownerDocumentPreview} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
-                    View Current Document
-                  </a>
+                  <span style={{ fontSize: '0.85rem', color: '#059669' }}>{ownerForm.idCopy?.name || 'File selected'}</span>
                 )}
               </div>
             )}
           </div>
+          <div className="sa-form-group">
+            <label>RIB of the owner <span style={{ color: '#6b7280', fontWeight: 'normal' }}>Text</span></label>
+            <input type="text" value={ownerForm.rib} onChange={(e) => setOwnerForm({...ownerForm, rib: e.target.value})} placeholder="Enter RIB" />
+          </div>
+          <div className="sa-form-group">
+            <label>Copy land title or ACD <span style={{ color: '#6b7280', fontWeight: 'normal' }}>PDF or image</span></label>
+            <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => handleOwnerFileChange('landTitle', e)} />
+            {(ownerDocumentPreviews.landTitle || ownerForm.landTitle) && (
+              <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#059669' }}>{ownerForm.landTitle?.name || 'File selected'}</div>
+            )}
+          </div>
+          <div className="sa-form-group">
+            <label>Photos of the property <span style={{ color: '#6b7280', fontWeight: 'normal' }}>PNG or JPG</span></label>
+            <input type="file" accept=".png,.jpg,.jpeg" multiple onChange={(e) => handleOwnerFileChange('propertyPhotos', e, true)} />
+            {ownerForm.propertyPhotos?.length > 0 && (
+              <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#059669' }}>{ownerForm.propertyPhotos.length} file(s) selected</div>
+            )}
+          </div>
+          <div className="sa-form-group">
+            <label>Amount of the commission (agency type) <span style={{ color: '#6b7280', fontWeight: 'normal' }}>XOF</span></label>
+            <input type="number" value={ownerForm.commissionAmount} onChange={(e) => setOwnerForm({...ownerForm, commissionAmount: e.target.value})} placeholder="0" min="0" step="0.01" />
+          </div>
+
           <div className="sa-form-actions">
-            <button type="button" className="sa-outline-button" onClick={() => {
-              setShowOwnerModal(false);
-              setOwnerForm({ name: '', email: '', phone: '', password: '', document: null });
-              setOwnerDocumentPreview(null);
-              setEditingOwner(null);
-            }}>Cancel</button>
+            <button type="button" className="sa-outline-button" onClick={() => { setShowOwnerModal(false); setOwnerForm(getEmptyOwnerForm()); setOwnerDocumentPreviews({}); setEditingOwner(null); }}>Cancel</button>
             <button type="submit" className="sa-primary-cta" disabled={loading}>
               {loading ? 'Saving...' : (editingOwner ? 'Update' : 'Create') + ' Owner'}
             </button>

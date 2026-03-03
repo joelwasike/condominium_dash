@@ -184,23 +184,26 @@ export const getAccountingDemoData = () => ({
     totalExpensesThisMonth: 500000,
     netProfitThisMonth: 2000000,
     totalTenantPayments: 15,
-    totalLandlordPayments: 8
+    totalLandlordPayments: 8,
+    totalAvailableBalance: 1850000,
+    globalBalance: 1850000,
+    totalTransferredToLandlords: 2000000,
+    totalCompanyCommissionEarned: 250000,
+    pendingRentAmount: 150000
   },
   tenantPayments: [
-    { id: generateId(), tenant: 'John Doe', property: '123 Demo Street', amount: 50000, date: generateDate(5), method: 'Mobile Money', status: 'Completed' },
-    { id: generateId(), tenant: 'Jane Smith', property: '456 Sample Avenue', amount: 75000, date: generateDate(10), method: 'Bank Transfer', status: 'Completed' }
+    { id: generateId(), tenant: 'John Doe', property: '123 Demo Street', amount: 50000, date: generateDate(5), method: 'Mobile Money', Status: 'Approved' },
+    { id: generateId(), tenant: 'Jane Smith', property: '456 Sample Avenue', amount: 75000, date: generateDate(10), method: 'Bank Transfer', Status: 'Approved' }
   ],
   landlordPayments: [
     { id: generateId(), landlord: 'Owner One', property: '123 Demo Street', amount: 40000, date: generateDate(7), status: 'Completed' },
     { id: generateId(), landlord: 'Owner Two', property: '456 Sample Avenue', amount: 60000, date: generateDate(12), status: 'Completed' }
   ],
   collections: [
-    { month: 'Jan', amount: 2000000 },
-    { month: 'Feb', amount: 2200000 },
-    { month: 'Mar', amount: 2400000 },
-    { month: 'Apr', amount: 2300000 },
-    { month: 'May', amount: 2500000 },
-    { month: 'Jun', amount: 2500000 }
+    { ID: generateId(), Building: '123 Demo Street', Landlord: 'Owner One', Amount: 50000, Status: 'Collected', Date: generateDate(5), ChargeType: 'Rent' },
+    { ID: generateId(), Building: '456 Sample Avenue', Landlord: 'Owner Two', Amount: 75000, Status: 'Collected', Date: generateDate(10), ChargeType: 'Rent' },
+    { ID: generateId(), Building: '123 Demo Street', Landlord: 'Owner One', Amount: 100000, Status: 'Collected', Date: generateDate(3), ChargeType: 'Deposit' },
+    { ID: generateId(), Building: '789 Test Road', Landlord: 'Owner One', Amount: 50000, Status: 'Pending', Date: generateDate(2), ChargeType: 'Rent' }
   ],
   expenses: [
     { id: generateId(), category: 'Maintenance', amount: 150000, date: generateDate(3), property: '123 Demo Street', description: 'Plumbing repair' },
@@ -214,6 +217,9 @@ export const getAccountingDemoData = () => ({
   landlords: [
     { id: generateId(), name: 'Owner One', email: 'owner1@example.com', totalProperties: 3 },
     { id: generateId(), name: 'Owner Two', email: 'owner2@example.com', totalProperties: 2 }
+  ],
+  advertisements: [
+    { ID: generateId(), Title: 'Demo Campaign', Text: 'Welcome to the Accounting Dashboard. Manage your financial operations efficiently.', imageUrl: null, CreatedAt: new Date().toISOString() }
   ]
 });
 

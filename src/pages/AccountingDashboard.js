@@ -125,6 +125,7 @@ const AccountingDashboard = () => {
   // Collections manual payment state
   const [showCollectionPaymentModal, setShowCollectionPaymentModal] = useState(false);
   const [collectionPaymentType, setCollectionPaymentType] = useState(null); // null, 'tenant', 'deposit', 'sale'
+  const [propertiesForSale, setPropertiesForSale] = useState([]);
   const [paymentView, setPaymentView] = useState('all'); // 'all', 'rent', 'deposit', 'sale', 'tenant'
   const [balanceView, setBalanceView] = useState('overview'); // 'overview', 'cash', 'bank', 'cash-journal', 'bank-journal'
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -253,11 +254,12 @@ const AccountingDashboard = () => {
         setExpenses(demoData.expenses);
         setMonthlySummary(demoData.monthlySummary);
         setLandlords(demoData.landlords);
+        setAdvertisements(demoData.advertisements || []);
         setLoading(false);
         return;
       }
       
-      const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary, landlordsData, tenantsData] = await Promise.all([
+      const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary, landlordsData, tenantsData, adsData] = await Promise.all([
         accountingService.getOverview(),
         accountingService.getTenantPayments(),
         accountingService.getLandlordPayments(),
@@ -265,17 +267,19 @@ const AccountingDashboard = () => {
         accountingService.getExpenses({}),
         accountingService.getMonthlySummary(),
         accountingService.getLandlords().catch(() => []),
-        accountingService.getTenantsWithPaymentStatus().catch(() => [])
+        accountingService.getTenantsWithPaymentStatus().catch(() => []),
+        accountingService.getAdvertisements().catch(() => [])
       ]);
 
       setOverviewData(overview);
-      setTenantPayments(tenantPaymentsData);
-      setLandlordPayments(landlordPaymentsData);
-      setCollections(collectionsData);
-      setExpenses(expensesData);
+      setTenantPayments(Array.isArray(tenantPaymentsData) ? tenantPaymentsData : (tenantPaymentsData?.payments ?? tenantPaymentsData?.tenantPayments ?? []));
+      setLandlordPayments(Array.isArray(landlordPaymentsData) ? landlordPaymentsData : (landlordPaymentsData?.payments ?? landlordPaymentsData?.landlordPayments ?? []));
+      setCollections(Array.isArray(collectionsData) ? collectionsData : (collectionsData?.collections ?? collectionsData?.data ?? []));
+      setExpenses(Array.isArray(expensesData) ? expensesData : (expensesData?.expenses ?? expensesData?.data ?? []));
       setMonthlySummary(summary);
-      setLandlords(Array.isArray(landlordsData) ? landlordsData : []);
-      setTenants(Array.isArray(tenantsData) ? tenantsData : []);
+      setLandlords(Array.isArray(landlordsData) ? landlordsData : (landlordsData?.landlords ?? landlordsData?.data ?? []));
+      setTenants(Array.isArray(tenantsData) ? tenantsData : (tenantsData?.tenants ?? tenantsData?.data ?? []));
+      setAdvertisements(Array.isArray(adsData) ? adsData : (adsData?.advertisements ?? adsData?.data ?? []));
       
       console.log('Accounting data loaded successfully:', { overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary });
     } catch (error) {
@@ -371,6 +375,23 @@ const AccountingDashboard = () => {
       setAdvertisements([]);
     }
   };
+
+  // Load properties when opening property sale form
+  useEffect(() => {
+    if (showCollectionPaymentModal && collectionPaymentType === 'sale') {
+      accountingService.getProperties().then(data => {
+        setPropertiesForSale(Array.isArray(data) ? data : []);
+      }).catch(() => setPropertiesForSale([]));
+    }
+  }, [showCollectionPaymentModal, collectionPaymentType]);
+
+  // Ensure tenants are loaded when opening tenant or deposit payment form
+  useEffect(() => {
+    if (showCollectionPaymentModal && (collectionPaymentType === 'tenant' || collectionPaymentType === 'deposit')) {
+      loadTenants();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCollectionPaymentModal, collectionPaymentType]);
 
   // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
@@ -1183,7 +1204,7 @@ const AccountingDashboard = () => {
           </div>
           <div style={{ padding: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('tenant-payments')}>
+              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('payments')}>
                 <p className="sa-metric-label">{t('accounting.pendingPayments')}</p>
                 <p className="sa-metric-value" style={{ color: '#dc2626' }}>
                   {overviewData ? `${(overviewData.pendingRentAmount || 0).toFixed(2)} XOF` : '0 XOF'}
@@ -5963,15 +5984,37 @@ const AccountingDashboard = () => {
                   }
                 }}>
                   <div className="form-group">
-                    <label htmlFor="tenantName">Tenant Name *</label>
-                    <input
+                    <label htmlFor="tenantName">Tenant *</label>
+                    <select
                       id="tenantName"
-                      type="text"
                       value={collectionPaymentForm.tenant}
-                      onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, tenant: e.target.value})}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const t = tenants.find(x => (x.tenantName || x.TenantName) === val);
+                        if (t) {
+                          const name = t.tenantName || t.TenantName || '';
+                          const prop = t.property || t.Property || t.building || t.Building || '';
+                          const rent = t.monthlyRent ?? t.MonthlyRent ?? t.rent ?? t.Rent ?? '';
+                          setCollectionPaymentForm({
+                            ...collectionPaymentForm,
+                            tenant: name,
+                            property: prop,
+                            amount: rent,
+                            chargeType: collectionPaymentForm.chargeType,
+                          });
+                        } else {
+                          setCollectionPaymentForm({...collectionPaymentForm, tenant: val || ''});
+                        }
+                      }}
                       required
-                      placeholder="Enter tenant name"
-                    />
+                    >
+                      <option value="">Select tenant</option>
+                      {tenants.map((t) => {
+                        const id = t.tenantId ?? t.TenantID ?? t.tenantName ?? t.TenantName;
+                        const name = t.tenantName || t.TenantName || '';
+                        return <option key={id} value={name}>{name} {t.property || t.Property ? ` (${t.property || t.Property})` : ''}</option>;
+                      })}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label htmlFor="tenantProperty">Property *</label>
@@ -6021,7 +6064,6 @@ const AccountingDashboard = () => {
                       <option value="Rent">Rent</option>
                       <option value="Deposit">Deposit</option>
                       <option value="Late Fee">Late Fee</option>
-                      <option value="Maintenance">Maintenance</option>
                     </select>
                   </div>
                   <div className="form-group">
@@ -6060,8 +6102,6 @@ const AccountingDashboard = () => {
                       tenantType: collectionPaymentForm.tenantType,
                       monthlyRent: parseFloat(collectionPaymentForm.monthlyRent || '0'),
                       paymentMethod: collectionPaymentForm.paymentMethod,
-                      reference: collectionPaymentForm.reference,
-                      notes: collectionPaymentForm.notes,
                     };
 
                     const deposit = await accountingService.recordDepositPayment(depositData);
@@ -6118,15 +6158,36 @@ const AccountingDashboard = () => {
                   }
                 }}>
                   <div className="form-group">
-                    <label htmlFor="depositTenant">Tenant Name *</label>
-                    <input
+                    <label htmlFor="depositTenant">Tenant *</label>
+                    <select
                       id="depositTenant"
-                      type="text"
                       value={collectionPaymentForm.tenant}
-                      onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, tenant: e.target.value})}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const t = tenants.find(x => (x.tenantName || x.TenantName) === val);
+                        if (t) {
+                          const name = t.tenantName || t.TenantName || '';
+                          const prop = t.property || t.Property || t.building || t.Building || '';
+                          const rent = t.monthlyRent ?? t.MonthlyRent ?? t.rent ?? t.Rent ?? '';
+                          const isHouse = (prop || '').toLowerCase().includes('house') || (prop || '').toLowerCase().includes('villa');
+                          setCollectionPaymentForm({
+                            ...collectionPaymentForm,
+                            tenant: name,
+                            property: prop,
+                            monthlyRent: rent,
+                          });
+                        } else {
+                          setCollectionPaymentForm({...collectionPaymentForm, tenant: val || ''});
+                        }
+                      }}
                       required
-                      placeholder="Enter tenant name"
-                    />
+                    >
+                      <option value="">Select tenant</option>
+                      {tenants.map((t) => {
+                        const name = t.tenantName || t.TenantName || '';
+                        return <option key={name} value={name}>{name} {t.property || t.Property ? ` (${t.property || t.Property})` : ''}</option>;
+                      })}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label htmlFor="depositProperty">Property *</label>
@@ -6190,26 +6251,6 @@ const AccountingDashboard = () => {
                       <option value="mobile_money">Mobile Money</option>
                       <option value="bank_transfer">Bank Transfer</option>
                     </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="depositReference">Reference (optional)</label>
-                    <input
-                      id="depositReference"
-                      type="text"
-                      value={collectionPaymentForm.reference}
-                      onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, reference: e.target.value})}
-                      placeholder="Receipt number or reference"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="depositNotes">Notes (optional)</label>
-                    <textarea
-                      id="depositNotes"
-                      value={collectionPaymentForm.notes}
-                      onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, notes: e.target.value})}
-                      rows="3"
-                      placeholder="Additional notes"
-                    />
                   </div>
                   <div className="modal-footer">
                     <button
@@ -6281,14 +6322,30 @@ const AccountingDashboard = () => {
                 }}>
                   <div className="form-group">
                     <label htmlFor="saleProperty">Property / Building *</label>
-                    <input
+                    <select
                       id="saleProperty"
-                      type="text"
                       value={collectionPaymentForm.property}
-                      onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})}
+                      onChange={(e) => {
+                        const addr = e.target.value;
+                        const p = propertiesForSale.find(x => (x.address || x.Address) === addr);
+                        if (p) {
+                          setCollectionPaymentForm({
+                            ...collectionPaymentForm,
+                            property: addr,
+                            landlord: p.landlord || p.Landlord || '',
+                          });
+                        } else {
+                          setCollectionPaymentForm({...collectionPaymentForm, property: addr});
+                        }
+                      }}
                       required
-                      placeholder="e.g., House 123, Apartment 4B"
-                    />
+                    >
+                      <option value="">Select property</option>
+                      {propertiesForSale.map((p) => {
+                        const addr = p.address || p.Address || '';
+                        return <option key={addr} value={addr}>{addr} {p.landlord || p.Landlord ? ` (${p.landlord || p.Landlord})` : ''}</option>;
+                      })}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label htmlFor="saleLandlord">Landlord / Seller *</label>
