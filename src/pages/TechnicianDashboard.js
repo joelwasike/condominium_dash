@@ -4083,61 +4083,61 @@ const TechnicianDashboard = () => {
                 {/* Photos Section */}
                 {(() => {
                   let photos = [];
-                  if (selectedMaintenanceRequest.Photos) {
-                    photos = Array.isArray(selectedMaintenanceRequest.Photos) 
-                      ? selectedMaintenanceRequest.Photos 
-                      : (typeof selectedMaintenanceRequest.Photos === 'string' ? JSON.parse(selectedMaintenanceRequest.Photos || '[]') : []);
-                  } else if (selectedMaintenanceRequest.photos) {
-                    photos = Array.isArray(selectedMaintenanceRequest.photos) 
-                      ? selectedMaintenanceRequest.photos 
-                      : (typeof selectedMaintenanceRequest.photos === 'string' ? JSON.parse(selectedMaintenanceRequest.photos || '[]') : []);
-                  } else if (selectedMaintenanceRequest.PhotoURLs) {
-                    photos = Array.isArray(selectedMaintenanceRequest.PhotoURLs) 
-                      ? selectedMaintenanceRequest.PhotoURLs 
-                      : (typeof selectedMaintenanceRequest.PhotoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.PhotoURLs || '[]') : []);
-                  } else if (selectedMaintenanceRequest.photoURLs) {
-                    photos = Array.isArray(selectedMaintenanceRequest.photoURLs) 
-                      ? selectedMaintenanceRequest.photoURLs 
-                      : (typeof selectedMaintenanceRequest.photoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.photoURLs || '[]') : []);
+                  const raw = selectedMaintenanceRequest.Photos ?? selectedMaintenanceRequest.photos ?? selectedMaintenanceRequest.PhotoURLs ?? selectedMaintenanceRequest.photoURLs;
+                  if (Array.isArray(raw)) {
+                    photos = raw;
+                  } else if (typeof raw === 'string' && raw.trim()) {
+                    try {
+                      photos = JSON.parse(raw) || [];
+                    } catch (_) {
+                      photos = [];
+                    }
                   }
+                  photos = Array.isArray(photos) ? photos : [];
 
-                  return photos.length > 0 ? (
+                  return (
                     <div>
-                      <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Photos ({photos.length})</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
-                        {photos.map((photoUrl, index) => {
-                          const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
-                          if (!url) return null;
-                          return (
-                            <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
-                              <img
-                                src={url}
-                                alt={`Maintenance photo ${index + 1}`}
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: 'cover',
-                                  cursor: 'pointer'
-                                }}
-                                onClick={() => window.open(url, '_blank')}
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  const parent = e.target.parentElement;
-                                  if (parent && !parent.querySelector('.sa-photo-fallback')) {
-                                    const fallback = document.createElement('div');
-                                    fallback.className = 'sa-photo-fallback';
-                                    fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
-                                    fallback.textContent = 'Image not available';
-                                    parent.appendChild(fallback);
-                                  }
-                                }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>
+                        Photos {photos.length > 0 ? `(${photos.length})` : ''}
+                      </label>
+                      {photos.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+                          {photos.map((photoUrl, index) => {
+                            const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
+                            if (!url) return null;
+                            return (
+                              <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
+                                <img
+                                  src={url}
+                                  alt={`Maintenance ${index + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    cursor: 'pointer'
+                                  }}
+                                  onClick={() => window.open(url, '_blank')}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    const parent = e.target.parentElement;
+                                    if (parent && !parent.querySelector('.sa-photo-fallback')) {
+                                      const fallback = document.createElement('div');
+                                      fallback.className = 'sa-photo-fallback';
+                                      fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
+                                      fallback.textContent = 'Image not available';
+                                      parent.appendChild(fallback);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>No photos attached to this maintenance request</p>
+                      )}
                     </div>
-                  ) : null;
+                  );
                 })()}
               </div>
             </div>
