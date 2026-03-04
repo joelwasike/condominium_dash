@@ -127,6 +127,7 @@ const TechnicianDashboard = () => {
     works: [],
     inventories: []
   });
+  const [submittedInventories, setSubmittedInventories] = useState([]);
   const [reportsData, setReportsData] = useState(null);
   const [showInventoryFormModal, setShowInventoryFormModal] = useState(false);
   const [inventoryFormData, setInventoryFormData] = useState({
@@ -393,6 +394,23 @@ const TechnicianDashboard = () => {
       setLoading(false);
     }
   };
+
+  const loadSubmittedInventories = useCallback(async () => {
+    if (isDemoMode()) return;
+    try {
+      const list = await technicianService.listInspections();
+      setSubmittedInventories(Array.isArray(list) ? list : []);
+    } catch (error) {
+      console.error('Error loading submitted inventories:', error);
+      setSubmittedInventories([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'state-entry') {
+      loadSubmittedInventories();
+    }
+  }, [activeTab, loadSubmittedInventories]);
 
   const handleInspectionSubmit = async (e) => {
     e.preventDefault();
@@ -3058,7 +3076,7 @@ const TechnicianDashboard = () => {
               <tbody>
                 {(() => {
                   const invType = stateEntryView === 'entry' ? 'Move-in' : 'Move-out';
-                  const submitted = (historyData.inventories || [])
+                  const submitted = (submittedInventories || [])
                     .filter(inv => (inv.Type || inv.type) === invType)
                     .sort((a, b) => new Date(b.CreatedAt || b.createdAt || b.Date || b.date) - new Date(a.CreatedAt || a.createdAt || a.Date || a.date));
                   if (submitted.length === 0) {
@@ -4595,6 +4613,7 @@ const TechnicianDashboard = () => {
 
                   setShowInventoryFormModal(false);
                   loadData(); // Refresh State of Entry/Exit list and tenant dashboard will show it for the tenant
+                  loadSubmittedInventories(); // Refresh submitted inventories list below
                 } catch (error) {
                   console.error('Error submitting inventory form:', error);
                   addNotification(error.message || 'Failed to submit inventory form', 'error');
