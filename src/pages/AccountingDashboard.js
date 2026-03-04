@@ -6723,14 +6723,16 @@ const AccountingDashboard = () => {
                     <option value="Other">Other</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Requested by (name of person)</label>
-                  <input
-                    type="text"
-                    name="requestedBy"
-                    placeholder="Enter name of person who requested the payment"
-                  />
-                </div>
+                {expenseFormScope !== 'Building' && (
+                  <div className="form-group">
+                    <label>Requested by (name of person)</label>
+                    <input
+                      type="text"
+                      name="requestedBy"
+                      placeholder="Enter name of person who requested the payment"
+                    />
+                  </div>
+                )}
                 <div className="form-group">
                   <label>Amount</label>
                   <input type="number" name="amount" step="0.01" required />
