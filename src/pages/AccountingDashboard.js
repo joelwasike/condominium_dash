@@ -6039,6 +6039,25 @@ const AccountingDashboard = () => {
                       style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}}
                     />
                   </div>
+                  {collectionPaymentForm.tenant && (() => {
+                    const sel = tenants.find(t => (t.tenantName || t.TenantName) === collectionPaymentForm.tenant);
+                    const due = sel ? (sel.outstandingAmount ?? sel.OutstandingAmount ?? 0) : 0;
+                    const months = sel ? (sel.monthsInArrears ?? sel.MonthsInArrears ?? 0) : 0;
+                    if (due <= 0) return null;
+                    return (
+                      <div className="form-group" style={{ padding: '12px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #f59e0b' }}>
+                        <label style={{ color: '#92400e', fontWeight: '600' }}>Amount Due (Outstanding)</label>
+                        <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#b45309' }}>
+                          {due.toLocaleString()} XOF
+                          {months > 0 && (
+                            <span style={{ fontSize: '0.85rem', fontWeight: '500', color: '#92400e', marginLeft: '8px' }}>
+                              ({months} month{months > 1 ? 's' : ''} in arrears)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="form-group">
                     <label htmlFor="tenantAmount">Amount (XOF) *</label>
                     <input
