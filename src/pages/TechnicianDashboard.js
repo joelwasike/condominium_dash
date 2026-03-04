@@ -4516,9 +4516,9 @@ const TechnicianDashboard = () => {
                   const reportUrl = finalized?.reportUrl || finalized?.reportURL || finalized?.ReportUrl;
 
                   addNotification('Inventory report saved successfully.', 'success');
+                  // Don't auto-open report - user stays on dashboard; report is saved and visible in History
                   if (reportUrl) {
-                    // Open report for download/print (user can "Save as PDF")
-                    window.open(`${API_CONFIG.BASE_URL}${reportUrl}`, '_blank');
+                    addNotification('Report saved. View it in History or via the report link.', 'info');
                   }
 
                   setShowInventoryFormModal(false);
