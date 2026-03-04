@@ -2306,16 +2306,12 @@ const AccountingDashboard = () => {
             <tr>
                     <th>Tenant Name</th>
                     <th>Email</th>
-                    <th>Phone</th>
                     <th>Property</th>
-              <th>Building</th>
                     <th>Monthly Rent</th>
                     <th>Payment Status</th>
                     <th>Months in Arrears</th>
                     <th>Outstanding Amount</th>
                     <th>Last Payment</th>
-                    <th>Next Payment Due</th>
-              <th className="table-menu">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -2341,9 +2337,7 @@ const AccountingDashboard = () => {
                       <tr key={tenant.TenantID || tenant.tenantId || index}>
                         <td><span className="sa-cell-title">{tenant.TenantName || tenant.tenantName || 'N/A'}</span></td>
                         <td>{tenant.Email || tenant.email || 'N/A'}</td>
-                        <td>{tenant.Phone || tenant.phone || 'N/A'}</td>
                         <td>{tenant.Property || tenant.property || 'N/A'}</td>
-                        <td>{tenant.Building || tenant.building || 'N/A'}</td>
                         <td>{(tenant.MonthlyRent || tenant.monthlyRent || 0).toFixed(2)} XOF</td>
                         <td>
                           <span className={`sa-status-pill ${statusClass}`}>
@@ -2359,12 +2353,6 @@ const AccountingDashboard = () => {
                             ? new Date(tenant.LastPaymentDate || tenant.lastPaymentDate).toLocaleDateString()
                             : 'N/A'}
               </td>
-                        <td>
-                          {tenant.NextPaymentDue || tenant.nextPaymentDue
-                            ? new Date(tenant.NextPaymentDue || tenant.nextPaymentDue).toLocaleDateString()
-                            : 'N/A'}
-              </td>
-                        <td />
             </tr>
                     );
                   })}
