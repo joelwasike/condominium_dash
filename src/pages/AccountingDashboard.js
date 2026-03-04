@@ -2460,8 +2460,13 @@ const AccountingDashboard = () => {
             </div>
           )}
         </div>
+      </div>
+    );
+  };
 
-        {/* Deposit Payment Modal */}
+  // Deposit modals - rendered at top level so they work from deposit-refunds tab (renderDeposits is never called)
+  const depositModals = (
+    <>
       {showDepositPaymentModal && (
           <div className="modal-overlay" onClick={() => setShowDepositPaymentModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -2874,9 +2879,8 @@ const AccountingDashboard = () => {
             </div>
           </div>
         )}
-      </div>
-    );
-  };
+    </>
+  );
 
   // Deposit Refunds - Tenants with completed state of exit (technician has done exit inventory)
   const renderDepositRefunds = () => {
@@ -5742,6 +5746,9 @@ const AccountingDashboard = () => {
           </div>
         ))}
       </div>
+
+      {/* Deposit modals - Process deposit, Deposit payment, Deposit refund */}
+      {depositModals}
 
       {/* Payment Approval Modal */}
       {showApprovalModal && selectedPayment && (
