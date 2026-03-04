@@ -6076,6 +6076,9 @@ const AccountingDashboard = () => {
                       required
                       placeholder="Enter payment amount"
                     />
+                    <small style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
+                      Can include arrears, current month, or months ahead
+                    </small>
                   </div>
                   <div className="form-group">
                     <label htmlFor="tenantMethod">Payment Method *</label>
