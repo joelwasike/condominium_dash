@@ -967,6 +967,89 @@ const AccountingDashboard = () => {
     addNotification('Receipt generated successfully', 'success');
   };
 
+  // Print deposit refund receipt as PDF (SAAF IMMO format)
+  const printRefundReceipt = (refund) => {
+    if (!refund) return;
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    let yPos = 20;
+
+    const amount = refund.Amount ?? refund.amount ?? 0;
+    const amountWords = numberToWordsFr(Math.floor(amount)) + ' francs CFA';
+
+    // Header - Logo and Title
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('sili', 20, yPos);
+    pdf.setFontSize(20);
+    pdf.text('SAAF IMMO', 20, yPos + 8);
+    pdf.setFontSize(18);
+    pdf.text('QUITTANCE DE REMBOURSEMENT', pageWidth - 20, yPos, { align: 'right' });
+    yPos += 25;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Remboursement dépôt de garantie', pageWidth - 20, yPos, { align: 'right' });
+    yPos += 20;
+
+    pdf.setFontSize(11);
+    pdf.text('Bénéficiaire :', 20, yPos);
+    pdf.text(refund.Tenant || refund.tenant || '-', 55, yPos);
+    yPos += 10;
+    pdf.text('Propriété :', 20, yPos);
+    pdf.text(refund.Property || refund.property || '-', 55, yPos);
+    yPos += 10;
+    pdf.text('Méthode de remboursement :', 20, yPos);
+    pdf.text(refund.RefundMethod || refund.refundMethod || '-', 70, yPos);
+    yPos += 10;
+    pdf.text('Date du remboursement :', 20, yPos);
+    const refundDate = refund.RefundedAt || refund.refundedAt;
+    pdf.text(refundDate ? new Date(refundDate).toLocaleDateString('fr-FR') : '-', 70, yPos);
+    yPos += 15;
+
+    pdf.text('La somme de', 20, yPos);
+    pdf.text('(en lettre) :', 20, yPos + 6);
+    pdf.line(50, yPos - 3, pageWidth - 20, yPos - 3);
+    pdf.text(amountWords, 55, yPos);
+    yPos += 12;
+    pdf.text('(en chiffre) :', 20, yPos);
+    pdf.line(50, yPos - 3, pageWidth - 60, yPos - 3);
+    pdf.text((amount || 0).toFixed(2) + ' CFA', 55, yPos);
+    yPos += 10;
+    pdf.text('N° Reçu :', 20, yPos);
+    pdf.text(refund.ReceiptNumber || refund.receiptNumber || `REF-${refund.ID || refund.id || Date.now()}`, 55, yPos);
+    yPos += 25;
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    pdf.text(`Fait à Abidjan, le ${dateStr}`, 20, yPos);
+
+    yPos = pageHeight - 50;
+    pdf.setFontSize(10);
+    pdf.text('Caisse', 20, yPos);
+    pdf.text('Direction financière', pageWidth / 2 - 30, yPos, { align: 'center' });
+    pdf.text('Bénéficiaire', pageWidth - 20, yPos, { align: 'right' });
+    yPos += 20;
+    pdf.line(20, yPos, 60, yPos);
+    pdf.line(pageWidth / 2 - 50, yPos, pageWidth / 2 + 10, yPos);
+    pdf.line(pageWidth - 60, yPos, pageWidth - 20, yPos);
+
+    yPos = pageHeight - 25;
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Abidjan, Cocody Angré, 8e tranche, Immeuble King Déco, 4e étage, carrefour La Prière. Ilot 43, lot 664.', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+    pdf.text('Tel : 00 225 07 04 77 51 79 / 00 225 07 04 77 51 77', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+    pdf.text('RCCM : CI-ABJ-2018-B-21320', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+    pdf.text('N°CC : 1843184R', pageWidth / 2, yPos, { align: 'center' });
+
+    const fileName = `remboursement-${refund.ID || refund.id || Date.now()}.pdf`;
+    pdf.save(fileName);
+    addNotification('Refund receipt downloaded', 'success');
+  };
+
   const transferToLandlord = async (paymentId) => {
     try {
       setLoading(true);
@@ -3033,6 +3116,7 @@ const AccountingDashboard = () => {
                       <th>Refund Method</th>
                       <th>Refund Date</th>
                       <th>Status</th>
+                      <th className="table-menu">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3047,6 +3131,16 @@ const AccountingDashboard = () => {
                         <td>{refund.RefundedAt || refund.refundedAt ? new Date(refund.RefundedAt || refund.refundedAt).toLocaleDateString() : 'N/A'}</td>
                         <td>
                           <span className="sa-status-pill success">Refunded</span>
+                        </td>
+                        <td className="table-menu">
+                          <button
+                            className="table-action-button edit"
+                            onClick={() => printRefundReceipt(refund)}
+                            title="Download Receipt"
+                          >
+                            <Download size={14} />
+                            Receipt
+                          </button>
                         </td>
                       </tr>
                     ))}
