@@ -359,6 +359,11 @@ export const accountingService = {
   },
 
   // Security Deposits
+  getDepositRefundsPending: async () => {
+    const url = buildApiUrl('/api/accounting/deposit-refunds/pending');
+    return await apiRequest(url);
+  },
+
   getSecurityDeposits: async (filters = {}) => {
     let url = buildApiUrl('/api/accounting/deposits');
     const queryParams = new URLSearchParams();
@@ -383,9 +388,13 @@ export const accountingService = {
 
   processDepositRefund: async (refundData) => {
     const url = buildApiUrl('/api/accounting/deposits/refund');
+    const body = { ...refundData };
+    if (refundData.refundAmount != null) {
+      body.refundAmount = Number(refundData.refundAmount);
+    }
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(refundData),
+      body: JSON.stringify(body),
     });
   },
 

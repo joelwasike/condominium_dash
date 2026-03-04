@@ -119,10 +119,16 @@ const AccountingDashboard = () => {
   });
   const [depositRefundForm, setDepositRefundForm] = useState({
     depositId: '',
+    refundAmount: null,
+    depositAmount: 0,
+    repairCost: 0,
+    tenant: '',
+    property: '',
     refundMethod: 'mobile_money',
     refundAccount: '',
     notes: ''
   });
+  const [pendingRefunds, setPendingRefunds] = useState([]);
 
   // Collections manual payment state
   const [showCollectionPaymentModal, setShowCollectionPaymentModal] = useState(false);
@@ -364,9 +370,21 @@ const AccountingDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Load all deposits, no filter needed
 
+  const loadDepositRefundsPending = useCallback(async () => {
+    try {
+      const data = await accountingService.getDepositRefundsPending();
+      setPendingRefunds(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading pending refunds:', error);
+      addNotification('Failed to load pending refunds', 'error');
+      setPendingRefunds([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === 'deposit-refunds') {
       loadDeposits();
+      loadDepositRefundsPending();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, depositFilter]); // Removed loadDeposits to prevent infinite loop
@@ -2606,21 +2624,31 @@ const AccountingDashboard = () => {
                   e.preventDefault();
                   try {
                     setLoading(true);
-                    await accountingService.processDepositRefund({
+                    const payload = {
                       depositId: parseInt(depositRefundForm.depositId),
                       refundMethod: depositRefundForm.refundMethod,
                       refundAccount: depositRefundForm.refundAccount,
                       notes: depositRefundForm.notes
-                    });
+                    };
+                    if (depositRefundForm.refundAmount != null && depositRefundForm.refundAmount >= 0) {
+                      payload.refundAmount = depositRefundForm.refundAmount;
+                    }
+                    await accountingService.processDepositRefund(payload);
                     addNotification('Security deposit refund processed successfully!', 'success');
                     setShowDepositRefundModal(false);
                     setDepositRefundForm({
                       depositId: '',
+                      refundAmount: null,
+                      depositAmount: 0,
+                      repairCost: 0,
+                      tenant: '',
+                      property: '',
                       refundMethod: 'mobile_money',
                       refundAccount: '',
                       notes: ''
                     });
                     await loadDeposits();
+                    loadDepositRefundsPending();
                     // Reload overview to update totals
                     try {
                       const overview = await accountingService.getOverview();
@@ -2635,37 +2663,50 @@ const AccountingDashboard = () => {
                     setLoading(false);
                   }
                 }}>
-                  <div className="form-group">
-                    <label htmlFor="refundDepositId">Select Deposit to Refund *</label>
-                    <select
-                      id="refundDepositId"
-                      value={depositRefundForm.depositId}
-                      onChange={(e) => setDepositRefundForm({...depositRefundForm, depositId: e.target.value})}
-                      required
-                    >
-                      <option value="">Select Deposit</option>
-                      {deposits
-                        .filter(d => {
-                          const type = (d.Type || d.type || '').toLowerCase();
-                          return type === 'payment';
-                        })
-                        .filter(deposit => {
-                          // Check if this deposit has already been refunded
-                          const refunded = deposits.some(r => {
-                            const refundType = (r.Type || r.type || '').toLowerCase();
-                            return refundType === 'refund' && 
-                                   (r.LeaseID || r.leaseId) === (deposit.LeaseID || deposit.leaseId);
-                          });
-                          return !refunded;
-                        })
-                        .map(deposit => (
-                          <option key={deposit.ID || deposit.id} value={deposit.ID || deposit.id}>
-                            {deposit.Tenant || deposit.tenant} - {deposit.Property || deposit.property} - 
-                            {(deposit.Amount || deposit.amount || 0).toFixed(2)} XOF
-                          </option>
-                        ))}
-                    </select>
-                  </div>
+                  {depositRefundForm.depositId && depositRefundForm.refundAmount != null ? (
+                    <div className="form-group" style={{ padding: '16px', background: '#f0f9ff', borderRadius: '8px', marginBottom: '16px' }}>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Refund Summary</h4>
+                      <p style={{ margin: '4px 0' }}><strong>Tenant:</strong> {depositRefundForm.tenant || '—'}</p>
+                      <p style={{ margin: '4px 0' }}><strong>Property:</strong> {depositRefundForm.property || '—'}</p>
+                      <p style={{ margin: '4px 0' }}><strong>Deposit Amount:</strong> {(depositRefundForm.depositAmount || 0).toFixed(2)} XOF</p>
+                      <p style={{ margin: '4px 0' }}><strong>Repair Cost (deducted):</strong> {(depositRefundForm.repairCost || 0).toFixed(2)} XOF</p>
+                      <p style={{ margin: '8px 0 0 0', fontSize: '1.1rem', fontWeight: '600', color: '#059669' }}>
+                        Amount to Refund: {(depositRefundForm.refundAmount || 0).toFixed(2)} XOF
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="form-group">
+                      <label htmlFor="refundDepositId">Select Deposit to Refund *</label>
+                      <select
+                        id="refundDepositId"
+                        value={depositRefundForm.depositId}
+                        onChange={(e) => setDepositRefundForm({...depositRefundForm, depositId: e.target.value})}
+                        required
+                      >
+                        <option value="">Select Deposit</option>
+                        {deposits
+                          .filter(d => {
+                            const type = (d.Type || d.type || '').toLowerCase();
+                            return type === 'payment';
+                          })
+                          .filter(deposit => {
+                            const refunded = deposits.some(r => {
+                              const refundType = (r.Type || r.type || '').toLowerCase();
+                              return refundType === 'refund' &&
+                                (r.Tenant || r.tenant) === (deposit.Tenant || deposit.tenant) &&
+                                (r.Property || r.property) === (deposit.Property || deposit.property);
+                            });
+                            return !refunded;
+                          })
+                          .map(deposit => (
+                            <option key={deposit.ID || deposit.id} value={deposit.ID || deposit.id}>
+                              {deposit.Tenant || deposit.tenant} - {deposit.Property || deposit.property} -
+                              {(deposit.Amount || deposit.amount || 0).toFixed(2)} XOF
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label htmlFor="refundMethod">Refund Method *</label>
@@ -2722,18 +2763,9 @@ const AccountingDashboard = () => {
     );
   };
 
-  // Deposit Refunds - Focused on refund requests and processing
+  // Deposit Refunds - Tenants with completed state of exit (technician has done exit inventory)
   const renderDepositRefunds = () => {
-    // Pending refunds: deposits that are payments (not yet refunded)
-    // These are deposits that have been paid but not yet refunded
-    const refundRequests = deposits.filter(d => {
-      const type = (d.Type || d.type || '').toLowerCase();
-      const status = (d.Status || d.status || '').toLowerCase();
-      // Show deposits that are payments and can be refunded
-      return type === 'payment' && status !== 'refunded';
-    });
-    
-    // Processed refunds: deposits that have been refunded
+    // Processed refunds: from deposits with type=refund
     const processedRefunds = deposits.filter(d => {
       const type = (d.Type || d.type || '').toLowerCase();
       return type === 'refund';
@@ -2745,7 +2777,7 @@ const AccountingDashboard = () => {
           <div className="sa-section-header">
             <div>
               <h2>Deposit Refunds</h2>
-              <p>Validate and process security deposit refunds</p>
+              <p>Tenants with completed state of exit. Process refunds after deducting repair costs.</p>
             </div>
           </div>
 
@@ -2754,7 +2786,10 @@ const AccountingDashboard = () => {
             <div style={{ padding: '20px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fbbf24' }}>
               <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Pending Refunds</p>
               <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#d97706' }}>
-                {refundRequests.length}
+                {pendingRefunds.length}
+              </p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+                State of exit completed
               </p>
             </div>
             <div style={{ padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
@@ -2771,13 +2806,16 @@ const AccountingDashboard = () => {
             </div>
           </div>
 
-          {/* Refund Requests Table */}
+          {/* Pending Refund Requests - tenants with completed exit inventory */}
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ marginBottom: '16px' }}>Pending Refund Requests</h3>
+            <p style={{ marginBottom: '16px', color: '#6b7280', fontSize: '0.875rem' }}>
+              Only tenants for whom the technician has completed the state of exit appear here. The refund amount is calculated as deposit minus repair costs.
+            </p>
             {loading ? (
               <div className="loading">Loading refund requests...</div>
-            ) : refundRequests.length === 0 ? (
-              <div className="no-data">No pending refund requests</div>
+            ) : pendingRefunds.length === 0 ? (
+              <div className="no-data">No pending refund requests. Tenants will appear here after the technician completes the state of exit.</div>
             ) : (
               <div className="sa-table-wrapper">
                 <table className="sa-table">
@@ -2786,43 +2824,53 @@ const AccountingDashboard = () => {
                       <th>Tenant</th>
                       <th>Property</th>
                       <th>Deposit Amount</th>
-                      <th>Payment Date</th>
-                      <th>Status</th>
+                      <th>Repair Cost</th>
+                      <th>Refund Amount</th>
+                      <th>Exit Date</th>
                       <th className="table-menu">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {refundRequests.map((deposit, index) => (
-                      <tr key={deposit.ID || `refund-request-${index}`}>
-                        <td>
-                          <span className="sa-cell-title">{deposit.Tenant || 'N/A'}</span>
-                        </td>
-                        <td>{deposit.Property || 'N/A'}</td>
-                        <td>{(deposit.Amount || deposit.amount || 0).toFixed(2)} XOF</td>
-                        <td>{deposit.CreatedAt ? new Date(deposit.CreatedAt).toLocaleDateString() : 'N/A'}</td>
-                        <td>
-                          <span className="sa-status-pill warning">Pending Refund</span>
-                        </td>
-                        <td className="table-menu">
-                          <div className="sa-row-actions">
-                            <button
-                              className="table-action-button edit"
-                              onClick={() => {
-                                setDepositRefundForm({
-                                  depositId: deposit.ID || deposit.id,
-                                  refundMethod: 'mobile_money',
-                                  refundAccount: '',
-                                  notes: ''
-                                });
-                                setShowDepositRefundModal(true);
-                              }}
-                            >
-                              Process Refund
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {pendingRefunds.map((item, index) => {
+                      const depositAmount = item.depositAmount ?? item.DepositAmount ?? 0;
+                      const repairCost = item.repairCost ?? item.RepairCost ?? 0;
+                      const refundAmount = item.refundAmount ?? item.RefundAmount ?? Math.max(0, depositAmount - repairCost);
+                      return (
+                        <tr key={item.depositId || `refund-request-${index}`}>
+                          <td>
+                            <span className="sa-cell-title">{item.tenant || item.Tenant || 'N/A'}</span>
+                          </td>
+                          <td>{item.property || item.Property || 'N/A'}</td>
+                          <td>{depositAmount.toFixed(2)} XOF</td>
+                          <td>{repairCost.toFixed(2)} XOF</td>
+                          <td><strong>{Math.max(0, refundAmount).toFixed(2)} XOF</strong></td>
+                          <td>{item.exitInventoryDate ? new Date(item.exitInventoryDate).toLocaleDateString() : (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—')}</td>
+                          <td className="table-menu">
+                            <div className="sa-row-actions">
+                              <button
+                                className="table-action-button edit"
+                                onClick={() => {
+                                  setDepositRefundForm({
+                                    depositId: item.depositId || item.depositID,
+                                    refundAmount: Math.max(0, refundAmount),
+                                    depositAmount,
+                                    repairCost,
+                                    tenant: item.tenant || item.Tenant,
+                                    property: item.property || item.Property,
+                                    refundMethod: 'mobile_money',
+                                    refundAccount: '',
+                                    notes: ''
+                                  });
+                                  setShowDepositRefundModal(true);
+                                }}
+                              >
+                                Process Refund
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
