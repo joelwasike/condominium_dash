@@ -3692,7 +3692,9 @@ const AccountingDashboard = () => {
               {tenantPayments
                 .filter(payment => {
                   const status = (payment.Status || '').toLowerCase();
-                  return status === 'successful' || status === 'failed' || status === 'approved' || status === 'rejected';
+                  const chargeType = (payment.ChargeType || payment.chargeType || '').toLowerCase();
+                  const isRent = chargeType === 'rent';
+                  return (status === 'successful' || status === 'failed' || status === 'approved' || status === 'rejected') && !isRent;
                 })
                 .map((payment, index) => {
                   const status = (payment.Status || '').toLowerCase();
