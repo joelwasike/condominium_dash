@@ -129,6 +129,9 @@ const AccountingDashboard = () => {
   const [collectionPaymentType, setCollectionPaymentType] = useState(null); // null, 'tenant', 'deposit', 'sale'
   const [propertiesForSale, setPropertiesForSale] = useState([]);
   const [expenseProperties, setExpenseProperties] = useState([]);
+  const [expenseFormScope, setExpenseFormScope] = useState('');
+  const [expenseFormBuilding, setExpenseFormBuilding] = useState('');
+  const [expenseFormUnits, setExpenseFormUnits] = useState([]);
   const [paymentView, setPaymentView] = useState('all'); // 'all', 'rent', 'deposit', 'sale', 'tenant'
   const [balanceView, setBalanceView] = useState('overview'); // 'overview', 'cash', 'bank', 'cash-journal', 'bank-journal'
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -405,6 +408,18 @@ const AccountingDashboard = () => {
       }).catch(() => setExpenseProperties([]));
     }
   }, [showExpenseModal]);
+
+  // Load units when building is selected in Add Expense form
+  useEffect(() => {
+    if (showExpenseModal && expenseFormScope === 'Building' && expenseFormBuilding) {
+      const addr = typeof expenseFormBuilding === 'string' ? expenseFormBuilding : (expenseFormBuilding?.address || expenseFormBuilding?.Address || '');
+      accountingService.getPropertyUnits(addr).then(data => {
+        setExpenseFormUnits(Array.isArray(data) ? data : []);
+      }).catch(() => setExpenseFormUnits([]));
+    } else {
+      setExpenseFormUnits([]);
+    }
+  }, [showExpenseModal, expenseFormScope, expenseFormBuilding]);
 
   // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
@@ -6550,11 +6565,21 @@ const AccountingDashboard = () => {
 
       {/* Expense Modal */}
       {showExpenseModal && (
-        <div className="modal-overlay" onClick={() => setShowExpenseModal(false)}>
+        <div className="modal-overlay" onClick={() => {
+          setShowExpenseModal(false);
+          setExpenseFormScope('');
+          setExpenseFormBuilding('');
+          setExpenseFormUnits([]);
+        }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add Expense</h3>
-              <button className="modal-close" onClick={() => setShowExpenseModal(false)}>×</button>
+              <button className="modal-close" onClick={() => {
+                setShowExpenseModal(false);
+                setExpenseFormScope('');
+                setExpenseFormBuilding('');
+                setExpenseFormUnits([]);
+              }}>×</button>
             </div>
             <div className="modal-body">
               <form onSubmit={async (e) => {
@@ -6563,9 +6588,13 @@ const AccountingDashboard = () => {
                   setLoading(true);
                   const formData = new FormData(e.target);
                   const accountId = formData.get('accountId');
+                  const scope = formData.get('scope');
+                  const building = formData.get('building');
+                  const unit = formData.get('unit');
+                  const buildingValue = scope === 'SAAF IMMO' ? '-' : (unit ? `${building} - ${unit}` : building || '-');
                   const expenseData = {
-                    scope: formData.get('scope'),
-                    building: formData.get('scope') === 'SAAF IMMO' ? '-' : formData.get('building'),
+                    scope,
+                    building: buildingValue,
                     category: formData.get('category'),
                     amount: parseFloat(formData.get('amount')),
                     date: formData.get('date'),
@@ -6595,6 +6624,9 @@ const AccountingDashboard = () => {
                   
                   addNotification('Expense added successfully!', 'success');
                   setShowExpenseModal(false);
+                  setExpenseFormScope('');
+                  setExpenseFormBuilding('');
+                  setExpenseFormUnits([]);
                   
                   // Reload expenses to update the list
                   await loadExpenses();
@@ -6618,22 +6650,57 @@ const AccountingDashboard = () => {
               }}>
                 <div className="form-group">
                   <label>Scope</label>
-                  <select name="scope" required>
+                  <select
+                    name="scope"
+                    required
+                    value={expenseFormScope}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setExpenseFormScope(val);
+                      if (val === 'SAAF IMMO') {
+                        setExpenseFormBuilding('');
+                        setExpenseFormUnits([]);
+                      }
+                    }}
+                  >
                     <option value="">Select Scope</option>
                     <option value="Building">Building</option>
                     <option value="SAAF IMMO">SAAF IMMO</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Building (if Building scope)</label>
-                  <select name="building">
-                    <option value="">Select Building</option>
-                    {expenseProperties.map((p) => {
-                      const addr = p.address || p.Address || '';
-                      return <option key={addr} value={addr}>{addr}</option>;
-                    })}
-                  </select>
-                </div>
+                {expenseFormScope === 'Building' && (
+                  <>
+                    <div className="form-group">
+                      <label>Building</label>
+                      <select
+                        name="building"
+                        required
+                        value={expenseFormBuilding}
+                        onChange={(e) => {
+                          setExpenseFormBuilding(e.target.value);
+                        }}
+                      >
+                        <option value="">Select Building</option>
+                        {expenseProperties.map((p) => {
+                          const addr = p.address || p.Address || '';
+                          return <option key={addr} value={addr}>{addr}</option>;
+                        })}
+                      </select>
+                    </div>
+                    {expenseFormBuilding && expenseFormUnits.length > 0 && (
+                      <div className="form-group">
+                        <label>Apartment / Unit (optional)</label>
+                        <select name="unit">
+                          <option value="">— Entire building —</option>
+                          {expenseFormUnits.map((u) => {
+                            const unitNum = u.UnitNumber || u.unitNumber || '';
+                            return <option key={u.ID || u.id || unitNum} value={unitNum}>{unitNum}</option>;
+                          })}
+                        </select>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div className="form-group">
                   <label>Category</label>
                   <select name="category" required>

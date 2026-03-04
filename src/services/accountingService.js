@@ -154,6 +154,14 @@ export const accountingService = {
     return await apiRequest(url);
   },
 
+  // Get units (apartments) for a property by address
+  getPropertyUnits: async (address) => {
+    if (!address) return [];
+    const url = buildApiUrl(`/api/accounting/properties/units?address=${encodeURIComponent(address)}`);
+    const data = await apiRequest(url);
+    return Array.isArray(data) ? data : [];
+  },
+
   // Calculate available payment amount for a building
   calculateBuildingPaymentAmount: async (building) => {
     const url = buildApiUrl(`/api/accounting/landlord-payments/calculate-amount?building=${encodeURIComponent(building)}`);
