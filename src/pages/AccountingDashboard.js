@@ -6693,7 +6693,7 @@ const AccountingDashboard = () => {
                         })}
                       </select>
                     </div>
-                    {expenseFormBuilding && expenseFormUnits.length > 0 && (
+                    {expenseFormBuilding && (
                       <div className="form-group">
                         <label>Apartment / Unit (optional)</label>
                         <select name="unit">
@@ -6703,6 +6703,11 @@ const AccountingDashboard = () => {
                             return <option key={u.ID || u.id || unitNum} value={unitNum}>{unitNum}</option>;
                           })}
                         </select>
+                        {expenseFormUnits.length === 0 && (
+                          <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                            No units found for this property
+                          </small>
+                        )}
                       </div>
                     )}
                   </>
