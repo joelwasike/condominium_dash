@@ -153,6 +153,7 @@ const AccountingDashboard = () => {
     // Sale fields
     buyer: '',
     saleAmount: '',
+    agencyCommission: '',
   });
 
   // Auto-slide carousel for advertisements on overview page
@@ -3478,6 +3479,7 @@ const AccountingDashboard = () => {
             <tr>
               <th>Property</th>
               <th>Sale Amount</th>
+              <th>Commission</th>
               <th>Date</th>
               <th>Status</th>
             </tr>
@@ -3487,6 +3489,7 @@ const AccountingDashboard = () => {
               <tr key={index}>
                 <td>{collection.Building || collection.building || 'N/A'}</td>
                 <td>{(collection.Amount || collection.amount || 0).toFixed(2)} XOF</td>
+                <td>{(collection.Commission ?? collection.commission ?? 0).toFixed(2)} XOF</td>
                 <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
                 <td>
                   <span className={`sa-status-pill ${(collection.Status || 'unknown').toLowerCase()}`}>
@@ -5984,6 +5987,7 @@ const AccountingDashboard = () => {
                       notes: '',
                       buyer: '',
                       saleAmount: '',
+                      agencyCommission: '',
                     });
                     setCollectionPaymentType(null);
                     setShowCollectionPaymentModal(false);
@@ -6189,6 +6193,7 @@ const AccountingDashboard = () => {
                       notes: '',
                       buyer: '',
                       saleAmount: '',
+                      agencyCommission: '',
                     });
                     setCollectionPaymentType(null);
                     setShowCollectionPaymentModal(false);
@@ -6323,6 +6328,7 @@ const AccountingDashboard = () => {
                       amount: parseFloat(collectionPaymentForm.saleAmount || '0'),
                       chargeType: 'Sale',
                       status: 'Collected',
+                      agencyCommission: parseFloat(collectionPaymentForm.agencyCommission || '0') || 0,
                     };
 
                     const created = await accountingService.recordCollection(saleData);
@@ -6354,6 +6360,7 @@ const AccountingDashboard = () => {
                       notes: '',
                       buyer: '',
                       saleAmount: '',
+                      agencyCommission: '',
                     });
                     setCollectionPaymentType(null);
                     setShowCollectionPaymentModal(false);
@@ -6424,6 +6431,18 @@ const AccountingDashboard = () => {
                       onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, saleAmount: e.target.value, amount: e.target.value})}
                       required
                       placeholder="Enter sale amount"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="agencyCommission">Agency Commission (XOF)</label>
+                    <input
+                      id="agencyCommission"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={collectionPaymentForm.agencyCommission}
+                      onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, agencyCommission: e.target.value})}
+                      placeholder="Enter agency commission (optional)"
                     />
                   </div>
                   <div className="modal-footer">
