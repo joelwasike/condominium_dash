@@ -1285,20 +1285,6 @@ const AccountingDashboard = () => {
               All Payments
             </button>
             <button
-              onClick={() => setPaymentView('rent')}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                background: paymentView === 'rent' ? '#3b82f6' : 'transparent',
-                color: paymentView === 'rent' ? 'white' : '#6b7280',
-                cursor: 'pointer',
-                borderBottom: paymentView === 'rent' ? '2px solid #3b82f6' : '2px solid transparent',
-                marginBottom: '-2px'
-              }}
-            >
-              Rent Payments
-            </button>
-            <button
               onClick={() => setPaymentView('deposit')}
               style={{
                 padding: '10px 20px',
@@ -3692,9 +3678,7 @@ const AccountingDashboard = () => {
               {tenantPayments
                 .filter(payment => {
                   const status = (payment.Status || '').toLowerCase();
-                  const chargeType = (payment.ChargeType || payment.chargeType || '').toLowerCase();
-                  const isRent = chargeType === 'rent';
-                  return (status === 'successful' || status === 'failed' || status === 'approved' || status === 'rejected') && !isRent;
+                  return status === 'successful' || status === 'failed' || status === 'approved' || status === 'rejected';
                 })
                 .map((payment, index) => {
                   const status = (payment.Status || '').toLowerCase();
