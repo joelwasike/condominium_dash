@@ -256,10 +256,11 @@ const TechnicianDashboard = () => {
   // Helper data for Inventory Form (Entry / Exit)
   const currentInventoryTenants =
     inventoryFormData.type === 'Entry' ? entryTenants : exitTenants;
+  // Use companyTenants (all tenants from sales manager) for the dropdown so technician can select any tenant
   const tenantOptions =
-    currentInventoryTenants && currentInventoryTenants.length > 0
-      ? currentInventoryTenants
-      : companyTenants;
+    companyTenants && companyTenants.length > 0
+      ? companyTenants
+      : currentInventoryTenants;
 
   const inventoryPropertyOptions = Array.from(
     new Set(
