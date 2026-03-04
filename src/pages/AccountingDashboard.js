@@ -748,6 +748,8 @@ const AccountingDashboard = () => {
     
     yPos += 12;
     pdf.text('Noms et prénoms :', 20, yPos);
+    const requestedBy = expense.RequestedBy || expense.requestedBy || '';
+    pdf.text(requestedBy || '-', 60, yPos);
     pdf.line(60, yPos - 3, pageWidth - 20, yPos - 3);
     
     yPos += 12;
@@ -3877,12 +3879,13 @@ const AccountingDashboard = () => {
   const exportExpensesToCSV = () => {
     const filteredExpenses = getFilteredExpenses();
     
-    const headers = ['Date', 'Scope', 'Building', 'Category', 'Amount', 'Notes'];
+    const headers = ['Date', 'Scope', 'Building', 'Category', 'Requested by', 'Amount', 'Notes'];
     const rows = filteredExpenses.map(exp => [
       exp.Date || exp.date ? new Date(exp.Date || exp.date).toLocaleDateString() : '',
       exp.Scope || exp.scope || '',
       exp.Building || exp.building || '',
       exp.Category || exp.category || '',
+      (exp.RequestedBy || exp.requestedBy || '').replace(/"/g, '""'),
       (exp.Amount || exp.amount || 0).toFixed(2),
       (exp.Notes || exp.notes || '').replace(/"/g, '""') // Escape quotes for CSV
     ]);
@@ -4063,6 +4066,7 @@ const AccountingDashboard = () => {
                 <th>Scope</th>
                 <th>Building</th>
                 <th>Category</th>
+                <th>Requested by</th>
                 <th>Amount</th>
                 <th>Notes</th>
                 <th className="table-menu"></th>
@@ -4077,6 +4081,7 @@ const AccountingDashboard = () => {
                     <span className="sa-cell-title">{exp.Building || exp.building || 'N/A'}</span>
                   </td>
                   <td>{exp.Category || exp.category || 'N/A'}</td>
+                  <td>{exp.RequestedBy || exp.requestedBy || '—'}</td>
                   <td>{(exp.Amount || exp.amount || 0).toFixed(2)} XOF</td>
                       <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {exp.Notes || exp.notes || 'N/A'}
@@ -6596,6 +6601,7 @@ const AccountingDashboard = () => {
                     scope,
                     building: buildingValue,
                     category: formData.get('category'),
+                    requestedBy: formData.get('requestedBy') || '',
                     amount: parseFloat(formData.get('amount')),
                     date: formData.get('date'),
                     notes: formData.get('notes'),
@@ -6711,6 +6717,14 @@ const AccountingDashboard = () => {
                     <option value="Software">Software</option>
                     <option value="Other">Other</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label>Requested by (name of person)</label>
+                  <input
+                    type="text"
+                    name="requestedBy"
+                    placeholder="Enter name of person who requested the payment"
+                  />
                 </div>
                 <div className="form-group">
                   <label>Amount</label>
@@ -6881,6 +6895,10 @@ const AccountingDashboard = () => {
               <div className="form-group">
                 <label>Category</label>
                 <div>{selectedExpense.Category || selectedExpense.category || 'N/A'}</div>
+              </div>
+              <div className="form-group">
+                <label>Requested by</label>
+                <div>{selectedExpense.RequestedBy || selectedExpense.requestedBy || '—'}</div>
               </div>
               <div className="form-group">
                 <label>Amount</label>
