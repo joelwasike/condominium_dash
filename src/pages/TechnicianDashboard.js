@@ -3033,6 +3033,78 @@ const TechnicianDashboard = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Submitted inventory reports - history below the tenant table */}
+        <div style={{ marginTop: '32px' }}>
+          <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600', color: '#374151' }}>
+            Submitted inventory reports
+          </h4>
+          <p style={{ marginBottom: '12px', fontSize: '0.875rem', color: '#6b7280' }}>
+            Inventory reports you have submitted (Entry or Exit) appear here.
+          </p>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Type</th>
+                  <th>Tenant</th>
+                  <th>Property</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Report</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const invType = stateEntryView === 'entry' ? 'Move-in' : 'Move-out';
+                  const submitted = (historyData.inventories || [])
+                    .filter(inv => (inv.Type || inv.type) === invType)
+                    .sort((a, b) => new Date(b.CreatedAt || b.createdAt || b.Date || b.date) - new Date(a.CreatedAt || a.createdAt || a.Date || a.date));
+                  if (submitted.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={7} className="sa-table-empty">
+                          No submitted {stateEntryView === 'entry' ? 'Entry' : 'Exit'} inventory reports yet.
+                        </td>
+                      </tr>
+                    );
+                  }
+                  return submitted.map((inv, idx) => {
+                    const reportURL = inv.ReportURL || inv.reportURL || inv.ReportUrl;
+                    return (
+                      <tr key={inv.ID || inv.id || idx}>
+                        <td>{idx + 1}</td>
+                        <td>
+                          <span className="sa-status-pill" style={{ backgroundColor: '#e0e7ff', color: '#3730a3' }}>
+                            {inv.Type || inv.type || 'Inventory'}
+                          </span>
+                        </td>
+                        <td>{inv.Tenant || inv.tenant || '—'}</td>
+                        <td>{inv.Property || inv.property || '—'}</td>
+                        <td>{(inv.Date || inv.date || inv.CreatedAt || inv.createdAt) ? new Date(inv.Date || inv.date || inv.CreatedAt || inv.createdAt).toLocaleDateString() : '—'}</td>
+                        <td>
+                          <span className={`sa-status-pill ${(inv.Status || inv.status || 'completed').toLowerCase()}`}>
+                            {inv.Status || inv.status || 'Completed'}
+                          </span>
+                        </td>
+                        <td>
+                          {reportURL ? (
+                            <a href={`${API_CONFIG?.BASE_URL || ''}${reportURL}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
+                              View report
+                            </a>
+                          ) : (
+                            <span style={{ color: '#9ca3af' }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   };
