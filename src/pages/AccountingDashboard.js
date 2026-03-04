@@ -129,6 +129,9 @@ const AccountingDashboard = () => {
     notes: ''
   });
   const [pendingRefunds, setPendingRefunds] = useState([]);
+  const [showProcessDepositModal, setShowProcessDepositModal] = useState(false);
+  const [processDepositItem, setProcessDepositItem] = useState(null);
+  const [processDepositManualAmount, setProcessDepositManualAmount] = useState('');
 
   // Collections manual payment state
   const [showCollectionPaymentModal, setShowCollectionPaymentModal] = useState(false);
@@ -2612,6 +2615,117 @@ const AccountingDashboard = () => {
           </div>
         )}
 
+        {/* Process Deposit Modal - for tenants needing deposit recorded; shows calculation with Approve/Deny */}
+        {showProcessDepositModal && processDepositItem && (
+          <div className="modal-overlay" onClick={() => { setShowProcessDepositModal(false); setProcessDepositItem(null); setProcessDepositManualAmount(''); }}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+              <div className="modal-header">
+                <h3>Process Deposit Refund</h3>
+                <button className="modal-close" onClick={() => { setShowProcessDepositModal(false); setProcessDepositItem(null); setProcessDepositManualAmount(''); }}>×</button>
+              </div>
+              <div className="modal-body">
+                {(() => {
+                  const depositAmt = (processDepositItem.depositAmount || 0) > 0
+                    ? processDepositItem.depositAmount
+                    : parseFloat(processDepositManualAmount) || 0;
+                  const repairAmt = processDepositItem.repairCost || 0;
+                  const refundAmt = Math.max(0, depositAmt - repairAmt);
+                  return (
+                    <>
+                      <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', marginBottom: '20px' }}>
+                        <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600' }}>Refund calculation</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', lineHeight: 1.6 }}>
+                          <div><strong>Tenant:</strong> {processDepositItem.tenant || '—'}</div>
+                          <div><strong>Property:</strong> {processDepositItem.property || '—'}</div>
+                          {(processDepositItem.depositAmount || 0) <= 0 ? (
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label>Deposit amount (XOF) *</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={processDepositManualAmount}
+                                onChange={(e) => setProcessDepositManualAmount(e.target.value)}
+                                placeholder="Enter deposit amount"
+                                style={{ width: '100%', padding: '8px 12px' }}
+                              />
+                            </div>
+                          ) : (
+                            <div><strong>Deposit amount:</strong> {depositAmt.toFixed(2)} XOF</div>
+                          )}
+                          <div><strong>Repair cost (deducted):</strong> {repairAmt.toFixed(2)} XOF</div>
+                          <div style={{ marginTop: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', fontSize: '1.1rem', fontWeight: '600', color: '#059669' }}>
+                            Amount to refund: {refundAmt.toFixed(2)} XOF
+                          </div>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '16px' }}>
+                        Approve to record the deposit and process the refund. Deny to cancel.
+                      </p>
+                      <div className="modal-footer" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                        <button
+                          type="button"
+                          className="action-button secondary"
+                          onClick={() => { setShowProcessDepositModal(false); setProcessDepositItem(null); setProcessDepositManualAmount(''); }}
+                        >
+                          Deny
+                        </button>
+                        <button
+                          type="button"
+                          className="action-button primary"
+                          disabled={loading || depositAmt <= 0}
+                          onClick={async () => {
+                            try {
+                              setLoading(true);
+                              const monthlyRent = depositAmt / 2;
+                              const depositRes = await accountingService.recordDepositPayment({
+                                tenant: processDepositItem.tenant,
+                                property: processDepositItem.property,
+                                tenantType: 'individual',
+                                monthlyRent,
+                                paymentMethod: 'mobile_money',
+                                reference: '',
+                                notes: 'Recorded via Process deposit refund'
+                              });
+                              const newDepositId = depositRes?.ID ?? depositRes?.id;
+                              if (newDepositId) {
+                                await accountingService.processDepositRefund({
+                                  depositId: newDepositId,
+                                  refundAmount: refundAmt,
+                                  refundMethod: 'mobile_money',
+                                  refundAccount: '',
+                                  notes: ''
+                                });
+                              }
+                              addNotification('Deposit recorded and refund processed successfully!', 'success');
+                              setShowProcessDepositModal(false);
+                              setProcessDepositItem(null);
+                              setProcessDepositManualAmount('');
+                              await loadDeposits();
+                              loadDepositRefundsPending();
+                              try {
+                                const overview = await accountingService.getOverview();
+                                setOverviewData(overview);
+                              } catch (err) { console.error(err); }
+                            } catch (error) {
+                              console.error('Error processing deposit refund:', error);
+                              addNotification(error.message || 'Failed to process deposit refund', 'error');
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                        >
+                          {loading ? 'Processing...' : 'Approve'}
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Deposit Refund Modal */}
         {showDepositRefundModal && (
           <div className="modal-overlay" onClick={() => setShowDepositRefundModal(false)}>
@@ -2854,19 +2968,18 @@ const AccountingDashboard = () => {
                                 <button
                                   className="table-action-button edit"
                                   onClick={() => {
-                                    setDepositPaymentForm({
+                                    setProcessDepositItem({
                                       tenant: item.tenant || item.Tenant,
                                       property: item.property || item.Property,
-                                      tenantType: 'individual',
-                                      monthlyRent: depositAmount > 0 ? String(depositAmount / 2) : '',
-                                      paymentMethod: 'mobile_money',
-                                      reference: '',
-                                      notes: ''
+                                      depositAmount,
+                                      repairCost,
+                                      refundAmount: Math.max(0, depositAmount - repairCost),
+                                      exitInventoryDate: item.exitInventoryDate
                                     });
-                                    setShowDepositPaymentModal(true);
+                                    setShowProcessDepositModal(true);
                                   }}
                                 >
-                                  Record deposit
+                                  Process deposit
                                 </button>
                               ) : (
                                 <button
