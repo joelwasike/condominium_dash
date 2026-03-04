@@ -2487,6 +2487,7 @@ const AccountingDashboard = () => {
                       notes: ''
                     });
                     await loadDeposits();
+                    loadDepositRefundsPending();
                   } catch (error) {
                     console.error('Error recording deposit payment:', error);
                     addNotification(error.message || 'Failed to record deposit payment', 'error');
@@ -2835,37 +2836,59 @@ const AccountingDashboard = () => {
                       const depositAmount = item.depositAmount ?? item.DepositAmount ?? 0;
                       const repairCost = item.repairCost ?? item.RepairCost ?? 0;
                       const refundAmount = item.refundAmount ?? item.RefundAmount ?? Math.max(0, depositAmount - repairCost);
+                      const needsDeposit = item.needsDeposit === true;
+                      const depositId = item.depositId ?? item.depositID ?? 0;
                       return (
-                        <tr key={item.depositId || `refund-request-${index}`}>
+                        <tr key={depositId || `refund-request-${index}`}>
                           <td>
                             <span className="sa-cell-title">{item.tenant || item.Tenant || 'N/A'}</span>
                           </td>
                           <td>{item.property || item.Property || 'N/A'}</td>
-                          <td>{depositAmount.toFixed(2)} XOF</td>
+                          <td>{depositAmount > 0 ? `${depositAmount.toFixed(2)} XOF` : (needsDeposit ? 'Not recorded' : '—')}</td>
                           <td>{repairCost.toFixed(2)} XOF</td>
-                          <td><strong>{Math.max(0, refundAmount).toFixed(2)} XOF</strong></td>
+                          <td><strong>{depositAmount > 0 ? `${Math.max(0, refundAmount).toFixed(2)} XOF` : (needsDeposit ? '—' : '—')}</strong></td>
                           <td>{item.exitInventoryDate ? new Date(item.exitInventoryDate).toLocaleDateString() : (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—')}</td>
                           <td className="table-menu">
                             <div className="sa-row-actions">
-                              <button
-                                className="table-action-button edit"
-                                onClick={() => {
-                                  setDepositRefundForm({
-                                    depositId: item.depositId || item.depositID,
-                                    refundAmount: Math.max(0, refundAmount),
-                                    depositAmount,
-                                    repairCost,
-                                    tenant: item.tenant || item.Tenant,
-                                    property: item.property || item.Property,
-                                    refundMethod: 'mobile_money',
-                                    refundAccount: '',
-                                    notes: ''
-                                  });
-                                  setShowDepositRefundModal(true);
-                                }}
-                              >
-                                Process Refund
-                              </button>
+                              {needsDeposit ? (
+                                <button
+                                  className="table-action-button edit"
+                                  onClick={() => {
+                                    setDepositPaymentForm({
+                                      tenant: item.tenant || item.Tenant,
+                                      property: item.property || item.Property,
+                                      tenantType: 'individual',
+                                      monthlyRent: depositAmount > 0 ? String(depositAmount / 2) : '',
+                                      paymentMethod: 'mobile_money',
+                                      reference: '',
+                                      notes: ''
+                                    });
+                                    setShowDepositPaymentModal(true);
+                                  }}
+                                >
+                                  Record deposit
+                                </button>
+                              ) : (
+                                <button
+                                  className="table-action-button edit"
+                                  onClick={() => {
+                                    setDepositRefundForm({
+                                      depositId: depositId,
+                                      refundAmount: Math.max(0, refundAmount),
+                                      depositAmount,
+                                      repairCost,
+                                      tenant: item.tenant || item.Tenant,
+                                      property: item.property || item.Property,
+                                      refundMethod: 'mobile_money',
+                                      refundAccount: '',
+                                      notes: ''
+                                    });
+                                    setShowDepositRefundModal(true);
+                                  }}
+                                >
+                                  Process Refund
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
