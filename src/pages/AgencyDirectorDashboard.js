@@ -636,7 +636,7 @@ const AgencyDirectorDashboard = () => {
 
   // Load data when specific tabs are active
   useEffect(() => {
-    if (activeTab === 'contracts' || (activeTab === 'management' && managementSubTab === 'contracts')) {
+    if (activeTab === 'contracts' || activeTab === 'owners' || (activeTab === 'management' && managementSubTab === 'contracts')) {
       loadContractsData();
     }
   }, [activeTab, managementSubTab, loadContractsData]);

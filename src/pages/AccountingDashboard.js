@@ -126,6 +126,7 @@ const AccountingDashboard = () => {
   const [showCollectionPaymentModal, setShowCollectionPaymentModal] = useState(false);
   const [collectionPaymentType, setCollectionPaymentType] = useState(null); // null, 'tenant', 'deposit', 'sale'
   const [propertiesForSale, setPropertiesForSale] = useState([]);
+  const [expenseProperties, setExpenseProperties] = useState([]);
   const [paymentView, setPaymentView] = useState('all'); // 'all', 'rent', 'deposit', 'sale', 'tenant'
   const [balanceView, setBalanceView] = useState('overview'); // 'overview', 'cash', 'bank', 'cash-journal', 'bank-journal'
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -392,6 +393,15 @@ const AccountingDashboard = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCollectionPaymentModal, collectionPaymentType]);
+
+  // Load properties when opening Add Expense modal
+  useEffect(() => {
+    if (showExpenseModal) {
+      accountingService.getProperties().then(data => {
+        setExpenseProperties(Array.isArray(data) ? data : []);
+      }).catch(() => setExpenseProperties([]));
+    }
+  }, [showExpenseModal]);
 
   // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
@@ -6023,8 +6033,10 @@ const AccountingDashboard = () => {
                       type="text"
                       value={collectionPaymentForm.property}
                       onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})}
+                      readOnly={!!(collectionPaymentForm.tenant && collectionPaymentForm.property)}
                       required
-                      placeholder="e.g., Apartment 4B, 123 Main St"
+                      placeholder="Select a tenant to auto-fill"
+                      style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}}
                     />
                   </div>
                   <div className="form-group">
@@ -6169,7 +6181,6 @@ const AccountingDashboard = () => {
                           const name = t.tenantName || t.TenantName || '';
                           const prop = t.property || t.Property || t.building || t.Building || '';
                           const rent = t.monthlyRent ?? t.MonthlyRent ?? t.rent ?? t.Rent ?? '';
-                          const isHouse = (prop || '').toLowerCase().includes('house') || (prop || '').toLowerCase().includes('villa');
                           setCollectionPaymentForm({
                             ...collectionPaymentForm,
                             tenant: name,
@@ -6196,8 +6207,10 @@ const AccountingDashboard = () => {
                       type="text"
                       value={collectionPaymentForm.property}
                       onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})}
+                      readOnly={!!(collectionPaymentForm.tenant && collectionPaymentForm.property)}
                       required
-                      placeholder="e.g., Apartment 4B or House 123"
+                      placeholder="Select a tenant to auto-fill"
+                      style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}}
                     />
                   </div>
                   <div className="form-group">
@@ -6481,10 +6494,10 @@ const AccountingDashboard = () => {
                   <label>Building (if Building scope)</label>
                   <select name="building">
                     <option value="">Select Building</option>
-                    <option value="123 Main St">123 Main St</option>
-                    <option value="456 Oak Ave">456 Oak Ave</option>
-                    <option value="789 Pine Ln">789 Pine Ln</option>
-                    <option value="321 Elm St">321 Elm St</option>
+                    {expenseProperties.map((p) => {
+                      const addr = p.address || p.Address || '';
+                      return <option key={addr} value={addr}>{addr}</option>;
+                    })}
                   </select>
                 </div>
                 <div className="form-group">
