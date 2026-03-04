@@ -2424,6 +2424,7 @@ const AccountingDashboard = () => {
                       <option value="mobile_money">Mobile Money</option>
                       <option value="bank_transfer">Bank Transfer</option>
                       <option value="cash">Cash</option>
+                      <option value="cheque">Cheque</option>
                     </select>
                   </div>
 
@@ -2548,6 +2549,7 @@ const AccountingDashboard = () => {
                       <option value="mobile_money">Mobile Money</option>
                       <option value="bank_transfer">Bank Transfer</option>
                       <option value="cash">Cash</option>
+                      <option value="cheque">Cheque</option>
                     </select>
                   </div>
 
@@ -6091,6 +6093,7 @@ const AccountingDashboard = () => {
                       <option value="Cash">Cash</option>
                       <option value="Mobile Money">Mobile Money</option>
                       <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="Cheque">Cheque</option>
                     </select>
                   </div>
                   <div className="form-group">
@@ -6291,6 +6294,7 @@ const AccountingDashboard = () => {
                       <option value="cash">Cash</option>
                       <option value="mobile_money">Mobile Money</option>
                       <option value="bank_transfer">Bank Transfer</option>
+                      <option value="cheque">Cheque</option>
                     </select>
                   </div>
                   <div className="modal-footer">
