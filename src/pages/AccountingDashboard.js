@@ -4078,42 +4078,6 @@ const AccountingDashboard = () => {
                         View
                       </button>
                       <button 
-                        className="table-action-button edit"
-                        onClick={() => {
-                          setSelectedExpense(exp);
-                          setShowEditExpenseModal(true);
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        className="table-action-button delete"
-                        onClick={async () => {
-                          if (window.confirm('Are you sure you want to delete this expense? This action cannot be undone.')) {
-                            try {
-                              setLoading(true);
-                              await accountingService.deleteExpense(exp.ID || exp.id);
-                              addNotification('Expense deleted successfully', 'success');
-                              await loadExpenses();
-                              // Refresh overview to update balances
-                              try {
-                                const overview = await accountingService.getOverview();
-                                setOverviewData(overview);
-                              } catch (err) {
-                                console.error('Error refreshing overview:', err);
-                              }
-                            } catch (error) {
-                              console.error('Error deleting expense:', error);
-                              addNotification(error.message || 'Failed to delete expense', 'error');
-                            } finally {
-                              setLoading(false);
-                            }
-                          }
-                        }}
-                      >
-                        Delete
-                      </button>
-                      <button 
                         className="table-action-button"
                         onClick={() => {
                           setSelectedExpense(exp);
