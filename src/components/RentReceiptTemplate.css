@@ -1,0 +1,237 @@
+/* Rent Receipt Template - SAAF IMMO */
+.rent-receipt-template {
+  position: relative;
+  background: #fff;
+  padding: 32px 40px 40px;
+  max-width: 210mm;
+  margin: 0 auto;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  color: #1a1a1a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.rent-receipt-watermark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.06;
+  font-size: 48px;
+  font-weight: bold;
+  color: #1e40af;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  align-content: space-around;
+  padding: 40px;
+}
+
+.rent-receipt-watermark span {
+  text-align: center;
+  transform: rotate(-15deg);
+}
+
+.rent-receipt-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.rent-receipt-logo {
+  display: flex;
+  flex-direction: column;
+}
+
+.rent-receipt-logo-sili {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1e40af;
+  letter-spacing: 0.5px;
+}
+
+.rent-receipt-logo-saaf {
+  font-size: 22px;
+  font-weight: bold;
+  color: #1e40af;
+  margin-top: 2px;
+}
+
+.rent-receipt-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e40af;
+  color: #fff;
+  padding: 10px 40px;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.rent-receipt-badge {
+  border: 2px solid #7c3aed;
+  padding: 6px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #7c3aed;
+  letter-spacing: 0.5px;
+}
+
+.rent-receipt-meta {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.rent-receipt-ref,
+.rent-receipt-date {
+  font-size: 11px;
+  color: #374151;
+}
+
+.rent-receipt-info {
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.rent-receipt-info-row {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.rent-receipt-label {
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.rent-receipt-value {
+  flex: 1;
+  border-bottom: 1px solid #9ca3af;
+  padding-bottom: 2px;
+}
+
+.rent-receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.rent-receipt-table th {
+  background: #1e40af;
+  color: #fff;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rent-receipt-table th:last-child {
+  text-align: right;
+}
+
+.rent-receipt-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rent-receipt-table td:last-child {
+  text-align: right;
+  font-weight: 500;
+}
+
+.rent-receipt-total-row td,
+.rent-receipt-payment-row td {
+  background: #f3f4f6;
+  font-weight: 600;
+}
+
+.rent-receipt-methods {
+  font-weight: 400 !important;
+  font-size: 11px;
+}
+
+.rent-receipt-methods .selected {
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.rent-receipt-balance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #dc2626;
+  color: #fff;
+  padding: 12px 20px;
+  margin-bottom: 28px;
+  font-weight: bold;
+  font-size: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.rent-receipt-balance-value {
+  font-size: 16px;
+}
+
+.rent-receipt-signatures {
+  display: flex;
+  justify-content: space-between;
+  gap: 60px;
+  margin-bottom: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.rent-receipt-sig {
+  flex: 1;
+  text-align: center;
+}
+
+.rent-receipt-sig span {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-decoration: underline;
+}
+
+.rent-receipt-sig-line {
+  height: 40px;
+  border-bottom: 1px solid #374151;
+}
+
+.rent-receipt-clauses {
+  font-size: 9px;
+  line-height: 1.5;
+  color: #4b5563;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.rent-receipt-footer {
+  font-size: 10px;
+  color: #6b7280;
+  line-height: 1.6;
+  position: relative;
+  z-index: 1;
+}
+
+.rent-receipt-footer div {
+  margin-bottom: 2px;
+}

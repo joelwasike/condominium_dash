@@ -15,6 +15,7 @@ import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAccountingDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
+import RentReceiptTemplate from '../components/RentReceiptTemplate';
 import SettingsPage from './SettingsPage';
 import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
@@ -895,108 +896,154 @@ const AccountingDashboard = () => {
     return num.toString();
   };
 
-  // Print payment/collection receipt as PDF (SAAF IMMO format - same as BON DE CAISSE)
-  const printPaymentReceipt = (item) => {
+  // Print payment/collection receipt as PDF (SAAF IMMO RENT RECEIPT template)
+  const printPaymentReceipt = (item, isCollectionParam) => {
     if (!item) return;
-    const isCollection = item.Building !== undefined;
+    const isCollection = isCollectionParam ?? (item.Building !== undefined);
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    let yPos = 20;
-
-    // Header - Logo and Title
-    pdf.setFontSize(16);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('sili', 20, yPos);
-    pdf.setFontSize(20);
-    pdf.text('SAAF IMMO', 20, yPos + 8);
-    pdf.setFontSize(18);
-    pdf.text('QUITTANCE DE PAIEMENT', pageWidth - 20, yPos, { align: 'right' });
-    yPos += 25;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('B.F.F.', pageWidth - 20, yPos, { align: 'right' });
-    yPos += 20;
+    let yPos = 18;
 
     const amount = item.Amount?.toFixed(2) ? parseFloat(item.Amount) : item.amount || 0;
-    const amountWords = numberToWordsFr(Math.floor(amount)) + ' francs CFA';
-
-    if (isCollection) {
-      pdf.setFontSize(11);
-      pdf.text('Reçu de :', 20, yPos);
-      pdf.text(item.Landlord || item.landlord || '-', 50, yPos);
-      yPos += 10;
-      pdf.text('Propriété / Bâtiment :', 20, yPos);
-      pdf.text(item.Building || item.building || '-', 70, yPos);
-      yPos += 10;
-      pdf.text('Type :', 20, yPos);
-      pdf.text(item.ChargeType || item.chargeType || '-', 50, yPos);
-      yPos += 10;
-      pdf.text('Référence :', 20, yPos);
-      pdf.text(item.Landlord ? `${item.Landlord} - ${item.Building}` : '-', 50, yPos);
-    } else {
-      pdf.setFontSize(11);
-      pdf.text('Payé par :', 20, yPos);
-      pdf.text(item.Tenant || item.tenant || '-', 50, yPos);
-      yPos += 10;
-      pdf.text('Propriété :', 20, yPos);
-      pdf.text(item.Property || item.property || '-', 50, yPos);
-      yPos += 10;
-      pdf.text('Type :', 20, yPos);
-      pdf.text(item.ChargeType || item.chargeType || 'Rent', 50, yPos);
-      yPos += 10;
-      pdf.text('Méthode :', 20, yPos);
-      pdf.text(item.Method || item.method || '-', 50, yPos);
-      yPos += 10;
-      pdf.text('Référence :', 20, yPos);
-      pdf.text(item.Reference || item.reference || '-', 50, yPos);
-    }
-    yPos += 15;
-
-    pdf.text('La somme de', 20, yPos);
-    pdf.text('(en lettre) :', 20, yPos + 6);
-    pdf.line(50, yPos - 3, pageWidth - 20, yPos - 3);
-    pdf.text(amountWords, 55, yPos);
-    yPos += 12;
-    pdf.text('(en chiffre) :', 20, yPos);
-    pdf.line(50, yPos - 3, pageWidth - 60, yPos - 3);
-    pdf.text((amount || 0).toFixed(2) + ' CFA', 55, yPos);
-    yPos += 10;
-    pdf.text('Date :', 20, yPos);
+    const tenant = item.Tenant || item.tenant || (isCollection ? (item.Landlord || item.landlord) : null);
+    const building = item.Property || item.property || item.Building || item.building || '-';
+    const method = item.Method || item.method || '-';
     const dateVal = item.Date || item.date;
-    pdf.text(dateVal ? new Date(dateVal).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR'), 50, yPos);
+    const dateStr = dateVal ? new Date(dateVal).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const refNum = item.ReceiptNumber || item.receiptNumber || item.Reference || item.reference || `SAAF/${item.ID || item.id || '000'}/000`;
+    const rentDue = item.RentDue ?? item.rentDue ?? 0;
+    const rentPaidAdvance = item.RentPaidAdvance ?? item.rentPaidAdvance ?? 0;
+    const rentPrice = amount;
+    const totalToPay = rentDue + rentPrice - rentPaidAdvance;
+    const paymentAmount = amount;
+    const balanceAfter = Math.max(0, totalToPay - paymentAmount);
+    const fmt = (v) => (Number(v) || 0).toLocaleString('fr-FR');
+
+    // Header - Logo
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(30, 64, 175);
+    pdf.text('sili', 20, yPos);
+    pdf.setFontSize(18);
+    pdf.text('SAAF IMMO', 20, yPos + 7);
+
+    // RENT RECEIPT banner (centered)
+    pdf.setFillColor(30, 64, 175);
+    pdf.rect(0, yPos - 5, pageWidth, 14, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(14);
+    pdf.text('RENT RECEIPT', pageWidth / 2, yPos + 4, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
+
+    // Agent badge
+    pdf.setDrawColor(124, 58, 237);
+    pdf.setLineWidth(0.5);
+    pdf.rect(pageWidth - 55, yPos - 2, 50, 10);
+    pdf.setFontSize(8);
+    pdf.setTextColor(124, 58, 237);
+    pdf.text('AGENT IMMOBILIER', pageWidth - 52, yPos + 3);
+    pdf.text('AGREÉ', pageWidth - 52, yPos + 7);
+    pdf.setTextColor(0, 0, 0);
+
+    yPos += 22;
+
+    // REF and Date
+    pdf.setFontSize(10);
+    pdf.text(`REF : ${refNum}`, pageWidth - 20, yPos, { align: 'right' });
+    pdf.text(`Date : ${dateStr}`, pageWidth - 20, yPos + 6, { align: 'right' });
+    yPos += 18;
+
+    // Tenant, Building, Locative
+    pdf.setFontSize(11);
+    pdf.text('Tenant:', 20, yPos);
+    pdf.text(tenant || '-', 50, yPos);
+    pdf.line(50, yPos - 2, pageWidth - 20, yPos - 2);
+    yPos += 10;
+    pdf.text('Building:', 20, yPos);
+    pdf.text(building || '-', 50, yPos);
+    pdf.line(50, yPos - 2, pageWidth - 20, yPos - 2);
+    yPos += 10;
+    pdf.text('Locative:', 20, yPos);
+    pdf.text(item.Unit || item.unit || item.Locative || item.locative || '-', 50, yPos);
+    pdf.line(50, yPos - 2, pageWidth - 20, yPos - 2);
+    yPos += 16;
+
+    // Table header
+    pdf.setFillColor(30, 64, 175);
+    pdf.rect(20, yPos - 3, pageWidth - 40, 10, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('DESIGNATION', 24, yPos + 3);
+    pdf.text('MONTANT', pageWidth - 24, yPos + 3, { align: 'right' });
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'normal');
+    yPos += 12;
+
+    pdf.setFontSize(10);
+    pdf.text('1. Rent due (Total unpaid)', 24, yPos);
+    pdf.text(`${fmt(rentDue)} F-CFA`, pageWidth - 24, yPos, { align: 'right' });
+    yPos += 7;
+    pdf.text('2. Rent paid in advance', 24, yPos);
+    pdf.text(`${fmt(rentPaidAdvance)} F-CFA`, pageWidth - 24, yPos, { align: 'right' });
+    yPos += 7;
+    pdf.text('3. Rent price', 24, yPos);
+    pdf.text(`${fmt(rentPrice)} F-CFA`, pageWidth - 24, yPos, { align: 'right' });
+    yPos += 7;
+    pdf.setFillColor(243, 244, 246);
+    pdf.rect(20, yPos - 3, pageWidth - 40, 8, 'F');
+    pdf.text('TOTAL TO BE PAID', 24, yPos + 3);
+    pdf.text(`${fmt(totalToPay)} F-CFA`, pageWidth - 24, yPos + 3, { align: 'right' });
+    yPos += 10;
+    pdf.rect(20, yPos - 3, pageWidth - 40, 8, 'F');
+    pdf.text('payment', 24, yPos + 3);
+    pdf.text(`${fmt(paymentAmount)} F-CFA`, pageWidth - 24, yPos + 3, { align: 'right' });
+    yPos += 10;
+    pdf.text('payment method', 24, yPos);
+    pdf.text('Link | Transfer | Check | OM | Wave | Cash', pageWidth - 24, yPos, { align: 'right' });
+    yPos += 14;
+
+    // Balance after payment (red banner)
+    pdf.setFillColor(220, 38, 38);
+    pdf.rect(20, yPos - 3, pageWidth - 40, 10, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Balance after payment', 24, yPos + 4);
+    pdf.text(`${fmt(balanceAfter)} F-CFA`, pageWidth - 24, yPos + 4, { align: 'right' });
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'normal');
+    yPos += 22;
+
+    // Signatures
+    pdf.setFontSize(10);
+    pdf.text('VISA AGENCY', 24, yPos);
+    pdf.text('VISA CLIENT', pageWidth - 24, yPos, { align: 'right' });
+    yPos += 4;
+    pdf.line(24, yPos, 80, yPos);
+    pdf.line(pageWidth - 80, yPos, pageWidth - 24, yPos);
+    yPos += 12;
+
+    // CLAUSES DE RESERVE
+    pdf.setFontSize(8);
+    pdf.text('CLAUSES DE RESERVE: La présente quittance annuelle loue reçu remis à titre d\'acompte, ne concerne que la période indiquée et ne présume pas du paiement des quittances antérieures. Elle ne comporte pas renonciation aux droits et actions du propriétaire ni novation dont l\'occupant puisse se prévaloir. En cas de révision en cours, les versements quittanciels le sont à titre provisionnel et en compte.', 20, yPos, { maxWidth: pageWidth - 40 });
     yPos += 25;
 
-    const today = new Date();
-    const dateStr = today.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    pdf.text(`Fait à Abidjan, le ${dateStr}`, 20, yPos);
+    // Footer
     pdf.setFontSize(9);
-    pdf.text(`N° Reçu : ${item.ReceiptNumber || item.receiptNumber || `RCP-${item.ID || item.id || Date.now()}`}`, pageWidth - 20, yPos, { align: 'right' });
+    pdf.text('SAAF - 17 BP 1016 Abidjan 17', 20, yPos);
+    yPos += 5;
+    pdf.text('Adresse: Abidjan, Cocody Angré 8 Tranche, Carrefour la Prière. Ilot 43, lot 664, immeuble King Déco, 4ème étage', 20, yPos);
+    yPos += 5;
+    pdf.text('Tel: +225 07 04 77 51 79', 20, yPos);
+    yPos += 5;
+    pdf.text('RCCM: C-ABJ-03-2024-M-33430', 20, yPos);
+    yPos += 5;
+    pdf.text('Email: info@saafimmo.ci', 20, yPos);
 
-    yPos = pageHeight - 50;
-    pdf.setFontSize(10);
-    pdf.text('Caisse', 20, yPos);
-    pdf.text('Direction financière', pageWidth / 2 - 30, yPos, { align: 'center' });
-    pdf.text('Bénéficiaire', pageWidth - 20, yPos, { align: 'right' });
-    yPos += 20;
-    pdf.line(20, yPos, 60, yPos);
-    pdf.line(pageWidth / 2 - 50, yPos, pageWidth / 2 + 10, yPos);
-    pdf.line(pageWidth - 60, yPos, pageWidth - 20, yPos);
-
-    yPos = pageHeight - 25;
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Abidjan, Cocody Angré, 8e tranche, Immeuble King Déco, 4e étage, carrefour La Prière. Ilot 43, lot 664.', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
-    pdf.text('Tel : 00 225 07 04 77 51 79 / 00 225 07 04 77 51 77', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
-    pdf.text('RCCM : CI-ABJ-2018-B-21320', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
-    pdf.text('N°CC : 1843184R', pageWidth / 2, yPos, { align: 'center' });
-
-    const fileName = `quittance-${item.ID || item.id || Date.now()}.pdf`;
+    const fileName = `rent-receipt-${item.ID || item.id || Date.now()}.pdf`;
     pdf.save(fileName);
-    addNotification('Receipt generated successfully', 'success');
+    addNotification('Receipt downloaded successfully', 'success');
   };
 
   // Print deposit refund receipt as PDF (SAAF IMMO format)
@@ -1597,7 +1644,7 @@ const AccountingDashboard = () => {
                           </button>
                           <button
                             className="table-action-button edit"
-                            onClick={() => printPaymentReceipt(collection)}
+                            onClick={() => printPaymentReceipt(collection, true)}
                           >
                             Receipt
                           </button>
@@ -1756,7 +1803,7 @@ const AccountingDashboard = () => {
                       </button>
                       <button
                         className="table-action-button edit"
-                        onClick={() => printPaymentReceipt(collection)}
+                        onClick={() => printPaymentReceipt(collection, true)}
                       >
                         Receipt
                       </button>
@@ -7293,91 +7340,20 @@ const AccountingDashboard = () => {
         </div>
       )}
 
-      {/* View Payment/Collection Modal */}
+      {/* View Payment/Collection Modal - Shows SAAF IMMO Rent Receipt Template */}
       {showPaymentViewModal && selectedItemForView && (
         <div className="modal-overlay" onClick={() => setShowPaymentViewModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content modal-content-receipt" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', overflow: 'auto' }}>
             <div className="modal-header">
               <h3>{selectedItemForView.type === 'collection' ? 'View Collection' : 'View Payment'}</h3>
               <button className="modal-close" onClick={() => setShowPaymentViewModal(false)}>×</button>
             </div>
-            <div className="modal-body">
-              {selectedItemForView.type === 'collection' ? (
-                <>
-                  <div className="form-group">
-                    <label>Property / Building</label>
-                    <div>{selectedItemForView.data.Building || selectedItemForView.data.building || 'N/A'}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Landlord</label>
-                    <div>{selectedItemForView.data.Landlord || selectedItemForView.data.landlord || 'N/A'}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Amount</label>
-                    <div>{(selectedItemForView.data.Amount ?? selectedItemForView.data.amount ?? 0).toFixed(2)} XOF</div>
-                  </div>
-                  {(selectedItemForView.data.ChargeType || selectedItemForView.data.chargeType) === 'Sale' && (selectedItemForView.data.Commission ?? selectedItemForView.data.commission) > 0 && (
-                    <div className="form-group">
-                      <label>Commission</label>
-                      <div>{(selectedItemForView.data.Commission ?? selectedItemForView.data.commission ?? 0).toFixed(2)} XOF</div>
-                    </div>
-                  )}
-                  <div className="form-group">
-                    <label>Charge Type</label>
-                    <div>{selectedItemForView.data.ChargeType || selectedItemForView.data.chargeType || 'N/A'}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Date</label>
-                    <div>{selectedItemForView.data.Date ? new Date(selectedItemForView.data.Date).toLocaleDateString() : (selectedItemForView.data.date ? new Date(selectedItemForView.data.date).toLocaleDateString() : 'N/A')}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Status</label>
-                    <div>{selectedItemForView.data.Status || selectedItemForView.data.status || 'N/A'}</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label>Tenant</label>
-                    <div>{selectedItemForView.data.Tenant || selectedItemForView.data.tenant || 'N/A'}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Property</label>
-                    <div>{selectedItemForView.data.Property || selectedItemForView.data.property || 'N/A'}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Amount</label>
-                    <div>{(selectedItemForView.data.Amount ?? selectedItemForView.data.amount ?? 0).toFixed(2)} XOF</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Charge Type</label>
-                    <div>{selectedItemForView.data.ChargeType || selectedItemForView.data.chargeType || 'N/A'}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Payment Method</label>
-                    <div>{selectedItemForView.data.Method || selectedItemForView.data.method || 'N/A'}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Date</label>
-                    <div>{selectedItemForView.data.Date ? new Date(selectedItemForView.data.Date).toLocaleDateString() : (selectedItemForView.data.date ? new Date(selectedItemForView.data.date).toLocaleDateString() : 'N/A')}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Status</label>
-                    <div>{selectedItemForView.data.Status || selectedItemForView.data.status || 'N/A'}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Reference</label>
-                    <div>{selectedItemForView.data.Reference || selectedItemForView.data.reference || 'N/A'}</div>
-                  </div>
-                  {(selectedItemForView.data.ReceiptNumber || selectedItemForView.data.receiptNumber) && (
-                    <div className="form-group">
-                      <label>Receipt Number</label>
-                      <div>{selectedItemForView.data.ReceiptNumber || selectedItemForView.data.receiptNumber}</div>
-                    </div>
-                  )}
-                </>
-              )}
-              <div className="modal-footer">
+            <div className="modal-body" style={{ padding: 0, overflow: 'auto', maxHeight: '85vh' }}>
+              <RentReceiptTemplate
+                data={selectedItemForView.data}
+                isCollection={selectedItemForView.type === 'collection'}
+              />
+              <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb' }}>
                 <button type="button" className="action-button secondary" onClick={() => setShowPaymentViewModal(false)}>
                   Close
                 </button>
@@ -7385,12 +7361,12 @@ const AccountingDashboard = () => {
                   type="button"
                   className="action-button primary"
                   onClick={() => {
-                    printPaymentReceipt(selectedItemForView.data);
+                    printPaymentReceipt(selectedItemForView.data, selectedItemForView.type === 'collection');
                     setShowPaymentViewModal(false);
                   }}
                 >
                   <Receipt size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                  Generate Receipt PDF
+                  Download Receipt PDF
                 </button>
               </div>
             </div>

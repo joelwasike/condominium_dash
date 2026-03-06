@@ -224,7 +224,12 @@ export const getAccountingDemoData = () => ({
 });
 
 // Agency Director Dashboard Demo Data
-export const getAgencyDirectorDemoData = () => ({
+export const getAgencyDirectorDemoData = () => {
+  const ownerOneId = generateId();
+  const ownerTwoId = generateId();
+  const prop1Id = generateId();
+  const prop2Id = generateId();
+  return {
   overview: {
     totalRentCollected: 5000000,
     occupancyRate: 75,
@@ -236,8 +241,8 @@ export const getAgencyDirectorDemoData = () => ({
     { id: generateId(), name: 'Accounting User', email: 'accounting@example.com', role: 'accounting', status: 'Active' }
   ],
   properties: [
-    { id: generateId(), address: '123 Demo Street, Apartment 4B', type: 'Apartment', status: 'Occupied', rent: 50000, tenant: 'John Doe' },
-    { id: generateId(), address: '456 Sample Avenue, Unit 2A', type: 'Condo', status: 'Occupied', rent: 75000, tenant: 'Jane Smith' }
+    { id: prop1Id, address: '123 Demo Street, Apartment 4B', type: 'Apartment', status: 'Occupied', rent: 50000, tenant: 'John Doe', landlordId: ownerOneId, LandlordID: ownerOneId, units: [{ unitNumber: '4B', rent: 50000, tenant: 'John Doe', status: 'Occupied' }] },
+    { id: prop2Id, address: '456 Sample Avenue, Unit 2A', type: 'Condo', status: 'Occupied', rent: 75000, tenant: 'Jane Smith', landlordId: ownerOneId, LandlordID: ownerOneId, units: [{ unitNumber: '2A', rent: 75000, tenant: 'Jane Smith', status: 'Occupied' }] }
   ],
   financial: {
     totalRevenue: 5000000,
@@ -257,11 +262,12 @@ export const getAgencyDirectorDemoData = () => ({
     nextBillingDate: generateDate(-25)
   },
   owners: [
-    { id: generateId(), name: 'Owner One', email: 'owner1@example.com', propertiesCount: 3, contractsCount: 3, status: 'Active' },
-    { id: generateId(), name: 'Owner Two', email: 'owner2@example.com', propertiesCount: 2, contractsCount: 2, status: 'Active' }
+    { id: ownerOneId, name: 'Owner One', email: 'owner1@example.com', propertiesCount: 2, contractsCount: 3, status: 'Active', totalOfAssets: 2, propertyForSell: 0, propertyForManage: 2, occupancy: '2/2', incomeThisMonth: 125000 },
+    { id: ownerTwoId, name: 'Owner Two', email: 'owner2@example.com', propertiesCount: 0, contractsCount: 2, status: 'Active', totalOfAssets: 0, propertyForSell: 0, propertyForManage: 0, occupancy: '0/0', incomeThisMonth: 0 }
   ],
   conversations: []
-});
+};
+};
 
 // Commercial/Sales Dashboard Demo Data
 export const getCommercialDemoData = () => ({

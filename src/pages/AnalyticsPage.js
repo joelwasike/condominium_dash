@@ -5,11 +5,16 @@ import {
   Cell,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid
 } from 'recharts';
 import { TrendingUp, TrendingDown, Award, AlertTriangle } from 'lucide-react';
 
-const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
+const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], loading }) => {
   // Prepare data for charts
   const financialOverviewData = useMemo(() => {
     if (!yearlyComparison?.yearlyData) return [];
@@ -519,6 +524,67 @@ const AnalyticsPage = ({ indicators, yearlyComparison, loading }) => {
           </div>
         </div>
       </div>
+
+      {/* Monthly Performance Comparison */}
+      {monthlyComparison && monthlyComparison.length > 0 && (
+        <div className="sa-section-card" style={{ marginBottom: '20px' }}>
+          <div className="sa-section-header">
+            <h3>Monthly Performance Comparison</h3>
+            <p>Month-over-month comparison: last month, this month, and so on</p>
+          </div>
+          <div style={{ width: '100%', height: '400px', padding: '20px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={monthlyComparison}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 12 }}
+                  angle={-35}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(value) => `${Number(value).toLocaleString()} XOF`}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                />
+                <Legend />
+                <Bar dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expenses" name="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="commissions" name="Commissions" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="netProfit" name="Net Profit" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{ padding: '0 20px 20px', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e5e7eb', background: '#f9fafb' }}>
+                  <th style={{ padding: '10px', textAlign: 'left', fontWeight: '600' }}>Month</th>
+                  <th style={{ padding: '10px', textAlign: 'right', fontWeight: '600' }}>Revenue</th>
+                  <th style={{ padding: '10px', textAlign: 'right', fontWeight: '600' }}>Expenses</th>
+                  <th style={{ padding: '10px', textAlign: 'right', fontWeight: '600' }}>Commissions</th>
+                  <th style={{ padding: '10px', textAlign: 'right', fontWeight: '600' }}>Net Profit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyComparison.map((row, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={{ padding: '10px' }}>{row.month || row.monthKey || '—'}</td>
+                    <td style={{ padding: '10px', textAlign: 'right' }}>{(row.revenue || 0).toLocaleString()} XOF</td>
+                    <td style={{ padding: '10px', textAlign: 'right' }}>{(row.expenses || 0).toLocaleString()} XOF</td>
+                    <td style={{ padding: '10px', textAlign: 'right' }}>{(row.commissions || 0).toLocaleString()} XOF</td>
+                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: '600' }}>{(row.netProfit || 0).toLocaleString()} XOF</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Bottom: Yearly Performance Comparison */}
       <div className="sa-section-card" style={{ marginBottom: '20px' }}>

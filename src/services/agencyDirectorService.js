@@ -232,6 +232,28 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
+  getRevenueByOwner: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/revenue-by-owner`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch revenue by owner');
+    const data = await parseJson(response);
+    return Array.isArray(data) ? data : (data?.revenueByOwner ?? data?.data ?? []);
+  },
+
+  getRevenueByAgency: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/revenue-by-agency`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch revenue by agency');
+    const data = await parseJson(response);
+    return Array.isArray(data) ? data : (data?.revenueByAgency ?? data?.data ?? []);
+  },
+
   // Landlord Payment Management
   approveLandlordPayment: async (paymentId) => {
     const headers = getAuthHeaders(false);
@@ -487,6 +509,28 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
+  // Get assets (properties) under management of an owner – for Properties page (owners → buildings → units)
+  getOwnerAssets: async (ownerId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/owners/${ownerId}/properties`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch owner assets');
+    return parseJson(response);
+  },
+
+  // Get building/unit detail for a property
+  getPropertyBuildingDetail: async (propertyId) => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/properties/${propertyId}/building-detail`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch property building detail');
+    return parseJson(response);
+  },
+
   createOwner: async (ownerData) => {
     const headers = getAuthHeaders(true);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners`, {
@@ -686,6 +730,17 @@ export const agencyDirectorService = {
     });
     if (!response.ok) throw new Error('Failed to fetch yearly comparison');
     return parseJson(response);
+  },
+
+  getMonthlyComparison: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/analytics/monthly-comparison`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch monthly comparison');
+    const data = await parseJson(response);
+    return Array.isArray(data) ? data : (data?.monthlyData ?? data?.data ?? []);
   },
 };
 

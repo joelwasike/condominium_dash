@@ -13,7 +13,8 @@ import {
   TrendingUp,
   UserCheck,
   Megaphone,
-  ArrowUp
+  ArrowUp,
+  ArrowLeft
 } from 'lucide-react';
 import {
   LineChart,
@@ -86,6 +87,18 @@ const AgencyDirectorDashboard = () => {
   const [propertyCompanyFilter, setPropertyCompanyFilter] = useState('');
   const [propertyStatusFilter, setPropertyStatusFilter] = useState('');
 
+  // Property Management (owners → buildings → units) - same flow as Sales Manager
+  const [pmView, setPmView] = useState('list'); // 'list' | 'owner-detail' | 'building-detail' | 'villa-detail' | 'land-detail'
+  const [pmOwnerId, setPmOwnerId] = useState(null);
+  const [pmOwnerName, setPmOwnerName] = useState('');
+  const [ownerAssets, setOwnerAssets] = useState(null); // { ownerName, assets: [] }
+  const [pmPropertyId, setPmPropertyId] = useState(null);
+  const [pmBuildingName, setPmBuildingName] = useState('');
+  const [buildingDetail, setBuildingDetail] = useState(null); // { buildingName, units: [], totalApartments, images }
+  const [landDetail, setLandDetail] = useState(null);
+  const [propertyManagementSearch, setPropertyManagementSearch] = useState('');
+  const [pmLoading, setPmLoading] = useState(false);
+
   // Modals
   const [showUserModal, setShowUserModal] = useState(false);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
@@ -93,7 +106,7 @@ const AgencyDirectorDashboard = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [editingProperty, setEditingProperty] = useState(null);
   const [editingOwner, setEditingOwner] = useState(null);
-  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'salesmanager', password: '', properties: [] });
+  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'salesmanager', password: '', properties: [], documents: [] });
   const [propertyForm, setPropertyForm] = useState({ 
     address: '', 
     type: '', 
@@ -141,6 +154,8 @@ const AgencyDirectorDashboard = () => {
   const [internalExpenses, setInternalExpenses] = useState([]);
   const [allExpenses, setAllExpenses] = useState([]);
   const [revenueData, setRevenueData] = useState([]);
+  const [revenueByOwner, setRevenueByOwner] = useState([]);
+  const [revenueByAgency, setRevenueByAgency] = useState([]);
   const [commissionsData, setCommissionsData] = useState({});
   const [allBuildingsReport, setAllBuildingsReport] = useState([]);
   const [unpaidRentReport, setUnpaidRentReport] = useState(null);
@@ -155,6 +170,7 @@ const AgencyDirectorDashboard = () => {
   // New Analytics state
   const [analyticsIndicators, setAnalyticsIndicators] = useState(null);
   const [yearlyComparison, setYearlyComparison] = useState(null);
+  const [monthlyComparison, setMonthlyComparison] = useState([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // Tenants state
@@ -624,23 +640,62 @@ const AgencyDirectorDashboard = () => {
     }
   }, [reportFilters]);
 
-  // Load new analytics indicators and yearly comparison
+  // Load new analytics indicators, yearly comparison, and monthly comparison
   const loadNewAnalyticsData = useCallback(async () => {
     try {
       setAnalyticsLoading(true);
-      const [indicators, yearly] = await Promise.all([
+      if (isDemoMode()) {
+        const now = new Date();
+        const demoMonthly = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const base = 4000000 + Math.random() * 1500000;
+          demoMonthly.push({
+            month: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+            monthKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+            revenue: Math.round(base),
+            expenses: Math.round(base * 0.25),
+            commissions: Math.round(base * 0.08),
+            netProfit: Math.round(base * 0.67)
+          });
+        }
+        setAnalyticsIndicators({ profitability: {}, expensesControl: {}, decisionMaking: {}, paymentPerformance: {}, costsMaintenance: {}, rentalVacancy: {}, overallActivity: {}, financialHealth: {}, risksAlerts: {} });
+        setYearlyComparison({ sortedYears: [2023, 2024], yearlyData: { 2023: { annualRevenue: 45000000, annualCommissions: 3600000, annualExpenses: 11250000, annualNetResult: 30150000 }, 2024: { annualRevenue: 50000000, annualCommissions: 4000000, annualExpenses: 12500000, annualNetResult: 33500000 } }, summary: { mostProfitableYear: '2024', bestMarginYear: '2024', mostExpensiveYear: '2024', mostStableYear: '2024', globalTrend: 'growth' } });
+        setMonthlyComparison(demoMonthly);
+        setAnalyticsLoading(false);
+        return;
+      }
+      const [indicators, yearly, monthly] = await Promise.all([
         agencyDirectorService.getAnalyticsIndicators().catch(() => null),
-        agencyDirectorService.getYearlyComparison().catch(() => null)
+        agencyDirectorService.getYearlyComparison().catch(() => null),
+        agencyDirectorService.getMonthlyComparison().catch(() => null)
       ]);
       setAnalyticsIndicators(indicators);
       setYearlyComparison(yearly);
+      if (Array.isArray(monthly) && monthly.length > 0) {
+        setMonthlyComparison(monthly);
+      } else {
+        const byMonth = {};
+        (transferHistory || []).forEach(t => {
+          const date = t.date || t.Date;
+          if (!date) return;
+          const d = new Date(date);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          if (!byMonth[key]) byMonth[key] = { monthKey: key, month: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), revenue: 0, expenses: 0, commissions: 0, netProfit: 0 };
+          byMonth[key].revenue += (t.netAmount || t.NetAmount || 0) + (t.commission || t.Commission || 0);
+          byMonth[key].commissions += t.commission || t.Commission || 0;
+          byMonth[key].netProfit += t.netAmount || t.NetAmount || 0;
+        });
+        const sorted = Object.keys(byMonth).sort().slice(-6).map(k => ({ ...byMonth[k], expenses: 0 }));
+        setMonthlyComparison(sorted.length > 0 ? sorted : []);
+      }
     } catch (error) {
       console.error('Error loading new analytics data:', error);
       addNotification('Failed to load analytics data', 'error');
     } finally {
       setAnalyticsLoading(false);
     }
-  }, [addNotification]);
+  }, [addNotification, transferHistory]);
 
   useEffect(() => {
     loadData();
@@ -648,7 +703,7 @@ const AgencyDirectorDashboard = () => {
 
   // Load data when specific tabs are active
   useEffect(() => {
-    if (activeTab === 'contracts' || activeTab === 'owners' || (activeTab === 'management' && managementSubTab === 'contracts')) {
+    if (activeTab === 'contracts' || activeTab === 'owners' || activeTab === 'properties' || (activeTab === 'management' && managementSubTab === 'contracts')) {
       loadContractsData();
     }
   }, [activeTab, managementSubTab, loadContractsData]);
@@ -664,6 +719,65 @@ const AgencyDirectorDashboard = () => {
       loadPendingApprovals();
     }
   }, [activeTab, managementSubTab, loadPendingApprovals]);
+
+  const loadAccountingData = useCallback(async () => {
+    if (isDemoMode()) {
+      const demo = getAgencyDirectorDemoData();
+      const ownersList = demo.owners || [];
+      setAllExpenses([]);
+      setRevenueData([]);
+      setRevenueByOwner(ownersList.map(o => ({
+        ownerId: o.id || o.ID,
+        ownerName: o.name || o.Name,
+        totalRevenue: o.incomeThisMonth ?? o.revenue ?? 0
+      })));
+      setRevenueByAgency([{ agencyName: 'SAAF IMMO', totalRevenue: (demo.financial?.totalRevenue || 5000000) }]);
+      return;
+    }
+    try {
+      const [expenses, tenantPayments, revenueByOwnerData, revenueByAgencyData] = await Promise.all([
+        agencyDirectorService.getExpenses().catch(() => []),
+        agencyDirectorService.getTenantPayments().catch(() => []),
+        agencyDirectorService.getRevenueByOwner().catch(() => null),
+        agencyDirectorService.getRevenueByAgency().catch(() => null)
+      ]);
+      setAllExpenses(Array.isArray(expenses) ? expenses : []);
+      setRevenueData(Array.isArray(tenantPayments) ? tenantPayments : []);
+      if (Array.isArray(revenueByOwnerData) && revenueByOwnerData.length > 0) {
+        setRevenueByOwner(revenueByOwnerData);
+      } else {
+        const byOwner = {};
+        (landlordPayments || []).forEach(p => {
+          const name = p.landlord || p.Landlord || 'Unknown';
+          const amt = (p.netAmount || p.NetAmount || 0) + (p.commission || p.Commission || 0);
+          byOwner[name] = (byOwner[name] || 0) + amt;
+        });
+        setRevenueByOwner(Object.entries(byOwner).map(([ownerName, totalRevenue]) => ({ ownerName, totalRevenue })));
+      }
+      if (Array.isArray(revenueByAgencyData) && revenueByAgencyData.length > 0) {
+        setRevenueByAgency(revenueByAgencyData);
+      } else {
+        const total = financialData?.totalRevenue || 0;
+        setRevenueByAgency([{ agencyName: 'Agency', totalRevenue: total }]);
+      }
+    } catch (e) {
+      console.error('Error loading accounting data:', e);
+      const byOwner = {};
+      (landlordPayments || []).forEach(p => {
+        const name = p.landlord || p.Landlord || 'Unknown';
+        const amt = (p.netAmount || p.NetAmount || 0) + (p.commission || p.Commission || 0);
+        byOwner[name] = (byOwner[name] || 0) + amt;
+      });
+      setRevenueByOwner(Object.entries(byOwner).map(([ownerName, totalRevenue]) => ({ ownerName, totalRevenue })));
+      setRevenueByAgency([{ agencyName: 'Agency', totalRevenue: financialData?.totalRevenue || 0 }]);
+    }
+  }, [landlordPayments, financialData]);
+
+  useEffect(() => {
+    if (activeTab === 'accounting') {
+      loadAccountingData();
+    }
+  }, [activeTab, loadAccountingData]);
 
   useEffect(() => {
     if (activeTab === 'analytics') {
@@ -756,8 +870,23 @@ const AgencyDirectorDashboard = () => {
   // User management
   const handleOpenAddUser = () => {
     setEditingUser(null);
-    setUserForm({ name: '', email: '', role: 'salesmanager', password: '', properties: [] });
+    setUserForm({ name: '', email: '', role: 'salesmanager', password: '', properties: [], documents: [] });
     setShowUserModal(true);
+  };
+
+  const handleAddDocument = () => {
+    setUserForm(prev => ({ ...prev, documents: [...prev.documents, { name: '', file: null }] }));
+  };
+
+  const handleRemoveDocument = (index) => {
+    setUserForm(prev => ({ ...prev, documents: prev.documents.filter((_, i) => i !== index) }));
+  };
+
+  const handleDocumentChange = (index, field, value) => {
+    setUserForm(prev => ({
+      ...prev,
+      documents: prev.documents.map((doc, i) => i === index ? { ...doc, [field]: value } : doc)
+    }));
   };
 
   const handleAddPropertyToForm = () => {
@@ -803,12 +932,17 @@ const AgencyDirectorDashboard = () => {
 
   const handleOpenEditUser = (user) => {
     setEditingUser(user);
+    let existingDocs = [];
+    try {
+      existingDocs = user.Documents ? (typeof user.Documents === 'string' ? JSON.parse(user.Documents || '[]') : user.Documents) : [];
+    } catch (_) { existingDocs = []; }
     setUserForm({
       name: user.Name || user.name || '',
       email: user.Email || user.email || '',
       role: user.Role || user.role || 'salesmanager',
       password: '',
-      properties: [] // Properties are only for creating new landlords, not editing
+      properties: [],
+      documents: existingDocs.map(d => ({ name: d.name || d.Name || '', file: null, url: d.url || d.URL }))
     });
     setShowUserModal(true);
   };
@@ -860,6 +994,22 @@ const AgencyDirectorDashboard = () => {
           }
           return formattedProp;
         });
+      }
+
+      // Upload documents to Cloudinary and add URLs
+      if (userForm.documents && userForm.documents.length > 0) {
+        const { cloudinaryService } = await import('../services/cloudinaryService');
+        const folder = 'real-estate-user-documents';
+        const docPromises = userForm.documents.map(async (doc) => {
+          if (doc.file) {
+            const result = await cloudinaryService.uploadFile(doc.file, folder);
+            return { name: doc.name || doc.file?.name || 'Document', url: result.success ? result.url : '' };
+          }
+          if (doc.url) return { name: doc.name || 'Document', url: doc.url };
+          return null;
+        });
+        const docs = (await Promise.all(docPromises)).filter(Boolean);
+        if (docs.length > 0) userData.documents = docs;
       }
 
       if (editingUser) {
@@ -1071,19 +1221,19 @@ const AgencyDirectorDashboard = () => {
     setEditingProperty(property);
     const propertyUnits = property.units || property.Units || [];
     setPropertyForm({
-      address: property.Address || property.address || '',
+      address: property.Address || property.address || property.buildingName || '',
       type: property.Type || property.type || '',
       rent: property.Rent || property.rent || '',
       tenant: property.Tenant || property.tenant || '',
       status: property.Status || property.status || 'Vacant',
-      units: propertyUnits.map(unit => ({
-        unitNumber: unit.unitNumber || unit.UnitNumber || '',
-        rent: unit.rent || unit.Rent || '',
+      units: propertyUnits.length > 0 ? propertyUnits.map(unit => ({
+        unitNumber: unit.unitNumber || unit.UnitNumber || unit.name || '',
+        rent: unit.rent || unit.rentPrice || unit.Rent || '',
         bedrooms: unit.bedrooms || unit.Bedrooms || '',
         bathrooms: unit.bathrooms || unit.Bathrooms || '',
-        status: unit.status || unit.Status || 'Vacant',
+        status: unit.status || unit.statut || unit.Status || 'Vacant',
         tenant: unit.tenant || unit.Tenant || ''
-      }))
+      })) : [{ unitNumber: '1', rent: '', bedrooms: '', bathrooms: '', status: 'Vacant', tenant: '' }]
     });
     setShowPropertyModal(true);
   };
@@ -1165,6 +1315,132 @@ const AgencyDirectorDashboard = () => {
         addNotification('Failed to delete property', 'error');
       }
     }
+  };
+
+  // Property Management: owners → buildings → units (same flow as Sales Manager)
+  const getOwnerId = (owner) => owner.id || owner.ID;
+  const getPropertyOwnerId = (property) => property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
+
+  const handleSeeOwner = async (owner) => {
+    const ownerId = getOwnerId(owner);
+    if (!ownerId) return;
+    setPmLoading(true);
+    try {
+      let data;
+      if (isDemoMode()) {
+        const ownerProps = (properties || []).filter((p) => String(getPropertyOwnerId(p) || '') === String(ownerId));
+        data = {
+          ownerName: owner.name || owner.Name || 'Owner',
+          assets: ownerProps.map((p) => ({
+            id: p.id || p.ID,
+            name: p.Address || p.address,
+            building: p.Address || p.address,
+            type: (p.Type || p.type || 'building').toLowerCase(),
+            apartmentsDisplay: p.units?.length || p.Units?.length || 1,
+            rentPrice: p.Rent || p.rent,
+            location: p.Address || p.address,
+            occupancy: p.Status || p.status || '—',
+            statut: p.Status || p.status || '—'
+          }))
+        };
+      } else {
+        data = await agencyDirectorService.getOwnerAssets(ownerId);
+      }
+      setOwnerAssets(data);
+      setPmOwnerId(ownerId);
+      setPmOwnerName(data.ownerName || owner.name || owner.Name || 'Owner');
+      setPmView('owner-detail');
+    } catch (err) {
+      console.error('Failed to load owner assets:', err);
+      addNotification('Failed to load owner assets', 'error');
+    } finally {
+      setPmLoading(false);
+    }
+  };
+
+  const handleViewBuilding = async (property) => {
+    const propId = property.id || property.ID;
+    if (!propId) return;
+    setPmLoading(true);
+    try {
+      let data;
+      if (isDemoMode()) {
+        const prop = (properties || []).find((p) => String(p.id || p.ID) === String(propId)) || property;
+        const units = prop.units || prop.Units || [];
+        data = {
+          buildingName: prop.Address || prop.address || property.name || property.building || 'Building',
+          totalApartments: units.length || 1,
+          units: units.length > 0 ? units.map((u, i) => ({
+            id: u.id || i,
+            unitNumber: u.unitNumber || u.UnitNumber || `Unit ${i + 1}`,
+            type: u.type || u.Type || '—',
+            tenant: u.tenant || u.Tenant || '—',
+            rentPrice: u.rent || u.rentPrice || u.Rent,
+            enterDate: u.enterDate || '—',
+            status: u.status || u.Status || 'Vacant',
+            statut: u.status || u.statut || u.Status || 'Vacant'
+          })) : [{ id: 1, unitNumber: '1', type: '—', tenant: '—', rentPrice: prop.Rent || prop.rent, enterDate: '—', status: 'Vacant', statut: 'Vacant' }],
+          images: []
+        };
+      } else {
+        data = await agencyDirectorService.getPropertyBuildingDetail(propId);
+      }
+      setBuildingDetail(data);
+      setPmPropertyId(propId);
+      setPmBuildingName(data.buildingName || property.name || property.building || property.Address || property.address || 'Building');
+      setPmView('building-detail');
+    } catch (err) {
+      console.error('Failed to load building detail:', err);
+      addNotification('Failed to load building detail', 'error');
+    } finally {
+      setPmLoading(false);
+    }
+  };
+
+  const handleViewVilla = async (property) => {
+    const propId = property.id || property.ID;
+    if (!propId) return;
+    setPmLoading(true);
+    try {
+      let data;
+      if (isDemoMode()) {
+        const prop = (properties || []).find((p) => String(p.id || p.ID) === String(propId)) || property;
+        const units = prop.units || prop.Units || [];
+        data = {
+          buildingName: prop.Address || prop.address || property.name || property.building || 'Villa',
+          totalApartments: units.length || 1,
+          units: units.length > 0 ? units.map((u, i) => ({
+            id: u.id || i,
+            unitNumber: u.unitNumber || u.UnitNumber || `Unit ${i + 1}`,
+            type: u.type || u.Type || '—',
+            tenant: u.tenant || u.Tenant || '—',
+            rentPrice: u.rent || u.rentPrice || u.Rent,
+            enterDate: u.enterDate || '—',
+            status: u.status || u.Status || 'Vacant',
+            statut: u.status || u.statut || u.Status || 'Vacant'
+          })) : [{ id: 1, unitNumber: '1', type: '—', tenant: '—', rentPrice: prop.Rent || prop.rent, enterDate: '—', status: 'Vacant', statut: 'Vacant' }],
+          images: []
+        };
+      } else {
+        data = await agencyDirectorService.getPropertyBuildingDetail(propId);
+      }
+      setBuildingDetail(data);
+      setPmPropertyId(propId);
+      setPmBuildingName(data.buildingName || property.name || property.building || property.Address || property.address || 'Villa');
+      setPmView('villa-detail');
+    } catch (err) {
+      console.error('Failed to load villa detail:', err);
+      addNotification('Failed to load villa detail', 'error');
+    } finally {
+      setPmLoading(false);
+    }
+  };
+
+  const handleViewLand = (property) => {
+    setLandDetail(property);
+    setPmPropertyId(property.id || property.ID);
+    setPmBuildingName(property.name || property.building || property.Address || property.address || 'Land');
+    setPmView('land-detail');
   };
 
   // Render functions
@@ -1627,93 +1903,16 @@ const AgencyDirectorDashboard = () => {
     </div>
   );
 
-  const renderProperties = () => (
-    <div className="sa-clients-page">
-      <div className="sa-clients-header">
-        <div>
-          <h2>Properties</h2>
-          <p>{filteredProperties.length} results found</p>
-        </div>
-        <div className="sa-clients-header-right">
-          <div className="sa-transactions-filters">
-            <select 
-              value={propertyCompanyFilter} 
-              onChange={(e) => setPropertyCompanyFilter(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', marginRight: '8px' }}
-            >
-              <option value="">All Companies</option>
-              {uniqueCompanies.map(company => (
-                <option key={company} value={company}>{company}</option>
-              ))}
-            </select>
-            <select 
-              value={propertyStatusFilter} 
-              onChange={(e) => setPropertyStatusFilter(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db' }}
-            >
-              <option value="">All Statuses</option>
-              <option value="Vacant">Vacant</option>
-              <option value="Occupied">Occupied</option>
-              <option value="Maintenance">Maintenance</option>
-            </select>
-          </div>
-        </div>
-      </div>
+  const renderProperties = () => {
+    // Filter owners by search (member name)
+    const searchLower = (propertyManagementSearch || '').trim().toLowerCase();
+    const filteredOwners = searchLower
+      ? (owners || []).filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower))
+      : (owners || []);
 
-      <div className="sa-table-wrapper">
-        <table className="sa-table">
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Address</th>
-              <th>Company</th>
-              <th>Type</th>
-              <th>Property Type</th>
-              <th>Rent</th>
-              <th>Tenant</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProperties.map((property, index) => (
-              <tr key={`property-${property.ID || property.id || index}`}>
-                <td>{index + 1}</td>
-                <td className="sa-cell-main">
-                  <span className="sa-cell-title">{property.Address || property.address}</span>
-                </td>
-                <td>{property.Company || property.company}</td>
-                <td>
-                  <div className="sa-cell-main">
-                    <span className="sa-cell-title">{property.Type || property.type}</span>
-                    {property.BuildingType || property.buildingType ? (
-                      <span className="sa-cell-sub">({property.BuildingType || property.buildingType})</span>
-                    ) : null}
-                  </div>
-                </td>
-                <td>{property.PropertyType || property.propertyType || 'N/A'}</td>
-                <td>{(property.Rent || property.rent || 0).toLocaleString()} FCFA</td>
-                <td>{property.Tenant || property.tenant || 'N/A'}</td>
-                <td>
-                  <span className={`sa-status-pill ${(property.Status || property.status || 'vacant').toLowerCase()}`}>
-                    {property.Status || property.status || 'Vacant'}
-                  </span>
-                </td>
-                <td className="sa-row-actions">
-                  <button className="sa-icon-button" onClick={() => handleOpenEditProperty(property)} title="Edit">✏️</button>
-                  <button className="sa-icon-button" onClick={() => handleDeleteProperty(property)} title="Delete">🗑️</button>
-                </td>
-              </tr>
-            ))}
-            {filteredProperties.length === 0 && (
-              <tr>
-                <td colSpan={9} className="sa-table-empty">No properties found</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+    const unassignedProperties = (properties || []).filter((p) => !getPropertyOwnerId(p));
 
+    const editPropertyModal = (
       <Modal isOpen={showPropertyModal && editingProperty} onClose={() => setShowPropertyModal(false)} title="Edit Property">
         {editingProperty && (
         <form onSubmit={handleSubmitProperty} className="sa-form">
@@ -1746,107 +1945,43 @@ const AgencyDirectorDashboard = () => {
               <option value="Maintenance">Maintenance</option>
             </select>
           </div>
-
-          {/* Units Section */}
           <div className="sa-form-group" style={{ marginTop: '24px', padding: '20px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <label style={{ margin: 0, fontWeight: 600, color: '#1f2937' }}>
                 Units/Houses <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#6b7280' }}>(Optional - for properties with multiple units)</span>
               </label>
-              <button
-                type="button"
-                onClick={handleAddUnit}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '500'
-                }}
-              >
-                + Add Unit
-              </button>
+              <button type="button" onClick={handleAddUnit} style={{ padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}>+ Add Unit</button>
             </div>
             {propertyForm.units.map((unit, index) => (
               <div key={index} style={{ marginBottom: '16px', padding: '16px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#6b7280' }}>Unit {index + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveUnit(index)}
-                    style={{
-                      padding: '4px 8px',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px'
-                    }}
-                  >
-                    Remove
-                  </button>
+                  <button type="button" onClick={() => handleRemoveUnit(index)} style={{ padding: '4px 8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Remove</button>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Unit Number *</label>
-                    <input
-                      type="text"
-                      value={unit.unitNumber}
-                      onChange={(e) => handleUnitChange(index, 'unitNumber', e.target.value)}
-                      placeholder="e.g., 101, A1, Unit 5"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
-                      required={propertyForm.units.length > 0}
-                    />
+                    <input type="text" value={unit.unitNumber} onChange={(e) => handleUnitChange(index, 'unitNumber', e.target.value)} placeholder="e.g., 101, A1, Unit 5" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }} required={propertyForm.units.length > 0} />
                   </div>
                   <div>
                     <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Rent *</label>
-                    <input
-                      type="number"
-                      value={unit.rent}
-                      onChange={(e) => handleUnitChange(index, 'rent', e.target.value)}
-                      placeholder="0.00"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
-                      required={propertyForm.units.length > 0}
-                    />
+                    <input type="number" value={unit.rent} onChange={(e) => handleUnitChange(index, 'rent', e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }} required={propertyForm.units.length > 0} />
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Bedrooms</label>
-                    <input
-                      type="number"
-                      value={unit.bedrooms}
-                      onChange={(e) => handleUnitChange(index, 'bedrooms', e.target.value)}
-                      placeholder="0"
-                      min="0"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
-                    />
+                    <input type="number" value={unit.bedrooms} onChange={(e) => handleUnitChange(index, 'bedrooms', e.target.value)} placeholder="0" min="0" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }} />
                   </div>
                   <div>
                     <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Bathrooms</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={unit.bathrooms}
-                      onChange={(e) => handleUnitChange(index, 'bathrooms', e.target.value)}
-                      placeholder="0.0"
-                      min="0"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
-                    />
+                    <input type="number" step="0.5" value={unit.bathrooms} onChange={(e) => handleUnitChange(index, 'bathrooms', e.target.value)} placeholder="0.0" min="0" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }} />
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Status</label>
-                    <select
-                      value={unit.status}
-                      onChange={(e) => handleUnitChange(index, 'status', e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
-                    >
+                    <select value={unit.status} onChange={(e) => handleUnitChange(index, 'status', e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}>
                       <option value="Vacant">Vacant</option>
                       <option value="Occupied">Occupied</option>
                       <option value="Maintenance">Maintenance</option>
@@ -1854,24 +1989,15 @@ const AgencyDirectorDashboard = () => {
                   </div>
                   <div>
                     <label style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px', display: 'block' }}>Tenant</label>
-                    <input
-                      type="text"
-                      value={unit.tenant}
-                      onChange={(e) => handleUnitChange(index, 'tenant', e.target.value)}
-                      placeholder="Tenant name (optional)"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }}
-                    />
+                    <input type="text" value={unit.tenant} onChange={(e) => handleUnitChange(index, 'tenant', e.target.value)} placeholder="Tenant name (optional)" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.9rem' }} />
                   </div>
                 </div>
               </div>
             ))}
             {propertyForm.units.length === 0 && (
-              <p style={{ fontSize: '0.85rem', color: '#6b7280', fontStyle: 'italic', textAlign: 'center', padding: '12px' }}>
-                No units added. Click "Add Unit" to add units/houses for this property.
-              </p>
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', fontStyle: 'italic', textAlign: 'center', padding: '12px' }}>No units added. Click "Add Unit" to add units/houses for this property.</p>
             )}
           </div>
-
           <div className="sa-form-actions">
             <button type="button" className="sa-outline-button" onClick={() => setShowPropertyModal(false)}>Cancel</button>
             <button type="submit" className="sa-primary-cta">Update Property</button>
@@ -1879,8 +2005,376 @@ const AgencyDirectorDashboard = () => {
         </form>
         )}
       </Modal>
+    );
+
+    // Building detail view – units table
+    if (pmView === 'building-detail' && buildingDetail) {
+      const units = buildingDetail.units || [];
+      const totalApartments = buildingDetail.totalApartments ?? units.length;
+      const images = buildingDetail.images || [];
+      const firstImage = images[0];
+      return (
+        <>
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => setPmView('owner-detail')}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>Building {pmBuildingName} management</h2>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
+            {firstImage && (
+              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            )}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
+              <p style={{ margin: 0, color: '#6b7280' }}>Total of appartments: <strong>{totalApartments}</strong></p>
+            </div>
+          </div>
+          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Appartements</th>
+                    <th>Type</th>
+                    <th>tenant</th>
+                    <th>price of rent</th>
+                    <th>Enter date</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {units.map((row, i) => (
+                    <tr key={row.id || i}>
+                      <td>{row.unitNumber || row.name || `Appartment ${i + 1}`}</td>
+                      <td>{row.type || '—'}</td>
+                      <td>{row.tenant || '—'}</td>
+                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
+                      <td>{row.enterDate || '—'}</td>
+                      <td>{row.status || row.statut || '—'}</td>
+                      <td>
+                        <button className="table-action-button edit" onClick={() => handleOpenEditProperty({ ...buildingDetail, id: pmPropertyId, Address: pmBuildingName })}>Edit</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {editPropertyModal}
+        </>
+      );
+    }
+
+    // Villa detail view
+    if (pmView === 'villa-detail' && buildingDetail) {
+      const units = buildingDetail.units || [];
+      const images = buildingDetail.images || [];
+      const firstImage = images[0];
+      return (
+        <>
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => setPmView('owner-detail')}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>Villa {pmBuildingName} management</h2>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
+            {firstImage && (
+              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            )}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
+              <p style={{ margin: 0, color: '#6b7280' }}>BIG HOUSE</p>
+            </div>
+          </div>
+          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Villa</th>
+                    <th>Type</th>
+                    <th>tenant</th>
+                    <th>price of rent</th>
+                    <th>Enter date</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {units.map((row, i) => (
+                    <tr key={row.id || i}>
+                      <td>VILLA</td>
+                      <td>{row.type || '—'}</td>
+                      <td>{row.tenant || '—'}</td>
+                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
+                      <td>{row.enterDate || '—'}</td>
+                      <td>{row.status || row.statut || '—'}</td>
+                      <td>
+                        <button className="table-action-button edit" onClick={() => handleOpenEditProperty({ ...buildingDetail, id: pmPropertyId, Address: pmBuildingName })}>Edit</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {editPropertyModal}
+        </>
+      );
+    }
+
+    // Land detail view
+    if (pmView === 'land-detail' && landDetail) {
+      return (
+        <>
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('owner-detail'); setLandDetail(null); }}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>Land: {pmBuildingName}</h2>
+              </div>
+            </div>
+          </div>
+          <div className="sa-section-card" style={{ marginTop: '20px', padding: '20px' }}>
+            <p><strong>Name:</strong> {landDetail.name || landDetail.Address || '—'}</p>
+            <p><strong>Location:</strong> {landDetail.location || landDetail.City || '—'}</p>
+            <p><strong>Statut:</strong> {landDetail.statut || 'For sell'}</p>
+            <p><strong>Price:</strong> {typeof landDetail.rentPrice === 'number' ? landDetail.rentPrice.toLocaleString() : landDetail.rentPrice ?? '—'}</p>
+          </div>
+        </div>
+        {editPropertyModal}
+        </>
+      );
+    }
+
+    // Owner assets view – buildings table
+    if (pmView === 'owner-detail' && ownerAssets) {
+      const assets = ownerAssets.assets || [];
+      const handleAssetClick = (asset) => {
+        const type = (asset.type || '').toLowerCase();
+        if (type === 'building') handleViewBuilding(asset);
+        else if (type === 'villa') handleViewVilla(asset);
+        else if (type === 'land') handleViewLand(asset);
+        else handleViewBuilding(asset);
+      };
+      return (
+        <>
+        <div className="sa-clients-page">
+          <div className="sa-clients-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setOwnerAssets(null); setPmOwnerId(null); setPmOwnerName(''); }}>
+                <ArrowLeft size={18} />
+                Back
+              </button>
+              <div>
+                <h2>{pmOwnerName} assets management</h2>
+              </div>
+            </div>
+          </div>
+          {pmLoading && <p style={{ marginTop: 8 }}>Loading…</p>}
+          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>PROPERTY</th>
+                    <th>APPARTMENTS</th>
+                    <th>RENT PRICE</th>
+                    <th>LOCATION</th>
+                    <th>OCCUPANCY</th>
+                    <th>STATUT</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assets.map((row) => (
+                    <tr
+                      key={row.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleAssetClick(row)}
+                      className="clickable-row"
+                    >
+                      <td className="sa-cell-main">{row.name || row.building || '—'}</td>
+                      <td>{row.apartmentsDisplay ?? row.apartments ?? '—'}</td>
+                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice ?? '—'}</td>
+                      <td>{row.location || row.localisation || '—'}</td>
+                      <td>{row.occupancy ?? '—'}</td>
+                      <td>{row.statut ?? '—'}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button className="table-action-button edit" onClick={() => handleOpenEditProperty(row)}>Edit</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {assets.length === 0 && !pmLoading && (
+              <p className="sa-table-empty">No assets for this owner.</p>
+            )}
+          </div>
+        </div>
+        {editPropertyModal}
+        </>
+      );
+    }
+
+    // Owners list (default view)
+    return (
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
+          <h2>PROPERTY MANAGEMENT</h2>
+          <p>Click an owner to see their buildings and units</p>
+        </div>
+        <div className="sa-clients-header-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
+            <input
+              type="text"
+              placeholder="Search by member name"
+              value={propertyManagementSearch}
+              onChange={(e) => setPropertyManagementSearch(e.target.value)}
+              style={{ padding: '8px 12px 8px 36px', border: '1px solid #e5e7eb', borderRadius: '8px', minWidth: '220px' }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Total of assets</th>
+                <th>Property for sell</th>
+                <th>Property for manage</th>
+                <th>Occupancy</th>
+                <th>Income (this month)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOwners.map((owner, index) => {
+                const ownerId = getOwnerId(owner);
+                const totalOfAssets = owner.totalOfAssets ?? owner.numberOfAssetsManaged ?? 0;
+                const propertyForSell = owner.propertyForSell ?? 0;
+                const propertyForManage = owner.propertyForManage ?? 0;
+                const occupancy = owner.occupancy ?? '0/0';
+                const incomeThisMonth = owner.incomeThisMonth ?? owner.revenue ?? 0;
+                return (
+                  <tr
+                    key={ownerId || index}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleSeeOwner(owner)}
+                    className="clickable-row"
+                  >
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{owner.name || owner.Name || 'N/A'}</span>
+                    </td>
+                    <td>{owner.email || owner.Email || '—'}</td>
+                    <td>{totalOfAssets}</td>
+                    <td>{propertyForSell}</td>
+                    <td>{propertyForManage}</td>
+                    <td>{occupancy}</td>
+                    <td>{typeof incomeThisMonth === 'number' ? incomeThisMonth.toLocaleString() : incomeThisMonth}</td>
+                  </tr>
+                );
+              })}
+              {filteredOwners.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="sa-table-empty">
+                    No owners found. Add property owners first.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {unassignedProperties.length > 0 && (
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
+          <div className="sa-section-header">
+            <div>
+              <h3>Properties Without Owner</h3>
+              <p>{unassignedProperties.length} properties not yet assigned to an owner</p>
+            </div>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Address</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Rent</th>
+                  <th>Bedrooms</th>
+                  <th>Bathrooms</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {unassignedProperties.map((property, index) => (
+                  <tr
+                    key={`unassigned-${property.ID || property.id || index}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleOpenEditProperty(property)}
+                  >
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{property.Address || property.address || 'N/A'}</span>
+                    </td>
+                    <td>{property.Type || property.type || 'N/A'}</td>
+                    <td>
+                      <span className={`sa-status-pill ${(property.Status || property.status || 'unknown').toLowerCase()}`}>
+                        {property.Status || property.status || 'Unknown'}
+                      </span>
+                    </td>
+                    <td>
+                      {typeof (property.Rent || property.rent) === 'number'
+                        ? (property.Rent || property.rent).toLocaleString()
+                        : property.Rent || property.rent || 'N/A'}
+                    </td>
+                    <td>{property.Bedrooms || property.bedrooms || 0}</td>
+                    <td>{property.Bathrooms || property.bathrooms || 0}</td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <button type="button" className="table-action-button edit" onClick={() => handleOpenEditProperty(property)}>Edit</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {editPropertyModal}
     </div>
   );
+  };
 
   const renderAccounting = () => (
     <div className="sa-overview-page">
@@ -1938,6 +2432,76 @@ const AgencyDirectorDashboard = () => {
               {(financialData?.pendingPayments || 0).toLocaleString()} FCFA
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <h3>Total Revenue by Owner</h3>
+          <p>Revenue attributed to each property owner</p>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Owner</th>
+                <th>Total Revenue (FCFA)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {revenueByOwner.length > 0 ? revenueByOwner.map((row, index) => (
+                <tr key={`owner-rev-${index}`}>
+                  <td>{index + 1}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{row.ownerName || row.owner || 'N/A'}</span>
+                  </td>
+                  <td style={{ fontWeight: 600 }}>
+                    {(row.totalRevenue || 0).toLocaleString()} FCFA
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={3} className="sa-table-empty">No revenue by owner data available</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        <div className="sa-section-header">
+          <h3>Total Revenue by Agency</h3>
+          <p>Revenue breakdown by agency or company</p>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Agency / Company</th>
+                <th>Total Revenue (FCFA)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {revenueByAgency.length > 0 ? revenueByAgency.map((row, index) => (
+                <tr key={`agency-rev-${index}`}>
+                  <td>{index + 1}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{row.agencyName || row.agency || row.company || 'N/A'}</span>
+                  </td>
+                  <td style={{ fontWeight: 600 }}>
+                    {(row.totalRevenue || 0).toLocaleString()} FCFA
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={3} className="sa-table-empty">No revenue by agency data available</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -2510,6 +3074,7 @@ const AgencyDirectorDashboard = () => {
         <AnalyticsPage 
           indicators={analyticsIndicators}
           yearlyComparison={yearlyComparison}
+          monthlyComparison={monthlyComparison}
           loading={analyticsLoading}
         />
       );
@@ -3820,18 +4385,6 @@ const AgencyDirectorDashboard = () => {
                 placeholder={subscriptionType === 'annual' ? "ANNUAL-2024-001" : "PAY-2024-001"}
               />
             </div>
-            <div className="sa-form-group">
-              <label>Status *</label>
-              <select
-                value={subscriptionForm.status}
-                onChange={(e) => setSubscriptionForm({...subscriptionForm, status: e.target.value})}
-                required
-              >
-                <option value="completed">Completed</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </select>
-            </div>
             <div className="sa-form-actions">
               <button type="button" className="sa-outline-button" onClick={() => setShowSubscriptionModal(false)}>Cancel</button>
               <button type="submit" className="sa-primary-cta">
@@ -4109,6 +4662,39 @@ const AgencyDirectorDashboard = () => {
               />
             </div>
           )}
+
+          <div className="sa-form-group" style={{ marginTop: '20px', padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <label style={{ margin: 0, fontWeight: 600 }}>Documents</label>
+              <button type="button" onClick={handleAddDocument} style={{ padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 500 }}>
+                + Add Document
+              </button>
+            </div>
+            <small style={{ color: '#6b7280', fontSize: '0.75rem', marginBottom: '12px', display: 'block' }}>Add any documents (ID, contract, etc.)</small>
+            {userForm.documents.map((doc, index) => (
+              <div key={index} style={{ marginBottom: '12px', padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Document name"
+                  value={doc.name || ''}
+                  onChange={(e) => handleDocumentChange(index, 'name', e.target.value)}
+                  style={{ flex: 1, minWidth: '120px', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+                />
+                <input
+                  type="file"
+                  onChange={(e) => handleDocumentChange(index, 'file', e.target.files?.[0] || null)}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                  style={{ flex: 1, minWidth: '140px', fontSize: '12px' }}
+                />
+                {doc.url && !doc.file && (
+                  <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#3b82f6' }}>View</a>
+                )}
+                <button type="button" onClick={() => handleRemoveDocument(index)} style={{ padding: '8px 12px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
 
           <div className="sa-form-actions">
             <button type="button" className="sa-outline-button" onClick={() => setShowUserModal(false)}>Cancel</button>
