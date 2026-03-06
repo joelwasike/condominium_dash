@@ -144,7 +144,8 @@ const AccountingDashboard = () => {
   const [expenseFormBuilding, setExpenseFormBuilding] = useState('');
   const [expenseFormUnits, setExpenseFormUnits] = useState([]);
   const [paymentView, setPaymentView] = useState('all'); // 'all', 'rent', 'deposit', 'sale', 'tenant'
-  const [balanceView, setBalanceView] = useState('overview'); // 'overview', 'cash', 'bank', 'cash-journal', 'bank-journal'
+  const [balanceView, setBalanceView] = useState('overview'); // 'overview', 'cash', 'bank', 'cash-journal', 'bank-journal', 'owner-balances'
+  const [selectedOwnerForBalance, setSelectedOwnerForBalance] = useState(null); // owner name when viewing their transactions
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -4959,6 +4960,20 @@ const AccountingDashboard = () => {
             >
               Bank Journal
             </button>
+            <button
+              onClick={() => { setBalanceView('owner-balances'); setSelectedOwnerForBalance(null); }}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: balanceView === 'owner-balances' ? '#3b82f6' : 'transparent',
+                color: balanceView === 'owner-balances' ? 'white' : '#6b7280',
+                cursor: 'pointer',
+                borderBottom: balanceView === 'owner-balances' ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-2px'
+              }}
+            >
+              Owner Balances
+            </button>
           </div>
 
           {/* Overview Tab */}
@@ -5418,6 +5433,143 @@ const AccountingDashboard = () => {
                     </tbody>
                   </table>
                 </div>
+              )}
+            </>
+          )}
+
+          {/* Owner Balances Tab */}
+          {balanceView === 'owner-balances' && (
+            <>
+              {!selectedOwnerForBalance ? (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <h3>Owner Balances</h3>
+                    <p style={{ color: '#6b7280', marginTop: '4px' }}>Balance per owner (collections minus payments). Click an owner to view details.</p>
+                  </div>
+                  {(() => {
+                    const ownerNames = new Set();
+                    collections.forEach(c => { const n = c.Landlord || c.landlord; if (n) ownerNames.add(n); });
+                    landlordPayments.forEach(p => { const n = p.Landlord || p.landlord; if (n) ownerNames.add(n); });
+                    const ownerBalances = Array.from(ownerNames).map(owner => {
+                      const totalCollected = collections
+                        .filter(c => (c.Landlord || c.landlord) === owner)
+                        .reduce((sum, c) => sum + (c.Amount || c.amount || 0), 0);
+                      const totalPaid = landlordPayments
+                        .filter(p => (p.Landlord || p.landlord) === owner)
+                        .reduce((sum, p) => sum + (p.NetAmount || p.netAmount || 0), 0);
+                      const balance = totalCollected - totalPaid;
+                      return { owner, totalCollected, totalPaid, balance };
+                    }).filter(o => o.owner);
+                    if (ownerBalances.length === 0) {
+                      return <div className="no-data">No owner data found. Collections and landlord payments will appear here.</div>;
+                    }
+                    return (
+                      <div className="sa-table-wrapper">
+                        <table className="sa-table">
+                          <thead>
+                            <tr>
+                              <th>Owner</th>
+                              <th>Total Collected</th>
+                              <th>Total Paid</th>
+                              <th>Balance (Owed)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ownerBalances.map((row, idx) => (
+                              <tr
+                                key={row.owner || idx}
+                                onClick={() => setSelectedOwnerForBalance(row.owner)}
+                                style={{ cursor: 'pointer' }}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForBalance(row.owner); } }}
+                              >
+                                <td><span className="sa-cell-title">{row.owner}</span></td>
+                                <td>{row.totalCollected.toFixed(2)} XOF</td>
+                                <td>{row.totalPaid.toFixed(2)} XOF</td>
+                                <td style={{ color: row.balance >= 0 ? '#059669' : '#dc2626', fontWeight: '600' }}>
+                                  {row.balance.toFixed(2)} XOF
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </>
+              ) : (
+                <>
+                  <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button
+                      type="button"
+                      className="sa-outline-button"
+                      onClick={() => setSelectedOwnerForBalance(null)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <ArrowLeft size={16} />
+                      Back to owners
+                    </button>
+                    <h3 style={{ margin: 0 }}>{selectedOwnerForBalance} – Recent Transactions</h3>
+                  </div>
+                  {(() => {
+                    const owner = selectedOwnerForBalance;
+                    const ownerCollections = collections
+                      .filter(c => (c.Landlord || c.landlord) === owner)
+                      .map(c => ({ ...c, _type: 'collection', _date: c.Date || c.date || c.CreatedAt || c.createdAt }));
+                    const ownerPayments = landlordPayments
+                      .filter(p => (p.Landlord || p.landlord) === owner)
+                      .map(p => ({ ...p, _type: 'payout', _date: p.Date || p.date || p.CreatedAt || p.createdAt }));
+                    const merged = [...ownerCollections, ...ownerPayments]
+                      .sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0))
+                      .slice(0, 50);
+                    if (merged.length === 0) {
+                      return <div className="no-data">No transactions for this owner.</div>;
+                    }
+                    return (
+                      <div className="sa-table-wrapper">
+                        <table className="sa-table">
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Type</th>
+                              <th>Building</th>
+                              <th>Description</th>
+                              <th>Amount</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {merged.map((item, idx) => {
+                              const isCollection = item._type === 'collection';
+                              const amount = isCollection ? (item.Amount || item.amount || 0) : (item.NetAmount || item.netAmount || 0);
+                              const building = item.Building || item.building || '—';
+                              const desc = isCollection ? (item.ChargeType || item.chargeType || 'Rent') : 'Payout';
+                              const date = item._date ? new Date(item._date).toLocaleDateString() : 'N/A';
+                              const status = item.Status || item.status || (isCollection ? 'Collected' : '—');
+                              return (
+                                <tr key={idx}>
+                                  <td>{date}</td>
+                                  <td>
+                                    <span className={`sa-status-pill ${isCollection ? 'success' : 'info'}`}>
+                                      {isCollection ? 'Collection' : 'Payout'}
+                                    </span>
+                                  </td>
+                                  <td>{building}</td>
+                                  <td>{desc}</td>
+                                  <td style={{ color: isCollection ? '#059669' : '#dc2626', fontWeight: '600' }}>
+                                    {isCollection ? '+' : '-'}{amount.toFixed(2)} XOF
+                                  </td>
+                                  <td>{status}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </>
           )}
