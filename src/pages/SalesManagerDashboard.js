@@ -252,7 +252,7 @@ const SalesManagerDashboard = () => {
   const [addingNote, setAddingNote] = useState(false);
   const [maintenanceDetail, setMaintenanceDetail] = useState(null);
   const [maintenanceDetailLoading, setMaintenanceDetailLoading] = useState(false);
-
+  
   // Edit states
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
@@ -1499,7 +1499,7 @@ const SalesManagerDashboard = () => {
       status: u.status === 'Occupied' ? 'Occupied' : 'Vacant',
       tenant: (u.status === 'Occupied' && u.tenant) ? String(u.tenant).trim() : null,
     }));
-
+    
     const propertyData = {
       address: formData.get('address')?.trim(),
       type: formData.get('type')?.trim(),
@@ -1516,7 +1516,7 @@ const SalesManagerDashboard = () => {
     if (numUnits > 1) {
       if (unitsPayload.length !== numUnits || unitsPayload.some(u => !u.unitNumber)) {
         addNotification('Each unit must have a name/label (e.g. F1, House A, 101).', 'error');
-        return;
+      return;
       }
       propertyData.units = unitsPayload;
       propertyData.rent = 0;
@@ -2466,11 +2466,11 @@ const SalesManagerDashboard = () => {
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Properties</p>
             <p className="sa-metric-value">{totalProperties}</p>
-          </div>
+            </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Villas</p>
             <p className="sa-metric-value">{totalVillas}</p>
-          </div>
+            </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Tenants</p>
             <p className="sa-metric-value">{clients.length}</p>
@@ -2598,8 +2598,8 @@ const SalesManagerDashboard = () => {
                         <td>
                           <span className={`sa-status-pill ${isFull ? 'occupied' : 'vacant'}`}>
                             {isFull ? 'Occupied' : (remaining > 0 ? 'Partially filled' : (property.Status || property.status || 'Unknown'))}
-                          </span>
-                        </td>
+                      </span>
+                    </td>
                         <td>
                           <div className="sa-cell-main">
                             <span className="sa-cell-title">{filledUnits} / {totalUnits}</span>
@@ -2651,11 +2651,11 @@ const SalesManagerDashboard = () => {
   };
 
   // Property Management - Owners list, owner assets (renting/selling), building payment
-  const getOwnerId = (owner) => owner.id || owner.ID;
+    const getOwnerId = (owner) => owner.id || owner.ID;
   const getPropertyOwnerId = (property) => property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
 
   const handleSeeOwner = async (owner) => {
-    const ownerId = getOwnerId(owner);
+      const ownerId = getOwnerId(owner);
     if (!ownerId) return;
     setPmLoading(true);
     try {
@@ -2728,17 +2728,17 @@ const SalesManagerDashboard = () => {
       const totalApartments = buildingDetail.totalApartments ?? units.length;
       const images = buildingDetail.images || [];
       const firstImage = images[0];
-      return (
-        <div className="sa-clients-page">
-          <div className="sa-clients-header">
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => setPmView('owner-detail')}>
                 <ArrowLeft size={18} />
                 Back
               </button>
-              <div>
+          <div>
                 <h2>Building {pmBuildingName} management</h2>
-              </div>
+          </div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
@@ -2776,7 +2776,7 @@ const SalesManagerDashboard = () => {
                       <td>{row.status || row.statut || '—'}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <button
+            <button 
                             type="button"
                             className="table-action-button edit"
                             style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
@@ -2816,14 +2816,14 @@ const SalesManagerDashboard = () => {
                             disabled={pmLoading}
                           >
                             Delete
-                          </button>
-                        </div>
+            </button>
+          </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+        </div>
           </div>
         </div>
       );
@@ -2843,10 +2843,10 @@ const SalesManagerDashboard = () => {
                 <ArrowLeft size={18} />
                 Back
               </button>
-              <div>
+            <div>
                 <h2>Villa {pmBuildingName} management</h2>
-              </div>
             </div>
+          </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
             {firstImage && (
@@ -2858,10 +2858,10 @@ const SalesManagerDashboard = () => {
             </div>
           </div>
           <div className="sa-section-card" style={{ marginTop: '20px' }}>
-            <div className="sa-table-wrapper">
-              <table className="sa-table">
-                <thead>
-                  <tr>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
                     <th>Villa</th>
                     <th>Type</th>
                     <th>tenant</th>
@@ -2869,9 +2869,9 @@ const SalesManagerDashboard = () => {
                     <th>Enter date</th>
                     <th>Statut</th>
                     <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+                </tr>
+              </thead>
+              <tbody>
                   {units.map((row, i) => (
                     <tr key={row.id || i}>
                       <td>VILLA</td>
@@ -2924,8 +2924,8 @@ const SalesManagerDashboard = () => {
                             Delete
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
                   ))}
                 </tbody>
               </table>
@@ -2993,8 +2993,8 @@ const SalesManagerDashboard = () => {
           <div className="sa-section-card" style={{ marginTop: '20px' }}>
             <div className="sa-table-wrapper">
               <table className="sa-table">
-                <thead>
-                  <tr>
+                                  <thead>
+                                    <tr>
                     <th>PROPERTY</th>
                     <th>APPARTMENTS</th>
                     <th>RENT PRICE</th>
@@ -3002,9 +3002,9 @@ const SalesManagerDashboard = () => {
                     <th>OCCUPANCY</th>
                     <th>STATUT</th>
                     <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
                   {assets.map((row) => (
                     <tr
                       key={row.id}
@@ -3073,12 +3073,12 @@ const SalesManagerDashboard = () => {
                             Delete
                           </button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
             {assets.length === 0 && !pmLoading && (
               <p className="sa-table-empty">No assets for this owner.</p>
             )}
@@ -3140,14 +3140,14 @@ const SalesManagerDashboard = () => {
                     >
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{owner.name || owner.Name || 'N/A'}</span>
-                      </td>
+                          </td>
                       <td>{owner.email || owner.Email || '—'}</td>
                       <td>{totalOfAssets}</td>
                       <td>{propertyForSell}</td>
                       <td>{propertyForManage}</td>
                       <td>{occupancy}</td>
                       <td>{typeof incomeThisMonth === 'number' ? incomeThisMonth.toLocaleString() : incomeThisMonth}</td>
-                    </tr>
+                        </tr>
                   );
                 })}
                 {filteredOwners.length === 0 && (
@@ -3171,9 +3171,9 @@ const SalesManagerDashboard = () => {
               </div>
             </div>
             <div className="sa-table-wrapper">
-            <table className="sa-table">
+              <table className="sa-table">
                 <thead>
-                <tr>
+                  <tr>
                     <th>No</th>
                     <th>Address</th>
                     <th>Type</th>
@@ -3913,7 +3913,7 @@ const SalesManagerDashboard = () => {
             }}
           >
             Clear filters
-          </button>
+        </button>
         )}
       </div>
 
@@ -5402,7 +5402,7 @@ const SalesManagerDashboard = () => {
                             return (
                               <option key={propertyId || `property-${address}`} value={propertyId ?? ''}>
                                 {displayText}
-                              </option>
+                            </option>
                             );
                           })
                         ) : (
@@ -5916,7 +5916,7 @@ const SalesManagerDashboard = () => {
                       <option value="Occupied">Occupied</option>
                     </select>
                   </div>
-                    <div className="form-group">
+                  <div className="form-group">
                     <label htmlFor="create-number-of-units">Number of Units *</label>
                     <input
                       type="number"
@@ -5944,8 +5944,8 @@ const SalesManagerDashboard = () => {
                       {createPropertyUnits.slice(0, createPropertyNumberOfUnits).map((unit, index) => (
                         <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
                           <div style={{ fontWeight: 600, marginBottom: '8px', color: '#374151' }}>Unit {index + 1}</div>
-                          <div className="form-row">
-                            <div className="form-group">
+                <div className="form-row">
+                  <div className="form-group">
                               <label>Unit name *</label>
                               <input
                                 type="text"
@@ -5965,16 +5965,16 @@ const SalesManagerDashboard = () => {
                             </div>
                             <div className="form-group">
                               <label>{selectedPropertyType === 'For Sale' ? 'Price (XOF)' : 'Rent (XOF)'} *</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
                                 value={unit.rent}
                                 onChange={(e) => updateCreatePropertyUnit(index, 'rent', e.target.value)}
                                 placeholder="0"
-                              />
-                            </div>
-                          </div>
+                    />
+                  </div>
+                </div>
                           <div className="form-row">
                             <div className="form-group">
                               <label>Status</label>
@@ -6735,35 +6735,35 @@ const SalesManagerDashboard = () => {
                       {editPropertyUnits.slice(0, editPropertyNumberOfUnits).map((unit, index) => (
                         <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
                           <div style={{ fontWeight: 600, marginBottom: '8px', color: '#374151' }}>Unit {index + 1}</div>
-                          <div className="form-row">
-                            <div className="form-group">
+                <div className="form-row">
+                  <div className="form-group">
                               <label>Unit name *</label>
-                              <input
+                    <input
                                 type="text"
                                 value={unit.unitNumber}
                                 onChange={(e) => updateEditPropertyUnit(index, 'unitNumber', e.target.value)}
                                 placeholder="e.g. F1, House A"
-                              />
-                            </div>
+                    />
+                  </div>
                             <div className="form-group">
                               <label>Bedrooms</label>
                               <select value={unit.bedrooms} onChange={(e) => updateEditPropertyUnit(index, 'bedrooms', parseInt(e.target.value, 10))}>
                                 {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
                               </select>
-                            </div>
-                            <div className="form-group">
+                </div>
+                  <div className="form-group">
                               <label>Rent (XOF) *</label>
-                              <input
-                                type="number"
+                    <input
+                      type="number"
                                 step="0.01"
-                                min="0"
+                      min="0"
                                 value={unit.rent}
                                 onChange={(e) => updateEditPropertyUnit(index, 'rent', e.target.value)}
-                              />
-                            </div>
+                    />
+                  </div>
                           </div>
                           <div className="form-row">
-                            <div className="form-group">
+                  <div className="form-group">
                               <label>Status</label>
                               <select value={unit.status} onChange={(e) => updateEditPropertyUnit(index, 'status', e.target.value)}>
                                 <option value="Vacant">Vacant</option>
@@ -6822,9 +6822,9 @@ const SalesManagerDashboard = () => {
                   </div>
                 </div>
 
-                <div className="form-group">
+                  <div className="form-group">
                   <label>Property images</label>
-                  <input
+                    <input
                     type="file"
                     accept="image/*"
                     multiple
@@ -6839,7 +6839,7 @@ const SalesManagerDashboard = () => {
                         <div key={i} style={{ position: 'relative' }}>
                           <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
                           <button type="button" onClick={() => setEditPropertyImages(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
-                        </div>
+                  </div>
                       ))}
                     </div>
                   )}

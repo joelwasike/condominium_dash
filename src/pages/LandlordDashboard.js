@@ -1185,17 +1185,17 @@ const LandlordDashboard = () => {
       const images = buildingDetail.images || [];
       const firstImage = images[0];
       return (
-        <div className="sa-clients-page">
-          <div className="sa-clients-header">
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setBuildingDetail(null); setPmPropertyId(null); setPmBuildingName(''); }}>
                 <ArrowLeft size={18} />
                 Back
               </button>
-              <div>
+        <div>
                 <h2>Building {pmBuildingName} management</h2>
-              </div>
-            </div>
+        </div>
+      </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
             {firstImage && (
@@ -1214,19 +1214,19 @@ const LandlordDashboard = () => {
             </div>
           </div>
           <div className="sa-section-card" style={{ marginTop: '20px' }}>
-            <div className="sa-table-wrapper">
-              <table className="sa-table">
-                <thead>
-                  <tr>
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+            <thead>
+              <tr>
                     <th>Apartments</th>
-                    <th>Type</th>
+                <th>Type</th>
                     <th>Tenant</th>
-                    <th>Rent</th>
+                <th>Rent</th>
                     <th>Enter date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
                   {units.map((row, i) => (
                     <tr key={row.id || i}>
                       <td>{row.unitNumber || row.name || `Apartment ${i + 1}`}</td>
@@ -1235,11 +1235,11 @@ const LandlordDashboard = () => {
                       <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
                       <td>{row.enterDate || '—'}</td>
                       <td>{row.status || row.statut || '—'}</td>
-                    </tr>
+              </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+                    </div>
           </div>
         </div>
       );
@@ -1303,12 +1303,12 @@ const LandlordDashboard = () => {
                       <td>{row.status || row.statut || '—'}</td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
+            </tbody>
+          </table>
             </div>
-          </div>
         </div>
-      );
+    </div>
+  );
     }
 
     // Buildings list – click to see apartments
@@ -1320,19 +1320,19 @@ const LandlordDashboard = () => {
     const others = properties.filter(p => !isBuilding(p) && !isVilla(p));
 
     return (
-      <div className="sa-clients-page">
-        <div className="sa-clients-header">
-          <div>
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
             <h2>Property & Asset Management</h2>
             <p>{properties.length} properties found – click a building or villa to see apartments</p>
-          </div>
         </div>
+      </div>
         {pmLoading && <p style={{ marginTop: 8 }}>Loading…</p>}
         <div className="sa-section-card" style={{ marginTop: '20px' }}>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
-              <thead>
-                <tr>
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
                   <th>Name</th>
                   <th>Type</th>
                   <th>Apartments</th>
@@ -1340,11 +1340,11 @@ const LandlordDashboard = () => {
                   <th>Income</th>
                   <th>Location</th>
                   <th>Occupancy</th>
-                  <th>Status</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
                 {[...buildings, ...villas, ...others].map((property, index) => {
                   const type = propType(property);
                   const isV = type.includes('villa');
@@ -1357,9 +1357,9 @@ const LandlordDashboard = () => {
                       onClick={handleClick}
                       className="clickable-row"
                     >
-                      <td className="sa-cell-main">
+                  <td className="sa-cell-main">
                         <span className="sa-cell-title">{property.Address || property.address || property.name || property.building || 'Unknown'}</span>
-                      </td>
+                  </td>
                       <td>{property.Type || property.type || 'N/A'}</td>
                       <td>{apartmentsDisplay}</td>
                       <td>{typeof property.rentPrice === 'number' ? property.rentPrice.toLocaleString() : property.Rent?.toLocaleString() || property.rent?.toLocaleString() || '—'}</td>
@@ -1369,21 +1369,21 @@ const LandlordDashboard = () => {
                       <td>{property.statut || property.Status || property.status || '—'}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <button type="button" className="sa-icon-button" title="View" onClick={handleClick}>👁️</button>
-                      </td>
-                    </tr>
+                  </td>
+                </tr>
                   );
                 })}
                 {properties.length === 0 && !pmLoading && (
                   <tr>
                     <td colSpan={9} className="sa-table-empty">No properties found</td>
                   </tr>
-                )}
-              </tbody>
-            </table>
+            )}
+          </tbody>
+        </table>
           </div>
-        </div>
       </div>
-    );
+    </div>
+  );
   };
 
   const renderTenantDetail = () => {
@@ -1573,13 +1573,13 @@ const LandlordDashboard = () => {
     const landlordProps = properties.map(p => p.Address ?? p.address ?? p.name).filter(Boolean);
     const uniqueProperties = [...new Set([...tenantProps, ...landlordProps])].filter(Boolean).sort();
     return (
-      <div className="sa-clients-page">
-        <div className="sa-clients-header">
-          <div>
+    <div className="sa-clients-page">
+      <div className="sa-clients-header">
+        <div>
             <h2>Tenant Management</h2>
             <p>{filteredTenants.length} tenants found – click a tenant to see full details</p>
-          </div>
-          <div className="sa-clients-header-right">
+                      </div>
+        <div className="sa-clients-header-right">
             <div className="sa-filters-section">
             <input
               type="text"
@@ -1598,23 +1598,23 @@ const LandlordDashboard = () => {
                 <option key={addr} value={addr}>{addr}</option>
               ))}
             </select>
-            </div>
-          </div>
+        </div>
+                    </div>
         </div>
         <div className="sa-section-card" style={{ marginTop: '20px' }}>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>No</th>
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
                   <th>Tenant Name</th>
                   <th>Property</th>
                   <th>Rent Amount</th>
-                  <th>Status</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
                 {filteredTenants.map((tenant, index) => {
                   const tenantId = tenant.id ?? tenant.ID;
                   const tenantName = tenant.name ?? tenant.Name ?? 'N/A';
@@ -1632,19 +1632,19 @@ const LandlordDashboard = () => {
                       <td><span className={`sa-status-pill ${(tenant.status ?? tenant.Status ?? 'active').toLowerCase().replace(/\s+/g, '-')}`}>{tenant.status ?? tenant.Status ?? 'Active'}</span></td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <button type="button" className="sa-icon-button" title="View" onClick={() => tenantId && setSelectedTenantId(String(tenantId))}>👁️</button>
-                      </td>
-                    </tr>
+              </td>
+            </tr>
                   );
                 })}
                 {filteredTenants.length === 0 && (
                   <tr><td colSpan={6} className="sa-table-empty">No tenants found</td></tr>
                 )}
-              </tbody>
-            </table>
+          </tbody>
+        </table>
           </div>
-        </div>
-      </div>
-    );
+                </div>
+              </div>
+  );
   };
 
   const renderPayments = () => {
@@ -2322,7 +2322,7 @@ const LandlordDashboard = () => {
                                 }}
                               >
                                 Approve
-                              </button>
+        </button>
                             )}
                           </td>
                         </tr>
@@ -2330,10 +2330,10 @@ const LandlordDashboard = () => {
                     })}
                   </tbody>
                 </table>
-              </div>
-            </div>
+        </div>
+                </div>
           )}
-
+                
           {/* Pending Maintenance Quotes for Approval */}
           {maintenanceQuotes && maintenanceQuotes.length > 0 && (
             <div className="sa-section-card" style={{ marginBottom: '24px' }}>
@@ -2534,7 +2534,7 @@ const LandlordDashboard = () => {
           </div>
         );
   };
-  
+      
   const renderInventory = () => (
     <div className="sa-clients-page">
       <div className="sa-clients-header">
@@ -2674,13 +2674,13 @@ const LandlordDashboard = () => {
                           <span className={`sa-status-pill ${(rent.status || rent.Status || 'approved').toLowerCase()}`}>
                             {rent.status || rent.Status || 'Approved'}
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
               </div>
-            </div>
+              </div>
           )}
 
           {rents.pendingRents && rents.pendingRents.length > 0 && (
@@ -3034,7 +3034,7 @@ const LandlordDashboard = () => {
     ].filter(d => d.value > 0);
 
     return (
-      <div className="sa-overview-page">
+    <div className="sa-overview-page">
         <div className="sa-clients-header" style={{ marginBottom: '24px' }}>
           <div>
             <h2>Business Analytics</h2>
@@ -3043,22 +3043,22 @@ const LandlordDashboard = () => {
         </div>
 
         <div className="sa-overview-metrics" style={{ width: '100%', marginBottom: '24px' }}>
-          <div className="sa-metric-card sa-metric-primary">
-            <p className="sa-metric-label">Revenue Trends</p>
+        <div className="sa-metric-card sa-metric-primary">
+          <p className="sa-metric-label">Revenue Trends</p>
             <p className="sa-metric-value">{businessTracking?.revenueTrends ?? '+0%'}</p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Occupancy Rate</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Occupancy Rate</p>
             <p className="sa-metric-number">{Number(businessTracking?.occupancyRate ?? 0).toFixed(1)}%</p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Maintenance Costs</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">Maintenance Costs</p>
             <p className="sa-metric-number">{(businessTracking?.maintenanceCosts ?? 0).toLocaleString()} XOF</p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">ROI</p>
+        </div>
+        <div className="sa-metric-card">
+          <p className="sa-metric-label">ROI</p>
             <p className="sa-metric-number">{Number(businessTracking?.roi ?? 0).toFixed(1)}%</p>
-          </div>
+        </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Revenue</p>
             <p className="sa-metric-number">{(businessTracking?.totalRevenue ?? 0).toLocaleString()} XOF</p>
@@ -3161,9 +3161,9 @@ const LandlordDashboard = () => {
               )}
             </div>
           </div>
-        </div>
-      </div>
-    );
+              </div>
+          </div>
+        );
   };
       
   // Load advertisements

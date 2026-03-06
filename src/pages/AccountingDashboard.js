@@ -52,6 +52,10 @@ const AccountingDashboard = () => {
   const [selectedLandlord, setSelectedLandlord] = useState(null);
   const [landlordProperties, setLandlordProperties] = useState(null);
   const [ownerView, setOwnerView] = useState('payments'); // 'owners', 'payments'
+  const [ownerPaymentsLandlordFilter, setOwnerPaymentsLandlordFilter] = useState('');
+  const [ownerPaymentsBuildingFilter, setOwnerPaymentsBuildingFilter] = useState('');
+  const [selectedOwnerForPaymentsHistory, setSelectedOwnerForPaymentsHistory] = useState(null); // owner name when viewing their transactions
+  const [ownerPaymentsOwners, setOwnerPaymentsOwners] = useState([]); // owners from backend (same as sales manager)
   const carouselIntervalRef = useRef(null);
   
   // History state - removed unused hardcoded history states, now using real backend data
@@ -366,6 +370,16 @@ const AccountingDashboard = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, balanceView]);
+
+  // Load owners for Owner Payments page (same source as sales manager)
+  useEffect(() => {
+    if (activeTab === 'owner-payments') {
+      accountingService.getOwners()
+        .then(data => setOwnerPaymentsOwners(Array.isArray(data) ? data : []))
+        .catch(() => setOwnerPaymentsOwners([]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // Load tenants data
   const loadTenants = useCallback(async () => {
@@ -1291,119 +1305,91 @@ const AccountingDashboard = () => {
                 {overviewData ? `${(overviewData.totalCompanyCommissionEarned || 0).toFixed(2)} XOF` : '0 XOF'}
               </p>
             </div>
-            {/* Advertisements Display - Replacing Banner Card */}
+            {/* Advertisements Display - fills space, no scroll, no label */}
             {advertisements.length > 0 ? (
               <div style={{
                 gridColumn: 'span 2',
                 minHeight: '400px',
-                padding: '32px',
+                padding: '0',
                 backgroundColor: '#fff',
                 borderRadius: '12px',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '24px',
                 overflow: 'hidden',
-                position: 'relative'
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column'
               }}>
-                <h3 style={{
-                  margin: '0 0 20px 0',
-                  fontSize: '1.5rem',
-                  fontWeight: '600',
-                  color: '#1f2937'
-                }}>
-                  Advertisements
-                </h3>
                 <div style={{
                   position: 'relative',
+                  flex: 1,
+                  minHeight: '400px',
                   overflow: 'hidden',
-                  flex: 1
+                  display: 'flex'
                 }}>
                   <div style={{
                     display: 'flex',
                     transform: `translateX(-${currentAdIndex * 100}%)`,
                     transition: 'transform 0.5s ease-in-out',
-                    width: `${advertisements.length * 100}%`
+                    width: `${advertisements.length * 100}%`,
+                    height: '100%'
                   }}>
                     {advertisements.map((ad, index) => {
                       const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-                      const fullImageUrl = imageUrl 
+                      const fullImageUrl = imageUrl
                         ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
                         : null;
 
                       return (
-                        <div 
+                        <div
                           key={`ad-${ad.ID || ad.id || index}`}
                           style={{
                             width: `${100 / advertisements.length}%`,
-                            padding: '20px',
-                            backgroundColor: '#f9fafb',
-                            borderRadius: '8px',
+                            height: '100%',
+                            minHeight: '400px',
+                            flexShrink: 0,
                             display: 'flex',
-                            flexDirection: 'column',
                             alignItems: 'center',
-                            textAlign: 'center',
-                            flexShrink: 0
+                            justifyContent: 'center',
+                            backgroundColor: '#f9fafb'
                           }}
                         >
-                        {fullImageUrl && (
-                          <img 
-                            src={fullImageUrl} 
-                            alt={ad.Title || ad.title || 'Advertisement'} 
-                            style={{
-                              width: '100%',
-                              height: 'auto',
-                              maxHeight: '250px',
-                              objectFit: 'contain',
-                              borderRadius: '8px',
-                              marginBottom: '16px'
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        )}
-                        <h3 style={{ 
-                          margin: '0 0 8px 0', 
-                          fontSize: '1.1rem', 
-                          color: '#1f2937',
-                          fontWeight: '600'
-                        }}>
-                          {ad.Title || ad.title || 'Untitled Advertisement'}
-                        </h3>
-                        <p style={{ 
-                          margin: '0 0 12px 0', 
-                          fontSize: '0.9rem', 
-                          color: '#6b7280',
-                          lineHeight: '1.5'
-                        }}>
-                          {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
-                        </p>
-                        {ad.CreatedAt && (
-                          <span style={{ 
-                            fontSize: '0.8rem', 
-                            color: '#9ca3af'
-                          }}>
-                            Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
-                          </span>
-                        )}
+                          {fullImageUrl ? (
+                            <img
+                              src={fullImageUrl}
+                              alt=""
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                minHeight: '400px',
+                                objectFit: 'cover',
+                                display: 'block'
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div style={{ padding: '24px', color: '#6b7280', textAlign: 'center' }}>
+                              {ad.Title || ad.title || 'No image'}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
-                  
+
                   {/* Carousel Indicators */}
                   {advertisements.length > 1 && (
                     <div style={{
                       display: 'flex',
                       justifyContent: 'center',
                       gap: '8px',
-                      padding: '16px',
+                      padding: '12px',
                       position: 'absolute',
                       bottom: 0,
                       left: 0,
                       right: 0,
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)'
+                      backgroundColor: 'rgba(0, 0, 0, 0.3)'
                     }}>
                       {advertisements.map((_, index) => (
                         <button
@@ -1422,7 +1408,7 @@ const AccountingDashboard = () => {
                             height: '8px',
                             borderRadius: '4px',
                             border: 'none',
-                            backgroundColor: index === currentAdIndex ? '#3b82f6' : '#d1d5db',
+                            backgroundColor: index === currentAdIndex ? '#fff' : 'rgba(255,255,255,0.5)',
                             cursor: 'pointer',
                             transition: 'all 0.3s ease'
                           }}
@@ -1821,12 +1807,74 @@ const AccountingDashboard = () => {
             </div>
           </div>
 
-          {ownerView === 'owners' && (
+          {selectedOwnerForPaymentsHistory ? (
             <div>
-              {loading ? (
-                <div className="loading">Loading owners...</div>
-              ) : landlords.length === 0 ? (
-                <div className="no-data">No owners found</div>
+              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  type="button"
+                  className="sa-outline-button"
+                  onClick={() => setSelectedOwnerForPaymentsHistory(null)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <ArrowLeft size={16} />
+                  Back to {ownerView === 'owners' ? 'owners' : 'payments'}
+                </button>
+                <h3 style={{ margin: 0 }}>{selectedOwnerForPaymentsHistory} – Transaction History</h3>
+              </div>
+              {(() => {
+                const owner = selectedOwnerForPaymentsHistory;
+                const ownerPayments = landlordPayments.filter(p => {
+                  const pLandlord = (p.Landlord || p.landlord || '').trim();
+                  return pLandlord && (pLandlord === owner || pLandlord.toLowerCase() === owner.toLowerCase());
+                });
+                const ownerCollections = collections.filter(c => {
+                  const cLandlord = (c.Landlord || c.landlord || '').trim();
+                  return cLandlord && (cLandlord === owner || cLandlord.toLowerCase() === owner.toLowerCase());
+                });
+                const merged = [
+                  ...ownerPayments.map(p => ({ ...p, _type: 'payout', _date: p.Date || p.date || p.CreatedAt || p.createdAt })),
+                  ...ownerCollections.map(c => ({ ...c, _type: 'collection', _date: c.Date || c.date || c.CreatedAt || c.createdAt }))
+                ].sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
+                if (merged.length === 0) return <div className="no-data">No transactions for this owner.</div>;
+                return (
+                  <div className="sa-table-wrapper">
+                    <table className="sa-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Type</th>
+                          <th>Building</th>
+                          <th>Amount</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {merged.map((item, idx) => {
+                          const isCollection = item._type === 'collection';
+                          const amount = isCollection ? (item.Amount || item.amount || 0) : (item.NetAmount || item.netAmount || 0);
+                          const building = item.Building || item.building || '—';
+                          const date = item._date ? new Date(item._date).toLocaleDateString() : 'N/A';
+                          const status = item.Status || item.status || (isCollection ? 'Collected' : '—');
+                          return (
+                            <tr key={idx}>
+                              <td>{date}</td>
+                              <td><span className={`sa-status-pill ${isCollection ? 'success' : 'info'}`}>{isCollection ? 'Collection' : 'Payout'}</span></td>
+                              <td>{building}</td>
+                              <td style={{ color: isCollection ? '#059669' : '#dc2626', fontWeight: '600' }}>{isCollection ? '+' : '-'}{amount.toFixed(2)} XOF</td>
+                              <td>{status}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          ) : ownerView === 'owners' ? (
+            <div>
+              {ownerPaymentsOwners.length === 0 ? (
+                <div className="no-data">No owners found. Owners are loaded from the backend (same as Sales Manager).</div>
               ) : (
                 <div className="sa-table-wrapper">
                   <table className="sa-table">
@@ -1834,64 +1882,122 @@ const AccountingDashboard = () => {
                       <tr>
                         <th>Owner Name</th>
                         <th>Email</th>
-                        <th>Properties</th>
                         <th className="table-menu"></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {landlords.map((landlord, index) => (
-                        <tr key={landlord.ID || landlord.id || index}>
-                          <td>
-                            <span className="sa-cell-title">{landlord.Name || landlord.name || 'N/A'}</span>
-                          </td>
-                          <td>{landlord.Email || landlord.email || 'N/A'}</td>
-                          <td>
-                            <button
-                              className="table-action-button view"
-                              onClick={async () => {
-                                try {
-                                  setLoading(true);
-                                  const properties = await accountingService.getLandlordProperties(landlord.ID || landlord.id);
-                                  setLandlordProperties(properties);
-                                  setSelectedLandlord(landlord);
-                                  setOwnerView('payments');
-                                  setShowLandlordPaymentModal(true);
-                                } catch (error) {
-                                  console.error('Error loading properties:', error);
-                                  addNotification('Failed to load properties', 'error');
-                                } finally {
-                                  setLoading(false);
-                                }
-                              }}
-                            >
-                              View Properties
-                            </button>
-                          </td>
-                          <td className="table-menu">
-                            <div className="sa-row-actions">
+                      {ownerPaymentsOwners.map((owner, index) => {
+                        const name = owner.Name || owner.name || owner.Landlord || owner.landlord || 'N/A';
+                        return (
+                          <tr
+                            key={owner.ID || owner.id || index}
+                            onClick={() => setSelectedOwnerForPaymentsHistory(name)}
+                            style={{ cursor: 'pointer' }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForPaymentsHistory(name); } }}
+                          >
+                            <td><span className="sa-cell-title">{name}</span></td>
+                            <td>{owner.Email || owner.email || 'N/A'}</td>
+                            <td className="table-menu" onClick={(e) => e.stopPropagation()}>
                               <button
                                 className="table-action-button edit"
                                 onClick={() => {
-                                  setSelectedLandlord(landlord);
-                                  setOwnerView('payments');
+                                  setSelectedLandlord(owner);
+                                  setLandlordProperties(null);
                                   setShowLandlordPaymentModal(true);
                                 }}
                               >
                                 Record Payment
                               </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               )}
             </div>
-          )}
+          ) : null}
 
           {ownerView === 'payments' && (
             <div className="sa-section-card">
+              {selectedOwnerForPaymentsHistory ? (
+                <>
+                  <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button
+                      type="button"
+                      className="sa-outline-button"
+                      onClick={() => setSelectedOwnerForPaymentsHistory(null)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <ArrowLeft size={16} />
+                      Back to list
+                    </button>
+                    <h3 style={{ margin: 0 }}>{selectedOwnerForPaymentsHistory} – Transaction History</h3>
+                  </div>
+                  {(() => {
+                    const owner = selectedOwnerForPaymentsHistory;
+                    const ownerPayments = landlordPayments.filter(p =>
+                      (p.Landlord || p.landlord || '').trim() === owner ||
+                      (p.Landlord || p.landlord || '').toLowerCase() === owner.toLowerCase()
+                    );
+                    const ownerCollections = collections.filter(c =>
+                      (c.Landlord || c.landlord || '').trim() === owner ||
+                      (c.Landlord || c.landlord || '').toLowerCase() === owner.toLowerCase()
+                    );
+                    const merged = [
+                      ...ownerPayments.map(p => ({ ...p, _type: 'payout', _date: p.Date || p.date || p.CreatedAt || p.createdAt })),
+                      ...ownerCollections.map(c => ({ ...c, _type: 'collection', _date: c.Date || c.date || c.CreatedAt || c.createdAt }))
+                    ].sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
+
+                    if (merged.length === 0) {
+                      return <div className="no-data">No transactions for this owner.</div>;
+                    }
+                    return (
+                      <div className="sa-table-wrapper">
+                        <table className="sa-table">
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Type</th>
+                              <th>Building</th>
+                              <th>Amount</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {merged.map((item, idx) => {
+                              const isCollection = item._type === 'collection';
+                              const amount = isCollection ? (item.Amount || item.amount || 0) : (item.NetAmount || item.netAmount || 0);
+                              const building = item.Building || item.building || '—';
+                              const date = item._date ? new Date(item._date).toLocaleDateString() : 'N/A';
+                              const status = item.Status || item.status || (isCollection ? 'Collected' : '—');
+                              return (
+                                <tr key={idx}>
+                                  <td>{date}</td>
+                                  <td>
+                                    <span className={`sa-status-pill ${isCollection ? 'success' : 'info'}`}>
+                                      {isCollection ? 'Collection' : 'Payout'}
+                                    </span>
+                                  </td>
+                                  <td>{building}</td>
+                                  <td style={{ color: isCollection ? '#059669' : '#dc2626', fontWeight: '600' }}>
+                                    {isCollection ? '+' : '-'}{amount.toFixed(2)} XOF
+                                  </td>
+                                  <td>{status}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </>
+              ) : (
+                <>
               <div className="sa-section-header">
                 <div>
                   <h2>Owner Payment Table</h2>
@@ -1907,85 +2013,108 @@ const AccountingDashboard = () => {
                 </button>
               </div>
 
-              <div className="sa-filters-section">
-                <select className="sa-filter-select">
-                  <option value="">All Landlords</option>
-                  <option value="john-smith">John Smith</option>
-                  <option value="jane-doe">Jane Doe</option>
-                  <option value="bob-johnson">Bob Johnson</option>
+              <div className="sa-filters-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                <select
+                  className="sa-filter-select"
+                  value={ownerPaymentsLandlordFilter}
+                  onChange={(e) => setOwnerPaymentsLandlordFilter(e.target.value)}
+                >
+                  <option value="">All Owners</option>
+                  {ownerPaymentsOwners.map((o) => {
+                    const name = o.Name || o.name || o.Landlord || o.landlord || '';
+                    return name ? <option key={o.ID || o.id} value={name}>{name}</option> : null;
+                  })}
+                  {ownerPaymentsOwners.length === 0 && [...new Set(landlordPayments.map(p => p.Landlord || p.landlord).filter(Boolean))].map((name, i) => (
+                    <option key={i} value={name}>{name}</option>
+                  ))}
                 </select>
-                <select className="sa-filter-select">
+                <select
+                  className="sa-filter-select"
+                  value={ownerPaymentsBuildingFilter}
+                  onChange={(e) => setOwnerPaymentsBuildingFilter(e.target.value)}
+                >
                   <option value="">All Buildings</option>
-                  <option value="123-main">123 Main St</option>
-                  <option value="456-oak">456 Oak Ave</option>
-                  <option value="789-pine">789 Pine Ln</option>
-                </select>
-                <select className="sa-filter-select">
-                  <option value="">All Periods</option>
-                  <option value="current-month">Current Month</option>
-                  <option value="last-month">Last Month</option>
+                  {[...new Set(landlordPayments.map(p => p.Building || p.building).filter(Boolean))].sort().map((b, i) => (
+                    <option key={i} value={b}>{b}</option>
+                  ))}
                 </select>
               </div>
 
               {loading ? (
                 <div className="loading">Loading landlord payments...</div>
-              ) : landlordPayments.length === 0 ? (
-                <div className="no-data">No landlord payments found</div>
-              ) : (
-                <div className="sa-table-wrapper">
-                  <table className="sa-table">
-                    <thead>
-                      <tr>
-                        <th>Landlord</th>
-                        <th>Building</th>
-                        <th>Net Amount</th>
-                        <th>Commission</th>
-                        <th>Transaction Type</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th className="table-menu"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {landlordPayments.map((payment, index) => (
-                        <tr key={payment.ID || `landlord-payment-${index}`}>
-                          <td>
-                            <span className="sa-cell-title">{payment.Landlord || 'N/A'}</span>
-                          </td>
-                          <td>{payment.Building || 'N/A'}</td>
-                          <td>{payment.NetAmount?.toFixed(2) || '0.00'} XOF</td>
-                          <td>{payment.Commission?.toFixed(2) || '0.00'} XOF</td>
-                          <td>Payout</td>
-                          <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
-                          <td>
-                            <span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>
-                              {payment.Status || 'Unknown'}
-                            </span>
-                          </td>
-                          <td className="table-menu">
-                            <div className="sa-row-actions">
-                              <button className="table-action-button view">{t('common.view')}</button>
-                              {(payment.Status || '').toLowerCase() !== 'paid' && (
-                                <button 
-                                  className="table-action-button edit" 
-                                  onClick={() => transferToLandlord(payment.ID)} 
-                                  title="Mark as Completed"
-                                >
-                                  Mark Completed
-                                </button>
-                              )}
-                              {(payment.Status || '').toLowerCase() === 'paid' && (
-                                <span className="sa-status-pill success" style={{ padding: '4px 12px' }}>
-                                  Completed
-                                </span>
-                              )}
-                            </div>
-                          </td>
+              ) : (() => {
+                const filtered = landlordPayments.filter(p => {
+                  if (ownerPaymentsLandlordFilter && (p.Landlord || p.landlord) !== ownerPaymentsLandlordFilter) return false;
+                  if (ownerPaymentsBuildingFilter && (p.Building || p.building) !== ownerPaymentsBuildingFilter) return false;
+                  return true;
+                });
+                return filtered.length === 0 ? (
+                  <div className="no-data">No landlord payments found</div>
+                ) : (
+                  <div className="sa-table-wrapper">
+                    <table className="sa-table">
+                      <thead>
+                        <tr>
+                          <th>Landlord</th>
+                          <th>Building</th>
+                          <th>Net Amount</th>
+                          <th>Commission</th>
+                          <th>Transaction Type</th>
+                          <th>Date</th>
+                          <th>Status</th>
+                          <th className="table-menu"></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {filtered.map((payment, index) => {
+                          const landlordName = payment.Landlord || payment.landlord || 'N/A';
+                          return (
+                            <tr
+                              key={payment.ID || `landlord-payment-${index}`}
+                              onClick={() => setSelectedOwnerForPaymentsHistory(landlordName)}
+                              style={{ cursor: 'pointer' }}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForPaymentsHistory(landlordName); } }}
+                            >
+                              <td><span className="sa-cell-title">{landlordName}</span></td>
+                              <td>{payment.Building || 'N/A'}</td>
+                              <td>{payment.NetAmount?.toFixed(2) || '0.00'} XOF</td>
+                              <td>{payment.Commission?.toFixed(2) || '0.00'} XOF</td>
+                              <td>Payout</td>
+                              <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
+                              <td>
+                                <span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>
+                                  {payment.Status || 'Unknown'}
+                                </span>
+                              </td>
+                              <td className="table-menu" onClick={(e) => e.stopPropagation()}>
+                                <div className="sa-row-actions">
+                                  {(payment.Status || '').toLowerCase() !== 'paid' && (
+                                    <button
+                                      className="table-action-button edit"
+                                      onClick={(e) => { e.stopPropagation(); transferToLandlord(payment.ID); }}
+                                      title="Mark as Completed"
+                                    >
+                                      Mark Completed
+                                    </button>
+                                  )}
+                                  {(payment.Status || '').toLowerCase() === 'paid' && (
+                                    <span className="sa-status-pill success" style={{ padding: '4px 12px' }}>
+                                      Completed
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+                </>
               )}
             </div>
           )}
@@ -6293,25 +6422,14 @@ const AccountingDashboard = () => {
                   const formData = new FormData(e.target);
                   const paymentData = {
                     landlord: formData.get('landlord'),
-                    building: formData.get('building'),
                     netAmount: parseFloat(formData.get('netAmount'))
-                    // Commission is automatically calculated by the backend (10% of net amount)
                   };
-                  
-                  // Call the backend API
                   const newPayment = await accountingService.recordLandlordPayment(paymentData);
-                  
-                  // Update local state with the response from backend
                   setLandlordPayments(prev => [newPayment, ...prev]);
                   addNotification('Landlord payment recorded successfully!', 'success');
                   setShowLandlordPaymentModal(false);
-                  
-                  // Reset form and state
                   e.target.reset();
-                  setSelectedBuilding('');
-                  setCalculatedAmount(null);
                   setSelectedLandlord(null);
-                  setLandlordProperties(null);
                 } catch (error) {
                   console.error('Error recording landlord payment:', error);
                   addNotification('Failed to record landlord payment. Please try again.', 'error');
@@ -6320,325 +6438,36 @@ const AccountingDashboard = () => {
                 }
               }}>
                 <div className="form-group">
-                  <label htmlFor="landlord">Landlord Name *</label>
-                  <select 
-                    name="landlord" 
+                  <label htmlFor="landlord">Owner / Landlord *</label>
+                  <select
+                    name="landlord"
                     required
-                    onChange={async (e) => {
-                      const landlordId = e.target.value;
-                      if (landlordId) {
-                        const landlord = landlords.find(l => (l.id || l.ID).toString() === landlordId);
-                        setSelectedLandlord(landlord);
-                        try {
-                          setLoading(true);
-                          const data = await accountingService.getLandlordProperties(landlordId);
-                          setLandlordProperties(data);
-                          // Reset building selection when landlord changes
-                          setSelectedBuilding('');
-                          setCalculatedAmount(null);
-                          const buildingSelect = e.target.form?.querySelector('select[name="building"]');
-                          if (buildingSelect) buildingSelect.value = '';
-                          const netAmountInput = e.target.form?.querySelector('input[name="netAmount"]');
-                          if (netAmountInput) netAmountInput.value = '';
-                        } catch (error) {
-                          console.error('Error loading landlord properties:', error);
-                          addNotification('Failed to load landlord properties', 'error');
-                          setLandlordProperties(null);
-                        } finally {
-                          setLoading(false);
-                        }
-                      } else {
-                        setSelectedLandlord(null);
-                        setLandlordProperties(null);
-                        setSelectedBuilding('');
-                        setCalculatedAmount(null);
-                      }
+                    defaultValue={selectedLandlord ? (selectedLandlord.id || selectedLandlord.ID) : ''}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      const ownersForModal = ownerPaymentsOwners.length > 0 ? ownerPaymentsOwners : landlords;
+                      setSelectedLandlord(ownersForModal.find(o => String(o.id || o.ID) === id) || null);
                     }}
                   >
-                    <option value="">Select Landlord</option>
-                    {landlords.map((landlord) => (
-                      <option key={landlord.id || landlord.ID} value={landlord.id || landlord.ID}>
-                        {landlord.name || landlord.Name} {landlord.email ? `(${landlord.email || landlord.Email})` : ''}
+                    <option value="">Select Owner</option>
+                    {(ownerPaymentsOwners.length > 0 ? ownerPaymentsOwners : landlords).map((o) => (
+                      <option key={o.id || o.ID} value={o.id || o.ID}>
+                        {o.Name || o.name || o.Landlord || o.landlord || 'N/A'} {o.Email || o.email ? `(${o.Email || o.email})` : ''}
                       </option>
                     ))}
                   </select>
                 </div>
-
-                {/* Show preferred payment method when landlord is selected */}
-                {selectedLandlord && landlordProperties && (
                 <div className="form-group">
-                    <label>Preferred Payment Method</label>
-                    <div style={{
-                      padding: '12px',
-                      backgroundColor: '#f0f9ff',
-                      border: '1px solid #bae6fd',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      color: '#0c4a6e',
-                      fontWeight: '500',
-                      textTransform: 'capitalize'
-                    }}>
-                      {landlordProperties.landlord?.preferredPaymentMethod || 'mobile_money'}
-                    </div>
-                  </div>
-                )}
-
-                {/* Show properties when landlord is selected */}
-                {selectedLandlord && landlordProperties && landlordProperties.properties && landlordProperties.properties.length > 0 && (
-                  <div className="form-group">
-                    <label>Properties & Income Details</label>
-                    <div style={{
-                      maxHeight: '400px',
-                      overflowY: 'auto',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      padding: '12px'
-                    }}>
-                      {landlordProperties.properties.map((property, index) => (
-                        <div 
-                          key={property.property.ID || index}
-                          style={{
-                            marginBottom: '16px',
-                            padding: '12px',
-                            backgroundColor: property.availableAmount > 0 ? '#f0fdf4' : '#f9fafb',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            cursor: property.availableAmount > 0 ? 'pointer' : 'default'
-                          }}
-                          onClick={() => {
-                            if (property.availableAmount > 0) {
-                              setSelectedBuilding(property.property.Address);
-                              const buildingSelect = document.querySelector('select[name="building"]');
-                              if (buildingSelect) buildingSelect.value = property.property.Address;
-                              const netAmountInput = document.querySelector('input[name="netAmount"]');
-                              if (netAmountInput) netAmountInput.value = property.availableAmount.toFixed(2);
-                              setCalculatedAmount({
-                                totalRentCollected: property.totalRentCollected,
-                                commission: property.commission,
-                                netAmount: property.netAmount,
-                                alreadyPaid: property.alreadyPaid,
-                                availableNetAmount: property.availableAmount,
-                                tenantsPaidCount: property.tenantsPaidCount
-                              });
-                            }
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                            <div>
-                              <div style={{ fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
-                                {property.property.Address}
-                              </div>
-                              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                                {property.property.Type} {property.property.BuildingType ? `(${property.property.BuildingType})` : ''}
-                                {property.totalUnits > 0 && ` • ${property.occupiedUnits}/${property.totalUnits} units occupied`}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontWeight: '600', color: property.availableAmount > 0 ? '#059669' : '#6b7280' }}>
-                                {property.availableAmount.toFixed(2)} XOF
-                              </div>
-                              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                                Available
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                              <span>Total Rent Collected:</span>
-                              <span style={{ fontWeight: '500' }}>{property.totalRentCollected.toFixed(2)} XOF</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                              <span>Tenants Paid ({property.tenantsPaidCount}):</span>
-                              <span style={{ fontWeight: '500' }}>{property.tenantsPaidCount} payment(s)</span>
-                            </div>
-                            {property.tenantsPaid && property.tenantsPaid.length > 0 && (
-                              <div style={{ marginTop: '8px', paddingLeft: '8px', borderLeft: '2px solid #d1d5db' }}>
-                                {property.tenantsPaid.map((payment, pIdx) => (
-                                  <div key={pIdx} style={{ marginBottom: '4px', fontSize: '0.7rem' }}>
-                                    • {payment.tenantName}: {payment.amount.toFixed(2)} XOF ({new Date(payment.date).toLocaleDateString()})
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', marginBottom: '4px' }}>
-                              <span>Commission (10%):</span>
-                              <span style={{ fontWeight: '500', color: '#dc2626' }}>-{property.commission.toFixed(2)} XOF</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                              <span>Net Amount:</span>
-                              <span style={{ fontWeight: '500' }}>{property.netAmount.toFixed(2)} XOF</span>
-                            </div>
-                            {property.alreadyPaid > 0 && (
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', color: '#f59e0b' }}>
-                                <span>Already Paid:</span>
-                                <span style={{ fontWeight: '500' }}>-{property.alreadyPaid.toFixed(2)} XOF</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {selectedLandlord && landlordProperties && (!landlordProperties.properties || landlordProperties.properties.length === 0) && (
-                  <div className="form-group">
-                    <div style={{
-                      padding: '12px',
-                      backgroundColor: '#fef3c7',
-                      border: '1px solid #fbbf24',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      color: '#92400e'
-                    }}>
-                      No properties found for this landlord.
-                    </div>
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label htmlFor="building">Building/Property *</label>
-                  <select 
-                    name="building" 
+                  <label htmlFor="netAmount">Net Amount (XOF) *</label>
+                  <input
+                    type="number"
+                    name="netAmount"
+                    step="0.01"
                     required
-                    value={selectedBuilding}
-                    disabled={!selectedLandlord || !landlordProperties || !landlordProperties.properties || landlordProperties.properties.length === 0}
-                    onChange={async (e) => {
-                      const building = e.target.value;
-                      setSelectedBuilding(building);
-                      
-                      if (building) {
-                        try {
-                          setLoading(true);
-                          const amountData = await accountingService.calculateBuildingPaymentAmount(building);
-                          setCalculatedAmount(amountData);
-                          
-                          // Auto-populate net amount in the form (use available amount)
-                          const netAmountInput = e.target.form?.querySelector('input[name="netAmount"]');
-                          if (netAmountInput && amountData.availableNetAmount > 0) {
-                            netAmountInput.value = amountData.availableNetAmount.toFixed(2);
-                          }
-                        } catch (error) {
-                          console.error('Error calculating amount:', error);
-                          addNotification('Failed to calculate payment amount', 'error');
-                          setCalculatedAmount(null);
-                        } finally {
-                          setLoading(false);
-                        }
-                      } else {
-                        setCalculatedAmount(null);
-                        const netAmountInput = e.target.form?.querySelector('input[name="netAmount"]');
-                        if (netAmountInput) {
-                          netAmountInput.value = '';
-                        }
-                      }
-                    }}
-                  >
-                    <option value="">
-                      {!selectedLandlord 
-                        ? 'Select a landlord first' 
-                        : (!landlordProperties || !landlordProperties.properties || landlordProperties.properties.length === 0)
-                        ? 'No properties found for this landlord'
-                        : 'Select Building/Property'}
-                    </option>
-                    {landlordProperties && landlordProperties.properties && landlordProperties.properties.length > 0 ? (
-                      landlordProperties.properties.map((property) => (
-                        <option key={property.property.ID} value={property.property.Address}>
-                          {property.property.Address} - {property.availableAmount.toFixed(2)} XOF available
-                        </option>
-                      ))
-                    ) : null}
-                  </select>
-                  {!selectedLandlord && (
-                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                      Please select a landlord first to see their properties.
-                    </small>
-                  )}
-                  {calculatedAmount && calculatedAmount.availableNetAmount > 0 && (
-                    <div style={{
-                      marginTop: '8px',
-                      padding: '12px',
-                      backgroundColor: '#f0fdf4',
-                      border: '1px solid #86efac',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem'
-                    }}>
-                      <div style={{ color: '#166534', fontWeight: '600', marginBottom: '4px' }}>
-                        Automatic Payment Calculation
-                </div>
-                      <div style={{ color: '#15803d', marginBottom: '2px' }}>
-                        Total Rent Collected: {calculatedAmount.totalRentCollected?.toFixed(2) || '0.00'} XOF
-                      </div>
-                      <div style={{ color: '#15803d', marginBottom: '2px' }}>
-                        Commission (10%): {calculatedAmount.commission?.toFixed(2) || '0.00'} XOF
-                      </div>
-                      <div style={{ color: '#15803d', marginBottom: '2px' }}>
-                        Net Amount (after commission): {calculatedAmount.netAmount?.toFixed(2) || '0.00'} XOF
-                      </div>
-                      {calculatedAmount.alreadyPaid > 0 && (
-                        <div style={{ color: '#f59e0b', marginBottom: '2px' }}>
-                          Already Paid: {calculatedAmount.alreadyPaid?.toFixed(2) || '0.00'} XOF
-                        </div>
-                      )}
-                      <div style={{ color: '#166534', fontWeight: '600', marginTop: '4px', borderTop: '1px solid #86efac', paddingTop: '4px' }}>
-                        Available to Pay: {calculatedAmount.availableNetAmount?.toFixed(2) || '0.00'} XOF
-                      </div>
-                      {calculatedAmount.tenantsPaidCount > 0 && (
-                        <div style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px' }}>
-                          Based on {calculatedAmount.tenantsPaidCount} tenant payment(s) for this month
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {calculatedAmount && calculatedAmount.availableNetAmount <= 0 && calculatedAmount.totalRentCollected > 0 && (
-                    <div style={{
-                      marginTop: '8px',
-                      padding: '12px',
-                      backgroundColor: '#fef3c7',
-                      border: '1px solid #fbbf24',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      color: '#92400e'
-                    }}>
-                      All available amount has been paid for this building this month.
-                      <div style={{ marginTop: '4px' }}>
-                        Total rent collected: {calculatedAmount.totalRentCollected?.toFixed(2) || '0.00'} XOF
-                      </div>
-                      <div>
-                        Already paid: {calculatedAmount.alreadyPaid?.toFixed(2) || '0.00'} XOF
-                      </div>
-                    </div>
-                  )}
-                  {calculatedAmount && calculatedAmount.totalRentCollected === 0 && (
-                    <div style={{
-                      marginTop: '8px',
-                      padding: '12px',
-                      backgroundColor: '#fee2e2',
-                      border: '1px solid #fca5a5',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      color: '#991b1b'
-                    }}>
-                      No approved rent payments found for this building this month.
-                    </div>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label htmlFor="netAmount">Net Amount ($) *</label>
-                  <input 
-                    type="number" 
-                    name="netAmount" 
-                    step="0.01" 
-                    required 
-                    placeholder="Auto-calculated when building is selected" 
-                    readOnly={!!calculatedAmount && calculatedAmount.netAmount > 0}
-                    style={calculatedAmount && calculatedAmount.netAmount > 0 ? { backgroundColor: '#f0fdf4', cursor: 'not-allowed' } : {}}
+                    placeholder="Enter amount"
                   />
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                    {calculatedAmount && calculatedAmount.availableNetAmount > 0 
-                      ? 'Amount automatically calculated from approved rent payments. Commission (10%) is automatically deducted from total rent collected.'
-                      : 'Select a building to automatically calculate the amount, or enter manually. Commission will be automatically calculated and deducted.'}
+                    Commission is automatically calculated and deducted by the backend.
                   </small>
                 </div>
                 <div className="modal-footer">
