@@ -146,6 +146,8 @@ const AccountingDashboard = () => {
   const [paymentView, setPaymentView] = useState('all'); // 'all', 'rent', 'deposit', 'sale', 'tenant'
   const [balanceView, setBalanceView] = useState('overview'); // 'overview', 'cash', 'bank', 'cash-journal', 'bank-journal', 'owner-balances'
   const [selectedOwnerForBalance, setSelectedOwnerForBalance] = useState(null); // owner name when viewing their transactions
+  const [ownerBalancesOwners, setOwnerBalancesOwners] = useState([]); // owners from backend (same as sales manager)
+  const [ownerBalancesLoading, setOwnerBalancesLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -285,7 +287,7 @@ const AccountingDashboard = () => {
         accountingService.getCollections(),
         accountingService.getExpenses({}),
         accountingService.getMonthlySummary(),
-        accountingService.getLandlords().catch(() => []),
+        accountingService.getOwners().catch(() => []),
         accountingService.getTenantsWithPaymentStatus().catch(() => []),
         accountingService.getAdvertisements().catch(() => [])
       ]);
@@ -341,6 +343,29 @@ const AccountingDashboard = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]); // Only reload when tab changes, not when loadCashierData changes
+
+  // Load owners from backend when Owner Balances tab is active (same source as sales manager)
+  const loadOwnerBalancesOwners = useCallback(async () => {
+    setOwnerBalancesLoading(true);
+    try {
+      const data = await accountingService.getOwners();
+      setOwnerBalancesOwners(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load owners:', err);
+      addNotification('Failed to load owners', 'error');
+      setOwnerBalancesOwners([]);
+    } finally {
+      setOwnerBalancesLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'account-balances' && balanceView === 'owner-balances') {
+      loadOwnerBalancesOwners();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, balanceView]);
 
   // Load tenants data
   const loadTenants = useCallback(async () => {
@@ -5437,32 +5462,37 @@ const AccountingDashboard = () => {
             </>
           )}
 
-          {/* Owner Balances Tab */}
+          {/* Owner Balances Tab - owners from backend (same as sales manager) */}
           {balanceView === 'owner-balances' && (
             <>
               {!selectedOwnerForBalance ? (
                 <>
                   <div style={{ marginBottom: '16px' }}>
                     <h3>Owner Balances</h3>
-                    <p style={{ color: '#6b7280', marginTop: '4px' }}>Balance per owner (collections minus payments). Click an owner to view details.</p>
+                    <p style={{ color: '#6b7280', marginTop: '4px' }}>Balance per owner (collections minus payments). Owners loaded from backend. Click an owner to view details.</p>
                   </div>
-                  {(() => {
-                    const ownerNames = new Set();
-                    collections.forEach(c => { const n = c.Landlord || c.landlord; if (n) ownerNames.add(n); });
-                    landlordPayments.forEach(p => { const n = p.Landlord || p.landlord; if (n) ownerNames.add(n); });
-                    const ownerBalances = Array.from(ownerNames).map(owner => {
+                  {ownerBalancesLoading ? (
+                    <div className="loading">Loading owners...</div>
+                  ) : ownerBalancesOwners.length === 0 ? (
+                    <div className="no-data">No owners found. Owners are added by the Agency Director or Sales Manager. Ensure the backend returns the same owners for accounting.</div>
+                  ) : (() => {
+                    const ownerBalances = ownerBalancesOwners.map(ownerObj => {
+                      const ownerName = ownerObj.Name || ownerObj.name || ownerObj.Landlord || ownerObj.landlord || 'N/A';
                       const totalCollected = collections
-                        .filter(c => (c.Landlord || c.landlord) === owner)
+                        .filter(c => {
+                          const cLandlord = (c.Landlord || c.landlord || '').trim();
+                          return cLandlord && (cLandlord === ownerName || cLandlord.toLowerCase() === ownerName.toLowerCase());
+                        })
                         .reduce((sum, c) => sum + (c.Amount || c.amount || 0), 0);
                       const totalPaid = landlordPayments
-                        .filter(p => (p.Landlord || p.landlord) === owner)
+                        .filter(p => {
+                          const pLandlord = (p.Landlord || p.landlord || '').trim();
+                          return pLandlord && (pLandlord === ownerName || pLandlord.toLowerCase() === ownerName.toLowerCase());
+                        })
                         .reduce((sum, p) => sum + (p.NetAmount || p.netAmount || 0), 0);
                       const balance = totalCollected - totalPaid;
-                      return { owner, totalCollected, totalPaid, balance };
-                    }).filter(o => o.owner);
-                    if (ownerBalances.length === 0) {
-                      return <div className="no-data">No owner data found. Collections and landlord payments will appear here.</div>;
-                    }
+                      return { owner: ownerName, ownerObj, totalCollected, totalPaid, balance };
+                    });
                     return (
                       <div className="sa-table-wrapper">
                         <table className="sa-table">

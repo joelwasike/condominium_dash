@@ -73,27 +73,35 @@ This document describes how tables are shared across roles so data flows correct
   - `Property.Address` = `TenantPayment.Property`
   - `Property.LandlordID` = landlord.ID
 
-### 2. Technician → Landlord
+### 2. Owners / Landlords – Single Source
+
+- **Owners** (landlords) are stored in `SystemUser` (role = landlord) or equivalent owner table.
+- **Sales Manager** uses `GET /api/salesmanager/owners`.
+- **Accounting** should use the same data: implement `GET /api/accounting/owners` to return the same owners (same DB tables). If not implemented, the frontend falls back to `GET /api/accounting/landlords`, which must also return the same owners.
+- **Agency Director** adds owners via `POST /api/agency-director/contracts/owners`.
+- All roles that display owners must read from the same source.
+
+### 3. Technician → Landlord
 
 - **Technician** creates `Maintenance` for a property.
 - **Technician** creates `Quote` for maintenance.
 - **Landlord** sees quotes for their properties and approves/rejects.
 - **Maintenance.Property** = property address from `Property`.
 
-### 3. Admin → Landlord / Sales Manager
+### 4. Admin → Landlord / Sales Manager
 
 - **Admin** uploads `Document` (tenant, property, type).
 - **Admin** manages `Lease` (tenant, property, landlord).
 - **Landlord** sees tenants via `Client` where `Client.Property` = landlord's property addresses.
 - **Sales Manager** sees documents via `approved-clients/:id/documents`.
 
-### 4. Expense → Landlord
+### 5. Expense → Landlord
 
 - **Accounting** creates `Expense` (building, category, amount).
 - **Expense.Building** = property address.
 - **Landlord** sees expenses where `Expense.Building` IN landlord's property addresses.
 
-### 5. Inventory → Landlord
+### 6. Inventory → Landlord
 
 - **Technician** creates `Inventory` (property, tenant).
 - **Landlord** sees inventory for their properties.

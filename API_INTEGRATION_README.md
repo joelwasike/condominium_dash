@@ -103,6 +103,9 @@ These endpoints were added or updated to support the frontend changes described 
 - **POST /api/agency-director/contracts/expenses/:id/approve** – Approve expense.
 - **POST /api/agency-director/contracts/leases/:id/approve** – Approve lease (moves to “Valid” tab).
 
+### Accounting – Owner Balances (same data as Sales Manager)
+- **GET /api/accounting/owners** – Return the **same owners** as `GET /api/salesmanager/owners` (same database tables). Used by the Account Balances → Owner Balances tab. If not implemented, the frontend falls back to `GET /api/accounting/landlords`; ensure both endpoints return the same owner list for consistency.
+
 ---
 
 ## Tenant Dashboard / Tenant-Related Changes

@@ -136,10 +136,23 @@ export const accountingService = {
     });
   },
 
-  // Get list of landlords
+  // Get list of landlords (same source as sales manager owners - for Owner Balances, tenant management, etc.)
   getLandlords: async () => {
     const url = buildApiUrl('/api/accounting/landlords');
     return await apiRequest(url);
+  },
+
+  // Get owners - same backend table as sales manager (/api/salesmanager/owners). Backend should implement /api/accounting/owners to return same data.
+  getOwners: async () => {
+    try {
+      const url = buildApiUrl('/api/accounting/owners');
+      const data = await apiRequest(url);
+      return Array.isArray(data) ? data : (data?.owners ?? data?.landlords ?? data?.data ?? []);
+    } catch (err) {
+      // Fallback to landlords if /api/accounting/owners not implemented
+      const landlords = await apiRequest(buildApiUrl('/api/accounting/landlords'));
+      return Array.isArray(landlords) ? landlords : (landlords?.landlords ?? landlords?.data ?? []);
+    }
   },
 
   // Get landlord properties with income calculations
