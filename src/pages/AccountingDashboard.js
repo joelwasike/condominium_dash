@@ -2035,7 +2035,26 @@ const AccountingDashboard = () => {
               {loading ? (
                 <div className="loading">Loading landlord payments...</div>
               ) : (() => {
+                const isPaymentForOwner = (p) => {
+                  const pVal = (p.Landlord || p.landlord || '').toString().trim();
+                  if (!pVal) return false;
+                  return ownerBalancesOwners.some(o => {
+                    const oId = String(o.id || o.ID || '');
+                    const oName = (o.Name || o.name || o.Landlord || o.landlord || '').toString().trim();
+                    return oId === pVal || oName === pVal || (oName && oName.toLowerCase() === pVal.toLowerCase());
+                  });
+                };
+                const getOwnerDisplayName = (p) => {
+                  const pVal = (p.Landlord || p.landlord || '').toString().trim();
+                  const owner = ownerBalancesOwners.find(o => {
+                    const oId = String(o.id || o.ID || '');
+                    const oName = (o.Name || o.name || o.Landlord || o.landlord || '').toString().trim();
+                    return oId === pVal || oName === pVal || (oName && oName.toLowerCase() === pVal.toLowerCase());
+                  });
+                  return owner ? (owner.Name || owner.name || owner.Landlord || owner.landlord || 'N/A') : 'N/A';
+                };
                 const filtered = landlordPayments.filter(p => {
+                  if (!isPaymentForOwner(p)) return false;
                   if (ownerPaymentsLandlordFilter) {
                     const selectedOwner = ownerBalancesOwners.find(o =>
                       (o.Name || o.name || o.Landlord || o.landlord || '').toString().trim() === ownerPaymentsLandlordFilter
@@ -2044,22 +2063,11 @@ const AccountingDashboard = () => {
                     const pVal = (p.Landlord || p.landlord || '').toString().trim();
                     const oId = String(selectedOwner.id || selectedOwner.ID || '');
                     const oName = (selectedOwner.Name || selectedOwner.name || selectedOwner.Landlord || selectedOwner.landlord || '').toString().trim();
-                    const matches = pVal === oId || pVal === oName || (oName && pVal.toLowerCase() === oName.toLowerCase());
-                    if (!matches) return false;
+                    if (pVal !== oId && pVal !== oName && !(oName && pVal.toLowerCase() === oName.toLowerCase())) return false;
                   }
                   if (ownerPaymentsBuildingFilter && (p.Building || p.building) !== ownerPaymentsBuildingFilter) return false;
                   return true;
                 });
-                const getOwnerDisplayName = (p) => {
-                  const pVal = (p.Landlord || p.landlord || '').toString().trim();
-                  if (!pVal) return 'N/A';
-                  const owner = ownerBalancesOwners.find(o => {
-                    const oId = String(o.id || o.ID || '');
-                    const oName = (o.Name || o.name || o.Landlord || o.landlord || '').toString().trim();
-                    return oId === pVal || oName === pVal || (oName && oName.toLowerCase() === pVal.toLowerCase());
-                  });
-                  return owner ? (owner.Name || owner.name || owner.Landlord || owner.landlord || 'N/A') : pVal || 'N/A';
-                };
                 return filtered.length === 0 ? (
                   <div className="no-data">No landlord payments found</div>
                 ) : (
