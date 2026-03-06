@@ -55,7 +55,6 @@ const AccountingDashboard = () => {
   const [ownerPaymentsLandlordFilter, setOwnerPaymentsLandlordFilter] = useState('');
   const [ownerPaymentsBuildingFilter, setOwnerPaymentsBuildingFilter] = useState('');
   const [selectedOwnerForPaymentsHistory, setSelectedOwnerForPaymentsHistory] = useState(null); // owner name when viewing their transactions
-  const [ownerPaymentsOwners, setOwnerPaymentsOwners] = useState([]); // owners from backend (same as sales manager)
   const carouselIntervalRef = useRef(null);
   
   // History state - removed unused hardcoded history states, now using real backend data
@@ -348,8 +347,8 @@ const AccountingDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]); // Only reload when tab changes, not when loadCashierData changes
 
-  // Load owners from backend when Owner Balances tab is active (same source as sales manager)
-  const loadOwnerBalancesOwners = useCallback(async () => {
+  // Load owners from backend - shared by Owner Balances and Owner Payments (same source as sales manager)
+  const loadOwners = useCallback(async () => {
     setOwnerBalancesLoading(true);
     try {
       const data = await accountingService.getOwners();
@@ -365,21 +364,12 @@ const AccountingDashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'account-balances' && balanceView === 'owner-balances') {
-      loadOwnerBalancesOwners();
+    const needsOwners = (activeTab === 'account-balances' && balanceView === 'owner-balances') || activeTab === 'owner-payments';
+    if (needsOwners) {
+      loadOwners();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, balanceView]);
-
-  // Load owners for Owner Payments page (same source as sales manager)
-  useEffect(() => {
-    if (activeTab === 'owner-payments') {
-      accountingService.getOwners()
-        .then(data => setOwnerPaymentsOwners(Array.isArray(data) ? data : []))
-        .catch(() => setOwnerPaymentsOwners([]));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
 
   // Load tenants data
   const loadTenants = useCallback(async () => {
@@ -1873,7 +1863,9 @@ const AccountingDashboard = () => {
             </div>
           ) : ownerView === 'owners' ? (
             <div>
-              {ownerPaymentsOwners.length === 0 ? (
+              {ownerBalancesLoading ? (
+                <div className="loading">Loading owners...</div>
+              ) : ownerBalancesOwners.length === 0 ? (
                 <div className="no-data">No owners found. Owners are loaded from the backend (same as Sales Manager).</div>
               ) : (
                 <div className="sa-table-wrapper">
@@ -1886,7 +1878,7 @@ const AccountingDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {ownerPaymentsOwners.map((owner, index) => {
+                      {ownerBalancesOwners.map((owner, index) => {
                         const name = owner.Name || owner.name || owner.Landlord || owner.landlord || 'N/A';
                         return (
                           <tr
@@ -2020,11 +2012,11 @@ const AccountingDashboard = () => {
                   onChange={(e) => setOwnerPaymentsLandlordFilter(e.target.value)}
                 >
                   <option value="">All Owners</option>
-                  {ownerPaymentsOwners.map((o) => {
+                  {ownerBalancesOwners.map((o) => {
                     const name = o.Name || o.name || o.Landlord || o.landlord || '';
                     return name ? <option key={o.ID || o.id} value={name}>{name}</option> : null;
                   })}
-                  {ownerPaymentsOwners.length === 0 && [...new Set(landlordPayments.map(p => p.Landlord || p.landlord).filter(Boolean))].map((name, i) => (
+                  {ownerBalancesOwners.length === 0 && [...new Set(landlordPayments.map(p => p.Landlord || p.landlord).filter(Boolean))].map((name, i) => (
                     <option key={i} value={name}>{name}</option>
                   ))}
                 </select>
@@ -6445,12 +6437,12 @@ const AccountingDashboard = () => {
                     defaultValue={selectedLandlord ? (selectedLandlord.id || selectedLandlord.ID) : ''}
                     onChange={(e) => {
                       const id = e.target.value;
-                      const ownersForModal = ownerPaymentsOwners.length > 0 ? ownerPaymentsOwners : landlords;
+                      const ownersForModal = ownerBalancesOwners.length > 0 ? ownerBalancesOwners : landlords;
                       setSelectedLandlord(ownersForModal.find(o => String(o.id || o.ID) === id) || null);
                     }}
                   >
                     <option value="">Select Owner</option>
-                    {(ownerPaymentsOwners.length > 0 ? ownerPaymentsOwners : landlords).map((o) => (
+                    {(ownerBalancesOwners.length > 0 ? ownerBalancesOwners : landlords).map((o) => (
                       <option key={o.id || o.ID} value={o.id || o.ID}>
                         {o.Name || o.name || o.Landlord || o.landlord || 'N/A'} {o.Email || o.email ? `(${o.Email || o.email})` : ''}
                       </option>
