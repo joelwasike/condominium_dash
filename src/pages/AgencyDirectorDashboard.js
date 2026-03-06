@@ -1321,6 +1321,24 @@ const AgencyDirectorDashboard = () => {
   const getOwnerId = (owner) => owner.id || owner.ID;
   const getPropertyOwnerId = (property) => property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
 
+  const deriveOwnerAssetsFromProperties = (ownerId, owner) => {
+    const ownerProps = (properties || []).filter((p) => String(getPropertyOwnerId(p) || '') === String(ownerId));
+    return {
+      ownerName: owner.name || owner.Name || 'Owner',
+      assets: ownerProps.map((p) => ({
+        id: p.id || p.ID,
+        name: p.Address || p.address,
+        building: p.Address || p.address,
+        type: (p.Type || p.type || 'building').toLowerCase(),
+        apartmentsDisplay: p.units?.length || p.Units?.length || 1,
+        rentPrice: p.Rent || p.rent,
+        location: p.Address || p.address,
+        occupancy: p.Status || p.status || '—',
+        statut: p.Status || p.status || '—'
+      }))
+    };
+  };
+
   const handleSeeOwner = async (owner) => {
     const ownerId = getOwnerId(owner);
     if (!ownerId) return;
@@ -1328,23 +1346,14 @@ const AgencyDirectorDashboard = () => {
     try {
       let data;
       if (isDemoMode()) {
-        const ownerProps = (properties || []).filter((p) => String(getPropertyOwnerId(p) || '') === String(ownerId));
-        data = {
-          ownerName: owner.name || owner.Name || 'Owner',
-          assets: ownerProps.map((p) => ({
-            id: p.id || p.ID,
-            name: p.Address || p.address,
-            building: p.Address || p.address,
-            type: (p.Type || p.type || 'building').toLowerCase(),
-            apartmentsDisplay: p.units?.length || p.Units?.length || 1,
-            rentPrice: p.Rent || p.rent,
-            location: p.Address || p.address,
-            occupancy: p.Status || p.status || '—',
-            statut: p.Status || p.status || '—'
-          }))
-        };
+        data = deriveOwnerAssetsFromProperties(ownerId, owner);
       } else {
-        data = await agencyDirectorService.getOwnerAssets(ownerId);
+        try {
+          data = await agencyDirectorService.getOwnerAssets(ownerId);
+        } catch (apiErr) {
+          // Fallback when API fails (e.g. agency director cannot access sales manager endpoint)
+          data = deriveOwnerAssetsFromProperties(ownerId, owner);
+        }
       }
       setOwnerAssets(data);
       setPmOwnerId(ownerId);
@@ -1358,6 +1367,26 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
+  const deriveBuildingDetailFromProperty = (propId, property) => {
+    const prop = (properties || []).find((p) => String(p.id || p.ID) === String(propId)) || property;
+    const units = prop.units || prop.Units || [];
+    return {
+      buildingName: prop.Address || prop.address || property.name || property.building || 'Building',
+      totalApartments: units.length || 1,
+      units: units.length > 0 ? units.map((u, i) => ({
+        id: u.id || i,
+        unitNumber: u.unitNumber || u.UnitNumber || `Unit ${i + 1}`,
+        type: u.type || u.Type || '—',
+        tenant: u.tenant || u.Tenant || '—',
+        rentPrice: u.rent || u.rentPrice || u.Rent,
+        enterDate: u.enterDate || '—',
+        status: u.status || u.Status || 'Vacant',
+        statut: u.status || u.statut || u.Status || 'Vacant'
+      })) : [{ id: 1, unitNumber: '1', type: '—', tenant: '—', rentPrice: prop.Rent || prop.rent, enterDate: '—', status: 'Vacant', statut: 'Vacant' }],
+      images: []
+    };
+  };
+
   const handleViewBuilding = async (property) => {
     const propId = property.id || property.ID;
     if (!propId) return;
@@ -1365,25 +1394,13 @@ const AgencyDirectorDashboard = () => {
     try {
       let data;
       if (isDemoMode()) {
-        const prop = (properties || []).find((p) => String(p.id || p.ID) === String(propId)) || property;
-        const units = prop.units || prop.Units || [];
-        data = {
-          buildingName: prop.Address || prop.address || property.name || property.building || 'Building',
-          totalApartments: units.length || 1,
-          units: units.length > 0 ? units.map((u, i) => ({
-            id: u.id || i,
-            unitNumber: u.unitNumber || u.UnitNumber || `Unit ${i + 1}`,
-            type: u.type || u.Type || '—',
-            tenant: u.tenant || u.Tenant || '—',
-            rentPrice: u.rent || u.rentPrice || u.Rent,
-            enterDate: u.enterDate || '—',
-            status: u.status || u.Status || 'Vacant',
-            statut: u.status || u.statut || u.Status || 'Vacant'
-          })) : [{ id: 1, unitNumber: '1', type: '—', tenant: '—', rentPrice: prop.Rent || prop.rent, enterDate: '—', status: 'Vacant', statut: 'Vacant' }],
-          images: []
-        };
+        data = deriveBuildingDetailFromProperty(propId, property);
       } else {
-        data = await agencyDirectorService.getPropertyBuildingDetail(propId);
+        try {
+          data = await agencyDirectorService.getPropertyBuildingDetail(propId);
+        } catch (apiErr) {
+          data = deriveBuildingDetailFromProperty(propId, property);
+        }
       }
       setBuildingDetail(data);
       setPmPropertyId(propId);
@@ -1397,6 +1414,26 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
+  const deriveVillaDetailFromProperty = (propId, property) => {
+    const prop = (properties || []).find((p) => String(p.id || p.ID) === String(propId)) || property;
+    const units = prop.units || prop.Units || [];
+    return {
+      buildingName: prop.Address || prop.address || property.name || property.building || 'Villa',
+      totalApartments: units.length || 1,
+      units: units.length > 0 ? units.map((u, i) => ({
+        id: u.id || i,
+        unitNumber: u.unitNumber || u.UnitNumber || `Unit ${i + 1}`,
+        type: u.type || u.Type || '—',
+        tenant: u.tenant || u.Tenant || '—',
+        rentPrice: u.rent || u.rentPrice || u.Rent,
+        enterDate: u.enterDate || '—',
+        status: u.status || u.Status || 'Vacant',
+        statut: u.status || u.statut || u.Status || 'Vacant'
+      })) : [{ id: 1, unitNumber: '1', type: '—', tenant: '—', rentPrice: prop.Rent || prop.rent, enterDate: '—', status: 'Vacant', statut: 'Vacant' }],
+      images: []
+    };
+  };
+
   const handleViewVilla = async (property) => {
     const propId = property.id || property.ID;
     if (!propId) return;
@@ -1404,25 +1441,13 @@ const AgencyDirectorDashboard = () => {
     try {
       let data;
       if (isDemoMode()) {
-        const prop = (properties || []).find((p) => String(p.id || p.ID) === String(propId)) || property;
-        const units = prop.units || prop.Units || [];
-        data = {
-          buildingName: prop.Address || prop.address || property.name || property.building || 'Villa',
-          totalApartments: units.length || 1,
-          units: units.length > 0 ? units.map((u, i) => ({
-            id: u.id || i,
-            unitNumber: u.unitNumber || u.UnitNumber || `Unit ${i + 1}`,
-            type: u.type || u.Type || '—',
-            tenant: u.tenant || u.Tenant || '—',
-            rentPrice: u.rent || u.rentPrice || u.Rent,
-            enterDate: u.enterDate || '—',
-            status: u.status || u.Status || 'Vacant',
-            statut: u.status || u.statut || u.Status || 'Vacant'
-          })) : [{ id: 1, unitNumber: '1', type: '—', tenant: '—', rentPrice: prop.Rent || prop.rent, enterDate: '—', status: 'Vacant', statut: 'Vacant' }],
-          images: []
-        };
+        data = deriveVillaDetailFromProperty(propId, property);
       } else {
-        data = await agencyDirectorService.getPropertyBuildingDetail(propId);
+        try {
+          data = await agencyDirectorService.getPropertyBuildingDetail(propId);
+        } catch (apiErr) {
+          data = deriveVillaDetailFromProperty(propId, property);
+        }
       }
       setBuildingDetail(data);
       setPmPropertyId(propId);

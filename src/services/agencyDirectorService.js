@@ -510,12 +510,21 @@ export const agencyDirectorService = {
   },
 
   // Get assets (properties) under management of an owner – for Properties page (owners → buildings → units)
+  // Uses agency-director endpoint; falls back to sales manager if backend only has that
   getOwnerAssets: async (ownerId) => {
     const headers = getAuthHeaders(false);
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/owners/${ownerId}/properties`, {
+    // Prefer agency-director endpoint (agency director token may not access sales manager routes)
+    let response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners/${ownerId}/properties`, {
       method: 'GET',
       headers: headers,
     });
+    if (!response.ok) {
+      // Fallback: try sales manager endpoint (some backends may only have this)
+      response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/owners/${ownerId}/properties`, {
+        method: 'GET',
+        headers: headers,
+      });
+    }
     if (!response.ok) throw new Error('Failed to fetch owner assets');
     return parseJson(response);
   },
@@ -523,10 +532,16 @@ export const agencyDirectorService = {
   // Get building/unit detail for a property
   getPropertyBuildingDetail: async (propertyId) => {
     const headers = getAuthHeaders(false);
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/properties/${propertyId}/building-detail`, {
+    let response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/properties/${propertyId}/building-detail`, {
       method: 'GET',
       headers: headers,
     });
+    if (!response.ok) {
+      response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/properties/${propertyId}/building-detail`, {
+        method: 'GET',
+        headers: headers,
+      });
+    }
     if (!response.ok) throw new Error('Failed to fetch property building detail');
     return parseJson(response);
   },
