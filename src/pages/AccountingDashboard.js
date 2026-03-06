@@ -2036,10 +2036,30 @@ const AccountingDashboard = () => {
                 <div className="loading">Loading landlord payments...</div>
               ) : (() => {
                 const filtered = landlordPayments.filter(p => {
-                  if (ownerPaymentsLandlordFilter && (p.Landlord || p.landlord) !== ownerPaymentsLandlordFilter) return false;
+                  if (ownerPaymentsLandlordFilter) {
+                    const selectedOwner = ownerBalancesOwners.find(o =>
+                      (o.Name || o.name || o.Landlord || o.landlord || '').toString().trim() === ownerPaymentsLandlordFilter
+                    );
+                    if (!selectedOwner) return false;
+                    const pVal = (p.Landlord || p.landlord || '').toString().trim();
+                    const oId = String(selectedOwner.id || selectedOwner.ID || '');
+                    const oName = (selectedOwner.Name || selectedOwner.name || selectedOwner.Landlord || selectedOwner.landlord || '').toString().trim();
+                    const matches = pVal === oId || pVal === oName || (oName && pVal.toLowerCase() === oName.toLowerCase());
+                    if (!matches) return false;
+                  }
                   if (ownerPaymentsBuildingFilter && (p.Building || p.building) !== ownerPaymentsBuildingFilter) return false;
                   return true;
                 });
+                const getOwnerDisplayName = (p) => {
+                  const pVal = (p.Landlord || p.landlord || '').toString().trim();
+                  if (!pVal) return 'N/A';
+                  const owner = ownerBalancesOwners.find(o => {
+                    const oId = String(o.id || o.ID || '');
+                    const oName = (o.Name || o.name || o.Landlord || o.landlord || '').toString().trim();
+                    return oId === pVal || oName === pVal || (oName && oName.toLowerCase() === pVal.toLowerCase());
+                  });
+                  return owner ? (owner.Name || owner.name || owner.Landlord || owner.landlord || 'N/A') : pVal || 'N/A';
+                };
                 return filtered.length === 0 ? (
                   <div className="no-data">No landlord payments found</div>
                 ) : (
@@ -2059,7 +2079,7 @@ const AccountingDashboard = () => {
                       </thead>
                       <tbody>
                         {filtered.map((payment, index) => {
-                          const landlordName = payment.Landlord || payment.landlord || 'N/A';
+                          const landlordName = getOwnerDisplayName(payment);
                           return (
                             <tr
                               key={payment.ID || `landlord-payment-${index}`}
