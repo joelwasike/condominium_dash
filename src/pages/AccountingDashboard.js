@@ -11,7 +11,6 @@ import {
 } from 'recharts';
 import { DollarSign, TrendingUp, Building, Receipt, Download, Search, CreditCard, User, FileText, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2, Clock, ArrowLeftRight, Scale, ShieldCheck, Users, History, FileBarChart, ArrowLeft, Mail, Phone, MapPin, Wrench, FileCheck, AlertTriangle } from 'lucide-react';
 import { accountingService } from '../services/accountingService';
-import { salesManagerService } from '../services/salesManagerService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAccountingDemoData } from '../utils/demoData';
@@ -292,7 +291,7 @@ const AccountingDashboard = () => {
         accountingService.getCollections(),
         accountingService.getExpenses({}),
         accountingService.getMonthlySummary(),
-        salesManagerService.getOwners().catch(() => []),
+        accountingService.getOwners().catch(() => []),
         accountingService.getTenantsWithPaymentStatus().catch(() => []),
         accountingService.getAdvertisements().catch(() => [])
       ]);
@@ -349,11 +348,11 @@ const AccountingDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]); // Only reload when tab changes, not when loadCashierData changes
 
-  // Load owners from backend when Owner Balances tab is active (same table as Sales Manager)
+  // Load owners from backend when Owner Balances tab is active (same source as sales manager)
   const loadOwnerBalancesOwners = useCallback(async () => {
     setOwnerBalancesLoading(true);
     try {
-      const data = await salesManagerService.getOwners();
+      const data = await accountingService.getOwners();
       setOwnerBalancesOwners(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load owners:', err);
@@ -372,10 +371,10 @@ const AccountingDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, balanceView]);
 
-  // Load owners for Owner Payments page (same table as Sales Manager)
+  // Load owners for Owner Payments page (same source as sales manager)
   useEffect(() => {
     if (activeTab === 'owner-payments') {
-      salesManagerService.getOwners()
+      accountingService.getOwners()
         .then(data => setOwnerPaymentsOwners(Array.isArray(data) ? data : []))
         .catch(() => setOwnerPaymentsOwners([]));
     }
@@ -1875,7 +1874,7 @@ const AccountingDashboard = () => {
           ) : ownerView === 'owners' ? (
             <div>
               {ownerPaymentsOwners.length === 0 ? (
-                <div className="no-data">No owners found. Owners are loaded from the same table as Sales Manager (/api/salesmanager/owners).</div>
+                <div className="no-data">No owners found. Owners are loaded from the backend (same as Sales Manager).</div>
               ) : (
                 <div className="sa-table-wrapper">
                   <table className="sa-table">
@@ -5604,7 +5603,7 @@ const AccountingDashboard = () => {
                   {ownerBalancesLoading ? (
                     <div className="loading">Loading owners...</div>
                   ) : ownerBalancesOwners.length === 0 ? (
-                    <div className="no-data">No owners found. Owners are loaded from the same table as Sales Manager (/api/salesmanager/owners).</div>
+                    <div className="no-data">No owners found. Owners are loaded from the backend (same as Sales Manager).</div>
                   ) : (() => {
                     const ownerBalances = ownerBalancesOwners.map(ownerObj => {
                       const ownerName = ownerObj.Name || ownerObj.name || ownerObj.Landlord || ownerObj.landlord || 'N/A';
