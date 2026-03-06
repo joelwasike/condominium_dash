@@ -51,7 +51,7 @@ const AccountingDashboard = () => {
   const [selectedTenantForPayment, setSelectedTenantForPayment] = useState(null);
   const [selectedLandlord, setSelectedLandlord] = useState(null);
   const [landlordProperties, setLandlordProperties] = useState(null);
-  const [ownerView, setOwnerView] = useState('payments'); // 'owners', 'payments'
+  const [ownerView, setOwnerView] = useState('owners'); // 'owners' = list of all owners, 'payments' = payment rows
   const [ownerPaymentsLandlordFilter, setOwnerPaymentsLandlordFilter] = useState('');
   const [ownerPaymentsBuildingFilter, setOwnerPaymentsBuildingFilter] = useState('');
   const [selectedOwnerForPaymentsHistory, setSelectedOwnerForPaymentsHistory] = useState(null); // owner name when viewing their transactions
