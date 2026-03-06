@@ -104,6 +104,8 @@ These endpoints were added or updated to support the frontend changes described 
 - **POST /api/agency-director/contracts/expenses/:id/approve** – Approve expense. After approval, the expense appears in the accounting Expenses list.
 - **POST /api/agency-director/contracts/expenses/:id/reject** – Reject expense.
 - **POST /api/agency-director/contracts/leases/:id/approve** – Approve lease (moves to “Valid” tab).
+- **GET /api/agency-director/contracts/owners/:id/properties** – List properties (assets) for an owner. Same response shape as `GET /api/salesmanager/owners/:id/properties`: `{ ownerName: string, assets: [...] }` or `{ ownerName: string, properties: [...] }`. Each asset: `id`, `name` or `building`, `address`, `type` (building/villa/land), `apartmentsDisplay`, `rentPrice`, `location`, `occupancy`, `statut`. Required for Agency Director Properties page (owners → buildings → units). **Backend option**: Allow agency director token to access `GET /api/salesmanager/owners/:id/properties` (same data). **Fallback**: Frontend derives from `GET /api/agency-director/properties` when each property includes `landlordId`, `LandlordID`, `ownerId`, or `OwnerID` linking to the owner.
+- **GET /api/agency-director/properties/:id/building-detail** – Building/unit detail for a property. Same shape as `GET /api/salesmanager/properties/:id/building-detail`: `{ buildingName, totalApartments, units: [...], images: [...] }`.
 
 ### Accounting – Expense Approval Flow
 When the accountant adds an expense via **POST /api/accounting/expenses**, the backend must:

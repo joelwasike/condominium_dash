@@ -1319,10 +1319,25 @@ const AgencyDirectorDashboard = () => {
 
   // Property Management: owners → buildings → units (same flow as Sales Manager)
   const getOwnerId = (owner) => owner.id || owner.ID;
-  const getPropertyOwnerId = (property) => property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
+  const getPropertyOwnerId = (property) =>
+    property.LandlordID ?? property.landlordId ?? property.landlordID ?? property.landlord_id ?? property.LandlordId ??
+    property.OwnerID ?? property.ownerId ?? property.ownerID ?? property.owner_id ??
+    property.owner?.id ?? property.owner?.ID ?? property.landlord?.id ?? property.landlord?.ID;
+
+  const getPropertyOwnerName = (property) =>
+    property.Landlord ?? property.landlord ?? property.Owner ?? property.owner ?? property.landlordName ?? property.ownerName;
 
   const deriveOwnerAssetsFromProperties = (ownerId, owner) => {
-    const ownerProps = (properties || []).filter((p) => String(getPropertyOwnerId(p) || '') === String(ownerId));
+    const ownerName = (owner.name || owner.Name || '').trim().toLowerCase();
+    const ownerProps = (properties || []).filter((p) => {
+      const propOwnerId = getPropertyOwnerId(p);
+      if (propOwnerId != null && String(propOwnerId) === String(ownerId)) return true;
+      if (ownerName && getPropertyOwnerName(p)) {
+        const propOwnerName = String(getPropertyOwnerName(p) || '').trim().toLowerCase();
+        if (propOwnerName === ownerName) return true;
+      }
+      return false;
+    });
     return {
       ownerName: owner.name || owner.Name || 'Owner',
       assets: ownerProps.map((p) => ({
@@ -1349,9 +1364,15 @@ const AgencyDirectorDashboard = () => {
         data = deriveOwnerAssetsFromProperties(ownerId, owner);
       } else {
         try {
+          // Try agency director endpoint first, then sales manager (same as Sales Manager dashboard)
           data = await agencyDirectorService.getOwnerAssets(ownerId);
+          const apiAssets = data?.assets || data?.properties || [];
+          if (apiAssets.length === 0 && (properties || []).length > 0) {
+            // API returned empty but we have properties – derive from local data (API may not link owner↔property)
+            data = deriveOwnerAssetsFromProperties(ownerId, owner);
+          }
         } catch (apiErr) {
-          // Fallback when API fails (e.g. agency director cannot access sales manager endpoint)
+          // Fallback when API fails – derive from properties (ensure properties include landlordId/LandlordID/ownerId)
           data = deriveOwnerAssetsFromProperties(ownerId, owner);
         }
       }
@@ -2193,9 +2214,9 @@ const AgencyDirectorDashboard = () => {
       );
     }
 
-    // Owner assets view – buildings table
+    // Owner assets view – buildings table (API may return assets or properties)
     if (pmView === 'owner-detail' && ownerAssets) {
-      const assets = ownerAssets.assets || [];
+      const assets = ownerAssets.assets || ownerAssets.properties || [];
       const handleAssetClick = (asset) => {
         const type = (asset.type || '').toLowerCase();
         if (type === 'building') handleViewBuilding(asset);
