@@ -9,8 +9,9 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { DollarSign, TrendingUp, Building, Receipt, Download, Search, CreditCard, User, FileText, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2, Clock, ArrowLeftRight, Scale, ShieldCheck, Users, History, FileBarChart } from 'lucide-react';
+import { DollarSign, TrendingUp, Building, Receipt, Download, Search, CreditCard, User, FileText, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2, Clock, ArrowLeftRight, Scale, ShieldCheck, Users, History, FileBarChart, ArrowLeft, Mail, Phone, MapPin, Wrench, FileCheck, StickyNote, AlertTriangle, AlertCircle } from 'lucide-react';
 import { accountingService } from '../services/accountingService';
+import { salesManagerService } from '../services/salesManagerService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAccountingDemoData } from '../utils/demoData';
@@ -102,6 +103,12 @@ const AccountingDashboard = () => {
   // Tenants state
   const [tenants, setTenants] = useState([]);
   const [tenantPaymentStatusFilter, setTenantPaymentStatusFilter] = useState('all'); // 'all', 'up-to-date', 'outstanding'
+  const [tenantNameFilter, setTenantNameFilter] = useState('');
+  const [selectedTenantId, setSelectedTenantId] = useState(null);
+  const [tenantDetail, setTenantDetail] = useState(null);
+  const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
+  const [privateNoteInput, setPrivateNoteInput] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
   
   // Deposits state
   const [deposits, setDeposits] = useState([]);
@@ -358,6 +365,30 @@ const AccountingDashboard = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]); // Only reload when tab changes, not when loadTenants changes
+
+  // Fetch full tenant details when a tenant is selected (same as sales manager)
+  useEffect(() => {
+    if (!selectedTenantId) {
+      setTenantDetail(null);
+      return;
+    }
+    let cancelled = false;
+    const loadTenantDetail = async () => {
+      setTenantDetailLoading(true);
+      setTenantDetail(null);
+      try {
+        const data = await salesManagerService.getClient(selectedTenantId);
+        if (!cancelled) setTenantDetail(data);
+      } catch (err) {
+        console.error('Failed to load tenant details:', err);
+        if (!cancelled) addNotification(err?.message || 'Failed to load tenant details', 'error');
+      } finally {
+        if (!cancelled) setTenantDetailLoading(false);
+      }
+    };
+    loadTenantDetail();
+    return () => { cancelled = true; };
+  }, [selectedTenantId]);
 
   // Load deposits data - load all deposits (both payments and refunds) for refunds page
   const loadDeposits = useCallback(async () => {
@@ -2158,14 +2189,17 @@ const AccountingDashboard = () => {
 
   // Render Tenants section
   const renderTenants = () => {
-    // Filter tenants based on payment status
+    // Filter tenants based on payment status and name
     const filteredTenants = tenants.filter(tenant => {
-      if (tenantPaymentStatusFilter === 'all') return true;
-      if (tenantPaymentStatusFilter === 'up-to-date') {
-        return (tenant.PaymentStatus || tenant.paymentStatus) === 'up-to-date';
+      if (tenantPaymentStatusFilter === 'all') { /* pass */ } else if (tenantPaymentStatusFilter === 'up-to-date') {
+        if ((tenant.PaymentStatus || tenant.paymentStatus) !== 'up-to-date') return false;
+      } else if (tenantPaymentStatusFilter === 'outstanding') {
+        if ((tenant.PaymentStatus || tenant.paymentStatus) === 'up-to-date') return false;
       }
-      if (tenantPaymentStatusFilter === 'outstanding') {
-        return (tenant.PaymentStatus || tenant.paymentStatus) !== 'up-to-date';
+      if (tenantNameFilter.trim()) {
+        const name = (tenant.TenantName || tenant.tenantName || '').toLowerCase();
+        const search = tenantNameFilter.trim().toLowerCase();
+        if (!name.includes(search)) return false;
       }
       return true;
     });
@@ -2283,7 +2317,18 @@ const AccountingDashboard = () => {
           </div>
 
           {/* Filters */}
-          <div className="sa-filters-section" style={{ marginBottom: '20px' }}>
+          <div className="sa-filters-section" style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Search size={16} style={{ color: '#6b7280' }} />
+              <input
+                type="text"
+                placeholder="Filter by name..."
+                value={tenantNameFilter}
+                onChange={(e) => setTenantNameFilter(e.target.value)}
+                className="sa-filter-select"
+                style={{ minWidth: '200px', padding: '8px 12px' }}
+              />
+            </div>
             <select
               className="sa-filter-select"
               value={tenantPaymentStatusFilter}
@@ -2321,20 +2366,30 @@ const AccountingDashboard = () => {
                     const outstanding = tenant.OutstandingAmount || tenant.outstandingAmount || 0;
                     
                     let statusClass = 'up-to-date';
-                    let statusLabel = 'Up-to-Date';
+                    let statusLabel = 'Paid';
                     if (status === '1-month') {
                       statusClass = 'warning';
-                      statusLabel = '1 Month';
+                      statusLabel = 'Due';
                     } else if (status === '2-months') {
                       statusClass = 'warning';
-                      statusLabel = '2 Months';
+                      statusLabel = 'Overdue';
                     } else if (status === '3+months') {
                       statusClass = 'error';
-                      statusLabel = '3+ Months';
+                      statusLabel = 'Overdue';
+                    } else if (status === 'up-to-date') {
+                      statusLabel = 'Paid';
                     }
 
+                    const tenantId = tenant.TenantID ?? tenant.tenantId ?? tenant.ClientID ?? tenant.clientId ?? tenant.ID ?? tenant.id;
                     return (
-                      <tr key={tenant.TenantID || tenant.tenantId || index}>
+                      <tr
+                        key={tenant.TenantID || tenant.tenantId || index}
+                        onClick={() => tenantId != null && setSelectedTenantId(String(tenantId))}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (tenantId != null) setSelectedTenantId(String(tenantId)); } }}
+                        style={{ cursor: tenantId != null ? 'pointer' : 'default' }}
+                      >
                         <td><span className="sa-cell-title">{tenant.TenantName || tenant.tenantName || 'N/A'}</span></td>
                         <td>{tenant.Email || tenant.email || 'N/A'}</td>
                         <td>{tenant.Property || tenant.property || 'N/A'}</td>
@@ -2360,6 +2415,339 @@ const AccountingDashboard = () => {
         </table>
       </div>
           )}
+        </div>
+      </div>
+    );
+  };
+
+  // Tenant detail view - same layout as Sales Manager (click row to view)
+  const renderTenantDetail = () => {
+    if (tenantDetailLoading) {
+      return (
+        <div className="sa-clients-page">
+          <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
+            <p className="sa-cell-sub" style={{ margin: 0 }}>Loading tenant details…</p>
+          </div>
+        </div>
+      );
+    }
+    const c = tenantDetail?.client;
+    if (!c) {
+      return (
+        <div className="sa-clients-page">
+          <button
+            type="button"
+            className="sa-outline-button sa-tenant-detail-back-btn"
+            onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
+            style={{ marginBottom: '16px' }}
+          >
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+          <div className="sa-section-card">
+            <p className="sa-cell-sub" style={{ margin: 0 }}>Tenant not found or failed to load.</p>
+          </div>
+        </div>
+      );
+    }
+    const prop = tenantDetail?.property;
+    const alertList = Array.isArray(tenantDetail?.alerts) ? tenantDetail.alerts : [];
+    const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances : [];
+    const paymentsList = Array.isArray(tenantDetail?.payments) ? tenantDetail.payments : [];
+    const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes : [];
+    const name = c.Name || c.name || 'N/A';
+
+    const handleAddPrivateNote = async () => {
+      const note = (privateNoteInput || '').trim();
+      if (!note || !selectedTenantId) return;
+      setAddingNote(true);
+      try {
+        await salesManagerService.addClientNote(selectedTenantId, { note });
+        setPrivateNoteInput('');
+        const data = await salesManagerService.getClient(selectedTenantId);
+        setTenantDetail(data);
+        addNotification('Note added', 'success');
+      } catch (err) {
+        addNotification(err?.message || 'Failed to add note', 'error');
+      } finally {
+        setAddingNote(false);
+      }
+    };
+
+    const email = c.Email || c.email || '';
+    const phone = c.Phone || c.phone || '';
+    const status = c.Status || c.status || 'Unknown';
+    const propertyAddr = c.Property || c.property || '—';
+    const unitNumber = c.UnitNumber ?? c.unitNumber ?? '—';
+    const amount = c.Amount ?? c.amount ?? 0;
+    const lastPayment = c.LastPayment ?? c.lastPayment;
+    const createdAt = c.CreatedAt ?? c.createdAt;
+
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header" style={{ marginBottom: '20px' }}>
+          <button
+            type="button"
+            className="sa-outline-button sa-tenant-detail-back-btn"
+            onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
+          >
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+        </div>
+
+        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+          <div className="sa-tenant-detail-hero">
+            <div className="sa-tenant-detail-avatar">
+              {(name || 'T').charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h2>{name}</h2>
+              <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`} style={{ marginRight: '8px' }}>
+                {status}
+              </span>
+              {propertyAddr && propertyAddr !== '—' && (
+                <span className="sa-tenant-detail-meta">
+                  <MapPin size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                  {propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="sa-tenant-detail-grid">
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <Users size={18} />
+              Personal information
+            </h3>
+            <dl className="sa-tenant-detail-dl">
+              <div>
+                <dt>Name</dt>
+                <dd>{name}</dd>
+              </div>
+              {email && (
+                <div>
+                  <dt>Email</dt>
+                  <dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Mail size={14} /> {email}
+                  </dd>
+                </div>
+              )}
+              {phone && (
+                <div>
+                  <dt>Phone</dt>
+                  <dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Phone size={14} /> {phone}
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt>Status</dt>
+                <dd>
+                  <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`}>{status}</span>
+                </dd>
+              </div>
+              {createdAt && (
+                <div>
+                  <dt>Member since</dt>
+                  <dd>{new Date(createdAt).toLocaleDateString()}</dd>
+                </div>
+              )}
+            </dl>
+            <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FileCheck size={16} />
+              Files & documents
+            </h4>
+            <p className="sa-cell-sub" style={{ margin: 0 }}>
+              No files uploaded yet. ID and other tenant documents can be added here for viewing.
+            </p>
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <DollarSign size={18} />
+              Rent & payment
+            </h3>
+            <dl className="sa-tenant-detail-dl">
+              <div>
+                <dt>Property</dt>
+                <dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <MapPin size={14} /> {propertyAddr}
+                </dd>
+              </div>
+              {unitNumber && unitNumber !== '—' && (
+                <div>
+                  <dt>Unit</dt>
+                  <dd>{unitNumber}</dd>
+                </div>
+              )}
+              <div>
+                <dt>Monthly rent</dt>
+                <dd className="sa-tenant-detail-value-bold">{Number(amount).toLocaleString()} XOF</dd>
+              </div>
+              <div>
+                <dt>Last payment</dt>
+                <dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</dd>
+              </div>
+            </dl>
+          </div>
+
+          {prop && (
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3>
+                <Building size={18} />
+                Property details
+              </h3>
+              <dl className="sa-tenant-detail-dl">
+                <div>
+                  <dt>Type</dt>
+                  <dd>{prop.type || prop.Type || '—'}</dd>
+                </div>
+                {(prop.bedrooms ?? prop.Bedrooms) != null && (
+                  <div>
+                    <dt>Bedrooms</dt>
+                    <dd>{prop.bedrooms ?? prop.Bedrooms}</dd>
+                  </div>
+                )}
+                {(prop.bathrooms ?? prop.Bathrooms) != null && (
+                  <div>
+                    <dt>Bathrooms</dt>
+                    <dd>{prop.bathrooms ?? prop.Bathrooms}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt>Property status</dt>
+                  <dd>
+                    <span className={`sa-status-pill ${(prop.status || prop.Status || '').toLowerCase()}`}>
+                      {prop.status || prop.Status || '—'}
+                    </span>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
+          <div className="sa-section-card sa-tenant-detail-card" style={alertList.length ? undefined : { gridColumn: '1 / -1' }}>
+            <h3>
+              <AlertTriangle size={18} />
+              Alerts & activity
+            </h3>
+            {alertList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {alertList.map((alert, idx) => (
+                  <li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item">
+                    <div className="sa-tenant-detail-alert-title">{alert.Title || alert.title || 'Alert'}</div>
+                    {alert.Message && <div className="sa-cell-sub" style={{ marginBottom: '4px' }}>{alert.Message}</div>}
+                    <div className="sa-tenant-detail-alert-meta">
+                      {(alert.Urgency || alert.urgency || '').toLowerCase()} · {alert.Status || alert.status || 'Open'}
+                      {alert.Amount != null && ` · ${Number(alert.Amount).toLocaleString()} XOF`}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No alerts for this tenant.</p>
+            )}
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <Wrench size={18} />
+              Maintenances requested
+            </h3>
+            {maintenancesList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {maintenancesList.map((m, idx) => (
+                  <li key={m.ID ?? m.id ?? idx} className="sa-tenant-detail-alert-item">
+                    <div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div>
+                    <div className="sa-tenant-detail-alert-meta">
+                      {(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}
+                      {m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No maintenance requests for this tenant.</p>
+            )}
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <Receipt size={18} />
+              Recent payment history
+            </h3>
+            {paymentsList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {paymentsList.slice(0, 10).map((p, idx) => (
+                  <li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+                    <div className="sa-tenant-detail-alert-title">
+                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
+                    </div>
+                    <div className="sa-tenant-detail-alert-meta">
+                      {p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}
+                      {(p.Method || p.method) && ` · ${p.Method || p.method}`}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No payment history for this tenant.</p>
+            )}
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <StickyNote size={18} />
+              Private notes
+            </h3>
+            <textarea
+              value={privateNoteInput}
+              onChange={(e) => setPrivateNoteInput(e.target.value)}
+              placeholder="Add a note for future reference..."
+              rows={2}
+              className="sa-tenant-detail-notes-input"
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginBottom: '10px' }}
+            />
+            <button
+              type="button"
+              className="sa-primary-cta"
+              onClick={handleAddPrivateNote}
+              disabled={!privateNoteInput.trim() || addingNote}
+              style={{ marginBottom: '16px' }}
+            >
+              {addingNote ? 'Adding…' : 'Add note'}
+            </button>
+            {privateNotesList.length > 0 ? (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {privateNotesList.map((n) => (
+                  <li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}>
+                    <div className="sa-tenant-detail-alert-title">{n.note ?? n.Note}</div>
+                    <div className="sa-tenant-detail-alert-meta">
+                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="sa-cell-sub">No private notes yet.</p>
+            )}
+          </div>
+
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3>
+              <AlertCircle size={18} />
+              Quick actions
+            </h3>
+            <div className="sa-tenant-detail-quick-actions">
+              <button type="button" className="sa-outline-button" disabled style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Receipt size={16} />
+                Generate Receipt
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -5747,7 +6135,8 @@ const AccountingDashboard = () => {
       case 'deposit-refunds':
         return renderDepositRefunds();
       case 'tenant-management':
-        return renderTenants(); // Renamed from 'tenants'
+        if (selectedTenantId) return renderTenantDetail();
+        return renderTenants();
       case 'account-balances':
         return renderCashier(); // Renamed from 'cashier'
       case 'owner-payments':
