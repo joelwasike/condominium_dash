@@ -1,12 +1,24 @@
 # Agency Director – Owner Assets Backend Implementation
 
-The Agency Director Properties page (owners → buildings → units) needs owner assets. Implement one of the options below.
+The Agency Director Properties page uses the **same data and API as the Sales Manager Property Management** page:
 
-**Frontend behavior**: The frontend tries (1) `GET /api/salesmanager/owners/:id/properties` first, then (2) `GET /api/agency-director/contracts/owners/:id/properties`. If both fail, it derives from `GET /api/agency-director/properties` when each property includes `landlordId`/`LandlordID`/`ownerId`/`OwnerID` or matching `landlord`/`Landlord`/`owner`/`Owner` name.
+- `GET /api/salesmanager/owners` – owners list
+- `GET /api/salesmanager/properties` – properties list
+- `GET /api/salesmanager/owners/:id/properties` – owner assets (buildings)
+- `GET /api/salesmanager/properties/:id/building-detail` – building/unit details
 
-## Option A: Allow agency director to access sales manager route (simplest)
+**Required**: The backend must allow the agency director role to access these sales manager endpoints. Otherwise the Agency Director Properties page will show empty.
 
-Allow the agency director role to call `GET /api/salesmanager/owners/:id/properties`. Update your auth middleware so agency director tokens are accepted for this endpoint (same as sales manager). No new route needed.
+## Option A: Allow agency director to access sales manager routes (recommended)
+
+Update your auth middleware so agency director tokens are accepted for these endpoints (same as sales manager):
+
+- `GET /api/salesmanager/owners`
+- `GET /api/salesmanager/properties`
+- `GET /api/salesmanager/owners/:id/properties`
+- `GET /api/salesmanager/properties/:id/building-detail`
+
+No new routes needed.
 
 ## Option B: Add agency-director endpoint
 

@@ -31,6 +31,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { agencyDirectorService } from '../services/agencyDirectorService';
+import { salesManagerService } from '../services/salesManagerService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAgencyDirectorDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
@@ -98,6 +99,10 @@ const AgencyDirectorDashboard = () => {
   const [landDetail, setLandDetail] = useState(null);
   const [propertyManagementSearch, setPropertyManagementSearch] = useState('');
   const [pmLoading, setPmLoading] = useState(false);
+  // Property Management: use same data as Sales Manager (same API) for owners → buildings → units
+  const [pmOwners, setPmOwners] = useState([]);
+  const [pmProperties, setPmProperties] = useState([]);
+  const [pmDataLoading, setPmDataLoading] = useState(false);
 
   // Modals
   const [showUserModal, setShowUserModal] = useState(false);
@@ -720,6 +725,37 @@ const AgencyDirectorDashboard = () => {
     }
   }, [activeTab, managementSubTab, loadPendingApprovals]);
 
+  // Property Management: load same data as Sales Manager (owners + properties) when Properties tab is active
+  // Uses sales manager API so Agency Director sees same owners/buildings as Sales Manager
+  useEffect(() => {
+    if (activeTab !== 'properties') return;
+    const loadPmData = async () => {
+      if (isDemoMode()) {
+        const demo = getAgencyDirectorDemoData();
+        setPmOwners(demo.owners || []);
+        setPmProperties(demo.properties || []);
+        setPmDataLoading(false);
+        return;
+      }
+      setPmDataLoading(true);
+      try {
+        const [ownersData, propertiesData] = await Promise.all([
+          salesManagerService.getOwners().catch(() => []),
+          salesManagerService.getProperties().catch(() => [])
+        ]);
+        setPmOwners(Array.isArray(ownersData) ? ownersData : []);
+        setPmProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      } catch (err) {
+        console.error('Failed to load Property Management data:', err);
+        setPmOwners([]);
+        setPmProperties([]);
+      } finally {
+        setPmDataLoading(false);
+      }
+    };
+    loadPmData();
+  }, [activeTab]);
+
   const loadAccountingData = useCallback(async () => {
     if (isDemoMode()) {
       const demo = getAgencyDirectorDemoData();
@@ -1327,9 +1363,10 @@ const AgencyDirectorDashboard = () => {
   const getPropertyOwnerName = (property) =>
     property.Landlord ?? property.landlord ?? property.Owner ?? property.owner ?? property.landlordName ?? property.ownerName;
 
-  const deriveOwnerAssetsFromProperties = (ownerId, owner) => {
+  const deriveOwnerAssetsFromProperties = (ownerId, owner, propsSource) => {
+    const props = propsSource || properties || [];
     const ownerName = (owner.name || owner.Name || '').trim().toLowerCase();
-    const ownerProps = (properties || []).filter((p) => {
+    const ownerProps = props.filter((p) => {
       const propOwnerId = getPropertyOwnerId(p);
       if (propOwnerId != null && String(propOwnerId) === String(ownerId)) return true;
       if (ownerName && getPropertyOwnerName(p)) {
@@ -1361,19 +1398,18 @@ const AgencyDirectorDashboard = () => {
     try {
       let data;
       if (isDemoMode()) {
-        data = deriveOwnerAssetsFromProperties(ownerId, owner);
+        data = deriveOwnerAssetsFromProperties(ownerId, owner, pmProperties.length ? pmProperties : properties);
       } else {
         try {
-          // Try agency director endpoint first, then sales manager (same as Sales Manager dashboard)
-          data = await agencyDirectorService.getOwnerAssets(ownerId);
+          // Use same API as Sales Manager – salesManagerService.getOwnerAssets
+          data = await salesManagerService.getOwnerAssets(ownerId);
           const apiAssets = data?.assets || data?.properties || [];
-          if (apiAssets.length === 0 && (properties || []).length > 0) {
-            // API returned empty but we have properties – derive from local data (API may not link owner↔property)
-            data = deriveOwnerAssetsFromProperties(ownerId, owner);
+          const propsSource = pmProperties.length ? pmProperties : properties;
+          if (apiAssets.length === 0 && propsSource.length > 0) {
+            data = deriveOwnerAssetsFromProperties(ownerId, owner, propsSource);
           }
         } catch (apiErr) {
-          // Fallback when API fails – derive from properties (ensure properties include landlordId/LandlordID/ownerId)
-          data = deriveOwnerAssetsFromProperties(ownerId, owner);
+          data = deriveOwnerAssetsFromProperties(ownerId, owner, pmProperties.length ? pmProperties : properties);
         }
       }
       setOwnerAssets(data);
@@ -1389,7 +1425,8 @@ const AgencyDirectorDashboard = () => {
   };
 
   const deriveBuildingDetailFromProperty = (propId, property) => {
-    const prop = (properties || []).find((p) => String(p.id || p.ID) === String(propId)) || property;
+    const props = pmProperties.length ? pmProperties : properties || [];
+    const prop = props.find((p) => String(p.id || p.ID) === String(propId)) || property;
     const units = prop.units || prop.Units || [];
     return {
       buildingName: prop.Address || prop.address || property.name || property.building || 'Building',
@@ -1418,7 +1455,7 @@ const AgencyDirectorDashboard = () => {
         data = deriveBuildingDetailFromProperty(propId, property);
       } else {
         try {
-          data = await agencyDirectorService.getPropertyBuildingDetail(propId);
+          data = await salesManagerService.getPropertyBuildingDetail(propId);
         } catch (apiErr) {
           data = deriveBuildingDetailFromProperty(propId, property);
         }
@@ -1436,7 +1473,8 @@ const AgencyDirectorDashboard = () => {
   };
 
   const deriveVillaDetailFromProperty = (propId, property) => {
-    const prop = (properties || []).find((p) => String(p.id || p.ID) === String(propId)) || property;
+    const props = pmProperties.length ? pmProperties : properties || [];
+    const prop = props.find((p) => String(p.id || p.ID) === String(propId)) || property;
     const units = prop.units || prop.Units || [];
     return {
       buildingName: prop.Address || prop.address || property.name || property.building || 'Villa',
@@ -1465,7 +1503,7 @@ const AgencyDirectorDashboard = () => {
         data = deriveVillaDetailFromProperty(propId, property);
       } else {
         try {
-          data = await agencyDirectorService.getPropertyBuildingDetail(propId);
+          data = await salesManagerService.getPropertyBuildingDetail(propId);
         } catch (apiErr) {
           data = deriveVillaDetailFromProperty(propId, property);
         }
@@ -1950,13 +1988,15 @@ const AgencyDirectorDashboard = () => {
   );
 
   const renderProperties = () => {
-    // Filter owners by search (member name)
+    // Use same data as Sales Manager Property Management (pmOwners, pmProperties)
+    const ownersList = pmOwners.length ? pmOwners : (owners || []);
+    const propsList = pmProperties.length ? pmProperties : (properties || []);
     const searchLower = (propertyManagementSearch || '').trim().toLowerCase();
     const filteredOwners = searchLower
-      ? (owners || []).filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower))
-      : (owners || []);
+      ? ownersList.filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower))
+      : ownersList;
 
-    const unassignedProperties = (properties || []).filter((p) => !getPropertyOwnerId(p));
+    const unassignedProperties = propsList.filter((p) => !getPropertyOwnerId(p));
 
     const editPropertyModal = (
       <Modal isOpen={showPropertyModal && editingProperty} onClose={() => setShowPropertyModal(false)} title="Edit Property">
@@ -2285,7 +2325,7 @@ const AgencyDirectorDashboard = () => {
       );
     }
 
-    // Owners list (default view)
+    // Owners list (default view) – same format as Sales Manager Property Management
     return (
     <div className="sa-clients-page">
       <div className="sa-clients-header">
@@ -2307,6 +2347,9 @@ const AgencyDirectorDashboard = () => {
         </div>
       </div>
 
+      {pmDataLoading && (
+        <p className="sa-table-empty" style={{ marginTop: '20px' }}>Loading owners and properties…</p>
+      )}
       <div className="sa-section-card" style={{ marginTop: '20px' }}>
         <div className="sa-table-wrapper">
           <table className="sa-table">
