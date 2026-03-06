@@ -30,7 +30,8 @@ import {
   Phone,
   Copy,
   Search,
-  FileCheck
+  FileCheck,
+  Zap
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -90,6 +91,13 @@ const TenantDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    paymentMethod: '',
+    reference: ''
+  });
+  const [showBillsModal, setShowBillsModal] = useState(false);
+  const [billsForm, setBillsForm] = useState({
+    billType: 'water',
     amount: '',
     paymentMethod: '',
     reference: ''
@@ -975,6 +983,52 @@ const TenantDashboard = () => {
     }
   };
 
+  const handleBillsSubmit = async (e) => {
+    e.preventDefault();
+    if (!billsForm.amount || !billsForm.paymentMethod || !billsForm.reference) {
+      addNotification('Please fill in all required fields', 'error');
+      return;
+    }
+    if (billsForm.paymentMethod !== 'Mobile Money') {
+      addNotification('Payment method must be Mobile Money', 'error');
+      return;
+    }
+    try {
+      setLoading(true);
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const tenantName = user.name || user.Name || user.tenant || 'Tenant';
+      let property = '';
+      if (isDemoMode()) {
+        property = 'Demo Property';
+      } else if (leaseInfo?.property) {
+        property = leaseInfo.property;
+      } else if (overviewData?.lease?.property) {
+        property = overviewData.lease.property;
+      } else if (overviewData?.property) {
+        property = overviewData.property;
+      }
+      const chargeType = billsForm.billType === 'water' ? 'Water' : 'Electricity';
+      const paymentData = {
+        tenant: tenantName,
+        property,
+        amount: parseFloat(billsForm.amount),
+        method: billsForm.paymentMethod,
+        chargeType,
+        reference: billsForm.reference
+      };
+      await tenantService.recordPayment(paymentData);
+      addNotification(`${chargeType} bill payment submitted successfully!`, 'success');
+      setBillsForm({ billType: 'water', amount: '', paymentMethod: '', reference: '' });
+      setShowBillsModal(false);
+      await loadPayments();
+    } catch (error) {
+      console.error('Error submitting bill payment:', error);
+      addNotification(error.message || 'Failed to submit bill payment', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const downloadReceipt = async (paymentId) => {
     try {
       const payment = payments.find(p => p.ID === paymentId);
@@ -1216,6 +1270,10 @@ Thank you for your payment!
           <button className="sa-primary-cta" onClick={() => setShowPaymentModal(true)} disabled={loading}>
             <Plus size={18} />
             Make Payment
+          </button>
+          <button className="sa-primary-cta" onClick={() => setShowBillsModal(true)} disabled={loading} style={{ backgroundColor: '#0ea5e9' }}>
+            <Zap size={18} />
+            Pay Bills
           </button>
           <button 
             className="sa-primary-cta" 
@@ -2217,6 +2275,78 @@ Thank you for your payment!
 
                 <div className="modal-footer">
                   <button type="button" className="action-button secondary" onClick={() => setShowPaymentModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="action-button primary" disabled={loading}>
+                    {loading ? 'Submitting...' : 'Submit Payment'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pay Bills Modal - Water & Electricity */}
+      {showBillsModal && (
+        <div className="modal-overlay" onClick={() => setShowBillsModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Pay Bills</h3>
+              <button className="modal-close" onClick={() => setShowBillsModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleBillsSubmit} className="modal-form">
+                <div className="form-group">
+                  <label htmlFor="billType">Bill Type</label>
+                  <select
+                    id="billType"
+                    value={billsForm.billType}
+                    onChange={(e) => setBillsForm(prev => ({ ...prev, billType: e.target.value }))}
+                  >
+                    <option value="water">Water</option>
+                    <option value="electricity">Electricity</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="billsAmount">Amount (XOF)</label>
+                    <input
+                      type="number"
+                      id="billsAmount"
+                      value={billsForm.amount}
+                      onChange={(e) => setBillsForm(prev => ({ ...prev, amount: e.target.value }))}
+                      placeholder="Enter amount"
+                      required
+                      min="1"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="billsPaymentMethod">Payment Method</label>
+                    <select
+                      id="billsPaymentMethod"
+                      value={billsForm.paymentMethod}
+                      onChange={(e) => setBillsForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                      required
+                    >
+                      <option value="">Select payment method</option>
+                      <option value="Mobile Money">Mobile Money</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="billsReference">Reference Number</label>
+                  <input
+                    type="text"
+                    id="billsReference"
+                    value={billsForm.reference}
+                    onChange={(e) => setBillsForm(prev => ({ ...prev, reference: e.target.value }))}
+                    placeholder="Enter transaction reference"
+                    required
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="action-button secondary" onClick={() => setShowBillsModal(false)}>
                     Cancel
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>

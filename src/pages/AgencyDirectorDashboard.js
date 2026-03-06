@@ -130,7 +130,9 @@ const AgencyDirectorDashboard = () => {
   
   // Management state - Pending approvals
   const [pendingPayments, setPendingPayments] = useState([]);
+  const [pendingExpenses, setPendingExpenses] = useState([]);
   const [pendingQuotes, setPendingQuotes] = useState([]);
+  const [paymentsToApproveSubTab, setPaymentsToApproveSubTab] = useState('payments'); // 'payments' | 'expenses'
 
   // Reports/Analytics state
   const [transferHistory, setTransferHistory] = useState([]);
@@ -448,24 +450,32 @@ const AgencyDirectorDashboard = () => {
   const handleApproveExpense = async (expenseId) => {
     if (!window.confirm('Are you sure you want to approve this expense?')) return;
     try {
+      setLoading(true);
       await agencyDirectorService.approveExpense(expenseId);
       addNotification('Expense approved successfully!', 'success');
+      await loadPendingApprovals();
       await loadContractsData();
     } catch (error) {
       console.error('Error approving expense:', error);
       addNotification(error.message || 'Failed to approve expense', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRejectExpense = async (expenseId) => {
     if (!window.confirm('Are you sure you want to reject this expense?')) return;
     try {
+      setLoading(true);
       await agencyDirectorService.rejectExpense(expenseId);
       addNotification('Expense rejected successfully!', 'success');
+      await loadPendingApprovals();
       await loadContractsData();
     } catch (error) {
       console.error('Error rejecting expense:', error);
       addNotification(error.message || 'Failed to reject expense', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -555,11 +565,13 @@ const AgencyDirectorDashboard = () => {
   // Load pending approvals data
   const loadPendingApprovals = useCallback(async () => {
     try {
-      const [payments, quotes] = await Promise.all([
+      const [payments, expenses, quotes] = await Promise.all([
         agencyDirectorService.getPendingPayments().catch(() => []),
+        agencyDirectorService.getPendingExpenses().catch(() => []),
         agencyDirectorService.getPendingQuotes().catch(() => [])
       ]);
       setPendingPayments(Array.isArray(payments) ? payments : []);
+      setPendingExpenses(Array.isArray(expenses) ? expenses : []);
       setPendingQuotes(Array.isArray(quotes) ? quotes : []);
     } catch (error) {
       console.error('Error loading pending approvals:', error);
@@ -3476,72 +3488,175 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
-  // Render Payments to Approve content
+  // Render Payments to Approve content (Payments + Expenses tabs)
   const renderPaymentsToApproveContent = () => (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <p style={{ color: '#6b7280', margin: 0 }}>{pendingPayments.length} pending payments found</p>
+      <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
+        <button
+          type="button"
+          onClick={() => setPaymentsToApproveSubTab('payments')}
+          style={{
+            padding: '12px 24px',
+            border: 'none',
+            background: 'transparent',
+            color: paymentsToApproveSubTab === 'payments' ? '#7c3aed' : '#6b7280',
+            borderBottom: paymentsToApproveSubTab === 'payments' ? '2px solid #7c3aed' : '2px solid transparent',
+            cursor: 'pointer',
+            fontWeight: paymentsToApproveSubTab === 'payments' ? '600' : '400',
+            marginBottom: '-2px'
+          }}
+        >
+          Payments ({pendingPayments.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setPaymentsToApproveSubTab('expenses')}
+          style={{
+            padding: '12px 24px',
+            border: 'none',
+            background: 'transparent',
+            color: paymentsToApproveSubTab === 'expenses' ? '#7c3aed' : '#6b7280',
+            borderBottom: paymentsToApproveSubTab === 'expenses' ? '2px solid #7c3aed' : '2px solid transparent',
+            cursor: 'pointer',
+            fontWeight: paymentsToApproveSubTab === 'expenses' ? '600' : '400',
+            marginBottom: '-2px'
+          }}
+        >
+          Expenses ({pendingExpenses.length})
+        </button>
       </div>
 
-      <div className="sa-table-wrapper">
-        <table className="sa-table">
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Tenant</th>
-              <th>Property</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Charge Type</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingPayments.map((payment, index) => (
-              <tr key={`payment-${payment.id || payment.ID || index}`}>
-                <td>{index + 1}</td>
-                <td className="sa-cell-main">
-                  <span className="sa-cell-title">{payment.tenant || payment.Tenant || 'N/A'}</span>
-                </td>
-                <td>{payment.property || payment.Property || 'N/A'}</td>
-                <td>{(payment.amount || payment.Amount || 0).toLocaleString()} XOF</td>
-                <td>{payment.method || payment.Method || 'N/A'}</td>
-                <td>{payment.chargeType || payment.ChargeType || 'N/A'}</td>
-                <td>
-                  {payment.date || payment.Date
-                    ? new Date(payment.date || payment.Date).toLocaleDateString()
-                    : 'N/A'}
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      className="table-action-button edit"
-                      onClick={() => handleApprovePayment(payment.id || payment.ID)}
-                      disabled={loading}
-                      style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      className="table-action-button delete"
-                      onClick={() => handleRejectPayment(payment.id || payment.ID)}
-                      disabled={loading}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {pendingPayments.length === 0 && (
-              <tr>
-                <td colSpan={8} className="sa-table-empty">No pending payments to approve</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {paymentsToApproveSubTab === 'payments' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <p style={{ color: '#6b7280', margin: 0 }}>Tenant payments added by accountant, pending agency admin approval</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Tenant</th>
+                  <th>Property</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Charge Type</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingPayments.map((payment, index) => (
+                  <tr key={`payment-${payment.id || payment.ID || index}`}>
+                    <td>{index + 1}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{payment.tenant || payment.Tenant || 'N/A'}</span>
+                    </td>
+                    <td>{payment.property || payment.Property || 'N/A'}</td>
+                    <td>{(payment.amount || payment.Amount || 0).toLocaleString()} XOF</td>
+                    <td>{payment.method || payment.Method || 'N/A'}</td>
+                    <td>{payment.chargeType || payment.ChargeType || 'N/A'}</td>
+                    <td>
+                      {payment.date || payment.Date
+                        ? new Date(payment.date || payment.Date).toLocaleDateString()
+                        : 'N/A'}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          className="table-action-button edit"
+                          onClick={() => handleApprovePayment(payment.id || payment.ID)}
+                          disabled={loading}
+                          style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="table-action-button delete"
+                          onClick={() => handleRejectPayment(payment.id || payment.ID)}
+                          disabled={loading}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {pendingPayments.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="sa-table-empty">No pending payments to approve</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {paymentsToApproveSubTab === 'expenses' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <p style={{ color: '#6b7280', margin: 0 }}>Expenses added by accountant, pending agency admin approval. After approval, they appear in the Expenses list.</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Building</th>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingExpenses.map((expense, index) => (
+                  <tr key={`expense-${expense.id || expense.ID || index}`}>
+                    <td>{index + 1}</td>
+                    <td>{expense.building || expense.Building || 'N/A'}</td>
+                    <td>{expense.category || expense.Category || 'N/A'}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{expense.description || expense.Description || 'N/A'}</span>
+                    </td>
+                    <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
+                    <td>
+                      {expense.date || expense.Date
+                        ? new Date(expense.date || expense.Date).toLocaleDateString()
+                        : 'N/A'}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          className="table-action-button edit"
+                          onClick={() => handleApproveExpense(expense.id || expense.ID)}
+                          disabled={loading}
+                          style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="table-action-button delete"
+                          onClick={() => handleRejectExpense(expense.id || expense.ID)}
+                          disabled={loading}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {pendingExpenses.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="sa-table-empty">No pending expenses to approve</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 

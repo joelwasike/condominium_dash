@@ -405,7 +405,7 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
-  // Get pending payments for approval
+  // Get pending payments for approval (tenant payments)
   getPendingPayments: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/payments/pending-approval`, {
@@ -414,6 +414,18 @@ export const agencyDirectorService = {
     });
     if (!response.ok) throw new Error('Failed to fetch pending payments');
     return parseJson(response);
+  },
+
+  // Get pending expenses for approval (expenses added by accountant)
+  getPendingExpenses: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/expenses/pending-approval`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch pending expenses');
+    const data = await parseJson(response);
+    return Array.isArray(data) ? data : (data?.expenses ?? data?.data ?? []);
   },
 
   // Approve tenant payment

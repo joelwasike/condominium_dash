@@ -99,9 +99,18 @@ These endpoints were added or updated to support the frontend changes described 
 - Tenant payments: backend should **approve tenant payments immediately** (no pending approval step) when the tenant records a payment.
 
 ### Agency Director
-- **GET /api/agency-director/accounting/payments/pending-approval** – List **expenses added by the accountant** that are pending director approval (not all payments).
-- **POST /api/agency-director/contracts/expenses/:id/approve** – Approve expense.
+- **GET /api/agency-director/accounting/payments/pending-approval** – List tenant payments pending director approval.
+- **GET /api/agency-director/accounting/expenses/pending-approval** – List expenses added by the accountant that are pending director approval. These appear in "Payments to Approve" → Expenses tab.
+- **POST /api/agency-director/contracts/expenses/:id/approve** – Approve expense. After approval, the expense appears in the accounting Expenses list.
+- **POST /api/agency-director/contracts/expenses/:id/reject** – Reject expense.
 - **POST /api/agency-director/contracts/leases/:id/approve** – Approve lease (moves to “Valid” tab).
+
+### Accounting – Expense Approval Flow
+When the accountant adds an expense via **POST /api/accounting/expenses**, the backend must:
+1. Create the expense with status `pending_approval` (or equivalent).
+2. The expense appears in **GET /api/agency-director/accounting/expenses/pending-approval** for the Agency Director to approve.
+3. **GET /api/accounting/expenses** (used by the Accounting dashboard) must return **only approved** expenses.
+4. When the Agency Director approves via **POST /api/agency-director/contracts/expenses/:id/approve**, the backend sets status to `approved`; the expense then appears in the Accounting Expenses list.
 
 ### Accounting – Owner Balances (same data as Sales Manager)
 - **GET /api/accounting/owners** – Return the **same owners** as `GET /api/salesmanager/owners` (same database tables). Used by the Account Balances → Owner Balances tab. If not implemented, the frontend falls back to `GET /api/accounting/landlords`; ensure both endpoints return the same owner list for consistency.
