@@ -34,6 +34,12 @@ export const accountingService = {
     });
   },
 
+  // Rent summary (collected, expected, paid, unpaid)
+  getRentSummary: async () => {
+    const url = buildApiUrl('/api/accounting/rent-summary');
+    return await apiRequest(url);
+  },
+
   // Tenant Payments APIs
   getTenantPayments: async (filters = {}) => {
     let url = buildApiUrl('/api/accounting/tenant-payments');
@@ -220,11 +226,31 @@ export const accountingService = {
     if (filters.building) queryParams.append('building', filters.building);
     if (filters.startDate) queryParams.append('startDate', filters.startDate);
     if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.category) queryParams.append('category', filters.category);
+    if (filters.scope) queryParams.append('scope', filters.scope); // 'agency' | 'owner'
     
     if (queryParams.toString()) {
       url += `?${queryParams.toString()}`;
     }
     
+    return await apiRequest(url);
+  },
+
+  getExpensesSummary: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/expenses/summary');
+    const queryParams = new URLSearchParams();
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    return await apiRequest(url);
+  },
+
+  getExpensesPerOwner: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/expenses/per-owner');
+    const queryParams = new URLSearchParams();
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (queryParams.toString()) url += `?${queryParams.toString()}`;
     return await apiRequest(url);
   },
 

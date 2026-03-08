@@ -81,6 +81,10 @@ const AccountingDashboard = () => {
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('');
   const [expenseScopeFilter, setExpenseScopeFilter] = useState('');
   const [expenseSearchText, setExpenseSearchText] = useState('');
+  const [expenseViewCard, setExpenseViewCard] = useState('total'); // 'total' | 'agency' | 'owner'
+  const [expensesSummary, setExpensesSummary] = useState(null);
+  const [expensesPerOwner, setExpensesPerOwner] = useState([]);
+  const [rentSummary, setRentSummary] = useState(null);
   
   // Cashier state
   const [cashierAccounts, setCashierAccounts] = useState([]);
@@ -258,6 +262,8 @@ const AccountingDashboard = () => {
       if (expenseStartDateFilter) expenseFilters.startDate = expenseStartDateFilter;
       if (expenseEndDateFilter) expenseFilters.endDate = expenseEndDateFilter;
       if (expenseCategoryFilter) expenseFilters.category = expenseCategoryFilter;
+      if (expenseViewCard === 'agency') expenseFilters.scope = 'agency';
+      else if (expenseViewCard === 'owner') expenseFilters.scope = 'owner';
 
       const expensesData = await accountingService.getExpenses(expenseFilters);
       setExpenses(Array.isArray(expensesData) ? expensesData : []);
@@ -266,7 +272,75 @@ const AccountingDashboard = () => {
       addNotification('Failed to load expenses', 'error');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter]); // addNotification is stable, no need to include
+  }, [expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter, expenseViewCard]);
+
+  // Load expenses summary (total, agency, owner)
+  const loadExpensesSummary = useCallback(async () => {
+    if (isDemoMode()) {
+      const total = expenses.reduce((s, e) => s + (e.Amount || e.amount || 0), 0);
+      const agency = expenses.filter(e => (e.Scope || e.scope) === 'SAAF IMMO' || (e.Building || e.building) === '-').reduce((s, e) => s + (e.Amount || e.amount || 0), 0);
+      const owner = expenses.filter(e => (e.Scope || e.scope) === 'Building' && (e.Building || e.building) && (e.Building || e.building) !== '-').reduce((s, e) => s + (e.Amount || e.amount || 0), 0);
+      setExpensesSummary({ totalExpenses: total, agencyExpenses: agency, ownerExpenses: owner });
+      return;
+    }
+    try {
+      const filters = {};
+      if (expenseStartDateFilter) filters.startDate = expenseStartDateFilter;
+      if (expenseEndDateFilter) filters.endDate = expenseEndDateFilter;
+      const data = await accountingService.getExpensesSummary(filters);
+      setExpensesSummary(data);
+    } catch (error) {
+      console.error('Failed to load expenses summary:', error);
+      setExpensesSummary({ totalExpenses: 0, agencyExpenses: 0, ownerExpenses: 0 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenseStartDateFilter, expenseEndDateFilter, expenses]);
+
+  // Load expenses per owner
+  const loadExpensesPerOwner = useCallback(async () => {
+    if (isDemoMode()) {
+      const ownerExpenses = expenses.filter(e => (e.Scope || e.scope) === 'Building' && (e.Building || e.building) && (e.Building || e.building) !== '-');
+      const byOwner = {};
+      ownerExpenses.forEach(exp => {
+        const owner = exp.Landlord || exp.landlord || 'Unknown';
+        if (!byOwner[owner]) byOwner[owner] = { ownerId: 0, ownerName: owner, total: 0, expenses: [] };
+        byOwner[owner].total += exp.Amount || exp.amount || 0;
+        byOwner[owner].expenses.push(exp);
+      });
+      setExpensesPerOwner(Object.values(byOwner));
+      return;
+    }
+    try {
+      const filters = {};
+      if (expenseStartDateFilter) filters.startDate = expenseStartDateFilter;
+      if (expenseEndDateFilter) filters.endDate = expenseEndDateFilter;
+      const data = await accountingService.getExpensesPerOwner(filters);
+      setExpensesPerOwner(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to load expenses per owner:', error);
+      setExpensesPerOwner([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenseStartDateFilter, expenseEndDateFilter, expenses]);
+
+  // Load rent summary
+  const loadRentSummary = useCallback(async () => {
+    if (isDemoMode()) {
+      const rentPayments = [...tenantPayments, ...collections].filter(p => (p.ChargeType || p.chargeType || '').toLowerCase() === 'rent');
+      const collected = rentPayments.filter(p => ['Approved', 'Collected', 'Paid'].includes((p.Status || p.status || ''))).reduce((s, p) => s + (p.Amount || p.amount || 0), 0);
+      const expected = overviewData?.totalCollectedThisMonth ? overviewData.totalCollectedThisMonth + (overviewData.pendingRentAmount || 0) : collected + 50000;
+      setRentSummary({ collectedRents: collected, expectedRentThisMonth: expected, paidRents: collected, unpaidRents: Math.max(0, expected - collected) });
+      return;
+    }
+    try {
+      const data = await accountingService.getRentSummary();
+      setRentSummary(data);
+    } catch (error) {
+      console.error('Failed to load rent summary:', error);
+      setRentSummary({ collectedRents: 0, expectedRentThisMonth: 0, paidRents: 0, unpaidRents: 0 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantPayments, collections, overviewData]);
 
   // Load data from APIs
   const loadData = async () => {
@@ -325,10 +399,22 @@ const AccountingDashboard = () => {
   // Reload expenses when filters change
   useEffect(() => {
     if (activeTab === 'expenses') {
-      loadExpenses();
+      loadExpensesSummary();
+      if (expenseViewCard === 'owner') {
+        loadExpensesPerOwner();
+      } else {
+        loadExpenses();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter]); // Only reload when tab or filters change
+  }, [activeTab, expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter, expenseViewCard]);
+
+  useEffect(() => {
+    if (activeTab === 'payments') {
+      loadRentSummary();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // Load cashier data
   const loadCashierData = useCallback(async () => {
@@ -1552,8 +1638,33 @@ const AccountingDashboard = () => {
         })
       : [];
 
+    const collected = rentSummary?.collectedRents ?? 0;
+    const expected = rentSummary?.expectedRentThisMonth ?? 0;
+    const paid = rentSummary?.paidRents ?? 0;
+    const unpaid = rentSummary?.unpaidRents ?? 0;
+
     return (
       <div>
+        {/* Rent summary grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Collected Rents</p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#059669' }}>{collected.toFixed(2)} XOF</p>
+          </div>
+          <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Expected Rent This Month</p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#1e40af' }}>{expected.toFixed(2)} XOF</p>
+          </div>
+          <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Paid Rents</p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#059669' }}>{paid.toFixed(2)} XOF</p>
+          </div>
+          <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Unpaid Rents</p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#dc2626' }}>{unpaid.toFixed(2)} XOF</p>
+          </div>
+        </div>
+
         {/* Payments tab – key information for owners and managers */}
         <div className="sa-section-card" style={{ marginBottom: '24px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#1e293b' }}>
@@ -1591,9 +1702,6 @@ const AccountingDashboard = () => {
               </p>
             </div>
           </div>
-          <p style={{ margin: '16px 0 0 0', color: '#475569', fontSize: '0.9rem', lineHeight: 1.5, paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
-            Thanks to these three pieces of information clearly displayed at the top of the tab, the owner or manager can quickly understand: how much money they should receive in total, how much has already been paid, and how much is still owed.
-          </p>
         </div>
 
         <div className="sa-section-card">
@@ -4794,8 +4902,64 @@ const AccountingDashboard = () => {
     const uniqueCategories = [...new Set(expenses.map(exp => exp.Category || exp.category).filter(Boolean))];
     const uniqueScopes = [...new Set(expenses.map(exp => exp.Scope || exp.scope).filter(Boolean))];
 
+    const totalExp = expensesSummary?.totalExpenses ?? 0;
+    const agencyExp = expensesSummary?.agencyExpenses ?? 0;
+    const ownerExp = expensesSummary?.ownerExpenses ?? 0;
+
     return (
       <>
+    {/* Top grid: Total Expenses, Agency Expenses, Owner Expenses */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <div
+        onClick={() => setExpenseViewCard('total')}
+        style={{
+          padding: '20px',
+          borderRadius: '8px',
+          border: `2px solid ${expenseViewCard === 'total' ? '#3b82f6' : '#e5e7eb'}`,
+          backgroundColor: expenseViewCard === 'total' ? '#eff6ff' : '#fff',
+          cursor: 'pointer',
+          transition: 'all 0.2s'
+        }}
+      >
+        <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Total Expenses</p>
+        <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#1f2937' }}>
+          {totalExp.toFixed(2)} XOF
+        </p>
+      </div>
+      <div
+        onClick={() => setExpenseViewCard('agency')}
+        style={{
+          padding: '20px',
+          borderRadius: '8px',
+          border: `2px solid ${expenseViewCard === 'agency' ? '#3b82f6' : '#e5e7eb'}`,
+          backgroundColor: expenseViewCard === 'agency' ? '#eff6ff' : '#fff',
+          cursor: 'pointer',
+          transition: 'all 0.2s'
+        }}
+      >
+        <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Agency Expenses</p>
+        <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#1f2937' }}>
+          {agencyExp.toFixed(2)} XOF
+        </p>
+      </div>
+      <div
+        onClick={() => setExpenseViewCard('owner')}
+        style={{
+          padding: '20px',
+          borderRadius: '8px',
+          border: `2px solid ${expenseViewCard === 'owner' ? '#3b82f6' : '#e5e7eb'}`,
+          backgroundColor: expenseViewCard === 'owner' ? '#eff6ff' : '#fff',
+          cursor: 'pointer',
+          transition: 'all 0.2s'
+        }}
+      >
+        <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Owner Expenses</p>
+        <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#1f2937' }}>
+          {ownerExp.toFixed(2)} XOF
+        </p>
+      </div>
+    </div>
+
     <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
@@ -4822,7 +4986,8 @@ const AccountingDashboard = () => {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filters - only for transaction history view */}
+        {expenseViewCard !== 'owner' && (
         <div className="sa-filters-section" style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
           <select 
             className="sa-filter-select"
@@ -4889,8 +5054,53 @@ const AccountingDashboard = () => {
             </button>
           )}
       </div>
+        )}
 
-      {loading ? (
+      {expenseViewCard === 'owner' ? (
+        /* Expenses per owner view */
+        loading ? (
+          <div className="loading">Loading expenses per owner...</div>
+        ) : expensesPerOwner.length === 0 ? (
+          <div className="no-data">No owner expenses found</div>
+        ) : (
+          <div style={{ padding: '16px' }}>
+            {expensesPerOwner.map((ownerGroup, idx) => (
+              <div key={ownerGroup.ownerId || idx} style={{ marginBottom: '24px', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600, fontSize: '1rem' }}>{ownerGroup.ownerName || 'Unknown'}</span>
+                  <span style={{ fontWeight: 600, color: '#059669' }}>{(ownerGroup.total || 0).toFixed(2)} XOF</span>
+                </div>
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Building</th>
+                        <th>Category</th>
+                        <th>Requested by</th>
+                        <th>Amount</th>
+                        <th>Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(ownerGroup.expenses || []).map((exp, i) => (
+                        <tr key={exp.ID || exp.id || i}>
+                          <td>{exp.Date ? new Date(exp.Date).toLocaleDateString() : (exp.date ? new Date(exp.date).toLocaleDateString() : 'N/A')}</td>
+                          <td>{exp.Building || exp.building || 'N/A'}</td>
+                          <td>{exp.Category || exp.category || 'N/A'}</td>
+                          <td>{exp.RequestedBy || exp.requestedBy || '—'}</td>
+                          <td>{(exp.Amount || exp.amount || 0).toFixed(2)} XOF</td>
+                          <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exp.Notes || exp.notes || 'N/A'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : loading ? (
         <div className="loading">Loading expenses...</div>
         ) : filteredExpenses.length === 0 ? (
           <div className="no-data">
