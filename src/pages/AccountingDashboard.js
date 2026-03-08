@@ -1645,62 +1645,27 @@ const AccountingDashboard = () => {
 
     return (
       <div>
-        {/* Rent summary grid */}
+        {/* Rent summary grid with examples in each field */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Collected Rents</p>
             <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#059669' }}>{collected.toFixed(2)} XOF</p>
+            <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>e.g. 2 tenants paid 200k + 250k = 450,000 XOF</p>
           </div>
           <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Expected Rent This Month</p>
             <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#1e40af' }}>{expected.toFixed(2)} XOF</p>
+            <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>e.g. 3 tenants: 200k + 250k + 300k = 750,000 XOF</p>
           </div>
           <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Paid Rents</p>
             <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#059669' }}>{paid.toFixed(2)} XOF</p>
+            <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>e.g. amount already received from tenants</p>
           </div>
           <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Unpaid Rents</p>
             <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#dc2626' }}>{unpaid.toFixed(2)} XOF</p>
-          </div>
-        </div>
-
-        {/* Payments tab – key information for owners and managers */}
-        <div className="sa-section-card" style={{ marginBottom: '24px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#1e293b' }}>
-            Understanding the Payments Tab
-          </h3>
-          <p style={{ margin: '0 0 16px 0', color: '#475569', fontSize: '0.95rem', lineHeight: 1.6 }}>
-            In the Payments tab, it is recommended to display three key pieces of information at the top of the page to allow the owner or manager to quickly understand the rental status.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <strong style={{ color: '#1e40af' }}>1. Expected Payments</strong>
-              <p style={{ margin: '6px 0 0 0', color: '#475569', fontSize: '0.9rem', lineHeight: 1.5 }}>
-                Expected payments represent the total amount of rent that should be received for the current period (e.g., the month). This amount corresponds to the sum of all the rent that tenants must pay if each tenant fulfills their commitment.
-              </p>
-              <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                Example: If a building has three tenants who pay 200,000 FCFA, 250,000 FCFA, and 300,000 FCFA per month, respectively, then the total expected payments are 750,000 FCFA.
-              </p>
-            </div>
-            <div>
-              <strong style={{ color: '#1e40af' }}>2. Payments Received</strong>
-              <p style={{ margin: '6px 0 0 0', color: '#475569', fontSize: '0.9rem', lineHeight: 1.5 }}>
-                Payments received represent the total amount of rent that has actually been paid by the tenants and recorded in the system. This information shows how much money has already been collected.
-              </p>
-              <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                Example: If two tenants have already paid their rent of 200,000 FCFA and 250,000 FCFA, then the total payments received is 450,000 FCFA.
-              </p>
-            </div>
-            <div>
-              <strong style={{ color: '#1e40af' }}>3. Pending Payments</strong>
-              <p style={{ margin: '6px 0 0 0', color: '#475569', fontSize: '0.9rem', lineHeight: 1.5 }}>
-                Pending payments represent the amount of rent that has not yet been paid by the tenants. It is the difference between the expected payments and the payments already received.
-              </p>
-              <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                Example: If the total amount expected is 750,000 FCFA and only 450,000 FCFA has been paid, then the amount of pending payments is 300,000 FCFA.
-              </p>
-            </div>
+            <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>e.g. 750,000 − 450,000 = 300,000 XOF</p>
           </div>
         </div>
 
