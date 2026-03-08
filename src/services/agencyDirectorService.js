@@ -510,18 +510,17 @@ export const agencyDirectorService = {
   },
 
   // Get assets (properties) under management of an owner – for Properties page (owners → buildings → units)
-  // Try sales manager endpoint first (same as Sales Manager dashboard; backend may allow agency director).
-  // Then try agency-director endpoint if backend has it.
+  // Backend returns 401 for sales manager routes when using agency director token, so try agency-director first.
   getOwnerAssets: async (ownerId) => {
     const headers = getAuthHeaders(false);
-    // 1. Try sales manager endpoint first – same as Sales Manager, often already allows agency director
-    let response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/owners/${ownerId}/properties`, {
+    // 1. Try agency-director endpoint (backend may have it)
+    let response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners/${ownerId}/properties`, {
       method: 'GET',
       headers: headers,
     });
     if (!response.ok) {
-      // 2. Try agency-director endpoint if backend has it
-      response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners/${ownerId}/properties`, {
+      // 2. Fallback: sales manager (will 401 for agency director – frontend then derives from properties)
+      response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/owners/${ownerId}/properties`, {
         method: 'GET',
         headers: headers,
       });
@@ -531,6 +530,7 @@ export const agencyDirectorService = {
   },
 
   // Get building/unit detail for a property
+  // Backend returns 401 for sales manager routes when using agency director token, so try agency-director first.
   getPropertyBuildingDetail: async (propertyId) => {
     const headers = getAuthHeaders(false);
     let response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/properties/${propertyId}/building-detail`, {

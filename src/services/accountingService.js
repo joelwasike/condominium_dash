@@ -267,6 +267,12 @@ export const accountingService = {
     return await apiRequest(url);
   },
 
+  // Agency balance - commission deducted from tenant payments (owner commission percentage)
+  getAgencyBalance: async () => {
+    const url = buildApiUrl('/api/accounting/agency-balance');
+    return await apiRequest(url);
+  },
+
   // Comprehensive Reports
   getPaymentsByPeriodReport: async (startDate, endDate, period = 'monthly') => {
     const url = buildApiUrl(`/api/accounting/reports/payments-by-period?startDate=${startDate}&endDate=${endDate}&period=${period}`);

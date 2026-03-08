@@ -108,11 +108,31 @@ These endpoints were added or updated to support the frontend changes described 
 - **GET /api/agency-director/properties/:id/building-detail** – Building/unit detail for a property. Same shape as `GET /api/salesmanager/properties/:id/building-detail`: `{ buildingName, totalApartments, units: [...], images: [...] }`.
 
 ### Accounting – Expense Approval Flow
-When the accountant adds an expense via **POST /api/accounting/expenses**, the backend must:
-1. Create the expense with status `pending_approval` (or equivalent).
-2. The expense appears in **GET /api/agency-director/accounting/expenses/pending-approval** for the Agency Director to approve.
-3. **GET /api/accounting/expenses** (used by the Accounting dashboard) must return **only approved** expenses.
-4. When the Agency Director approves via **POST /api/agency-director/contracts/expenses/:id/approve**, the backend sets status to `approved`; the expense then appears in the Accounting Expenses list.
+
+**Two approval paths and deduction sources depending on expense scope:**
+
+1. **Building expense** (scope = Building, has building address):
+   - **Approval:** The **building owner** must approve.
+   - **Deduction:** When approved, the amount is **reduced from the owner's balance** (the money owed to the owner for that building).
+   - Backend creates expense with status `pending_owner_approval`.
+   - Expense appears in **GET /api/landlord/expenses/pending-approval** for the owner.
+   - Owner approves via **POST /api/landlord/expenses/:id/approve** or rejects via **POST /api/landlord/expenses/:id/reject**.
+
+2. **Agency-only expense** (scope = SAAF IMMO, no building or building = '-'):
+   - **Approval:** The **agency director** must approve.
+   - **Deduction:** When approved, the amount is **reduced from the commission account** (agency commission).
+   - Backend creates expense with status `pending_director_approval`.
+   - Expense appears in **GET /api/agency-director/accounting/expenses/pending-approval** for the Agency Director.
+   - Director approves via **POST /api/agency-director/contracts/expenses/:id/approve** or rejects via **POST /api/agency-director/contracts/expenses/:id/reject**.
+
+**POST /api/accounting/expenses** receives:
+- `requiresOwnerApproval: true` when scope is Building
+- `deductFrom: 'owner_balance'` when scope is Building (deduct from owner's balance)
+- `deductFrom: 'commission_account'` when scope is SAAF IMMO (deduct from commission account)
+
+**GET /api/accounting/expenses** must return **only approved** expenses.
+
+**Full backend spec:** See `BACKEND_EXPENSE_IMPLEMENTATION.md` for detailed endpoint specs, request/response shapes, and deduction logic.
 
 ### Accounting – Owner Balances (same data as Sales Manager)
 - **GET /api/accounting/owners** – Return the **same owners** as `GET /api/salesmanager/owners` (same database tables). Used by the Account Balances → Owner Balances tab. If not implemented, the frontend falls back to `GET /api/accounting/landlords`; ensure both endpoints return the same owner list for consistency.

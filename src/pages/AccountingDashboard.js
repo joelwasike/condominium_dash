@@ -85,6 +85,7 @@ const AccountingDashboard = () => {
   // Cashier state
   const [cashierAccounts, setCashierAccounts] = useState([]);
   const [cashierTransactions, setCashierTransactions] = useState([]);
+  const [agencyBalance, setAgencyBalance] = useState(null);
   const [showCashierAccountModal, setShowCashierAccountModal] = useState(false);
   const [showCashierTransactionModal, setShowCashierTransactionModal] = useState(false);
   const [cashierAccountForm, setCashierAccountForm] = useState({
@@ -148,6 +149,10 @@ const AccountingDashboard = () => {
   const [expenseFormBuilding, setExpenseFormBuilding] = useState('');
   const [expenseFormUnits, setExpenseFormUnits] = useState([]);
   const [paymentView, setPaymentView] = useState('all'); // 'all', 'rent', 'deposit', 'sale', 'tenant'
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all'); // 'all', 'approved', 'pending', 'rejected' – verify if tenant paid
+  const [paymentNameFilter, setPaymentNameFilter] = useState('');
+  const [paymentDateStartFilter, setPaymentDateStartFilter] = useState('');
+  const [paymentDateEndFilter, setPaymentDateEndFilter] = useState('');
   const [balanceView, setBalanceView] = useState('overview'); // 'overview', 'cash', 'bank', 'cash-journal', 'bank-journal', 'owner-balances'
   const [selectedOwnerForBalance, setSelectedOwnerForBalance] = useState(null); // owner name when viewing their transactions
   const [ownerBalancesOwners, setOwnerBalancesOwners] = useState([]); // owners from backend (same as sales manager)
@@ -328,12 +333,15 @@ const AccountingDashboard = () => {
   // Load cashier data
   const loadCashierData = useCallback(async () => {
     try {
-      const [accounts, transactions] = await Promise.all([
+      const [accounts, transactions, agencyBal] = await Promise.all([
         accountingService.getCashierAccounts().catch(() => []),
-        accountingService.getCashierTransactions().catch(() => [])
+        accountingService.getCashierTransactions().catch(() => []),
+        accountingService.getAgencyBalance().catch(() => ({ balance: 0 }))
       ]);
       setCashierAccounts(Array.isArray(accounts) ? accounts : []);
       setCashierTransactions(Array.isArray(transactions) ? transactions : []);
+      const bal = agencyBal?.balance ?? agencyBal?.agencyBalance ?? (typeof agencyBal === 'number' ? agencyBal : 0);
+      setAgencyBalance(bal);
     } catch (error) {
       console.error('Error loading cashier data:', error);
       addNotification('Failed to load cashier data', 'error');
@@ -1497,21 +1505,97 @@ const AccountingDashboard = () => {
 
   // Payments Section - Merged Collections + Tenant Payments
   const renderPaymentsSection = () => {
-    // Filter collections and tenant payments based on view
+    const nameLower = (paymentNameFilter || '').trim().toLowerCase();
+    const dateStart = paymentDateStartFilter ? new Date(paymentDateStartFilter + 'T00:00:00') : null;
+    const dateEnd = paymentDateEndFilter ? new Date(paymentDateEndFilter + 'T23:59:59') : null;
+
+    const matchesStatus = (status) => {
+      if (paymentStatusFilter === 'all') return true;
+      const s = (status || '').toLowerCase();
+      if (paymentStatusFilter === 'approved') return s === 'approved' || s === 'collected' || s === 'paid';
+      if (paymentStatusFilter === 'pending') return s === 'pending' || s === 'awaiting';
+      if (paymentStatusFilter === 'rejected') return s === 'rejected' || s === 'failed';
+      return true;
+    };
+    const matchesName = (tenant, buyer, property, landlord) => {
+      if (!nameLower) return true;
+      const search = [tenant, buyer, property, landlord].filter(Boolean).join(' ').toLowerCase();
+      return search.includes(nameLower);
+    };
+    const matchesDate = (dateStr) => {
+      if (!dateStr) return !dateStart && !dateEnd;
+      const d = new Date(dateStr);
+      if (dateStart && d < dateStart) return false;
+      if (dateEnd && d > dateEnd) return false;
+      return true;
+    };
+
+    // Filter collections and tenant payments based on view, status, name, date
     const filteredCollections = collections.filter(col => {
-      if (paymentView === 'all') return true;
-      if (paymentView === 'rent') return col.ChargeType === 'Rent';
-      if (paymentView === 'deposit') return col.ChargeType === 'Deposit';
-      if (paymentView === 'sale') return col.ChargeType === 'Sale';
-      return false;
+      if (paymentView === 'tenant') return false;
+      if (paymentView === 'all') { /* show all collection types */ }
+      else if (paymentView === 'rent' && col.ChargeType !== 'Rent') return false;
+      else if (paymentView === 'deposit' && col.ChargeType !== 'Deposit') return false;
+      else if (paymentView === 'sale' && col.ChargeType !== 'Sale') return false;
+      if (!matchesStatus(col.Status)) return false;
+      if (!matchesName(col.Tenant, col.Buyer, col.Building, col.Landlord)) return false;
+      if (!matchesDate(col.Date)) return false;
+      return true;
     });
 
-    const filteredTenantPayments = paymentView === 'all' || paymentView === 'tenant' 
-      ? tenantPayments.filter(p => (p.Status || '').toLowerCase() === 'approved')
+    const filteredTenantPayments = (paymentView === 'all' || paymentView === 'tenant')
+      ? tenantPayments.filter(p => {
+          if (!matchesStatus(p.Status)) return false;
+          if (!matchesName(p.Tenant, null, p.Property, null)) return false;
+          if (!matchesDate(p.Date)) return false;
+          return true;
+        })
       : [];
 
     return (
       <div>
+        {/* Payments tab – key information for owners and managers */}
+        <div className="sa-section-card" style={{ marginBottom: '24px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#1e293b' }}>
+            Understanding the Payments Tab
+          </h3>
+          <p style={{ margin: '0 0 16px 0', color: '#475569', fontSize: '0.95rem', lineHeight: 1.6 }}>
+            In the Payments tab, it is recommended to display three key pieces of information at the top of the page to allow the owner or manager to quickly understand the rental status.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <strong style={{ color: '#1e40af' }}>1. Expected Payments</strong>
+              <p style={{ margin: '6px 0 0 0', color: '#475569', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                Expected payments represent the total amount of rent that should be received for the current period (e.g., the month). This amount corresponds to the sum of all the rent that tenants must pay if each tenant fulfills their commitment.
+              </p>
+              <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                Example: If a building has three tenants who pay 200,000 FCFA, 250,000 FCFA, and 300,000 FCFA per month, respectively, then the total expected payments are 750,000 FCFA.
+              </p>
+            </div>
+            <div>
+              <strong style={{ color: '#1e40af' }}>2. Payments Received</strong>
+              <p style={{ margin: '6px 0 0 0', color: '#475569', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                Payments received represent the total amount of rent that has actually been paid by the tenants and recorded in the system. This information shows how much money has already been collected.
+              </p>
+              <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                Example: If two tenants have already paid their rent of 200,000 FCFA and 250,000 FCFA, then the total payments received is 450,000 FCFA.
+              </p>
+            </div>
+            <div>
+              <strong style={{ color: '#1e40af' }}>3. Pending Payments</strong>
+              <p style={{ margin: '6px 0 0 0', color: '#475569', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                Pending payments represent the amount of rent that has not yet been paid by the tenants. It is the difference between the expected payments and the payments already received.
+              </p>
+              <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                Example: If the total amount expected is 750,000 FCFA and only 450,000 FCFA has been paid, then the amount of pending payments is 300,000 FCFA.
+              </p>
+            </div>
+          </div>
+          <p style={{ margin: '16px 0 0 0', color: '#475569', fontSize: '0.9rem', lineHeight: 1.5, paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+            Thanks to these three pieces of information clearly displayed at the top of the tab, the owner or manager can quickly understand: how much money they should receive in total, how much has already been paid, and how much is still owed.
+          </p>
+        </div>
+
         <div className="sa-section-card">
           <div className="sa-section-header">
             <div>
@@ -1586,6 +1670,65 @@ const AccountingDashboard = () => {
             >
               Tenant Payments
             </button>
+          </div>
+
+          {/* Filters: verify payment status, filter by name, filter by date */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', whiteSpace: 'nowrap' }}>Status (verify payment):</label>
+              <select
+                value={paymentStatusFilter}
+                onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem', minWidth: '140px' }}
+              >
+                <option value="all">All</option>
+                <option value="approved">Approved / Verified</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Search size={18} style={{ color: '#6b7280' }} />
+              <input
+                type="text"
+                placeholder="Filter by tenant, buyer, property..."
+                value={paymentNameFilter}
+                onChange={(e) => setPaymentNameFilter(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem', minWidth: '200px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', whiteSpace: 'nowrap' }}>Date from:</label>
+              <input
+                type="date"
+                value={paymentDateStartFilter}
+                onChange={(e) => setPaymentDateStartFilter(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', whiteSpace: 'nowrap' }}>Date to:</label>
+              <input
+                type="date"
+                value={paymentDateEndFilter}
+                onChange={(e) => setPaymentDateEndFilter(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+              />
+            </div>
+            {(paymentStatusFilter !== 'all' || paymentNameFilter || paymentDateStartFilter || paymentDateEndFilter) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentStatusFilter('all');
+                  setPaymentNameFilter('');
+                  setPaymentDateStartFilter('');
+                  setPaymentDateEndFilter('');
+                }}
+                style={{ padding: '8px 12px', fontSize: '0.875rem', color: '#64748b', background: 'transparent', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Clear filters
+              </button>
+            )}
           </div>
 
           {/* Combined Payments Table */}
@@ -5369,6 +5512,32 @@ const AccountingDashboard = () => {
               </div>
             )}
 
+            {/* Agency Balance - commission deducted from tenant payments */}
+            <div className="sa-section-card" style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <Building2 size={24} style={{ color: '#f59e0b' }} />
+                <h3 style={{ margin: 0 }}>Agency Balance</h3>
+              </div>
+              <div style={{ 
+                padding: '16px', 
+                backgroundColor: '#fffbeb', 
+                borderRadius: '6px',
+                border: '1px solid #fde68a'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: '600', color: '#1f2937' }}>Commission from tenant payments</p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
+                      Percentage deducted per owner, credited to agency
+                    </p>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#b45309' }}>
+                    {(agencyBalance ?? 0).toFixed(2)} XOF
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {cashierAccounts.length === 0 && (
               <div style={{ 
                 gridColumn: '1 / -1', 
@@ -7172,7 +7341,9 @@ const AccountingDashboard = () => {
                     amount: parseFloat(formData.get('amount')),
                     date: formData.get('date'),
                     notes: formData.get('notes'),
-                    accountId: accountId ? parseInt(accountId) : null
+                    accountId: accountId ? parseInt(accountId) : null,
+                    requiresOwnerApproval: scope === 'Building',
+                    deductFrom: scope === 'Building' ? 'owner_balance' : 'commission_account' // Building → owner balance; Agency → commission account
                   };
                   
                   // Call the backend API
@@ -7240,6 +7411,10 @@ const AccountingDashboard = () => {
                     <option value="Building">Building</option>
                     <option value="SAAF IMMO">SAAF IMMO</option>
                   </select>
+                  <small style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '6px', display: 'block', lineHeight: 1.4 }}>
+                    <strong>Approval:</strong> Building → owner approves. Agency → director approves.<br />
+                    <strong>Deduction:</strong> Building expense → reduces owner&apos;s balance. Agency expense → reduces commission account.
+                  </small>
                 </div>
                 {expenseFormScope === 'Building' && (
                   <>

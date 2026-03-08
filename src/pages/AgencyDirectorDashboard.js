@@ -31,7 +31,6 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { agencyDirectorService } from '../services/agencyDirectorService';
-import { salesManagerService } from '../services/salesManagerService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAgencyDirectorDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
@@ -123,7 +122,8 @@ const AgencyDirectorDashboard = () => {
   const [ownerForm, setOwnerForm] = useState({
     name: '', email: '', phone: '', password: '',
     rentalMandate: null, salesMandate: null, idCopy: null, landTitle: null, propertyPhotos: [],
-    rib: '', commissionAmount: ''
+    commissionPercentage: '',
+    rib: ''
   });
   const [ownerDocumentPreviews, setOwnerDocumentPreviews] = useState({});
   
@@ -725,8 +725,7 @@ const AgencyDirectorDashboard = () => {
     }
   }, [activeTab, managementSubTab, loadPendingApprovals]);
 
-  // Property Management: load same data as Sales Manager (owners + properties) when Properties tab is active
-  // Uses sales manager API so Agency Director sees same owners/buildings as Sales Manager
+  // Property Management: use agency director data (backend returns 401 for sales manager when logged in as agency director)
   useEffect(() => {
     if (activeTab !== 'properties') return;
     const loadPmData = async () => {
@@ -740,8 +739,8 @@ const AgencyDirectorDashboard = () => {
       setPmDataLoading(true);
       try {
         const [ownersData, propertiesData] = await Promise.all([
-          salesManagerService.getOwners().catch(() => []),
-          salesManagerService.getProperties().catch(() => [])
+          agencyDirectorService.getOwners().catch(() => []),
+          agencyDirectorService.getProperties().catch(() => [])
         ]);
         setPmOwners(Array.isArray(ownersData) ? ownersData : []);
         setPmProperties(Array.isArray(propertiesData) ? propertiesData : []);
@@ -1085,7 +1084,7 @@ const AgencyDirectorDashboard = () => {
   const getEmptyOwnerForm = () => ({
     name: '', email: '', phone: '', password: '',
     rentalMandate: null, salesMandate: null, idCopy: null, landTitle: null, propertyPhotos: [],
-    rib: '', commissionAmount: ''
+    rib: '', commissionPercentage: ''
   });
 
   const handleOpenAddOwner = () => {
@@ -1105,7 +1104,7 @@ const AgencyDirectorDashboard = () => {
       password: '',
       rentalMandate: null, salesMandate: null, idCopy: null, landTitle: null, propertyPhotos: [],
       rib: profile.rib || profile.RIB || '',
-      commissionAmount: profile.commissionAmount ?? profile.CommissionAmount ?? ''
+      commissionPercentage: profile.commissionPercentage ?? profile.CommissionPercentage ?? ''
     });
     setOwnerDocumentPreviews({
       rentalMandate: profile.rentalMandateURL || profile.RentalMandateURL,
@@ -1201,7 +1200,7 @@ const AgencyDirectorDashboard = () => {
         rib: ownerForm.rib || undefined,
         landTitleURL: landTitleURL || undefined,
         propertyPhotos: propertyPhotosUrls.length > 0 ? JSON.stringify(propertyPhotosUrls) : undefined,
-        commissionAmount: ownerForm.commissionAmount ? parseFloat(ownerForm.commissionAmount) : undefined
+        commissionPercentage: ownerForm.commissionPercentage ? parseFloat(ownerForm.commissionPercentage) : undefined
       };
       if (!editingOwner) {
         ownerData.password = ownerForm.password;
@@ -1401,14 +1400,15 @@ const AgencyDirectorDashboard = () => {
         data = deriveOwnerAssetsFromProperties(ownerId, owner, pmProperties.length ? pmProperties : properties);
       } else {
         try {
-          // Use same API as Sales Manager – salesManagerService.getOwnerAssets
-          data = await salesManagerService.getOwnerAssets(ownerId);
+          // Use agency director API (sales manager returns 401 for agency director token)
+          data = await agencyDirectorService.getOwnerAssets(ownerId);
           const apiAssets = data?.assets || data?.properties || [];
           const propsSource = pmProperties.length ? pmProperties : properties;
           if (apiAssets.length === 0 && propsSource.length > 0) {
             data = deriveOwnerAssetsFromProperties(ownerId, owner, propsSource);
           }
         } catch (apiErr) {
+          // API failed (404/401) – derive from properties (requires landlordId/LandlordID in each property)
           data = deriveOwnerAssetsFromProperties(ownerId, owner, pmProperties.length ? pmProperties : properties);
         }
       }
@@ -1455,7 +1455,7 @@ const AgencyDirectorDashboard = () => {
         data = deriveBuildingDetailFromProperty(propId, property);
       } else {
         try {
-          data = await salesManagerService.getPropertyBuildingDetail(propId);
+          data = await agencyDirectorService.getPropertyBuildingDetail(propId);
         } catch (apiErr) {
           data = deriveBuildingDetailFromProperty(propId, property);
         }
@@ -1503,7 +1503,7 @@ const AgencyDirectorDashboard = () => {
         data = deriveVillaDetailFromProperty(propId, property);
       } else {
         try {
-          data = await salesManagerService.getPropertyBuildingDetail(propId);
+          data = await agencyDirectorService.getPropertyBuildingDetail(propId);
         } catch (apiErr) {
           data = deriveVillaDetailFromProperty(propId, property);
         }
@@ -4176,7 +4176,11 @@ const AgencyDirectorDashboard = () => {
             marginBottom: '-2px'
           }}
         >
-          Expenses ({pendingExpenses.length})
+          Expenses ({pendingExpenses.filter((e) => {
+            const scope = (e.scope || e.Scope || '').toString();
+            const building = (e.building || e.Building || '').toString().trim();
+            return scope === 'SAAF IMMO' || building === '-' || building === '';
+          }).length})
         </button>
       </div>
 
@@ -4250,7 +4254,7 @@ const AgencyDirectorDashboard = () => {
       {paymentsToApproveSubTab === 'expenses' && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <p style={{ color: '#6b7280', margin: 0 }}>Expenses added by accountant, pending agency admin approval. After approval, they appear in the Expenses list.</p>
+            <p style={{ color: '#6b7280', margin: 0 }}>Agency-only expenses (SAAF IMMO scope) pending director approval. Building expenses require owner approval and appear in the owner&apos;s dashboard.</p>
           </div>
           <div className="sa-table-wrapper">
             <table className="sa-table">
@@ -4266,7 +4270,14 @@ const AgencyDirectorDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {pendingExpenses.map((expense, index) => (
+                {pendingExpenses
+                  .filter((e) => {
+                    const scope = (e.scope || e.Scope || '').toString();
+                    const building = (e.building || e.Building || '').toString().trim();
+                    const isAgencyOnly = scope === 'SAAF IMMO' || building === '-' || building === '';
+                    return isAgencyOnly;
+                  })
+                  .map((expense, index) => (
                   <tr key={`expense-${expense.id || expense.ID || index}`}>
                     <td>{index + 1}</td>
                     <td>{expense.building || expense.Building || 'N/A'}</td>
@@ -4301,9 +4312,13 @@ const AgencyDirectorDashboard = () => {
                     </td>
                   </tr>
                 ))}
-                {pendingExpenses.length === 0 && (
+                {pendingExpenses.filter((e) => {
+                  const scope = (e.scope || e.Scope || '').toString();
+                  const building = (e.building || e.Building || '').toString().trim();
+                  return scope === 'SAAF IMMO' || building === '-' || building === '';
+                }).length === 0 && (
                   <tr>
-                    <td colSpan={7} className="sa-table-empty">No pending expenses to approve</td>
+                    <td colSpan={7} className="sa-table-empty">No agency-only expenses to approve. Building expenses require owner approval.</td>
                   </tr>
                 )}
               </tbody>
@@ -4902,8 +4917,9 @@ const AgencyDirectorDashboard = () => {
             )}
           </div>
           <div className="sa-form-group">
-            <label>Amount of the commission (agency type) <span style={{ color: '#6b7280', fontWeight: 'normal' }}>XOF</span></label>
-            <input type="number" value={ownerForm.commissionAmount} onChange={(e) => setOwnerForm({...ownerForm, commissionAmount: e.target.value})} placeholder="0" min="0" step="0.01" />
+            <label>Commission percentage (agency type) <span style={{ color: '#6b7280', fontWeight: 'normal' }}>%</span></label>
+            <input type="number" value={ownerForm.commissionPercentage} onChange={(e) => setOwnerForm({...ownerForm, commissionPercentage: e.target.value})} placeholder="0" min="0" max="100" step="0.01" />
+            <span style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px', display: 'block' }}>Percentage deducted from tenant payments and credited to agency balance</span>
           </div>
 
           <div className="sa-form-actions">

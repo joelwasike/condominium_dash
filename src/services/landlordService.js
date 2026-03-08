@@ -102,6 +102,28 @@ export const landlordService = {
     return await apiRequest(url);
   },
 
+  // Building expenses pending owner approval (expenses linked to owner's buildings)
+  getPendingExpensesForApproval: async () => {
+    try {
+      const url = buildApiUrl('/api/landlord/expenses/pending-approval');
+      return await apiRequest(url);
+    } catch (err) {
+      return [];
+    }
+  },
+
+  approveExpense: async (expenseId) => {
+    return await apiRequest(buildApiUrl(`/api/landlord/expenses/${expenseId}/approve`), {
+      method: 'POST',
+    });
+  },
+
+  rejectExpense: async (expenseId) => {
+    return await apiRequest(buildApiUrl(`/api/landlord/expenses/${expenseId}/reject`), {
+      method: 'POST',
+    });
+  },
+
   // Maintenance Quotes - landlord approval flow
   getMaintenanceQuotes: async (filters = {}) => {
     let url = buildApiUrl('/api/landlord/maintenance-quotes');

@@ -74,6 +74,7 @@ const LandlordDashboard = () => {
   const [netPayments, setNetPayments] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState(null);
   const [expenses, setExpenses] = useState([]);
+  const [pendingExpensesForApproval, setPendingExpensesForApproval] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [maintenances, setMaintenances] = useState([]);
   const [maintenanceQuotes, setMaintenanceQuotes] = useState([]);
@@ -281,6 +282,47 @@ const LandlordDashboard = () => {
     }
   };
 
+  // Load building expenses pending owner approval
+  const loadPendingExpensesForApproval = async () => {
+    try {
+      const data = await landlordService.getPendingExpensesForApproval();
+      setPendingExpensesForApproval(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading pending expenses:', error);
+      setPendingExpensesForApproval([]);
+    }
+  };
+
+  const handleApproveExpense = async (expenseId) => {
+    if (!window.confirm('Approve this expense?')) return;
+    try {
+      setLoading(true);
+      await landlordService.approveExpense(expenseId);
+      addNotification('Expense approved successfully', 'success');
+      await loadPendingExpensesForApproval();
+      await loadExpenses();
+    } catch (error) {
+      addNotification(error.message || 'Failed to approve expense', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectExpense = async (expenseId) => {
+    if (!window.confirm('Reject this expense?')) return;
+    try {
+      setLoading(true);
+      await landlordService.rejectExpense(expenseId);
+      addNotification('Expense rejected', 'success');
+      await loadPendingExpensesForApproval();
+      await loadExpenses();
+    } catch (error) {
+      addNotification(error.message || 'Failed to reject expense', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load data on component mount
   useEffect(() => {
     loadData();
@@ -294,10 +336,11 @@ const LandlordDashboard = () => {
     }
   }, [netPaymentStatusFilter, netPaymentStartDate, netPaymentEndDate, activeTab]);
   
-  // Load expenses when filters change
+  // Load expenses and pending expenses when filters change
   useEffect(() => {
     if (activeTab === 'expenses') {
       loadExpenses();
+      loadPendingExpensesForApproval();
     }
   }, [expensePropertyFilter, expenseStartDate, expenseEndDate, activeTab]);
 
@@ -2747,7 +2790,7 @@ const LandlordDashboard = () => {
       <div className="sa-clients-header">
         <div>
           <h2>Expenses Management</h2>
-          <p>Review expenses per property</p>
+          <p>Review expenses per property. Building expenses require your approval before they are recorded.</p>
         </div>
         <div className="sa-clients-header-right">
           <div className="sa-filters-section">
@@ -2780,6 +2823,70 @@ const LandlordDashboard = () => {
           </div>
                   </div>
                 </div>
+
+      {/* Building expenses pending owner approval */}
+      {pendingExpensesForApproval.length > 0 && (
+        <div className="sa-section-card" style={{ marginBottom: '24px', border: '2px solid #f59e0b', background: '#fffbeb' }}>
+          <div className="sa-section-header">
+            <div>
+              <h3>Expenses to Approve</h3>
+              <p>{pendingExpensesForApproval.length} building expense(s) awaiting your approval</p>
+            </div>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Building</th>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingExpensesForApproval.map((expense, index) => (
+                  <tr key={expense.id || expense.ID || `pending-expense-${index}`}>
+                    <td>{index + 1}</td>
+                    <td>{expense.building || expense.Building || 'N/A'}</td>
+                    <td>{expense.category || expense.Category || 'N/A'}</td>
+                    <td className="sa-cell-main">
+                      <span className="sa-cell-title">{expense.description || expense.Description || expense.notes || expense.Notes || 'N/A'}</span>
+                    </td>
+                    <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
+                    <td>
+                      {expense.date || expense.Date
+                        ? new Date(expense.date || expense.Date).toLocaleDateString()
+                        : 'N/A'}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          className="table-action-button edit"
+                          onClick={() => handleApproveExpense(expense.id || expense.ID)}
+                          disabled={loading}
+                          style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="table-action-button delete"
+                          onClick={() => handleRejectExpense(expense.id || expense.ID)}
+                          disabled={loading}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
                 
       {expenses.length > 0 && expenses[0].property ? (
         expenses.map((propertyGroup, groupIndex) => (
