@@ -157,7 +157,6 @@ const AccountingDashboard = () => {
   const [paymentNameFilter, setPaymentNameFilter] = useState('');
   const [paymentDateStartFilter, setPaymentDateStartFilter] = useState('');
   const [paymentDateEndFilter, setPaymentDateEndFilter] = useState('');
-  const [balanceView, setBalanceView] = useState('overview'); // 'overview', 'cash', 'bank', 'cash-journal', 'bank-journal', 'owner-balances'
   const [selectedOwnerForBalance, setSelectedOwnerForBalance] = useState(null); // owner name when viewing their transactions
   const [ownerBalancesOwners, setOwnerBalancesOwners] = useState([]); // owners from backend (same as sales manager)
   const [ownerBalancesLoading, setOwnerBalancesLoading] = useState(false);
@@ -459,12 +458,12 @@ const AccountingDashboard = () => {
   }, []);
 
   useEffect(() => {
-    const needsOwners = (activeTab === 'account-balances' && balanceView === 'owner-balances') || activeTab === 'owner-payments';
+    const needsOwners = activeTab === 'account-balances' || activeTab === 'owner-payments';
     if (needsOwners) {
       loadOwners();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, balanceView]);
+  }, [activeTab]);
 
   // Load tenants data
   const loadTenants = useCallback(async () => {
@@ -5427,97 +5426,6 @@ const AccountingDashboard = () => {
             </div>
           </div>
 
-          {/* Account Balance Tabs */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb' }}>
-            <button
-              onClick={() => setBalanceView('overview')}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                background: balanceView === 'overview' ? '#3b82f6' : 'transparent',
-                color: balanceView === 'overview' ? 'white' : '#6b7280',
-                cursor: 'pointer',
-                borderBottom: balanceView === 'overview' ? '2px solid #3b82f6' : '2px solid transparent',
-                marginBottom: '-2px'
-              }}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setBalanceView('cash')}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                background: balanceView === 'cash' ? '#3b82f6' : 'transparent',
-                color: balanceView === 'cash' ? 'white' : '#6b7280',
-                cursor: 'pointer',
-                borderBottom: balanceView === 'cash' ? '2px solid #3b82f6' : '2px solid transparent',
-                marginBottom: '-2px'
-              }}
-            >
-              Cash Balance
-            </button>
-            <button
-              onClick={() => setBalanceView('bank')}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                background: balanceView === 'bank' ? '#3b82f6' : 'transparent',
-                color: balanceView === 'bank' ? 'white' : '#6b7280',
-                cursor: 'pointer',
-                borderBottom: balanceView === 'bank' ? '2px solid #3b82f6' : '2px solid transparent',
-                marginBottom: '-2px'
-              }}
-            >
-              Bank Balance
-            </button>
-            <button
-              onClick={() => setBalanceView('cash-journal')}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                background: balanceView === 'cash-journal' ? '#3b82f6' : 'transparent',
-                color: balanceView === 'cash-journal' ? 'white' : '#6b7280',
-                cursor: 'pointer',
-                borderBottom: balanceView === 'cash-journal' ? '2px solid #3b82f6' : '2px solid transparent',
-                marginBottom: '-2px'
-              }}
-            >
-              Cash Journal
-            </button>
-            <button
-              onClick={() => setBalanceView('bank-journal')}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                background: balanceView === 'bank-journal' ? '#3b82f6' : 'transparent',
-                color: balanceView === 'bank-journal' ? 'white' : '#6b7280',
-                cursor: 'pointer',
-                borderBottom: balanceView === 'bank-journal' ? '2px solid #3b82f6' : '2px solid transparent',
-                marginBottom: '-2px'
-              }}
-            >
-              Bank Journal
-            </button>
-            <button
-              onClick={() => { setBalanceView('owner-balances'); setSelectedOwnerForBalance(null); }}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                background: balanceView === 'owner-balances' ? '#3b82f6' : 'transparent',
-                color: balanceView === 'owner-balances' ? 'white' : '#6b7280',
-                cursor: 'pointer',
-                borderBottom: balanceView === 'owner-balances' ? '2px solid #3b82f6' : '2px solid transparent',
-                marginBottom: '-2px'
-              }}
-            >
-              Owner Balances
-            </button>
-          </div>
-
-          {/* Overview Tab */}
-          {balanceView === 'overview' && (
-            <>
           {/* Total Balance Summary */}
           <div style={{ 
             padding: '24px', 
@@ -5713,6 +5621,30 @@ const AccountingDashboard = () => {
               </div>
             </div>
 
+            {/* Cash Balance - summary card */}
+            <div className="sa-section-card" style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <Banknote size={24} style={{ color: '#10b981' }} />
+                <h3 style={{ margin: 0 }}>Cash Balance</h3>
+              </div>
+              <div style={{ padding: '16px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #86efac' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Physical Cash</p>
+                <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#166534' }}>{cashBalance.toFixed(2)} XOF</p>
+              </div>
+            </div>
+
+            {/* Bank Balance - summary card */}
+            <div className="sa-section-card" style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <Building2 size={24} style={{ color: '#8b5cf6' }} />
+                <h3 style={{ margin: 0 }}>Bank Balance</h3>
+              </div>
+              <div style={{ padding: '16px', backgroundColor: '#f0f9ff', borderRadius: '6px', border: '1px solid #93c5fd' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Bank Accounts Total</p>
+                <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#0284c7' }}>{bankBalance.toFixed(2)} XOF</p>
+              </div>
+            </div>
+
             {cashierAccounts.length === 0 && (
               <div style={{ 
                 gridColumn: '1 / -1', 
@@ -5722,6 +5654,218 @@ const AccountingDashboard = () => {
               }}>
                 {t('accounting.noCashierAccounts')}
               </div>
+            )}
+          </div>
+
+          {/* Cash Journal - grid card */}
+          <div className="sa-section-card" style={{ marginTop: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <Banknote size={24} style={{ color: '#10b981' }} />
+              <div>
+                <h3 style={{ margin: 0 }}>Cash Journal</h3>
+                <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Transactions for cash register accounts</p>
+              </div>
+            </div>
+            {cashTransactions.length === 0 ? (
+              <div className="no-data">No cash transactions found</div>
+            ) : (
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Account</th>
+                      <th>Type</th>
+                      <th>Amount</th>
+                      <th>Reference</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cashTransactions.slice(0, 15).map((transaction, index) => {
+                      const account = cashierAccounts.find(acc => (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId));
+                      const accountName = account ? (account.Name || account.name) : 'Unknown';
+                      const type = transaction.Type || transaction.type || 'N/A';
+                      const amount = transaction.Amount || transaction.amount || 0;
+                      const isNegative = type === 'withdrawal' || type === 'transfer';
+                      return (
+                        <tr key={transaction.ID || transaction.id || index}>
+                          <td>{transaction.CreatedAt || transaction.createdAt ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString() : 'N/A'}</td>
+                          <td><span className="sa-cell-title">{accountName}</span></td>
+                          <td><span className={`sa-status-pill ${type.toLowerCase()}`}>{type}</span></td>
+                          <td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>{isNegative ? '-' : '+'}{amount.toFixed(2)} XOF</td>
+                          <td>{transaction.Reference || transaction.reference || 'N/A'}</td>
+                          <td>{transaction.Description || transaction.description || 'N/A'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Bank Journal - grid card */}
+          <div className="sa-section-card" style={{ marginTop: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <Building2 size={24} style={{ color: '#8b5cf6' }} />
+              <div>
+                <h3 style={{ margin: 0 }}>Bank Journal</h3>
+                <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Transactions for bank accounts</p>
+              </div>
+            </div>
+            {bankTransactions.length === 0 ? (
+              <div className="no-data">No bank transactions found</div>
+            ) : (
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Account</th>
+                      <th>Type</th>
+                      <th>Amount</th>
+                      <th>Reference</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bankTransactions.slice(0, 15).map((transaction, index) => {
+                      const account = cashierAccounts.find(acc => (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId));
+                      const accountName = account ? (account.Name || account.name) : 'Unknown';
+                      const type = transaction.Type || transaction.type || 'N/A';
+                      const amount = transaction.Amount || transaction.amount || 0;
+                      const isNegative = type === 'withdrawal' || type === 'transfer';
+                      return (
+                        <tr key={transaction.ID || transaction.id || index}>
+                          <td>{transaction.CreatedAt || transaction.createdAt ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString() : 'N/A'}</td>
+                          <td><span className="sa-cell-title">{accountName}</span></td>
+                          <td><span className={`sa-status-pill ${type.toLowerCase()}`}>{type}</span></td>
+                          <td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>{isNegative ? '-' : '+'}{amount.toFixed(2)} XOF</td>
+                          <td>{transaction.Reference || transaction.reference || 'N/A'}</td>
+                          <td>{transaction.Description || transaction.description || 'N/A'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Owner Balances - grid card */}
+          <div className="sa-section-card" style={{ marginTop: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <Users size={24} style={{ color: '#6366f1' }} />
+              <div>
+                <h3 style={{ margin: 0 }}>Owner Balances</h3>
+                <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Balance per owner (collections minus payments)</p>
+              </div>
+            </div>
+            {!selectedOwnerForBalance ? (
+              ownerBalancesLoading ? (
+                <div className="loading">Loading owners...</div>
+              ) : ownerBalancesOwners.length === 0 ? (
+                <div className="no-data">No owners found</div>
+              ) : (() => {
+                const ownerBalances = ownerBalancesOwners.map(ownerObj => {
+                  const ownerName = ownerObj.Name || ownerObj.name || ownerObj.Landlord || ownerObj.landlord || 'N/A';
+                  const totalCollected = collections.filter(c => {
+                    const cLandlord = (c.Landlord || c.landlord || '').trim();
+                    return cLandlord && (cLandlord === ownerName || cLandlord.toLowerCase() === ownerName.toLowerCase());
+                  }).reduce((sum, c) => sum + (c.Amount || c.amount || 0), 0);
+                  const totalPaid = landlordPayments.filter(p => {
+                    const pLandlord = (p.Landlord || p.landlord || '').trim();
+                    return pLandlord && (pLandlord === ownerName || pLandlord.toLowerCase() === ownerName.toLowerCase());
+                  }).reduce((sum, p) => sum + (p.NetAmount || p.netAmount || 0), 0);
+                  const balance = totalCollected - totalPaid;
+                  return { owner: ownerName, ownerObj, totalCollected, totalPaid, balance };
+                });
+                return (
+                  <div className="sa-table-wrapper">
+                    <table className="sa-table">
+                      <thead>
+                        <tr>
+                          <th>Owner</th>
+                          <th>Total Collected</th>
+                          <th>Total Paid</th>
+                          <th>Balance (Owed)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ownerBalances.map((row, idx) => (
+                          <tr
+                            key={row.owner || idx}
+                            onClick={() => setSelectedOwnerForBalance(row.owner)}
+                            style={{ cursor: 'pointer' }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForBalance(row.owner); } }}
+                          >
+                            <td><span className="sa-cell-title">{row.owner}</span></td>
+                            <td>{row.totalCollected.toFixed(2)} XOF</td>
+                            <td>{row.totalPaid.toFixed(2)} XOF</td>
+                            <td style={{ color: row.balance >= 0 ? '#059669' : '#dc2626', fontWeight: '600' }}>{row.balance.toFixed(2)} XOF</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()
+            ) : (
+              <>
+                <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button type="button" className="sa-outline-button" onClick={() => setSelectedOwnerForBalance(null)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <ArrowLeft size={16} />
+                    Back to owners
+                  </button>
+                  <h4 style={{ margin: 0 }}>{selectedOwnerForBalance} – Recent Transactions</h4>
+                </div>
+                {(() => {
+                  const owner = selectedOwnerForBalance;
+                  const ownerCollections = collections.filter(c => (c.Landlord || c.landlord) === owner).map(c => ({ ...c, _type: 'collection', _date: c.Date || c.date || c.CreatedAt || c.createdAt }));
+                  const ownerPayments = landlordPayments.filter(p => (p.Landlord || p.landlord) === owner).map(p => ({ ...p, _type: 'payout', _date: p.Date || p.date || p.CreatedAt || p.createdAt }));
+                  const merged = [...ownerCollections, ...ownerPayments].sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0)).slice(0, 50);
+                  if (merged.length === 0) return <div className="no-data">No transactions for this owner.</div>;
+                  return (
+                    <div className="sa-table-wrapper">
+                      <table className="sa-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Building</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {merged.map((item, idx) => {
+                            const isCollection = item._type === 'collection';
+                            const amount = isCollection ? (item.Amount || item.amount || 0) : (item.NetAmount || item.netAmount || 0);
+                            const building = item.Building || item.building || '—';
+                            const desc = isCollection ? (item.ChargeType || item.chargeType || 'Rent') : 'Payout';
+                            const date = item._date ? new Date(item._date).toLocaleDateString() : 'N/A';
+                            const status = item.Status || item.status || (isCollection ? 'Collected' : '—');
+                            return (
+                              <tr key={idx}>
+                                <td>{date}</td>
+                                <td><span className={`sa-status-pill ${isCollection ? 'success' : 'info'}`}>{isCollection ? 'Collection' : 'Payout'}</span></td>
+                                <td>{building}</td>
+                                <td>{desc}</td>
+                                <td style={{ color: isCollection ? '#059669' : '#dc2626', fontWeight: '600' }}>{isCollection ? '+' : '-'}{amount.toFixed(2)} XOF</td>
+                                <td>{status}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+              </>
             )}
           </div>
 
@@ -5787,362 +5931,6 @@ const AccountingDashboard = () => {
               </div>
             )}
           </div>
-            </>
-          )}
-
-          {/* Cash Balance Tab */}
-          {balanceView === 'cash' && (
-            <>
-              <div style={{ padding: '24px', marginBottom: '24px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Physical Cash Balance</p>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '2rem', fontWeight: '600', color: '#166534' }}>
-                      {cashBalance.toFixed(2)} XOF
-                    </p>
-                  </div>
-                  <Banknote size={48} style={{ color: '#22c55e' }} />
-                </div>
-              </div>
-
-              {accountsByType.cash_register.length === 0 ? (
-                <div className="no-data">No cash register accounts found</div>
-              ) : (
-                <div className="sa-table-wrapper">
-                  <table className="sa-table">
-                    <thead>
-                      <tr>
-                        <th>Account Name</th>
-                        <th>Description</th>
-                        <th>Balance</th>
-                        <th>Currency</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {accountsByType.cash_register.map((account, index) => (
-                        <tr key={account.ID || account.id || index}>
-                          <td><span className="sa-cell-title">{account.Name || account.name || 'Unnamed'}</span></td>
-                          <td>{account.Description || '-'}</td>
-                          <td style={{ fontWeight: '600', color: '#059669' }}>
-                            {(account.Balance || account.balance || 0).toFixed(2)} XOF
-                          </td>
-                          <td>{account.Currency || account.currency || 'XOF'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Bank Balance Tab */}
-          {balanceView === 'bank' && (
-            <>
-              <div style={{ padding: '24px', marginBottom: '24px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #93c5fd' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Bank Balance</p>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '2rem', fontWeight: '600', color: '#0284c7' }}>
-                      {bankBalance.toFixed(2)} XOF
-                    </p>
-                  </div>
-                  <Building2 size={48} style={{ color: '#3b82f6' }} />
-                </div>
-              </div>
-
-              {accountsByType.bank.length === 0 ? (
-                <div className="no-data">No bank accounts found</div>
-              ) : (
-                <div className="sa-table-wrapper">
-                  <table className="sa-table">
-                    <thead>
-                      <tr>
-                        <th>Account Name</th>
-                        <th>Description</th>
-                        <th>Balance</th>
-                        <th>Currency</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {accountsByType.bank.map((account, index) => (
-                        <tr key={account.ID || account.id || index}>
-                          <td><span className="sa-cell-title">{account.Name || account.name || 'Unnamed'}</span></td>
-                          <td>{account.Description || '-'}</td>
-                          <td style={{ fontWeight: '600', color: '#0284c7' }}>
-                            {(account.Balance || account.balance || 0).toFixed(2)} XOF
-                          </td>
-                          <td>{account.Currency || account.currency || 'XOF'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Cash Journal Tab */}
-          {balanceView === 'cash-journal' && (
-            <>
-              <div style={{ marginBottom: '16px' }}>
-                <h3>Cash Journal</h3>
-                <p style={{ color: '#6b7280', marginTop: '4px' }}>All transactions for cash register accounts</p>
-              </div>
-              {cashTransactions.length === 0 ? (
-                <div className="no-data">No cash transactions found</div>
-              ) : (
-                <div className="sa-table-wrapper">
-                  <table className="sa-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Account</th>
-                        <th>Type</th>
-                        <th>Amount</th>
-                        <th>Reference</th>
-                        <th>Description</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cashTransactions.map((transaction, index) => {
-                        const account = cashierAccounts.find(acc => 
-                          (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId)
-                        );
-                        const accountName = account ? (account.Name || account.name) : 'Unknown';
-                        const type = transaction.Type || transaction.type || 'N/A';
-                        const amount = transaction.Amount || transaction.amount || 0;
-                        const isNegative = type === 'withdrawal' || type === 'transfer';
-
-                        return (
-                          <tr key={transaction.ID || transaction.id || index}>
-                            <td>
-                              {transaction.CreatedAt || transaction.createdAt 
-                                ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString()
-                                : 'N/A'}
-                            </td>
-                            <td><span className="sa-cell-title">{accountName}</span></td>
-                            <td>
-                              <span className={`sa-status-pill ${type.toLowerCase()}`}>
-                                {type}
-                              </span>
-                            </td>
-                            <td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>
-                              {isNegative ? '-' : '+'}{amount.toFixed(2)} XOF
-                            </td>
-                            <td>{transaction.Reference || transaction.reference || 'N/A'}</td>
-                            <td>{transaction.Description || transaction.description || 'N/A'}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Bank Journal Tab */}
-          {balanceView === 'bank-journal' && (
-            <>
-              <div style={{ marginBottom: '16px' }}>
-                <h3>Bank Journal</h3>
-                <p style={{ color: '#6b7280', marginTop: '4px' }}>All transactions for bank accounts</p>
-              </div>
-              {bankTransactions.length === 0 ? (
-                <div className="no-data">No bank transactions found</div>
-              ) : (
-                <div className="sa-table-wrapper">
-                  <table className="sa-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Account</th>
-                        <th>Type</th>
-                        <th>Amount</th>
-                        <th>Reference</th>
-                        <th>Description</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bankTransactions.map((transaction, index) => {
-                        const account = cashierAccounts.find(acc => 
-                          (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId)
-                        );
-                        const accountName = account ? (account.Name || account.name) : 'Unknown';
-                        const type = transaction.Type || transaction.type || 'N/A';
-                        const amount = transaction.Amount || transaction.amount || 0;
-                        const isNegative = type === 'withdrawal' || type === 'transfer';
-
-                        return (
-                          <tr key={transaction.ID || transaction.id || index}>
-                            <td>
-                              {transaction.CreatedAt || transaction.createdAt 
-                                ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString()
-                                : 'N/A'}
-                            </td>
-                            <td><span className="sa-cell-title">{accountName}</span></td>
-                            <td>
-                              <span className={`sa-status-pill ${type.toLowerCase()}`}>
-                                {type}
-                              </span>
-                            </td>
-                            <td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>
-                              {isNegative ? '-' : '+'}{amount.toFixed(2)} XOF
-                            </td>
-                            <td>{transaction.Reference || transaction.reference || 'N/A'}</td>
-                            <td>{transaction.Description || transaction.description || 'N/A'}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Owner Balances Tab - owners from backend (same as sales manager) */}
-          {balanceView === 'owner-balances' && (
-            <>
-              {!selectedOwnerForBalance ? (
-                <>
-                  <div style={{ marginBottom: '16px' }}>
-                    <h3>Owner Balances</h3>
-                    <p style={{ color: '#6b7280', marginTop: '4px' }}>Balance per owner (collections minus payments). Owners loaded from backend. Click an owner to view details.</p>
-                  </div>
-                  {ownerBalancesLoading ? (
-                    <div className="loading">Loading owners...</div>
-                  ) : ownerBalancesOwners.length === 0 ? (
-                    <div className="no-data">No owners found. Owners are loaded from the backend (same as Sales Manager).</div>
-                  ) : (() => {
-                    const ownerBalances = ownerBalancesOwners.map(ownerObj => {
-                      const ownerName = ownerObj.Name || ownerObj.name || ownerObj.Landlord || ownerObj.landlord || 'N/A';
-                      const totalCollected = collections
-                        .filter(c => {
-                          const cLandlord = (c.Landlord || c.landlord || '').trim();
-                          return cLandlord && (cLandlord === ownerName || cLandlord.toLowerCase() === ownerName.toLowerCase());
-                        })
-                        .reduce((sum, c) => sum + (c.Amount || c.amount || 0), 0);
-                      const totalPaid = landlordPayments
-                        .filter(p => {
-                          const pLandlord = (p.Landlord || p.landlord || '').trim();
-                          return pLandlord && (pLandlord === ownerName || pLandlord.toLowerCase() === ownerName.toLowerCase());
-                        })
-                        .reduce((sum, p) => sum + (p.NetAmount || p.netAmount || 0), 0);
-                      const balance = totalCollected - totalPaid;
-                      return { owner: ownerName, ownerObj, totalCollected, totalPaid, balance };
-                    });
-                    return (
-                      <div className="sa-table-wrapper">
-                        <table className="sa-table">
-                          <thead>
-                            <tr>
-                              <th>Owner</th>
-                              <th>Total Collected</th>
-                              <th>Total Paid</th>
-                              <th>Balance (Owed)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {ownerBalances.map((row, idx) => (
-                              <tr
-                                key={row.owner || idx}
-                                onClick={() => setSelectedOwnerForBalance(row.owner)}
-                                style={{ cursor: 'pointer' }}
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForBalance(row.owner); } }}
-                              >
-                                <td><span className="sa-cell-title">{row.owner}</span></td>
-                                <td>{row.totalCollected.toFixed(2)} XOF</td>
-                                <td>{row.totalPaid.toFixed(2)} XOF</td>
-                                <td style={{ color: row.balance >= 0 ? '#059669' : '#dc2626', fontWeight: '600' }}>
-                                  {row.balance.toFixed(2)} XOF
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })()}
-                </>
-              ) : (
-                <>
-                  <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button
-                      type="button"
-                      className="sa-outline-button"
-                      onClick={() => setSelectedOwnerForBalance(null)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      <ArrowLeft size={16} />
-                      Back to owners
-                    </button>
-                    <h3 style={{ margin: 0 }}>{selectedOwnerForBalance} – Recent Transactions</h3>
-                  </div>
-                  {(() => {
-                    const owner = selectedOwnerForBalance;
-                    const ownerCollections = collections
-                      .filter(c => (c.Landlord || c.landlord) === owner)
-                      .map(c => ({ ...c, _type: 'collection', _date: c.Date || c.date || c.CreatedAt || c.createdAt }));
-                    const ownerPayments = landlordPayments
-                      .filter(p => (p.Landlord || p.landlord) === owner)
-                      .map(p => ({ ...p, _type: 'payout', _date: p.Date || p.date || p.CreatedAt || p.createdAt }));
-                    const merged = [...ownerCollections, ...ownerPayments]
-                      .sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0))
-                      .slice(0, 50);
-                    if (merged.length === 0) {
-                      return <div className="no-data">No transactions for this owner.</div>;
-                    }
-                    return (
-                      <div className="sa-table-wrapper">
-                        <table className="sa-table">
-                          <thead>
-                            <tr>
-                              <th>Date</th>
-                              <th>Type</th>
-                              <th>Building</th>
-                              <th>Description</th>
-                              <th>Amount</th>
-                              <th>Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {merged.map((item, idx) => {
-                              const isCollection = item._type === 'collection';
-                              const amount = isCollection ? (item.Amount || item.amount || 0) : (item.NetAmount || item.netAmount || 0);
-                              const building = item.Building || item.building || '—';
-                              const desc = isCollection ? (item.ChargeType || item.chargeType || 'Rent') : 'Payout';
-                              const date = item._date ? new Date(item._date).toLocaleDateString() : 'N/A';
-                              const status = item.Status || item.status || (isCollection ? 'Collected' : '—');
-                              return (
-                                <tr key={idx}>
-                                  <td>{date}</td>
-                                  <td>
-                                    <span className={`sa-status-pill ${isCollection ? 'success' : 'info'}`}>
-                                      {isCollection ? 'Collection' : 'Payout'}
-                                    </span>
-                                  </td>
-                                  <td>{building}</td>
-                                  <td>{desc}</td>
-                                  <td style={{ color: isCollection ? '#059669' : '#dc2626', fontWeight: '600' }}>
-                                    {isCollection ? '+' : '-'}{amount.toFixed(2)} XOF
-                                  </td>
-                                  <td>{status}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })()}
-                </>
-              )}
-            </>
-          )}
         </div>
 
         {/* Add Account Modal */}
