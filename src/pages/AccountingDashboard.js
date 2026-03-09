@@ -5428,53 +5428,46 @@ const AccountingDashboard = () => {
 
           {/* Total Balance Summary */}
           <div style={{ 
-            padding: '24px', 
-            marginBottom: '24px', 
+            padding: '12px 16px', 
+            marginBottom: '16px', 
             backgroundColor: '#f0fdf4', 
             borderRadius: '8px',
             border: '1px solid #86efac'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Total Available Balance</p>
-                <p style={{ margin: '8px 0 0 0', fontSize: '2rem', fontWeight: '600', color: '#166534' }}>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.75rem' }}>Total Available Balance</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '1.25rem', fontWeight: '600', color: '#166534' }}>
                   {totalBalance.toFixed(2)} XOF
                 </p>
               </div>
-              <Wallet size={48} style={{ color: '#22c55e' }} />
+              <Wallet size={28} style={{ color: '#22c55e' }} />
             </div>
           </div>
 
           {/* Accounts by Type */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
             {/* Mobile Money Accounts */}
             {accountsByType.mobile_money.length > 0 && (
-              <div className="sa-section-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <Smartphone size={24} style={{ color: '#3b82f6' }} />
-                  <h3 style={{ margin: 0 }}>Mobile Money</h3>
+              <div className="sa-section-card" style={{ padding: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <Smartphone size={18} style={{ color: '#3b82f6' }} />
+                  <h3 style={{ margin: 0, fontSize: '0.875rem' }}>Mobile Money</h3>
                 </div>
                 {accountsByType.mobile_money.map((account, index) => {
                   const balance = account.Balance || account.balance || 0;
                   const name = account.Name || account.name || 'Unnamed';
                   return (
                     <div key={account.ID || account.id || index} style={{ 
-                      padding: '16px', 
-                      marginBottom: '12px', 
+                      padding: '8px', 
+                      marginBottom: '6px', 
                       backgroundColor: '#f9fafb', 
                       borderRadius: '6px',
                       border: '1px solid #e5e7eb'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                        <div>
-                          <p style={{ margin: 0, fontWeight: '600', color: '#1f2937' }}>{name}</p>
-                          {account.Description && (
-                            <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
-                              {account.Description}
-                            </p>
-                          )}
-                        </div>
-                        <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#059669' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '4px' }}>
+                        <p style={{ margin: 0, fontWeight: '600', color: '#1f2937', fontSize: '0.8rem' }}>{name}</p>
+                        <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: '#059669' }}>
                           {balance.toFixed(2)} XOF
                         </p>
                       </div>
@@ -5486,32 +5479,25 @@ const AccountingDashboard = () => {
 
             {/* Cash Register Accounts */}
             {accountsByType.cash_register.length > 0 && (
-              <div className="sa-section-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <Banknote size={24} style={{ color: '#10b981' }} />
-                  <h3 style={{ margin: 0 }}>Cash Register</h3>
+              <div className="sa-section-card" style={{ padding: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <Banknote size={18} style={{ color: '#10b981' }} />
+                  <h3 style={{ margin: 0, fontSize: '0.875rem' }}>Cash Register</h3>
                 </div>
                 {accountsByType.cash_register.map((account, index) => {
                   const balance = account.Balance || account.balance || 0;
                   const name = account.Name || account.name || 'Unnamed';
                   return (
                     <div key={account.ID || account.id || index} style={{ 
-                      padding: '16px', 
-                      marginBottom: '12px', 
+                      padding: '8px', 
+                      marginBottom: '6px', 
                       backgroundColor: '#f9fafb', 
                       borderRadius: '6px',
                       border: '1px solid #e5e7eb'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                        <div>
-                          <p style={{ margin: 0, fontWeight: '600', color: '#1f2937' }}>{name}</p>
-                          {account.Description && (
-                            <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
-                              {account.Description}
-                            </p>
-                          )}
-                        </div>
-                        <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#059669' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '4px' }}>
+                        <p style={{ margin: 0, fontWeight: '600', color: '#1f2937', fontSize: '0.8rem' }}>{name}</p>
+                        <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: '#059669' }}>
                           {balance.toFixed(2)} XOF
                         </p>
                       </div>
@@ -5523,32 +5509,25 @@ const AccountingDashboard = () => {
 
             {/* Bank Accounts */}
             {accountsByType.bank.length > 0 && (
-              <div className="sa-section-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <Building2 size={24} style={{ color: '#8b5cf6' }} />
-                  <h3 style={{ margin: 0 }}>Bank Accounts</h3>
+              <div className="sa-section-card" style={{ padding: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <Building2 size={18} style={{ color: '#8b5cf6' }} />
+                  <h3 style={{ margin: 0, fontSize: '0.875rem' }}>Bank Accounts</h3>
                 </div>
                 {accountsByType.bank.map((account, index) => {
                   const balance = account.Balance || account.balance || 0;
                   const name = account.Name || account.name || 'Unnamed';
                   return (
                     <div key={account.ID || account.id || index} style={{ 
-                      padding: '16px', 
-                      marginBottom: '12px', 
+                      padding: '8px', 
+                      marginBottom: '6px', 
                       backgroundColor: '#f9fafb', 
                       borderRadius: '6px',
                       border: '1px solid #e5e7eb'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                        <div>
-                          <p style={{ margin: 0, fontWeight: '600', color: '#1f2937' }}>{name}</p>
-                          {account.Description && (
-                            <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
-                              {account.Description}
-                            </p>
-                          )}
-                        </div>
-                        <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#059669' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '4px' }}>
+                        <p style={{ margin: 0, fontWeight: '600', color: '#1f2937', fontSize: '0.8rem' }}>{name}</p>
+                        <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: '#059669' }}>
                           {balance.toFixed(2)} XOF
                         </p>
                       </div>
@@ -5560,32 +5539,25 @@ const AccountingDashboard = () => {
 
             {/* Other Accounts */}
             {accountsByType.other.length > 0 && (
-              <div className="sa-section-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <Wallet size={24} style={{ color: '#6b7280' }} />
-                  <h3 style={{ margin: 0 }}>Other Accounts</h3>
+              <div className="sa-section-card" style={{ padding: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <Wallet size={18} style={{ color: '#6b7280' }} />
+                  <h3 style={{ margin: 0, fontSize: '0.875rem' }}>Other Accounts</h3>
                 </div>
                 {accountsByType.other.map((account, index) => {
                   const balance = account.Balance || account.balance || 0;
                   const name = account.Name || account.name || 'Unnamed';
                   return (
                     <div key={account.ID || account.id || index} style={{ 
-                      padding: '16px', 
-                      marginBottom: '12px', 
+                      padding: '8px', 
+                      marginBottom: '6px', 
                       backgroundColor: '#f9fafb', 
                       borderRadius: '6px',
                       border: '1px solid #e5e7eb'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                        <div>
-                          <p style={{ margin: 0, fontWeight: '600', color: '#1f2937' }}>{name}</p>
-                          {account.Description && (
-                            <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
-                              {account.Description}
-                            </p>
-                          )}
-                        </div>
-                        <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#059669' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '4px' }}>
+                        <p style={{ margin: 0, fontWeight: '600', color: '#1f2937', fontSize: '0.8rem' }}>{name}</p>
+                        <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: '#059669' }}>
                           {balance.toFixed(2)} XOF
                         </p>
                       </div>
@@ -5596,52 +5568,45 @@ const AccountingDashboard = () => {
             )}
 
             {/* Agency Balance - commission deducted from tenant payments */}
-            <div className="sa-section-card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <Building2 size={24} style={{ color: '#f59e0b' }} />
-                <h3 style={{ margin: 0 }}>Agency Balance</h3>
+            <div className="sa-section-card" style={{ padding: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Building2 size={18} style={{ color: '#f59e0b' }} />
+                <h3 style={{ margin: 0, fontSize: '0.875rem' }}>Agency Balance</h3>
               </div>
               <div style={{ 
-                padding: '16px', 
+                padding: '10px', 
                 backgroundColor: '#fffbeb', 
                 borderRadius: '6px',
                 border: '1px solid #fde68a'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: '600', color: '#1f2937' }}>Commission from tenant payments</p>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
-                      Percentage deducted per owner, credited to agency
-                    </p>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#b45309' }}>
-                    {(agencyBalance ?? 0).toFixed(2)} XOF
-                  </p>
-                </div>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>Commission from tenant payments</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '1rem', fontWeight: '600', color: '#b45309' }}>
+                  {(agencyBalance ?? 0).toFixed(2)} XOF
+                </p>
               </div>
             </div>
 
             {/* Cash Balance - summary card */}
-            <div className="sa-section-card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <Banknote size={24} style={{ color: '#10b981' }} />
-                <h3 style={{ margin: 0 }}>Cash Balance</h3>
+            <div className="sa-section-card" style={{ padding: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Banknote size={18} style={{ color: '#10b981' }} />
+                <h3 style={{ margin: 0, fontSize: '0.875rem' }}>Cash Balance</h3>
               </div>
-              <div style={{ padding: '16px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #86efac' }}>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Physical Cash</p>
-                <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#166534' }}>{cashBalance.toFixed(2)} XOF</p>
+              <div style={{ padding: '10px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #86efac' }}>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>Physical Cash</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '1rem', fontWeight: 600, color: '#166534' }}>{cashBalance.toFixed(2)} XOF</p>
               </div>
             </div>
 
             {/* Bank Balance - summary card */}
-            <div className="sa-section-card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <Building2 size={24} style={{ color: '#8b5cf6' }} />
-                <h3 style={{ margin: 0 }}>Bank Balance</h3>
+            <div className="sa-section-card" style={{ padding: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Building2 size={18} style={{ color: '#8b5cf6' }} />
+                <h3 style={{ margin: 0, fontSize: '0.875rem' }}>Bank Balance</h3>
               </div>
-              <div style={{ padding: '16px', backgroundColor: '#f0f9ff', borderRadius: '6px', border: '1px solid #93c5fd' }}>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Bank Accounts Total</p>
-                <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#0284c7' }}>{bankBalance.toFixed(2)} XOF</p>
+              <div style={{ padding: '10px', backgroundColor: '#f0f9ff', borderRadius: '6px', border: '1px solid #93c5fd' }}>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>Bank Accounts Total</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '1rem', fontWeight: 600, color: '#0284c7' }}>{bankBalance.toFixed(2)} XOF</p>
               </div>
             </div>
 
