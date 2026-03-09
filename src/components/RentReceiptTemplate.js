@@ -1,5 +1,7 @@
 import React from 'react';
 import './RentReceiptTemplate.css';
+import logoLeft from '../Screenshot 2026-03-09 at 11.34.17.png';
+import logoRight from '../Screenshot 2026-03-09 at 11.34.25.png';
 
 const PAYMENT_METHODS = ['Link', 'Transfer', 'Check', 'OM', 'Wave', 'Cash'];
 
@@ -7,6 +9,7 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
   const amount = data?.Amount ?? data?.amount ?? 0;
   const tenant = data?.Tenant ?? data?.tenant ?? (isCollection ? (data?.Landlord ?? data?.landlord) : null);
   const building = data?.Property ?? data?.property ?? data?.Building ?? data?.building ?? '—';
+  const locative = data?.Unit ?? data?.unit ?? data?.Locative ?? data?.locative ?? '—';
   const method = data?.Method ?? data?.method ?? '—';
   const dateVal = data?.Date ?? data?.date;
   const dateStr = dateVal
@@ -22,50 +25,50 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
 
   const formatAmount = (val) => (Number(val) || 0).toLocaleString('fr-FR');
 
+  const getMethodSpans = () => {
+    const methodLower = (method || '').toLowerCase();
+    return PAYMENT_METHODS.map((m, i) => {
+      const mLower = m.toLowerCase();
+      const isSelected = methodLower.includes(mLower) || (methodLower === 'mobile money' && mLower === 'om') || (methodLower === 'bank transfer' && mLower === 'transfer');
+      return (
+        <span key={m}>
+          {isSelected ? <strong>{m}</strong> : m}
+          {i < PAYMENT_METHODS.length - 1 ? ' | ' : ''}
+        </span>
+      );
+    });
+  };
+
   return (
-    <div className="rent-receipt-template">
-      <div className="rent-receipt-watermark" aria-hidden="true">
-        {[...Array(12)].map((_, i) => (
-          <span key={i}>SAAF IMMO</span>
-        ))}
-      </div>
-
-      <div className="rent-receipt-header">
-        <div className="rent-receipt-logo">
-          <span className="rent-receipt-logo-sili">sili</span>
-          <span className="rent-receipt-logo-saaf">SAAF IMMO</span>
+    <div className="receipt-container">
+      <div className="header">
+        <div className="logo-main">
+          <img src={logoLeft} alt="SAAF IMMO" />
         </div>
-        <div className="rent-receipt-title">RENT RECEIPT</div>
-        <div className="rent-receipt-badge">
-          <span>AGENT IMMOBILIER AGRÉÉ</span>
+        <div className="receipt-title">RENT RECEIPT</div>
+        <div className="logo-badge">
+          <img src={logoRight} alt="Agent Immobilier Agréé" />
         </div>
       </div>
 
-      <div className="rent-receipt-meta">
-        <div className="rent-receipt-ref">REF : {refNum}</div>
-        <div className="rent-receipt-date">Date : {dateStr}</div>
-      </div>
-
-      <div className="rent-receipt-info">
-        <div className="rent-receipt-info-row">
-          <span className="rent-receipt-label">Tenant:</span>
-          <span className="rent-receipt-value">{tenant || '—'}</span>
+      <div className="info-section">
+        <div className="tenant-details">
+          <div>Tenant: {tenant || '................................................................'}</div>
+          <div>Building: {building || '.............................................................'}</div>
+          <div>Locative: {locative || '.............................................................'}</div>
         </div>
-        <div className="rent-receipt-info-row">
-          <span className="rent-receipt-label">Building:</span>
-          <span className="rent-receipt-value">{building || '—'}</span>
-        </div>
-        <div className="rent-receipt-info-row">
-          <span className="rent-receipt-label">Locative:</span>
-          <span className="rent-receipt-value">{data?.Unit ?? data?.unit ?? data?.Locative ?? data?.locative ?? '—'}</span>
+        <div className="ref-date-details">
+          <div>REF : {refNum}</div>
+          <br />
+          <div>Date : {dateStr}</div>
         </div>
       </div>
 
-      <table className="rent-receipt-table">
+      <table>
         <thead>
           <tr>
-            <th>DESIGNATION</th>
-            <th>MONTANT</th>
+            <th className="col-designation">DESIGNATION</th>
+            <th className="col-montant">MONTANT</th>
           </tr>
         </thead>
         <tbody>
@@ -81,58 +84,43 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
             <td>3. Rent price</td>
             <td>{formatAmount(rentPrice)} F-CFA</td>
           </tr>
-          <tr className="rent-receipt-total-row">
-            <td>TOTAL TO BE PAID</td>
+          <tr className="total-row">
+            <td style={{ textAlign: 'center' }}>TOTAL TO BE PAID</td>
             <td>{formatAmount(totalToPay)} F-CFA</td>
           </tr>
-          <tr className="rent-receipt-payment-row">
-            <td>payment</td>
+          <tr className="payment-row">
+            <td style={{ textAlign: 'center' }}>payment</td>
             <td>{formatAmount(paymentAmount)} F-CFA</td>
           </tr>
-          <tr>
+          <tr className="method-row">
             <td>payment method</td>
-            <td className="rent-receipt-methods">
-              {PAYMENT_METHODS.map((m, i) => {
-                const methodLower = (method || '').toLowerCase();
-                const mLower = m.toLowerCase();
-                const isSelected = methodLower.includes(mLower) || (methodLower === 'mobile money' && mLower === 'om') || (methodLower === 'bank transfer' && mLower === 'transfer');
-                return (
-                  <span key={m} className={isSelected ? 'selected' : ''}>
-                    {m}{i < PAYMENT_METHODS.length - 1 ? ' | ' : ''}
-                  </span>
-                );
-              })}
-            </td>
+            <td>{getMethodSpans()}</td>
           </tr>
         </tbody>
       </table>
 
-      <div className="rent-receipt-balance">
-        <span className="rent-receipt-balance-label">Balance after payment</span>
-        <span className="rent-receipt-balance-value">{formatAmount(balanceAfter)} F-CFA</span>
-      </div>
-
-      <div className="rent-receipt-signatures">
-        <div className="rent-receipt-sig">
-          <span>VISA AGENCY</span>
-          <div className="rent-receipt-sig-line" />
-        </div>
-        <div className="rent-receipt-sig">
-          <span>VISA CLIENT</span>
-          <div className="rent-receipt-sig-line" />
+      <div className="balance-container">
+        <div className="balance-label">Balance after payment</div>
+        <div className="balance-value">
+          <span>.......................................................</span>
+          <span>{formatAmount(balanceAfter)} F-CFA</span>
         </div>
       </div>
 
-      <div className="rent-receipt-clauses">
-        <strong>CLAUSES DE RESERVE:</strong> La présente quittance annuelle loue reçu remis à titre d'acompte, ne concerne que la période indiquée et ne présume pas du paiement des quittances antérieures. Elle ne comporte pas renonciation aux droits et actions du propriétaire ni novation dont l'occupant puisse se prévaloir. En cas de révision en cours, les versements quittanciels le sont à titre provisionnel et en compte.
+      <div className="signature-section">
+        <div>VISA AGENCY</div>
+        <div>VISA CLIENT</div>
       </div>
 
-      <div className="rent-receipt-footer">
-        <div>SAAF - 17 BP 1016 Abidjan 17</div>
-        <div>Adresse: Abidjan, Cocody Angré 8 Tranche, Carrefour la Prière. Ilot 43, lot 664, immeuble King Déco, 4ème étage</div>
-        <div>Tel: +225 07 04 77 51 79</div>
-        <div>RCCM: C-ABJ-03-2024-M-33430</div>
-        <div>Email: info@saafimmo.ci</div>
+      <div className="footer">
+        <div className="clauses">
+          CLAUSES DE RESERVE : La présente quittance annule tous reçus remis à titre d'acompte, ne concerne que la période indiquée et ne présume pas du paiement des quittances antérieures. <br />
+          Elle ne comporte pas renonciation aux droits et actions du propriétaire ni novation dont l'occupant puisse se prévaloir. En cas de révision en cours, les versements quittancés le sont à titre provisionnel et en compte.
+        </div>
+        <div className="contact-info">
+          SAAF - 17 BP 1016 Abidjan 17 - Adresse : Abidjan, Cocody Angré 8 Tranche, Carrefour la Prière. Ilot 43, lot 664, immeuble King Déco, 4ème étage <br />
+          Tél: +225 07 04 77 51 79 - RCCM : CI-ABJ-03-2024-M-33430 ; N°CC : 1843184R - Email: info@saafimmo.ci
+        </div>
       </div>
     </div>
   );

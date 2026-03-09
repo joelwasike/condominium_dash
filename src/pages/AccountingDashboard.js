@@ -14,6 +14,7 @@ import { accountingService } from '../services/accountingService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAccountingDemoData } from '../utils/demoData';
+import ReactDOM from 'react-dom/client';
 import RoleLayout from '../components/RoleLayout';
 import RentReceiptTemplate from '../components/RentReceiptTemplate';
 import SettingsPage from './SettingsPage';
@@ -21,6 +22,7 @@ import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 import './AccountingDashboard.css';
 import jsPDF from 'jspdf';
+import html2pdf from 'html2pdf.js';
 
 const AccountingDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -989,154 +991,35 @@ const AccountingDashboard = () => {
     return num.toString();
   };
 
-  // Print payment/collection receipt as PDF (SAAF IMMO RENT RECEIPT template)
-  const printPaymentReceipt = (item, isCollectionParam) => {
+  // Print payment/collection receipt as PDF (SAAF IMMO RENT RECEIPT template - same HTML as view)
+  const printPaymentReceipt = async (item, isCollectionParam) => {
     if (!item) return;
     const isCollection = isCollectionParam ?? (item.Building !== undefined);
-    const pdf = new jsPDF();
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    let yPos = 18;
-
-    const amount = item.Amount?.toFixed(2) ? parseFloat(item.Amount) : item.amount || 0;
-    const tenant = item.Tenant || item.tenant || (isCollection ? (item.Landlord || item.landlord) : null);
-    const building = item.Property || item.property || item.Building || item.building || '-';
-    const method = item.Method || item.method || '-';
-    const dateVal = item.Date || item.date;
-    const dateStr = dateVal ? new Date(dateVal).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const refNum = item.ReceiptNumber || item.receiptNumber || item.Reference || item.reference || `SAAF/${item.ID || item.id || '000'}/000`;
-    const rentDue = item.RentDue ?? item.rentDue ?? 0;
-    const rentPaidAdvance = item.RentPaidAdvance ?? item.rentPaidAdvance ?? 0;
-    const rentPrice = amount;
-    const totalToPay = rentDue + rentPrice - rentPaidAdvance;
-    const paymentAmount = amount;
-    const balanceAfter = Math.max(0, totalToPay - paymentAmount);
-    const fmt = (v) => (Number(v) || 0).toLocaleString('fr-FR');
-
-    // Header - Logo
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(30, 64, 175);
-    pdf.text('sili', 20, yPos);
-    pdf.setFontSize(18);
-    pdf.text('SAAF IMMO', 20, yPos + 7);
-
-    // RENT RECEIPT banner (centered)
-    pdf.setFillColor(30, 64, 175);
-    pdf.rect(0, yPos - 5, pageWidth, 14, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(14);
-    pdf.text('RENT RECEIPT', pageWidth / 2, yPos + 4, { align: 'center' });
-    pdf.setTextColor(0, 0, 0);
-
-    // Agent badge
-    pdf.setDrawColor(124, 58, 237);
-    pdf.setLineWidth(0.5);
-    pdf.rect(pageWidth - 55, yPos - 2, 50, 10);
-    pdf.setFontSize(8);
-    pdf.setTextColor(124, 58, 237);
-    pdf.text('AGENT IMMOBILIER', pageWidth - 52, yPos + 3);
-    pdf.text('AGREÉ', pageWidth - 52, yPos + 7);
-    pdf.setTextColor(0, 0, 0);
-
-    yPos += 22;
-
-    // REF and Date
-    pdf.setFontSize(10);
-    pdf.text(`REF : ${refNum}`, pageWidth - 20, yPos, { align: 'right' });
-    pdf.text(`Date : ${dateStr}`, pageWidth - 20, yPos + 6, { align: 'right' });
-    yPos += 18;
-
-    // Tenant, Building, Locative
-    pdf.setFontSize(11);
-    pdf.text('Tenant:', 20, yPos);
-    pdf.text(tenant || '-', 50, yPos);
-    pdf.line(50, yPos - 2, pageWidth - 20, yPos - 2);
-    yPos += 10;
-    pdf.text('Building:', 20, yPos);
-    pdf.text(building || '-', 50, yPos);
-    pdf.line(50, yPos - 2, pageWidth - 20, yPos - 2);
-    yPos += 10;
-    pdf.text('Locative:', 20, yPos);
-    pdf.text(item.Unit || item.unit || item.Locative || item.locative || '-', 50, yPos);
-    pdf.line(50, yPos - 2, pageWidth - 20, yPos - 2);
-    yPos += 16;
-
-    // Table header
-    pdf.setFillColor(30, 64, 175);
-    pdf.rect(20, yPos - 3, pageWidth - 40, 10, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('DESIGNATION', 24, yPos + 3);
-    pdf.text('MONTANT', pageWidth - 24, yPos + 3, { align: 'right' });
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('helvetica', 'normal');
-    yPos += 12;
-
-    pdf.setFontSize(10);
-    pdf.text('1. Rent due (Total unpaid)', 24, yPos);
-    pdf.text(`${fmt(rentDue)} F-CFA`, pageWidth - 24, yPos, { align: 'right' });
-    yPos += 7;
-    pdf.text('2. Rent paid in advance', 24, yPos);
-    pdf.text(`${fmt(rentPaidAdvance)} F-CFA`, pageWidth - 24, yPos, { align: 'right' });
-    yPos += 7;
-    pdf.text('3. Rent price', 24, yPos);
-    pdf.text(`${fmt(rentPrice)} F-CFA`, pageWidth - 24, yPos, { align: 'right' });
-    yPos += 7;
-    pdf.setFillColor(243, 244, 246);
-    pdf.rect(20, yPos - 3, pageWidth - 40, 8, 'F');
-    pdf.text('TOTAL TO BE PAID', 24, yPos + 3);
-    pdf.text(`${fmt(totalToPay)} F-CFA`, pageWidth - 24, yPos + 3, { align: 'right' });
-    yPos += 10;
-    pdf.rect(20, yPos - 3, pageWidth - 40, 8, 'F');
-    pdf.text('payment', 24, yPos + 3);
-    pdf.text(`${fmt(paymentAmount)} F-CFA`, pageWidth - 24, yPos + 3, { align: 'right' });
-    yPos += 10;
-    pdf.text('payment method', 24, yPos);
-    pdf.text('Link | Transfer | Check | OM | Wave | Cash', pageWidth - 24, yPos, { align: 'right' });
-    yPos += 14;
-
-    // Balance after payment (red banner)
-    pdf.setFillColor(220, 38, 38);
-    pdf.rect(20, yPos - 3, pageWidth - 40, 10, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Balance after payment', 24, yPos + 4);
-    pdf.text(`${fmt(balanceAfter)} F-CFA`, pageWidth - 24, yPos + 4, { align: 'right' });
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('helvetica', 'normal');
-    yPos += 22;
-
-    // Signatures
-    pdf.setFontSize(10);
-    pdf.text('VISA AGENCY', 24, yPos);
-    pdf.text('VISA CLIENT', pageWidth - 24, yPos, { align: 'right' });
-    yPos += 4;
-    pdf.line(24, yPos, 80, yPos);
-    pdf.line(pageWidth - 80, yPos, pageWidth - 24, yPos);
-    yPos += 12;
-
-    // CLAUSES DE RESERVE
-    pdf.setFontSize(8);
-    pdf.text('CLAUSES DE RESERVE: La présente quittance annuelle loue reçu remis à titre d\'acompte, ne concerne que la période indiquée et ne présume pas du paiement des quittances antérieures. Elle ne comporte pas renonciation aux droits et actions du propriétaire ni novation dont l\'occupant puisse se prévaloir. En cas de révision en cours, les versements quittanciels le sont à titre provisionnel et en compte.', 20, yPos, { maxWidth: pageWidth - 40 });
-    yPos += 25;
-
-    // Footer
-    pdf.setFontSize(9);
-    pdf.text('SAAF - 17 BP 1016 Abidjan 17', 20, yPos);
-    yPos += 5;
-    pdf.text('Adresse: Abidjan, Cocody Angré 8 Tranche, Carrefour la Prière. Ilot 43, lot 664, immeuble King Déco, 4ème étage', 20, yPos);
-    yPos += 5;
-    pdf.text('Tel: +225 07 04 77 51 79', 20, yPos);
-    yPos += 5;
-    pdf.text('RCCM: C-ABJ-03-2024-M-33430', 20, yPos);
-    yPos += 5;
-    pdf.text('Email: info@saafimmo.ci', 20, yPos);
-
-    const fileName = `rent-receipt-${item.ID || item.id || Date.now()}.pdf`;
-    pdf.save(fileName);
-    addNotification('Receipt downloaded successfully', 'success');
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:#fff;';
+    document.body.appendChild(container);
+    const root = ReactDOM.createRoot(container);
+    root.render(
+      <RentReceiptTemplate data={item} isCollection={isCollection} />
+    );
+    try {
+      await new Promise(r => setTimeout(r, 600));
+      const opt = {
+        margin: 10,
+        filename: `rent-receipt-${item.ID || item.id || Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      await html2pdf().set(opt).from(container).save();
+      addNotification('Receipt downloaded successfully', 'success');
+    } catch (err) {
+      console.error('Failed to generate receipt PDF:', err);
+      addNotification('Failed to download receipt', 'error');
+    } finally {
+      root.unmount();
+      document.body.removeChild(container);
+    }
   };
 
   // Print deposit refund receipt as PDF (SAAF IMMO format)
@@ -7451,7 +7334,7 @@ const AccountingDashboard = () => {
               <h3>{selectedItemForView.type === 'collection' ? 'View Collection' : 'View Payment'}</h3>
               <button className="modal-close" onClick={() => setShowPaymentViewModal(false)}>×</button>
             </div>
-            <div className="modal-body" style={{ padding: 0, overflow: 'auto', maxHeight: '85vh' }}>
+            <div className="modal-body" style={{ padding: '20px', overflow: 'auto', maxHeight: '85vh', backgroundColor: '#f0f0f0' }}>
               <RentReceiptTemplate
                 data={selectedItemForView.data}
                 isCollection={selectedItemForView.type === 'collection'}

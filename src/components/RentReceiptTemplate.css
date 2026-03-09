@@ -1,237 +1,187 @@
-/* Rent Receipt Template - SAAF IMMO */
-.rent-receipt-template {
-  position: relative;
-  background: #fff;
-  padding: 32px 40px 40px;
-  max-width: 210mm;
+/* Rent Receipt - SAAF IMMO - matches user-provided template */
+:root {
+  --primary-blue: #00008B;
+  --light-blue: #E8F0FE;
+  --border-color: #333;
+  --red-alert: #FF0000;
+}
+
+.receipt-container {
+  width: 210mm;
+  min-height: 297mm;
+  background-color: white;
   margin: 0 auto;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: 12px;
-  color: #1a1a1a;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.rent-receipt-watermark {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  overflow: hidden;
-  opacity: 0.06;
-  font-size: 48px;
-  font-weight: bold;
-  color: #1e40af;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  align-content: space-around;
   padding: 40px;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.rent-receipt-watermark span {
-  text-align: center;
-  transform: rotate(-15deg);
+.receipt-container::after {
+  content: "SAAF IMMO";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  font-size: 150px;
+  color: rgba(0, 0, 0, 0.03);
+  pointer-events: none;
+  z-index: 0;
+  white-space: nowrap;
 }
 
-.rent-receipt-header {
+/* Header Section */
+.receipt-container .header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 20px;
   position: relative;
   z-index: 1;
 }
 
-.rent-receipt-logo {
+.receipt-container .logo-main img {
+  width: 120px;
+  height: auto;
+  display: block;
+}
+
+.receipt-container .receipt-title {
+  background-color: var(--primary-blue);
+  color: white;
+  padding: 10px 80px;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 5px;
+  border-radius: 2px;
+}
+
+.receipt-container .logo-badge img {
+  width: 80px;
+  height: auto;
+  display: block;
+}
+
+/* Tenant Info Section */
+.receipt-container .info-section {
   display: flex;
-  flex-direction: column;
-}
-
-.rent-receipt-logo-sili {
-  font-size: 16px;
+  justify-content: space-between;
+  margin-top: 20px;
   font-weight: bold;
-  color: #1e40af;
-  letter-spacing: 0.5px;
-}
-
-.rent-receipt-logo-saaf {
-  font-size: 22px;
-  font-weight: bold;
-  color: #1e40af;
-  margin-top: 2px;
-}
-
-.rent-receipt-title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1e40af;
-  color: #fff;
-  padding: 10px 40px;
-  font-size: 18px;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-.rent-receipt-badge {
-  border: 2px solid #7c3aed;
-  padding: 6px 12px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #7c3aed;
-  letter-spacing: 0.5px;
-}
-
-.rent-receipt-meta {
-  display: flex;
-  justify-content: flex-end;
-  gap: 24px;
-  margin-bottom: 24px;
   position: relative;
   z-index: 1;
 }
 
-.rent-receipt-ref,
-.rent-receipt-date {
-  font-size: 11px;
-  color: #374151;
+.receipt-container .tenant-details div {
+  margin-bottom: 10px;
 }
 
-.rent-receipt-info {
-  margin-bottom: 24px;
-  position: relative;
-  z-index: 1;
+.receipt-container .ref-date-details {
+  text-align: right;
 }
 
-.rent-receipt-info-row {
-  margin-bottom: 8px;
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.rent-receipt-label {
-  font-weight: 600;
-  min-width: 80px;
-}
-
-.rent-receipt-value {
-  flex: 1;
-  border-bottom: 1px solid #9ca3af;
-  padding-bottom: 2px;
-}
-
-.rent-receipt-table {
+/* Table Styles */
+.receipt-container table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 20px;
+  margin-top: 20px;
   position: relative;
   z-index: 1;
 }
 
-.rent-receipt-table th {
-  background: #1e40af;
-  color: #fff;
-  padding: 12px 16px;
+.receipt-container th {
+  background-color: var(--primary-blue);
+  color: white;
+  padding: 12px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
+  text-transform: uppercase;
 }
 
-.rent-receipt-table th:last-child {
+.receipt-container td {
+  border: 1px solid var(--border-color);
+  padding: 10px;
+}
+
+.receipt-container .col-designation {
+  width: 60%;
+}
+
+.receipt-container .col-montant {
+  width: 40%;
   text-align: right;
 }
 
-.rent-receipt-table td {
-  padding: 10px 16px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.rent-receipt-table td:last-child {
-  text-align: right;
-  font-weight: 500;
-}
-
-.rent-receipt-total-row td,
-.rent-receipt-payment-row td {
-  background: #f3f4f6;
-  font-weight: 600;
-}
-
-.rent-receipt-methods {
-  font-weight: 400 !important;
-  font-size: 11px;
-}
-
-.rent-receipt-methods .selected {
-  font-weight: 700;
-  color: #1e40af;
-}
-
-.rent-receipt-balance {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #dc2626;
-  color: #fff;
-  padding: 12px 20px;
-  margin-bottom: 28px;
+.receipt-container .total-row {
   font-weight: bold;
-  font-size: 14px;
-  position: relative;
-  z-index: 1;
 }
 
-.rent-receipt-balance-value {
-  font-size: 16px;
+.receipt-container .payment-row {
+  background-color: #A9A9A9;
+  font-weight: bold;
 }
 
-.rent-receipt-signatures {
+.receipt-container .method-row td {
+  text-align: center;
+  font-size: 0.9em;
+}
+
+/* Balance Section */
+.receipt-container .balance-container {
   display: flex;
-  justify-content: space-between;
-  gap: 60px;
-  margin-bottom: 28px;
+  margin-top: 20px;
+  border: 2px solid black;
   position: relative;
   z-index: 1;
 }
 
-.rent-receipt-sig {
-  flex: 1;
+.receipt-container .balance-label {
+  background-color: var(--red-alert);
+  color: white;
+  padding: 10px;
+  width: 40%;
+  font-weight: bold;
   text-align: center;
 }
 
-.rent-receipt-sig span {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  margin-bottom: 8px;
+.receipt-container .balance-value {
+  width: 60%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  font-weight: bold;
+}
+
+/* Signature Section */
+.receipt-container .signature-section {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 40px;
+  font-weight: bold;
   text-decoration: underline;
+  position: relative;
+  z-index: 1;
 }
 
-.rent-receipt-sig-line {
-  height: 40px;
-  border-bottom: 1px solid #374151;
-}
-
-.rent-receipt-clauses {
+/* Footer Section */
+.receipt-container .footer {
+  margin-top: 50px;
   font-size: 9px;
-  line-height: 1.5;
-  color: #4b5563;
-  margin-bottom: 24px;
+  text-align: center;
+  line-height: 1.4;
+  color: #333;
   position: relative;
   z-index: 1;
 }
 
-.rent-receipt-footer {
-  font-size: 10px;
-  color: #6b7280;
-  line-height: 1.6;
-  position: relative;
-  z-index: 1;
+.receipt-container .clauses {
+  font-style: italic;
+  margin-bottom: 15px;
+  text-align: justify;
 }
 
-.rent-receipt-footer div {
-  margin-bottom: 2px;
+.receipt-container .contact-info {
+  border-top: 1px solid #ccc;
+  padding-top: 10px;
 }
