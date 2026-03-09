@@ -992,33 +992,38 @@ const AccountingDashboard = () => {
   };
 
   // Print payment/collection receipt as PDF (SAAF IMMO RENT RECEIPT template - same HTML as view)
+  // html2canvas requires element to be in viewport - render in visible overlay, capture, then remove
   const printPaymentReceipt = async (item, isCollectionParam) => {
     if (!item) return;
     const isCollection = isCollectionParam ?? (item.Building !== undefined);
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f0f0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;';
+    document.body.appendChild(overlay);
     const container = document.createElement('div');
-    container.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:#fff;';
-    document.body.appendChild(container);
+    overlay.appendChild(container);
     const root = ReactDOM.createRoot(container);
     root.render(
       <RentReceiptTemplate data={item} isCollection={isCollection} />
     );
     try {
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 800));
+      const receiptEl = container.querySelector('.receipt-container') || container.firstChild;
+      if (!receiptEl) throw new Error('Receipt element not found');
       const opt = {
         margin: 10,
         filename: `rent-receipt-${item.ID || item.id || Date.now()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
-      await html2pdf().set(opt).from(container).save();
+      await html2pdf().set(opt).from(receiptEl).save();
       addNotification('Receipt downloaded successfully', 'success');
     } catch (err) {
       console.error('Failed to generate receipt PDF:', err);
       addNotification('Failed to download receipt', 'error');
     } finally {
       root.unmount();
-      document.body.removeChild(container);
+      document.body.removeChild(overlay);
     }
   };
 
