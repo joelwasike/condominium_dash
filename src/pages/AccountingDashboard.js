@@ -1449,29 +1449,6 @@ const AccountingDashboard = () => {
           </div>
         </div>
 
-        <div className="sa-section-card" style={{ marginTop: '24px' }}>
-          <div className="sa-section-header">
-            <h3>{t('accounting.quickActions')}</h3>
-            <p>Manage your financial operations and view key metrics.</p>
-          </div>
-          <div style={{ padding: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('payments')}>
-                <p className="sa-metric-label">{t('accounting.pendingPayments')}</p>
-                <p className="sa-metric-value" style={{ color: '#dc2626' }}>
-                  {overviewData ? `${(overviewData.pendingRentAmount || 0).toFixed(2)} XOF` : '0 XOF'}
-                </p>
-              </div>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('expenses')}>
-                <p className="sa-metric-label">{t('accounting.totalExpenses')} ({t('dashboard.thisMonth')})</p>
-                <p className="sa-metric-value">
-                  {overviewData ? `${(overviewData.totalExpensesThisMonth || 0).toFixed(2)} XOF` : '0 XOF'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
     );
   };
@@ -1537,22 +1514,18 @@ const AccountingDashboard = () => {
           <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Collected Rents</p>
             <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#059669' }}>{collected.toFixed(2)} XOF</p>
-            <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>e.g. 2 tenants paid 200k + 250k = 450,000 XOF</p>
           </div>
           <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Expected Rent This Month</p>
             <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#1e40af' }}>{expected.toFixed(2)} XOF</p>
-            <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>e.g. 3 tenants: 200k + 250k + 300k = 750,000 XOF</p>
           </div>
           <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Paid Rents</p>
             <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#059669' }}>{paid.toFixed(2)} XOF</p>
-            <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>e.g. amount already received from tenants</p>
           </div>
           <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Unpaid Rents</p>
             <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#dc2626' }}>{unpaid.toFixed(2)} XOF</p>
-            <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>e.g. 750,000 − 450,000 = 300,000 XOF</p>
           </div>
         </div>
 
