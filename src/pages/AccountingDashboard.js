@@ -1010,7 +1010,7 @@ const AccountingDashboard = () => {
       const receiptEl = container.querySelector('.receipt-container') || container.firstChild;
       if (!receiptEl) throw new Error('Receipt element not found');
       const opt = {
-        margin: 10,
+        margin: 0,
         filename: `rent-receipt-${item.ID || item.id || Date.now()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
