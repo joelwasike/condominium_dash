@@ -3065,7 +3065,9 @@ const AccountingDashboard = () => {
                     setLoading(true);
                     await accountingService.recordDepositPayment({
                       ...depositPaymentForm,
-                      monthlyRent: parseFloat(depositPaymentForm.monthlyRent)
+                      monthlyRent: parseFloat(depositPaymentForm.monthlyRent),
+                      amount: parseFloat(depositPaymentForm.monthlyRent) * 4.5,
+                      monthsMultiplier: 4.5
                     });
                     addNotification('Security deposit payment recorded successfully!', 'success');
                     setShowDepositPaymentModal(false);
@@ -3123,9 +3125,7 @@ const AccountingDashboard = () => {
                       <option value="company">Company</option>
                     </select>
                     <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>
-                      {depositPaymentForm.tenantType === 'company' 
-                        ? 'Company: 3 months deposit for apartments, 5 months for houses'
-                        : 'Individual: 2 months deposit for apartments, 5 months for houses'}
+                      4.5 months deposit for all properties
                     </small>
                   </div>
 
@@ -3142,13 +3142,7 @@ const AccountingDashboard = () => {
                     />
                     {depositPaymentForm.monthlyRent && (
                       <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>
-                        Deposit Amount: {
-                          (parseFloat(depositPaymentForm.monthlyRent) * 
-                          (depositPaymentForm.tenantType === 'company' ? 3 : 
-                           depositPaymentForm.property.toLowerCase().includes('house') || 
-                           depositPaymentForm.property.toLowerCase().includes('villa') ? 5 : 2)
-                          ).toFixed(2)
-                        } XOF
+                        Deposit Amount: {(parseFloat(depositPaymentForm.monthlyRent) * 4.5).toFixed(2)} XOF
                       </small>
                     )}
                   </div>
@@ -3266,7 +3260,7 @@ const AccountingDashboard = () => {
                           onClick={async () => {
                             try {
                               setLoading(true);
-                              const monthlyRent = depositAmt / 2;
+                              const monthlyRent = depositAmt / 4.5;
                               const depositRes = await accountingService.recordDepositPayment({
                                 tenant: processDepositItem.tenant,
                                 property: processDepositItem.property,
@@ -6771,11 +6765,14 @@ const AccountingDashboard = () => {
                   e.preventDefault();
                   try {
                     setLoading(true);
+                    const monthlyRent = parseFloat(collectionPaymentForm.monthlyRent || '0');
                     const depositData = {
                       tenant: collectionPaymentForm.tenant,
                       property: collectionPaymentForm.property,
                       tenantType: collectionPaymentForm.tenantType,
-                      monthlyRent: parseFloat(collectionPaymentForm.monthlyRent || '0'),
+                      monthlyRent,
+                      amount: monthlyRent * 4.5,
+                      monthsMultiplier: 4.5,
                       paymentMethod: collectionPaymentForm.paymentMethod,
                     };
 
@@ -6787,7 +6784,7 @@ const AccountingDashboard = () => {
                       await accountingService.recordCollection({
                         building: collectionPaymentForm.property,
                         landlord: collectionPaymentForm.landlord || 'N/A',
-                        amount: deposit.deposit?.Amount || deposit.amount || parseFloat(collectionPaymentForm.monthlyRent || '0') * (collectionPaymentForm.tenantType === 'company' ? 3 : collectionPaymentForm.property.toLowerCase().includes('house') || collectionPaymentForm.property.toLowerCase().includes('villa') ? 5 : 2),
+                        amount: deposit.deposit?.Amount || deposit.amount || parseFloat(collectionPaymentForm.monthlyRent || '0') * 4.5,
                         chargeType: 'Deposit',
                         status: 'Collected',
                       });
@@ -6889,9 +6886,7 @@ const AccountingDashboard = () => {
                       <option value="company">Company</option>
                     </select>
                     <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>
-                      {collectionPaymentForm.tenantType === 'company' 
-                        ? 'Deposit: 3 months rent for apartments, 5 months for houses'
-                        : 'Deposit: 2 months rent for apartments, 5 months for houses'}
+                      Deposit: 4.5 months rent for all properties
                     </small>
                   </div>
                   <div className="form-group">
@@ -6906,13 +6901,9 @@ const AccountingDashboard = () => {
                       required
                       placeholder="Enter monthly rent amount"
                     />
-                    {collectionPaymentForm.monthlyRent && (
+{collectionPaymentForm.monthlyRent && (
                       <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>
-                        Deposit Amount: {(parseFloat(collectionPaymentForm.monthlyRent) * 
-                          (collectionPaymentForm.tenantType === 'company' ? 3 : 
-                           collectionPaymentForm.property.toLowerCase().includes('house') || 
-                           collectionPaymentForm.property.toLowerCase().includes('villa') ? 5 : 2)
-                        ).toFixed(2)} XOF
+                        Deposit Amount: {(parseFloat(collectionPaymentForm.monthlyRent) * 4.5).toFixed(2)} XOF
                       </small>
                     )}
                   </div>
