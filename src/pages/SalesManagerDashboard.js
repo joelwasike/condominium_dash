@@ -4132,19 +4132,6 @@ const SalesManagerDashboard = () => {
             <FileSpreadsheet size={16} style={{ marginRight: '4px' }} />
             Import from Excel
           </button>
-          <button
-            type="button"
-            className="sa-primary-cta secondary"
-            style={{ marginLeft: '8px' }}
-            onClick={() => {
-              setBulkImportTab('tenants');
-              setBulkImportFile(null);
-              setShowBulkImportModal(true);
-            }}
-          >
-            <Download size={16} style={{ marginRight: '4px' }} />
-            Bulk Import
-          </button>
           <button className="sa-sort-button">Sort: Creation Date</button>
           <button className="sa-date-button">
             {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}

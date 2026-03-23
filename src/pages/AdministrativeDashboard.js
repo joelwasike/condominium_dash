@@ -23,7 +23,8 @@ import {
   FileCheck,
   History,
   LogOut,
-  ClipboardList
+  ClipboardList,
+  FileSpreadsheet
 } from 'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
@@ -31,6 +32,7 @@ import Modal from '../components/Modal';
 import '../components/RoleLayout.css';
 import './AdministrativeDashboard.css';
 import { adminService } from '../services/adminService';
+import { salesManagerService } from '../services/salesManagerService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAdministrativeDemoData } from '../utils/demoData';
@@ -135,6 +137,10 @@ const AdministrativeDashboard = () => {
   const [checklistDocsLoading, setChecklistDocsLoading] = useState(false);
   const [clientStatusFilter, setClientStatusFilter] = useState(''); // 'in-progress', 'accepted', 'refused'
   const [clientSearchText, setClientSearchText] = useState('');
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [bulkImportTab, setBulkImportTab] = useState('clients'); // 'properties' | 'clients'
+  const [bulkImportFile, setBulkImportFile] = useState(null);
+  const [bulkImportLoading, setBulkImportLoading] = useState(false);
   const [leaseSearchText, setLeaseSearchText] = useState('');
   const [showEditLeaseModal, setShowEditLeaseModal] = useState(false);
   const [editingLease, setEditingLease] = useState(null);
@@ -2485,6 +2491,275 @@ const AdministrativeDashboard = () => {
     );
   };
 
+  const downloadBlob = (content, filename) => {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadClientsExampleCsv = () => {
+    const escapeCsv = (v) => {
+      const s = String(v ?? '').trim();
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const headers = ['Type', 'Name', 'Email', 'Phone', 'Property', 'CompanyName', 'RegistrationNumber', 'ContactPerson', 'Address'];
+    const rows = [
+      ['individual', 'Jane Doe', 'jane@example.com', '+2250700000000', '123 Main St', '', '', '', ''],
+      ['company', 'Acme Corp', 'contact@acme.com', '+2250700000001', '456 Oak Ave', 'Acme Corp', 'RC-12345', 'John Manager', '10 Business St']
+    ];
+    const csv = [headers.join(','), ...rows.map(r => r.map(escapeCsv).join(','))].join('\n') + '\n';
+    downloadBlob(csv, 'clients_import_example.csv');
+  };
+
+  const downloadPropertiesExampleCsv = () => {
+    const escapeCsv = (v) => {
+      const s = String(v ?? '').trim();
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const headers = ['Address', 'Type', 'PropertyType', 'BuildingType', 'Status', 'NumberOfUnits', 'Rent', 'Bedrooms', 'Bathrooms', 'Urgency', 'LandlordId', 'UnitNumbers', 'UnitRents'];
+    const rows = [
+      ['123 Main St', 'House', 'For Rent', '', 'Vacant', '1', '150000', '3', '2', 'normal', '', '', ''],
+      ['456 Oak Ave', 'Apartment', 'For Rent', 'T2', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']
+    ];
+    const csv = [headers.join(','), ...rows.map(r => r.map(escapeCsv).join(','))].join('\n') + '\n';
+    downloadBlob(csv, 'properties_import_example.csv');
+  };
+
+  const downloadFullImportExampleCsv = () => {
+    const escapeCsv = (v) => {
+      const s = String(v ?? '').trim();
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const propHeaders = ['Address', 'Type', 'PropertyType', 'BuildingType', 'Status', 'NumberOfUnits', 'Rent', 'Bedrooms', 'Bathrooms', 'Urgency', 'LandlordId', 'UnitNumbers', 'UnitRents'];
+    const propRows = [
+      ['123 Main St', 'House', 'For Rent', '', 'Vacant', '1', '150000', '3', '2', 'normal', '', '', ''],
+      ['456 Oak Ave', 'Apartment', 'For Rent', 'T2', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']
+    ];
+    const clientHeaders = ['Type', 'Name', 'Email', 'Phone', 'Property', 'CompanyName', 'RegistrationNumber', 'ContactPerson', 'Address'];
+    const clientRows = [
+      ['individual', 'Jane Doe', 'jane@example.com', '+2250700000000', '123 Main St', '', '', '', '']
+    ];
+    const sections = [
+      '[PROPERTIES]',
+      propHeaders.join(','),
+      ...propRows.map(r => r.map(escapeCsv).join(',')),
+      '',
+      '[CLIENTS]',
+      clientHeaders.join(','),
+      ...clientRows.map(r => r.map(escapeCsv).join(','))
+    ];
+    downloadBlob(sections.join('\n') + '\n', 'full_import_example.csv');
+  };
+
+  const parseCsvWithSections = (text) => {
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const result = { properties: [], clients: [] };
+    let currentSection = null;
+    let headers = null;
+    const sectionMarkers = { '[PROPERTIES]': 'properties', '[CLIENTS]': 'clients', '[TENANTS]': 'clients' };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      if (sectionMarkers[trimmed]) {
+        currentSection = sectionMarkers[trimmed];
+        headers = null;
+        continue;
+      }
+      if (!currentSection) continue;
+      const parseRow = (raw) => {
+        const row = [];
+        let val = '';
+        let inQuotes = false;
+        for (let j = 0; j < raw.length; j++) {
+          const c = raw[j];
+          if (c === '"') {
+            if (inQuotes && raw[j + 1] === '"') { val += '"'; j++; }
+            else inQuotes = !inQuotes;
+          } else if ((c === ',' && !inQuotes) || (c === '\n' && !inQuotes)) {
+            row.push(val.trim());
+            val = '';
+            if (c === '\n') break;
+          } else val += c;
+        }
+        if (val !== undefined) row.push(val.trim());
+        return row;
+      };
+      const cells = parseRow(line);
+      if (cells.length === 0 || cells.every(c => !c)) continue;
+      if (!headers) {
+        headers = cells.map(c => (c || '').trim());
+        continue;
+      }
+      const obj = {};
+      headers.forEach((h, idx) => { if (h) obj[h] = (cells[idx] ?? '').trim(); });
+      if (currentSection === 'properties' && obj.Address) result.properties.push(obj);
+      if (currentSection === 'clients' && (obj.Name || obj.Email)) result.clients.push(obj);
+    }
+    return result;
+  };
+
+  const handleBulkImportProperties = async (file) => {
+    const text = await file.text();
+    let rows = [];
+    if (text.includes('[PROPERTIES]') || text.includes('[CLIENTS]')) {
+      rows = parseCsvWithSections(text).properties;
+    } else {
+      const parseCsvLine = (line) => {
+        const out = []; let val = ''; let inQ = false;
+        for (let j = 0; j < line.length; j++) {
+          const c = line[j];
+          if (c === '"') { if (inQ && line[j + 1] === '"') { val += '"'; j++; } else inQ = !inQ; }
+          else if (c === ',' && !inQ) { out.push(val.trim().replace(/^"|"$/g, '')); val = ''; }
+          else val += c;
+        }
+        out.push(val.trim().replace(/^"|"$/g, ''));
+        return out;
+      };
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const headers = parseCsvLine(lines[0] || '').map(h => h.trim());
+      for (let i = 1; i < lines.length; i++) {
+        const cells = parseCsvLine(lines[i]);
+        const obj = {}; headers.forEach((h, idx) => { if (h) obj[h] = (cells[idx] ?? '').trim(); });
+        if (obj.Address) rows.push(obj);
+      }
+    }
+    if (rows.length === 0) return { success: 0, failed: 0 };
+    let success = 0, failed = 0;
+    for (const r of rows) {
+      try {
+        const numUnits = Math.max(1, parseInt(r.NumberOfUnits, 10) || 1);
+        let units = [];
+        if (numUnits > 1 && (r.UnitNumbers || r.UnitRents)) {
+          const unitNums = (r.UnitNumbers || '').split('|').map(s => s.trim()).filter(Boolean);
+          const unitRents = (r.UnitRents || '').split('|').map(s => parseFloat(s) || 0);
+          for (let u = 0; u < numUnits; u++) {
+            units.push({ unitNumber: unitNums[u] || `Unit${u + 1}`, rent: unitRents[u] ?? 0, bedrooms: parseInt(r.Bedrooms, 10) || 0, bathrooms: parseFloat(r.Bathrooms) || 1, status: 'Vacant', tenant: null });
+          }
+        } else {
+          const rent = parseFloat(r.Rent) || 0;
+          units = [{ unitNumber: '1', rent, bedrooms: parseInt(r.Bedrooms, 10) || 0, bathrooms: parseFloat(r.Bathrooms) || 1, status: (r.Status || 'Vacant').trim() === 'Occupied' ? 'Occupied' : 'Vacant', tenant: null }];
+        }
+        const payload = {
+          address: (r.Address || '').trim(),
+          type: (r.Type || 'House').trim(),
+          propertyType: (r.PropertyType || 'For Rent').trim(),
+          buildingType: (r.BuildingType || '').trim() || null,
+          status: (r.Status || 'Vacant').trim() === 'Occupied' ? 'Occupied' : 'Vacant',
+          numberOfUnits: numUnits,
+          rent: numUnits === 1 ? (parseFloat(r.Rent) || 0) : 0,
+          bedrooms: parseInt(r.Bedrooms, 10) || undefined,
+          bathrooms: parseFloat(r.Bathrooms) || undefined,
+          urgency: (r.Urgency || 'normal').trim() || 'normal',
+          landlord_id: r.LandlordId ? parseInt(r.LandlordId, 10) : null,
+          units
+        };
+        if (!payload.address || !payload.type || !payload.propertyType) { failed++; continue; }
+        if (payload.type === 'Apartment' && !payload.buildingType) payload.buildingType = 'T2';
+        await salesManagerService.createProperty(payload);
+        success++;
+      } catch (err) { console.error('Property import row error:', err); failed++; }
+    }
+    return { success, failed };
+  };
+
+  const handleBulkImportClients = async (file) => {
+    const text = await file.text();
+    let rows = [];
+    if (text.includes('[PROPERTIES]') || text.includes('[CLIENTS]') || text.includes('[TENANTS]')) {
+      rows = parseCsvWithSections(text).clients;
+    } else {
+      const parseCsvLine = (line) => {
+        const out = []; let val = ''; let inQ = false;
+        for (let j = 0; j < line.length; j++) {
+          const c = line[j];
+          if (c === '"') { if (inQ && line[j + 1] === '"') { val += '"'; j++; } else inQ = !inQ; }
+          else if (c === ',' && !inQ) { out.push(val.trim().replace(/^"|"$/g, '')); val = ''; }
+          else val += c;
+        }
+        out.push(val.trim().replace(/^"|"$/g, ''));
+        return out;
+      };
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const headers = parseCsvLine(lines[0] || '').map(h => h.trim());
+      for (let i = 1; i < lines.length; i++) {
+        const cells = parseCsvLine(lines[i]);
+        const obj = {}; headers.forEach((h, idx) => { if (h) obj[h] = (cells[idx] ?? '').trim(); });
+        if (obj.Name || obj.Email) rows.push(obj);
+      }
+    }
+    if (rows.length === 0) return { success: 0, failed: 0 };
+    let success = 0, failed = 0;
+    for (const r of rows) {
+      try {
+        const type = ((r.Type || r.type || 'individual') + '').toLowerCase();
+        const clientData = {
+          type: type === 'company' ? 'company' : 'individual',
+          name: (r.Name || r.name || '').trim() || (r.Email || r.email || '').trim(),
+          email: (r.Email || r.email || '').trim(),
+          phone: (r.Phone || r.phone || '').trim(),
+          address: (r.Address || r.address || '').trim(),
+          companyName: (r.CompanyName || r.companyName || '').trim(),
+          registrationNumber: (r.RegistrationNumber || r.registrationNumber || '').trim(),
+          contactPerson: (r.ContactPerson || r.contactPerson || '').trim()
+        };
+        if (!clientData.email || !clientData.phone) { failed++; continue; }
+        if (type === 'company' && (!clientData.companyName || !clientData.registrationNumber || !clientData.contactPerson)) { failed++; continue; }
+        await adminService.createNewClient(clientData);
+        success++;
+      } catch (err) { console.error('Client import row error:', err); failed++; }
+    }
+    return { success, failed };
+  };
+
+  const handleBulkImportUpload = async () => {
+    if (!bulkImportFile) { addNotification('Please select a file first', 'error'); return; }
+    const isCsv = bulkImportFile.name.toLowerCase().endsWith('.csv');
+    if (!isCsv) { addNotification('Bulk import supports CSV only. Please use a .csv file.', 'error'); return; }
+    setBulkImportLoading(true);
+    try {
+      const text = await bulkImportFile.text();
+      const hasProps = text.includes('[PROPERTIES]');
+      const hasClients = text.includes('[CLIENTS]') || text.includes('[TENANTS]');
+      const doBoth = hasProps && hasClients;
+      const doProps = hasProps || (bulkImportTab === 'properties' && !hasClients);
+      const doClients = hasClients || (bulkImportTab === 'clients' && !hasProps);
+      let totalSuccess = 0, totalFailed = 0;
+      if (doProps) {
+        const res = await handleBulkImportProperties(bulkImportFile);
+        totalSuccess += res.success;
+        totalFailed += res.failed;
+      }
+      if (doClients) {
+        const res = await handleBulkImportClients(bulkImportFile);
+        totalSuccess += res.success;
+        totalFailed += res.failed;
+      }
+      if (totalSuccess > 0 || totalFailed > 0) await loadData();
+      const msg = doBoth
+        ? `Import complete: ${totalSuccess} succeeded, ${totalFailed} failed`
+        : doProps && !doClients
+          ? `Properties: ${totalSuccess} imported, ${totalFailed} failed`
+          : `Clients: ${totalSuccess} imported, ${totalFailed} failed`;
+      addNotification(msg, totalSuccess > 0 ? 'success' : totalFailed > 0 ? 'error' : 'info');
+      setShowBulkImportModal(false);
+      setBulkImportFile(null);
+    } catch (err) {
+      console.error('Bulk import error:', err);
+      addNotification(err?.message || 'Import failed', 'error');
+    } finally {
+      setBulkImportLoading(false);
+    }
+  };
+
   // Render New Client Section
   const renderNewClient = () => {
     // Filter clients based on search and status
@@ -2540,6 +2815,19 @@ const AdministrativeDashboard = () => {
           >
             <Plus size={18} />
             Create New Client
+          </button>
+          <button
+            type="button"
+            className="sa-primary-cta secondary"
+            style={{ marginLeft: '8px' }}
+            onClick={() => {
+              setBulkImportTab('clients');
+              setBulkImportFile(null);
+              setShowBulkImportModal(true);
+            }}
+          >
+            <FileSpreadsheet size={18} style={{ marginRight: '4px' }} />
+            Import from CSV
           </button>
         </div>
 
@@ -3291,6 +3579,100 @@ const AdministrativeDashboard = () => {
               >
                 Reject Document
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Import Modal (Properties + Clients) */}
+      {showBulkImportModal && (
+        <div className="modal-overlay" onClick={() => { setShowBulkImportModal(false); setBulkImportFile(null); }}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e5e7eb' }}>
+              <h3 style={{ margin: 0 }}>Bulk Import – Properties & Clients</h3>
+              <button className="modal-close" onClick={() => { setShowBulkImportModal(false); setBulkImportFile(null); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.9rem', color: '#6b7280', marginRight: '8px' }}>Download example:</span>
+                <button type="button" className="sa-primary-cta secondary" onClick={downloadPropertiesExampleCsv} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
+                  <Download size={16} style={{ marginRight: '6px' }} />
+                  Properties Example
+                </button>
+                <button type="button" className="sa-primary-cta secondary" onClick={downloadClientsExampleCsv} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
+                  <Download size={16} style={{ marginRight: '6px' }} />
+                  Clients Example
+                </button>
+                <button type="button" className="sa-primary-cta" onClick={downloadFullImportExampleCsv} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
+                  <Download size={16} style={{ marginRight: '6px' }} />
+                  Full Example (Properties + Clients)
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb' }}>
+                <button
+                  type="button"
+                  onClick={() => setBulkImportTab('properties')}
+                  style={{
+                    padding: '10px 16px', fontSize: '0.9rem', border: 'none', background: 'none', cursor: 'pointer',
+                    borderBottom: bulkImportTab === 'properties' ? '2px solid #7c3aed' : '2px solid transparent',
+                    color: bulkImportTab === 'properties' ? '#7c3aed' : '#6b7280', fontWeight: bulkImportTab === 'properties' ? 600 : 400
+                  }}
+                >
+                  Properties
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkImportTab('clients')}
+                  style={{
+                    padding: '10px 16px', fontSize: '0.9rem', border: 'none', background: 'none', cursor: 'pointer',
+                    borderBottom: bulkImportTab === 'clients' ? '2px solid #7c3aed' : '2px solid transparent',
+                    color: bulkImportTab === 'clients' ? '#7c3aed' : '#6b7280', fontWeight: bulkImportTab === 'clients' ? 600 : 400
+                  }}
+                >
+                  Clients
+                </button>
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ marginBottom: '8px' }}>{bulkImportTab === 'properties' ? 'Import Properties' : 'Import Clients'}</h4>
+                <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
+                  {bulkImportTab === 'properties'
+                    ? 'Upload a CSV with: Address, Type, PropertyType, BuildingType, Status, NumberOfUnits, Rent, Bedrooms, Bathrooms, Urgency, LandlordId. For multi-unit: UnitNumbers (F1|F2), UnitRents (100000|120000).'
+                    : 'Upload a CSV with: Type, Name, Email, Phone, Property (optional). For company: CompanyName, RegistrationNumber, ContactPerson. After import, open each client to add property and upload documents.'}
+                </p>
+                <div
+                  style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: bulkImportLoading ? 'not-allowed' : 'pointer' }}
+                  onClick={() => !bulkImportLoading && document.getElementById('admin-bulk-import-file')?.click()}
+                >
+                  <input
+                    type="file"
+                    id="admin-bulk-import-file"
+                    accept=".csv,text/csv,application/csv"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) setBulkImportFile(f); e.target.value = ''; }}
+                    style={{ display: 'none' }}
+                    disabled={bulkImportLoading}
+                  />
+                  <FileSpreadsheet size={48} color={bulkImportLoading ? '#9ca3af' : '#7c3aed'} style={{ margin: '0 auto 12px', display: 'block' }} />
+                  <div>
+                    <strong style={{ color: bulkImportLoading ? '#9ca3af' : '#1f2937' }}>
+                      {bulkImportLoading ? 'Importing...' : (bulkImportFile ? bulkImportFile.name : 'Click to select CSV file')}
+                    </strong>
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>CSV only</p>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                <button type="button" className="sa-primary-cta secondary" onClick={() => { setShowBulkImportModal(false); setBulkImportFile(null); }}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="sa-primary-cta"
+                  onClick={handleBulkImportUpload}
+                  disabled={!bulkImportFile || bulkImportLoading}
+                >
+                  {bulkImportLoading ? 'Importing...' : 'Import'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
