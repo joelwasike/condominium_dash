@@ -499,23 +499,25 @@ const TechnicianDashboard = () => {
         } else {
           const costRaw = taskForm.estimatedCost;
           const estimatedCost = (typeof costRaw === 'number' && Number.isFinite(costRaw)) ? costRaw : (Number(costRaw) || 0);
+          const statusForCreate = taskForm.requireDirectorApproval ? 'Pending Director Approval' : (taskForm.status || 'Pending');
           const maintenanceData = {
             property: taskForm.property || '',
             issue: taskForm.issue || 'Maintenance Task',
             priority: taskForm.priority || 'normal',
-            status: taskForm.status || 'Pending',
+            status: statusForCreate,
             estimatedCost,
             assigned: taskForm.assigned || '',
-            photos: taskForm.photos || []
+            photos: taskForm.photos || [],
+            quotation: taskForm.quotation || null,
+            invoice: taskForm.invoice || null,
+            requireDirectorApproval: taskForm.requireDirectorApproval || false,
           };
           await technicianService.createMaintenanceRequest(maintenanceData);
           const hadPhotos = (maintenanceData.photos && maintenanceData.photos.length) > 0;
-          addNotification(
-            hadPhotos
-              ? 'Maintenance created. To add photos, edit this request and attach images.'
-              : 'Maintenance created successfully',
-            'success'
-          );
+          const needsApproval = maintenanceData.requireDirectorApproval;
+          let msg = hadPhotos ? 'Maintenance created. To add photos, edit this request and attach images.' : 'Maintenance created successfully';
+          if (needsApproval) msg += ' Task sent to director for approval.';
+          addNotification(msg, 'success');
         }
       } else if (taskId) {
         // Update existing task
@@ -1515,6 +1517,9 @@ const TechnicianDashboard = () => {
                 assigned: '',
                 photos: [],
                 existingPhotoURLs: [],
+                quotation: null,
+                invoice: null,
+                requireDirectorApproval: false,
               });
               setShowTaskModal(true);
             }}
@@ -3957,6 +3962,18 @@ const TechnicianDashboard = () => {
                 </div>
               </div>
             )}
+            {selectedTask && taskContext === 'maintenance' && (selectedTask.QuotationURL || selectedTask.quotationURL) && (
+              <div className="form-group">
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Quotation</label>
+                <a href={selectedTask.QuotationURL || selectedTask.quotationURL} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>View / Download Quotation</a>
+              </div>
+            )}
+            {selectedTask && taskContext === 'maintenance' && (selectedTask.InvoiceURL || selectedTask.invoiceURL) && (
+              <div className="form-group">
+                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Invoice</label>
+                <a href={selectedTask.InvoiceURL || selectedTask.invoiceURL} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>View / Download Invoice</a>
+              </div>
+            )}
             {!selectedTask && (
               <div className="form-group">
                 <label htmlFor="task-photos">Upload one or more photos (optional)</label>
@@ -4002,6 +4019,58 @@ const TechnicianDashboard = () => {
                   </div>
                 )}
               </div>
+            )}
+            {!selectedTask && taskContext === 'maintenance' && (
+              <>
+              <div className="form-group">
+                <label htmlFor="task-quotation">Upload Quotation (optional)</label>
+                <input
+                  type="file"
+                  id="task-quotation"
+                  accept=".pdf,.doc,.docx,image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    setTaskForm(prev => ({ ...prev, quotation: f || null }));
+                    e.target.value = '';
+                  }}
+                />
+                {taskForm.quotation && (
+                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{taskForm.quotation.name}</span>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, quotation: null }))}>Remove</button>
+                  </div>
+                )}
+              </div>
+              <div className="form-group">
+                <label htmlFor="task-invoice">Upload Invoice (optional)</label>
+                <input
+                  type="file"
+                  id="task-invoice"
+                  accept=".pdf,.doc,.docx,image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    setTaskForm(prev => ({ ...prev, invoice: f || null }));
+                    e.target.value = '';
+                  }}
+                />
+                {taskForm.invoice && (
+                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{taskForm.invoice.name}</span>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, invoice: null }))}>Remove</button>
+                  </div>
+                )}
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!taskForm.requireDirectorApproval}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, requireDirectorApproval: e.target.checked }))}
+                  />
+                  <span>Require director approval (for security – task will be sent to director for approval before processing)</span>
+                </label>
+              </div>
+              </>
             )}
                 <div className="modal-footer">
                 <button 

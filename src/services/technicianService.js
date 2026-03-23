@@ -104,9 +104,14 @@ export const technicianService = {
     const cost = Number(requestData?.estimatedCost);
     const numCost = Number.isFinite(cost) ? cost : 0;
     const photos = requestData?.photos;
+    const quotation = requestData?.quotation;
+    const invoice = requestData?.invoice;
     const hasPhotos = Array.isArray(photos) && photos.length > 0;
+    const hasQuotation = quotation && typeof quotation === 'object' && quotation instanceof File;
+    const hasInvoice = invoice && typeof invoice === 'object' && invoice instanceof File;
+    const hasFiles = hasPhotos || hasQuotation || hasInvoice;
 
-    if (hasPhotos) {
+    if (hasFiles) {
       const formData = new FormData();
       formData.append('property', String(requestData?.property ?? ''));
       formData.append('issue', String(requestData?.issue ?? ''));
@@ -114,11 +119,16 @@ export const technicianService = {
       formData.append('status', String(requestData?.status ?? 'Pending'));
       formData.append('estimatedCost', String(numCost));
       formData.append('assigned', String(requestData?.assigned ?? ''));
-      photos.forEach((file) => {
-        if (file && typeof file === 'object' && file instanceof File) {
-          formData.append('photos', file);
-        }
-      });
+      formData.append('requireDirectorApproval', String(!!requestData?.requireDirectorApproval));
+      if (hasPhotos) {
+        photos.forEach((file) => {
+          if (file && typeof file === 'object' && file instanceof File) {
+            formData.append('photos', file);
+          }
+        });
+      }
+      if (hasQuotation) formData.append('quotation', quotation);
+      if (hasInvoice) formData.append('invoice', invoice);
       return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
         method: 'POST',
         body: formData,
@@ -132,6 +142,7 @@ export const technicianService = {
       status: String(requestData?.status ?? 'Pending'),
       estimatedCost: numCost,
       assigned: String(requestData?.assigned ?? ''),
+      requireDirectorApproval: !!requestData?.requireDirectorApproval,
     };
     return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
       method: 'POST',

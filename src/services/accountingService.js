@@ -142,6 +142,13 @@ export const accountingService = {
     });
   },
 
+  approveLandlordPayment: async (paymentId) => {
+    const url = buildApiUrl(`/api/accounting/landlord-payments/${paymentId}/approve`);
+    return await apiRequest(url, {
+      method: 'POST',
+    });
+  },
+
   // Get list of landlords (same source as sales manager owners - for Owner Balances, tenant management, etc.)
   getLandlords: async () => {
     const url = buildApiUrl('/api/accounting/landlords');
@@ -441,6 +448,53 @@ export const accountingService = {
       method: 'POST',
       body: JSON.stringify(body),
     });
+  },
+
+  // Employees (caretakers, etc.) - backend can implement /api/accounting/employees
+  getEmployees: async () => {
+    try {
+      const url = buildApiUrl('/api/accounting/employees');
+      return await apiRequest(url);
+    } catch {
+      const stored = localStorage.getItem('accounting_employees');
+      return stored ? JSON.parse(stored) : [];
+    }
+  },
+
+  addEmployee: async (employeeData) => {
+    try {
+      const url = buildApiUrl('/api/accounting/employees');
+      return await apiRequest(url, { method: 'POST', body: JSON.stringify(employeeData) });
+    } catch {
+      const stored = JSON.parse(localStorage.getItem('accounting_employees') || '[]');
+      const id = Date.now();
+      const emp = { ...employeeData, ID: id, id };
+      stored.push(emp);
+      localStorage.setItem('accounting_employees', JSON.stringify(stored));
+      return emp;
+    }
+  },
+
+  payEmployee: async (employeeId, paymentData) => {
+    try {
+      const url = buildApiUrl(`/api/accounting/employees/${employeeId}/pay`);
+      return await apiRequest(url, { method: 'POST', body: JSON.stringify(paymentData) });
+    } catch {
+      const payments = JSON.parse(localStorage.getItem('accounting_employee_payments') || '[]');
+      const pay = { ...paymentData, employeeId, id: Date.now(), date: new Date().toISOString() };
+      payments.push(pay);
+      localStorage.setItem('accounting_employee_payments', JSON.stringify(payments));
+      return pay;
+    }
+  },
+
+  getEmployeePayments: async () => {
+    try {
+      const url = buildApiUrl('/api/accounting/employees/payments');
+      return await apiRequest(url);
+    } catch {
+      return JSON.parse(localStorage.getItem('accounting_employee_payments') || '[]');
+    }
   },
 
   getSecurityDeposit: async (depositId) => {

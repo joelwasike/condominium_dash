@@ -57,6 +57,9 @@ const AccountingDashboard = () => {
   const [ownerView, setOwnerView] = useState('owners'); // 'owners' = list of all owners, 'payments' = payment rows
   const [ownerPaymentsLandlordFilter, setOwnerPaymentsLandlordFilter] = useState('');
   const [ownerPaymentsBuildingFilter, setOwnerPaymentsBuildingFilter] = useState('');
+  const [ownerPaymentsStartDate, setOwnerPaymentsStartDate] = useState('');
+  const [ownerPaymentsEndDate, setOwnerPaymentsEndDate] = useState('');
+  const [ownerPaymentsMonthFilter, setOwnerPaymentsMonthFilter] = useState('');
   const [selectedOwnerForPaymentsHistory, setSelectedOwnerForPaymentsHistory] = useState(null); // owner name when viewing their transactions
   const carouselIntervalRef = useRef(null);
   
@@ -82,6 +85,7 @@ const AccountingDashboard = () => {
   const [expenseEndDateFilter, setExpenseEndDateFilter] = useState('');
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('');
   const [expenseScopeFilter, setExpenseScopeFilter] = useState('');
+  const [expenseOwnerFilter, setExpenseOwnerFilter] = useState('');
   const [expenseSearchText, setExpenseSearchText] = useState('');
   const [expenseViewCard, setExpenseViewCard] = useState('total'); // 'total' | 'agency' | 'owner'
   const [expensesSummary, setExpensesSummary] = useState(null);
@@ -119,6 +123,17 @@ const AccountingDashboard = () => {
   // Deposits state
   const [deposits, setDeposits] = useState([]);
   const [depositFilter, setDepositFilter] = useState('all'); // 'all', 'payment', 'refund'
+  // Employees state (caretakers, etc.)
+  const [employees, setEmployees] = useState([]);
+  const [employeePayments, setEmployeePayments] = useState([]);
+  const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
+  const [showPayEmployeeModal, setShowPayEmployeeModal] = useState(false);
+  const [selectedEmployeeForPay, setSelectedEmployeeForPay] = useState(null);
+  const [depositStartDateFilter, setDepositStartDateFilter] = useState('');
+  const [depositEndDateFilter, setDepositEndDateFilter] = useState('');
+  const [historyStartDateFilter, setHistoryStartDateFilter] = useState('');
+  const [historyEndDateFilter, setHistoryEndDateFilter] = useState('');
+  const [historyTypeFilter, setHistoryTypeFilter] = useState('all');
   const [showDepositPaymentModal, setShowDepositPaymentModal] = useState(false);
   const [showDepositRefundModal, setShowDepositRefundModal] = useState(false);
   const [depositPaymentForm, setDepositPaymentForm] = useState({
@@ -246,6 +261,7 @@ const AccountingDashboard = () => {
       { id: 'account-balances', label: 'Account Balances', icon: Wallet },
       { id: 'owner-payments', label: 'Owner Payments', icon: Building },
       { id: 'transaction-history', label: 'Transaction History', icon: History },
+      { id: 'employees', label: 'Employees', icon: Users },
       { id: 'states-taxes', label: 'States & Taxes', icon: Scale },
       { id: 'reports', label: t('nav.reports'), icon: Receipt },
       { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
@@ -771,6 +787,18 @@ const AccountingDashboard = () => {
 
   // Load all transaction data when transaction-history tab is active
   useEffect(() => {
+    if (activeTab === 'employees') {
+      (async () => {
+        try {
+          const [empData, payData] = await Promise.all([accountingService.getEmployees(), accountingService.getEmployeePayments()]);
+          setEmployees(Array.isArray(empData) ? empData : (empData?.employees ?? empData?.data ?? []));
+          setEmployeePayments(Array.isArray(payData) ? payData : (payData?.payments ?? payData?.data ?? []));
+        } catch (e) {
+          setEmployees([]);
+          setEmployeePayments([]);
+        }
+      })();
+    }
     if (activeTab === 'transaction-history') {
       // Reload all data to ensure transaction history is up to date
       loadData();
@@ -2128,7 +2156,7 @@ const AccountingDashboard = () => {
                 </button>
               </div>
 
-              <div className="sa-filters-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+              <div className="sa-filters-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', alignItems: 'center' }}>
                 <select
                   className="sa-filter-select"
                   value={ownerPaymentsLandlordFilter}
@@ -2153,6 +2181,9 @@ const AccountingDashboard = () => {
                     <option key={i} value={b}>{b}</option>
                   ))}
                 </select>
+                <input type="month" className="sa-filter-select" value={ownerPaymentsMonthFilter} onChange={(e) => setOwnerPaymentsMonthFilter(e.target.value)} placeholder="Month" title="Filter by month" />
+                <input type="date" className="sa-filter-select" value={ownerPaymentsStartDate} onChange={(e) => setOwnerPaymentsStartDate(e.target.value)} placeholder="Start Date" title="Start date" />
+                <input type="date" className="sa-filter-select" value={ownerPaymentsEndDate} onChange={(e) => setOwnerPaymentsEndDate(e.target.value)} placeholder="End Date" title="End date" />
               </div>
 
               {loading ? (
@@ -2189,11 +2220,55 @@ const AccountingDashboard = () => {
                     if (pVal !== oId && pVal !== oName && !(oName && pVal.toLowerCase() === oName.toLowerCase())) return false;
                   }
                   if (ownerPaymentsBuildingFilter && (p.Building || p.building) !== ownerPaymentsBuildingFilter) return false;
+                  const d = p.Date || p.date || p.CreatedAt || p.createdAt;
+                  if (ownerPaymentsMonthFilter && d) {
+                    const pd = new Date(d);
+                    const [y, m] = ownerPaymentsMonthFilter.split('-').map(Number);
+                    if (pd.getFullYear() !== y || pd.getMonth() + 1 !== m) return false;
+                  }
+                  if (ownerPaymentsStartDate && d && new Date(d) < new Date(ownerPaymentsStartDate)) return false;
+                  if (ownerPaymentsEndDate && d && new Date(d) > new Date(ownerPaymentsEndDate + 'T23:59:59')) return false;
                   return true;
                 });
                 return filtered.length === 0 ? (
                   <div className="no-data">No landlord payments found</div>
                 ) : (
+                  <>
+                  <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      className="sa-outline-button"
+                      onClick={() => {
+                        const headers = ['Date', 'Landlord', 'Building', 'Net Amount', 'Commission', 'Status'];
+                        const getOwnerDisplayNameExport = (p) => {
+                          const pVal = (p.Landlord || p.landlord || '').toString().trim();
+                          const owner = ownerBalancesOwners.find(o => {
+                            const oId = String(o.id || o.ID || '');
+                            const oName = (o.Name || o.name || o.Landlord || o.landlord || '').toString().trim();
+                            return oId === pVal || oName === pVal || (oName && oName.toLowerCase() === pVal.toLowerCase());
+                          });
+                          return owner ? (owner.Name || owner.name || owner.Landlord || owner.landlord || 'N/A') : (p.Landlord || p.landlord || 'N/A');
+                        };
+                        const rows = filtered.map(p => [
+                          p.Date || p.date ? new Date(p.Date || p.date).toLocaleDateString() : '',
+                          getOwnerDisplayNameExport(p),
+                          p.Building || p.building || '',
+                          (p.NetAmount || p.netAmount || 0).toFixed(2),
+                          (p.Commission || p.commission || 0).toFixed(2),
+                          p.Status || p.status || ''
+                        ]);
+                        const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+                        const a = document.createElement('a');
+                        a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+                        a.download = `owner-payments-export.csv`;
+                        a.click();
+                        addNotification('Owner payments exported', 'success');
+                      }}
+                      title="Export filtered payments to CSV"
+                    >
+                      <Download size={16} />
+                      Export
+                    </button>
+                  </div>
                   <div className="sa-table-wrapper">
                     <table className="sa-table">
                       <thead>
@@ -2233,20 +2308,43 @@ const AccountingDashboard = () => {
                               </td>
                               <td className="table-menu" onClick={(e) => e.stopPropagation()}>
                                 <div className="sa-row-actions">
-                                  {(payment.Status || '').toLowerCase() !== 'paid' && (
-                                    <button
-                                      className="table-action-button edit"
-                                      onClick={(e) => { e.stopPropagation(); transferToLandlord(payment.ID); }}
-                                      title="Mark as Completed"
-                                    >
-                                      Mark Completed
-                                    </button>
-                                  )}
-                                  {(payment.Status || '').toLowerCase() === 'paid' && (
-                                    <span className="sa-status-pill success" style={{ padding: '4px 12px' }}>
-                                      Completed
-                                    </span>
-                                  )}
+                                  {(() => {
+                                    const status = (payment.Status || '').toLowerCase();
+                                    const isDirector = (JSON.parse(localStorage.getItem('user') || '{}').role || '').toLowerCase() === 'agency_director';
+                                    const needsApproval = ['pending', 'pending approval', 'pending director approval', 'pending_approval'].includes(status);
+                                    if (needsApproval && isDirector) {
+                                      return (
+                                        <button
+                                          className="table-action-button edit"
+                                          onClick={(e) => { e.stopPropagation(); (async () => {
+                                            try { setLoading(true); await accountingService.approveLandlordPayment(payment.ID); const updated = await accountingService.getLandlordPayments(); setLandlordPayments(Array.isArray(updated) ? updated : (updated?.payments ?? updated?.landlordPayments ?? [])); addNotification('Payment approved by director', 'success'); } catch (err) { addNotification(err.message || 'Failed to approve', 'error'); } finally { setLoading(false); }
+                                          })(); }}
+                                          title="Director: Approve Payment"
+                                        >
+                                          Approve
+                                        </button>
+                                      );
+                                    }
+                                    if (status !== 'paid' && status !== 'completed' && !needsApproval) {
+                                      return (
+                                        <button
+                                          className="table-action-button edit"
+                                          onClick={(e) => { e.stopPropagation(); transferToLandlord(payment.ID); }}
+                                          title="Mark as Completed"
+                                        >
+                                          Mark Completed
+                                        </button>
+                                      );
+                                    }
+                                    if (status === 'paid' || status === 'completed') {
+                                      return (
+                                        <span className="sa-status-pill success" style={{ padding: '4px 12px' }}>
+                                          Completed
+                                        </span>
+                                      );
+                                    }
+                                    return <span className="sa-status-pill" style={{ padding: '4px 12px' }}>Pending Approval</span>;
+                                  })()}
                                 </div>
                               </td>
                             </tr>
@@ -2255,6 +2353,7 @@ const AccountingDashboard = () => {
                       </tbody>
                     </table>
                   </div>
+                  </>
                 );
               })()}
                 </>
@@ -2881,8 +2980,13 @@ const AccountingDashboard = () => {
   // Render Deposits section
   const renderDeposits = () => {
     const filteredDeposits = deposits.filter(deposit => {
-      if (depositFilter === 'all') return true;
-      return (deposit.Type || deposit.type) === depositFilter;
+      if (depositFilter !== 'all' && (deposit.Type || deposit.type) !== depositFilter) return false;
+      const d = deposit.CreatedAt || deposit.createdAt;
+      if (!d) return true;
+      const date = new Date(d);
+      if (depositStartDateFilter && date < new Date(depositStartDateFilter)) return false;
+      if (depositEndDateFilter && date > new Date(depositEndDateFilter + 'T23:59:59')) return false;
+      return true;
     });
 
     const paymentDeposits = deposits.filter(d => (d.Type || d.type) === 'payment');
@@ -2968,7 +3072,7 @@ const AccountingDashboard = () => {
           </div>
 
           {/* Filters */}
-          <div className="sa-filters-section" style={{ marginBottom: '20px' }}>
+          <div className="sa-filters-section" style={{ marginBottom: '20px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
             <select
               className="sa-filter-select"
               value={depositFilter}
@@ -2978,6 +3082,49 @@ const AccountingDashboard = () => {
               <option value="payment">Payments Only</option>
               <option value="refund">Refunds Only</option>
             </select>
+            <input
+              type="date"
+              className="sa-filter-select"
+              value={depositStartDateFilter}
+              onChange={(e) => setDepositStartDateFilter(e.target.value)}
+              placeholder="Start Date"
+            />
+            <input
+              type="date"
+              className="sa-filter-select"
+              value={depositEndDateFilter}
+              onChange={(e) => setDepositEndDateFilter(e.target.value)}
+              placeholder="End Date"
+            />
+            <button
+              className="sa-outline-button"
+              onClick={() => {
+                const filtered = filteredDeposits;
+                const headers = ['Date', 'Tenant', 'Property', 'Type', 'Monthly Rent', 'Months', 'Amount', 'Method', 'Reference', 'Status'];
+                const rows = filtered.map(d => [
+                  d.CreatedAt || d.createdAt ? new Date(d.CreatedAt || d.createdAt).toLocaleDateString() : '',
+                  d.Tenant || d.tenant || '',
+                  d.Property || d.property || '',
+                  (d.Type || d.type) === 'payment' ? 'Payment' : 'Refund',
+                  (d.MonthlyRent || d.monthlyRent || 0).toFixed(2),
+                  d.MonthsMultiplier || d.monthsMultiplier || 0,
+                  (d.Amount || d.amount || 0).toFixed(2),
+                  d.PaymentMethod || d.paymentMethod || d.RefundMethod || d.refundMethod || '',
+                  d.Reference || d.reference || '',
+                  d.Status || d.status || ''
+                ]);
+                const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+                const a = document.createElement('a');
+                a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+                a.download = `deposits-${depositStartDateFilter || 'all'}-to-${depositEndDateFilter || 'all'}.csv`;
+                a.click();
+                addNotification('Deposits exported to CSV', 'success');
+              }}
+              disabled={filteredDeposits.length === 0}
+            >
+              <Download size={16} />
+              Export
+            </button>
       </div>
 
       {loading ? (
@@ -3091,14 +3238,26 @@ const AccountingDashboard = () => {
                 }}>
                   <div className="form-group">
                     <label htmlFor="depositTenant">Tenant Name *</label>
-                    <input
-                      type="text"
+                    <select
                       id="depositTenant"
                       value={depositPaymentForm.tenant}
-                      onChange={(e) => setDepositPaymentForm({...depositPaymentForm, tenant: e.target.value})}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        const t = tenants.find(x => (x.tenantName || x.TenantName) === name);
+                        setDepositPaymentForm({
+                          ...depositPaymentForm,
+                          tenant: name,
+                          property: t ? (t.property || t.Property || '') : ''
+                        });
+                      }}
                       required
-                      placeholder="Enter tenant name"
-                    />
+                    >
+                      <option value="">Select tenant (with property)</option>
+                      {tenants.filter(t => (t.property || t.Property)).map((t) => {
+                        const name = t.tenantName || t.TenantName || '';
+                        return <option key={name} value={name}>{name} – {t.property || t.Property}</option>;
+                      })}
+                    </select>
                   </div>
 
                   <div className="form-group">
@@ -3109,7 +3268,7 @@ const AccountingDashboard = () => {
                       value={depositPaymentForm.property}
                       onChange={(e) => setDepositPaymentForm({...depositPaymentForm, property: e.target.value})}
                       required
-                      placeholder="e.g., Apartment 4B or House 123"
+                      placeholder="Auto-filled when selecting tenant"
                     />
                   </div>
 
@@ -4656,11 +4815,12 @@ const AccountingDashboard = () => {
   const exportExpensesToCSV = () => {
     const filteredExpenses = getFilteredExpenses();
     
-    const headers = ['Date', 'Scope', 'Building', 'Category', 'Requested by', 'Amount', 'Notes'];
+    const headers = ['Date', 'Scope', 'Building', 'Owner', 'Category', 'Requested by', 'Amount', 'Notes'];
     const rows = filteredExpenses.map(exp => [
       exp.Date || exp.date ? new Date(exp.Date || exp.date).toLocaleDateString() : '',
       exp.Scope || exp.scope || '',
       exp.Building || exp.building || '',
+      exp.Owner || exp.owner || exp.Landlord || exp.landlord || '',
       exp.Category || exp.category || '',
       (exp.RequestedBy || exp.requestedBy || '').replace(/"/g, '""'),
       (exp.Amount || exp.amount || 0).toFixed(2),
@@ -4688,15 +4848,50 @@ const AccountingDashboard = () => {
     addNotification('Expenses exported to CSV successfully!', 'success');
   };
 
-  // Get filtered expenses
+  // Get filtered expenses (all filters applied before display and export)
   const getFilteredExpenses = () => {
     let filtered = [...expenses];
+
+    // Filter by building
+    if (expenseBuildingFilter) {
+      filtered = filtered.filter(exp => 
+        (exp.Building || exp.building || '').toString().trim() === expenseBuildingFilter
+      );
+    }
+
+    // Filter by category
+    if (expenseCategoryFilter) {
+      filtered = filtered.filter(exp => 
+        (exp.Category || exp.category || '').toString().trim() === expenseCategoryFilter
+      );
+    }
 
     // Filter by scope
     if (expenseScopeFilter) {
       filtered = filtered.filter(exp => 
         (exp.Scope || exp.scope || '').toLowerCase() === expenseScopeFilter.toLowerCase()
       );
+    }
+
+    // Filter by owner
+    if (expenseOwnerFilter) {
+      filtered = filtered.filter(exp => 
+        (exp.Owner || exp.owner || exp.Landlord || exp.landlord || '').toLowerCase().includes(expenseOwnerFilter.toLowerCase())
+      );
+    }
+
+    // Filter by date range
+    if (expenseStartDateFilter) {
+      filtered = filtered.filter(exp => {
+        const d = exp.Date || exp.date;
+        return !d || new Date(d) >= new Date(expenseStartDateFilter);
+      });
+    }
+    if (expenseEndDateFilter) {
+      filtered = filtered.filter(exp => {
+        const d = exp.Date || exp.date;
+        return !d || new Date(d) <= new Date(expenseEndDateFilter + 'T23:59:59');
+      });
     }
 
     // Filter by search text
@@ -4720,6 +4915,7 @@ const AccountingDashboard = () => {
     const uniqueBuildings = [...new Set(expenses.map(exp => exp.Building || exp.building).filter(Boolean))];
     const uniqueCategories = [...new Set(expenses.map(exp => exp.Category || exp.category).filter(Boolean))];
     const uniqueScopes = [...new Set(expenses.map(exp => exp.Scope || exp.scope).filter(Boolean))];
+    const uniqueOwners = [...new Set(expenses.map(exp => exp.Owner || exp.owner || exp.Landlord || exp.landlord).filter(Boolean))];
 
     const totalExp = expensesSummary?.totalExpenses ?? 0;
     const agencyExp = expensesSummary?.agencyExpenses ?? 0;
@@ -4841,6 +5037,17 @@ const AccountingDashboard = () => {
             ))}
           </select>
 
+          <select 
+            className="sa-filter-select"
+            value={expenseOwnerFilter}
+            onChange={(e) => setExpenseOwnerFilter(e.target.value)}
+          >
+            <option value="">All Owners</option>
+            {uniqueOwners.map(owner => (
+              <option key={owner} value={owner}>{owner}</option>
+            ))}
+          </select>
+
           <input
             type="date"
             className="sa-filter-select"
@@ -4857,13 +5064,14 @@ const AccountingDashboard = () => {
             placeholder="End Date"
           />
 
-          {(expenseBuildingFilter || expenseCategoryFilter || expenseScopeFilter || expenseStartDateFilter || expenseEndDateFilter) && (
+          {(expenseBuildingFilter || expenseCategoryFilter || expenseScopeFilter || expenseOwnerFilter || expenseStartDateFilter || expenseEndDateFilter) && (
             <button
               className="sa-outline-button"
               onClick={() => {
                 setExpenseBuildingFilter('');
                 setExpenseCategoryFilter('');
                 setExpenseScopeFilter('');
+                setExpenseOwnerFilter('');
                 setExpenseStartDateFilter('');
                 setExpenseEndDateFilter('');
               }}
@@ -4944,6 +5152,7 @@ const AccountingDashboard = () => {
                 <th>Date</th>
                 <th>Scope</th>
                 <th>Building</th>
+                <th>Owner</th>
                 <th>Category</th>
                 <th>Requested by</th>
                 <th>Amount</th>
@@ -4959,6 +5168,7 @@ const AccountingDashboard = () => {
                   <td>
                     <span className="sa-cell-title">{exp.Building || exp.building || 'N/A'}</span>
                   </td>
+                  <td>{exp.Owner || exp.owner || exp.Landlord || exp.landlord || '—'}</td>
                   <td>{exp.Category || exp.category || 'N/A'}</td>
                   <td>{exp.RequestedBy || exp.requestedBy || '—'}</td>
                   <td>{(exp.Amount || exp.amount || 0).toFixed(2)} XOF</td>
@@ -5107,6 +5317,16 @@ const AccountingDashboard = () => {
       return dateB - dateA;
     });
 
+    const filteredHistory = allTransactions.filter(t => {
+      if (historyTypeFilter !== 'all' && t.type !== historyTypeFilter) return false;
+      const d = t.date;
+      if (!d) return true;
+      const date = new Date(d);
+      if (historyStartDateFilter && date < new Date(historyStartDateFilter)) return false;
+      if (historyEndDateFilter && date > new Date(historyEndDateFilter + 'T23:59:59')) return false;
+      return true;
+    });
+
     return (
       <div style={{ padding: '20px' }}>
         <div className="sa-section-card">
@@ -5117,9 +5337,22 @@ const AccountingDashboard = () => {
             </div>
           </div>
 
+          <div className="sa-filters-section" style={{ marginBottom: '20px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <select className="sa-filter-select" value={historyTypeFilter} onChange={(e) => setHistoryTypeFilter(e.target.value)}>
+              <option value="all">All Types</option>
+              <option value="Tenant Payment">Tenant Payment</option>
+              <option value="Expense">Expense</option>
+              <option value="Owner Payment">Owner Payment</option>
+              <option value="Deposit Refund">Deposit Refund</option>
+              <option value="Cashier Transaction">Cashier Transaction</option>
+            </select>
+            <input type="date" className="sa-filter-select" value={historyStartDateFilter} onChange={(e) => setHistoryStartDateFilter(e.target.value)} placeholder="Start Date" />
+            <input type="date" className="sa-filter-select" value={historyEndDateFilter} onChange={(e) => setHistoryEndDateFilter(e.target.value)} placeholder="End Date" />
+          </div>
+
           {loading ? (
             <div className="loading">Loading transactions...</div>
-          ) : allTransactions.length === 0 ? (
+          ) : filteredHistory.length === 0 ? (
             <div className="no-data">No transactions found</div>
           ) : (
             <div className="sa-table-wrapper">
@@ -5136,7 +5369,7 @@ const AccountingDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {allTransactions.map((transaction, index) => (
+                  {filteredHistory.map((transaction, index) => (
                     <tr key={transaction.id || `transaction-${index}`}>
                       <td>
                         {transaction.date 
@@ -5594,12 +5827,19 @@ const AccountingDashboard = () => {
                     const cLandlord = (c.Landlord || c.landlord || '').trim();
                     return cLandlord && (cLandlord === ownerName || cLandlord.toLowerCase() === ownerName.toLowerCase());
                   }).reduce((sum, c) => sum + (c.Amount || c.amount || 0), 0);
-                  const totalPaid = landlordPayments.filter(p => {
+                  const ownerPaymentsList = landlordPayments.filter(p => {
                     const pLandlord = (p.Landlord || p.landlord || '').trim();
                     return pLandlord && (pLandlord === ownerName || pLandlord.toLowerCase() === ownerName.toLowerCase());
-                  }).reduce((sum, p) => sum + (p.NetAmount || p.netAmount || 0), 0);
+                  });
+                  const totalPaid = ownerPaymentsList.reduce((sum, p) => sum + (p.NetAmount || p.netAmount || 0), 0);
+                  const totalExpense = expenses.filter(exp => {
+                    const expOwner = (exp.Owner || exp.owner || exp.Landlord || exp.landlord || '').trim();
+                    return expOwner && (expOwner === ownerName || expOwner.toLowerCase() === ownerName.toLowerCase());
+                  }).reduce((sum, e) => sum + (e.Amount || e.amount || 0), 0);
                   const balance = totalCollected - totalPaid;
-                  return { owner: ownerName, ownerObj, totalCollected, totalPaid, balance };
+                  const totalExpected = totalCollected;
+                  const urgencyCommission = ownerPaymentsList.filter(p => ['pending', 'pending approval', 'pending director approval'].includes((p.Status || '').toLowerCase())).reduce((sum, p) => sum + (p.Commission || p.commission || 0), 0);
+                  return { owner: ownerName, ownerObj, totalCollected, totalPaid, totalExpense, balance, totalExpected: totalExpected || totalCollected, urgencyCommission };
                 });
                 return (
                   <div className="sa-table-wrapper">
@@ -5609,6 +5849,9 @@ const AccountingDashboard = () => {
                           <th>Owner</th>
                           <th>Total Collected</th>
                           <th>Total Paid</th>
+                          <th>Total Expense</th>
+                          <th>Total Expected</th>
+                          <th>Urgency Commission</th>
                           <th>Balance (Owed)</th>
                         </tr>
                       </thead>
@@ -5625,6 +5868,9 @@ const AccountingDashboard = () => {
                             <td><span className="sa-cell-title">{row.owner}</span></td>
                             <td>{row.totalCollected.toFixed(2)} XOF</td>
                             <td>{row.totalPaid.toFixed(2)} XOF</td>
+                            <td>{(row.totalExpense || 0).toFixed(2)} XOF</td>
+                            <td>{(row.totalExpected ?? row.totalCollected).toFixed(2)} XOF</td>
+                            <td style={row.urgencyCommission > 0 ? { color: '#dc2626', fontWeight: '600' } : {}}>{(row.urgencyCommission || 0).toFixed(2)} XOF</td>
                             <td style={{ color: row.balance >= 0 ? '#059669' : '#dc2626', fontWeight: '600' }}>{row.balance.toFixed(2)} XOF</td>
                           </tr>
                         ))}
@@ -6281,6 +6527,105 @@ const AccountingDashboard = () => {
     );
   };
 
+  const renderEmployees = () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const role = (user.role || '').toLowerCase();
+    const canAddEmployee = ['admin', 'accounting', 'agency_director', 'administrative'].includes(role);
+    const canPayEmployee = ['accounting', 'agency_director'].includes(role);
+
+    return (
+      <div style={{ padding: '20px' }}>
+        <div className="sa-section-card">
+          <div className="sa-section-header">
+            <div>
+              <h2>Employees</h2>
+              <p>Caretakers and other property management employees. Add employees (admin/accountant) and pay them (accountant).</p>
+            </div>
+            {canAddEmployee && (
+              <button className="sa-primary-cta" onClick={() => setShowAddEmployeeModal(true)}>
+                <Plus size={18} />
+                Add Employee
+              </button>
+            )}
+          </div>
+          {loading ? (
+            <div className="loading">Loading employees...</div>
+          ) : employees.length === 0 ? (
+            <div className="no-data">No employees yet. Add caretakers and other staff above.</div>
+          ) : (
+            <div className="sa-table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Property / Building</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    {canPayEmployee && <th className="table-menu">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map((emp, idx) => (
+                    <tr key={emp.ID || emp.id || idx}>
+                      <td><span className="sa-cell-title">{emp.Name || emp.name || 'N/A'}</span></td>
+                      <td>{emp.Role || emp.role || 'Caretaker'}</td>
+                      <td>{emp.Building || emp.building || emp.Property || emp.property || '—'}</td>
+                      <td>{emp.Phone || emp.phone || '—'}</td>
+                      <td>{emp.Email || emp.email || '—'}</td>
+                      {canPayEmployee && (
+                        <td className="table-menu">
+                          <button
+                            className="table-action-button edit"
+                            onClick={() => { setSelectedEmployeeForPay(emp); setShowPayEmployeeModal(true); }}
+                          >
+                            Pay
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {employeePayments.length > 0 && (
+            <div style={{ marginTop: '24px' }}>
+              <h3 style={{ marginBottom: '12px' }}>Payment History</h3>
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Employee</th>
+                      <th>Amount</th>
+                      <th>Method</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employeePayments.slice(0, 50).map((p, i) => {
+                      const emp = employees.find(e => (e.ID || e.id) === (p.employeeId || p.employeeID));
+                      return (
+                        <tr key={p.id || i}>
+                          <td>{p.date ? new Date(p.date).toLocaleDateString() : 'N/A'}</td>
+                          <td>{emp ? (emp.Name || emp.name) : (p.employeeName || '—')}</td>
+                          <td>{(p.amount || p.Amount || 0).toFixed(2)} XOF</td>
+                          <td>{p.method || p.Method || '—'}</td>
+                          <td>{p.notes || p.Notes || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -6300,6 +6645,8 @@ const AccountingDashboard = () => {
         return renderPayments(); // Renamed from 'payments' (landlord payments)
       case 'transaction-history':
         return renderHistory(); // Renamed from 'history'
+      case 'employees':
+        return renderEmployees();
       case 'states-taxes':
         return renderStatesTaxes();
       case 'reports':
@@ -6377,6 +6724,120 @@ const AccountingDashboard = () => {
 
       {/* Deposit modals - Process deposit, Deposit payment, Deposit refund */}
       {depositModals}
+
+      {/* Add Employee Modal */}
+      {showAddEmployeeModal && (
+        <div className="modal-overlay" onClick={() => setShowAddEmployeeModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Employee</h3>
+              <button className="modal-close" onClick={() => setShowAddEmployeeModal(false)}>×</button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setLoading(true);
+                const fd = new FormData(e.target);
+                const data = { Name: fd.get('name'), name: fd.get('name'), Role: fd.get('role') || 'Caretaker', role: fd.get('role') || 'Caretaker', Building: fd.get('building'), building: fd.get('building'), Phone: fd.get('phone'), phone: fd.get('phone'), Email: fd.get('email'), email: fd.get('email') };
+                const emp = await accountingService.addEmployee(data);
+                setEmployees(prev => [...prev, emp]);
+                addNotification('Employee added successfully', 'success');
+                setShowAddEmployeeModal(false);
+                e.target.reset();
+              } catch (err) {
+                addNotification(err.message || 'Failed to add employee', 'error');
+              } finally {
+                setLoading(false);
+              }
+            }}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Name *</label>
+                  <input name="name" type="text" required placeholder="Employee name" />
+                </div>
+                <div className="form-group">
+                  <label>Role</label>
+                  <select name="role">
+                    <option value="Caretaker">Caretaker</option>
+                    <option value="Security">Security</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Property / Building</label>
+                  <input name="building" type="text" placeholder="Assigned building" />
+                </div>
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input name="phone" type="tel" placeholder="Phone number" />
+                </div>
+                <div className="form-group">
+                  <label>Email</label>
+                  <input name="email" type="email" placeholder="Email" />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="action-button secondary" onClick={() => setShowAddEmployeeModal(false)}>Cancel</button>
+                <button type="submit" className="action-button primary">Add Employee</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Pay Employee Modal */}
+      {showPayEmployeeModal && selectedEmployeeForPay && (
+        <div className="modal-overlay" onClick={() => { setShowPayEmployeeModal(false); setSelectedEmployeeForPay(null); }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Pay Employee: {selectedEmployeeForPay.Name || selectedEmployeeForPay.name}</h3>
+              <button className="modal-close" onClick={() => { setShowPayEmployeeModal(false); setSelectedEmployeeForPay(null); }}>×</button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setLoading(true);
+                const fd = new FormData(e.target);
+                const payData = { amount: parseFloat(fd.get('amount')), method: fd.get('method') || 'Cash', notes: fd.get('notes') };
+                const pay = await accountingService.payEmployee(selectedEmployeeForPay.ID || selectedEmployeeForPay.id, payData);
+                setEmployeePayments(prev => [...prev, { ...pay, employeeName: selectedEmployeeForPay.Name || selectedEmployeeForPay.name }]);
+                addNotification('Payment recorded successfully', 'success');
+                setShowPayEmployeeModal(false);
+                setSelectedEmployeeForPay(null);
+                e.target.reset();
+              } catch (err) {
+                addNotification(err.message || 'Failed to record payment', 'error');
+              } finally {
+                setLoading(false);
+              }
+            }}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Amount (XOF) *</label>
+                  <input name="amount" type="number" step="0.01" min="0" required placeholder="Amount" />
+                </div>
+                <div className="form-group">
+                  <label>Method</label>
+                  <select name="method">
+                    <option value="Cash">Cash</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Notes</label>
+                  <input name="notes" type="text" placeholder="Payment notes" />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="action-button secondary" onClick={() => { setShowPayEmployeeModal(false); setSelectedEmployeeForPay(null); }}>Cancel</button>
+                <button type="submit" className="action-button primary">Record Payment</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Payment Approval Modal */}
       {showApprovalModal && selectedPayment && (
@@ -6647,7 +7108,7 @@ const AccountingDashboard = () => {
                       required
                     >
                       <option value="">Select tenant</option>
-                      {tenants.map((t) => {
+                      {tenants.filter(t => (t.property || t.Property)).map((t) => {
                         const id = t.tenantId ?? t.TenantID ?? t.tenantName ?? t.TenantName;
                         const name = t.tenantName || t.TenantName || '';
                         return <option key={id} value={name}>{name} {t.property || t.Property ? ` (${t.property || t.Property})` : ''}</option>;
@@ -6855,7 +7316,7 @@ const AccountingDashboard = () => {
                       required
                     >
                       <option value="">Select tenant</option>
-                      {tenants.map((t) => {
+                      {tenants.filter(t => (t.property || t.Property)).map((t) => {
                         const name = t.tenantName || t.TenantName || '';
                         return <option key={name} value={name}>{name} {t.property || t.Property ? ` (${t.property || t.Property})` : ''}</option>;
                       })}
@@ -7112,10 +7573,12 @@ const AccountingDashboard = () => {
                   const scope = formData.get('scope');
                   const building = formData.get('building');
                   const unit = formData.get('unit');
+                  const owner = formData.get('owner');
                   const buildingValue = scope === 'SAAF IMMO' ? '-' : (unit ? `${building} - ${unit}` : building || '-');
                   const expenseData = {
                     scope,
                     building: buildingValue,
+                    owner: owner || undefined,
                     category: formData.get('category'),
                     requestedBy: formData.get('requestedBy') || '',
                     amount: parseFloat(formData.get('amount')),
@@ -7199,6 +7662,16 @@ const AccountingDashboard = () => {
                 {expenseFormScope === 'Building' && (
                   <>
                     <div className="form-group">
+                      <label>Owner</label>
+                      <select name="owner">
+                        <option value="">Select Owner</option>
+                        {landlords.map((l) => {
+                          const name = l.Name || l.name || l.Landlord || l.landlord || l.Email || l.email || '—';
+                          return <option key={l.ID || l.id} value={name}>{name}</option>;
+                        })}
+                      </select>
+                    </div>
+                    <div className="form-group">
                       <label>Building</label>
                       <select
                         name="building"
@@ -7263,7 +7736,7 @@ const AccountingDashboard = () => {
                   <label>Date</label>
                   <input type="date" name="date" required />
                 </div>
-                <div className="form-group">
+<div className="form-group">
                   <label>Cashier Account (to deduct from)</label>
                   <select name="accountId">
                     <option value="">No deduction (manual entry)</option>
@@ -7280,6 +7753,13 @@ const AccountingDashboard = () => {
                 <div className="form-group">
                   <label>Notes</label>
                   <input type="text" name="notes" placeholder="Optional" />
+                </div>
+                <div className="form-group">
+                  <label>Document (optional)</label>
+                  <input type="file" name="document" accept=".pdf,image/*" />
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Attach receipt or supporting document
+                  </small>
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="action-button secondary" onClick={() => setShowExpenseModal(false)}>
@@ -7366,6 +7846,21 @@ const AccountingDashboard = () => {
                 <label>Notes</label>
                 <div>{selectedExpense.Notes || selectedExpense.notes || 'N/A'}</div>
               </div>
+              {(selectedExpense.DocumentURL || selectedExpense.documentURL || selectedExpense.DocumentUrl || selectedExpense.documentUrl) && (
+                <div className="form-group">
+                  <label>Document</label>
+                  <a
+                    href={selectedExpense.DocumentURL || selectedExpense.documentURL || selectedExpense.DocumentUrl || selectedExpense.documentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="action-button primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+                  >
+                    <Download size={16} />
+                    View / Download Document
+                  </a>
+                </div>
+              )}
               <div className="modal-footer">
                 <button type="button" className="action-button secondary" onClick={() => setShowViewExpenseModal(false)}>
                   Close

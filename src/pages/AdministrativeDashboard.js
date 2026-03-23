@@ -3209,12 +3209,31 @@ const AdministrativeDashboard = () => {
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                     {urlList.map((url, i) => {
                       const label = INDIVIDUAL_DOCUMENTS[i] ? INDIVIDUAL_DOCUMENTS[i].label : `Document ${i + 1}`;
+                      const filename = `${label.replace(/\s+/g, '-')}.pdf`;
                       return (
                         <li key={i} style={{ marginBottom: '12px', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
                           <span style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#374151' }}>{label}</span>
-                          <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontSize: '0.875rem' }}>
-                            View document
-                          </a>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontSize: '0.875rem' }}>
+                              View document
+                            </a>
+                            <button
+                              type="button"
+                              className="action-button secondary"
+                              style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                              onClick={() => {
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = filename;
+                                a.target = '_blank';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                              }}
+                            >
+                              Download
+                            </button>
+                          </div>
                         </li>
                       );
                     })}
@@ -3484,7 +3503,11 @@ const AdministrativeDashboard = () => {
               required
             >
               <option value="">Select property</option>
-            {properties.map(property => {
+            {(properties.filter(property => {
+                const label = property.Address || property.address || property.name || property.Name || `Property ${property.ID || property.id}`;
+                const hasTenant = clients.some(c => (c.Property || c.property || '').trim() === label.trim());
+                return !hasTenant;
+              })).map(property => {
                 const id = property.ID || property.id;
                 const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                 return (
@@ -3523,12 +3546,11 @@ const AdministrativeDashboard = () => {
         <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
           <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
           <div className="application-fees-list">
-            <label className="application-fee-item">
+            <label className="application-fee-item" style={{ cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={clientDocForm.applicationFees}
-                readOnly
-                disabled
+                onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFees: e.target.checked })}
               />
               <span>Application fees (37,000 FCFA - obligation to pay)</span>
             </label>
@@ -3807,6 +3829,21 @@ const AdministrativeDashboard = () => {
               <option value="no">Not Paid</option>
               <option value="yes">Paid</option>
             </select>
+            {(() => {
+              const storedAmount = editingClient?.SecurityDeposit || editingClient?.securityDeposit;
+              const selectedProp = editClientForm.property ? properties.find(p => {
+                const label = p.Address || p.address || p.name || p.Name || `Property ${p.ID || p.id}`;
+                return label === editClientForm.property;
+              }) : null;
+              const monthlyRent = selectedProp ? (Number(selectedProp.rent) || Number(selectedProp.Rent) || 0) : 0;
+              const computedAmount = monthlyRent * 4.5;
+              const securityDepositAmount = storedAmount ?? computedAmount;
+              return securityDepositAmount > 0 ? (
+                <div style={{ marginTop: '8px', padding: '8px 12px', background: '#eff6ff', borderRadius: '6px', fontSize: '0.875rem' }}>
+                  <strong>Security Deposit:</strong> {Number(securityDepositAmount).toLocaleString()} FCFA
+                </div>
+              ) : null;
+            })()}
           </div>
 
           <div className="form-group">

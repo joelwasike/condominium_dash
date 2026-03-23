@@ -137,6 +137,7 @@ const SalesManagerDashboard = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState(null); // { type: 'single' | 'bulk', user: {...} | users: [...] }
   const [selectedApprovedClientId, setSelectedApprovedClientId] = useState('');
+  const [moveInFormPropertyRent, setMoveInFormPropertyRent] = useState(0);
   const [approvedClientDocuments, setApprovedClientDocuments] = useState([]);
   const [approvedClientChecklist, setApprovedClientChecklist] = useState(null);
   const [loadingApprovedDocs, setLoadingApprovedDocs] = useState(false);
@@ -554,6 +555,7 @@ const SalesManagerDashboard = () => {
     if (!selectedApprovedClientId) {
       setApprovedClientDocuments([]);
       setApprovedClientChecklist(null);
+      setMoveInFormPropertyRent(0);
       return;
     }
     const loadApprovedClientDocs = async () => {
@@ -5343,7 +5345,8 @@ const SalesManagerDashboard = () => {
                         type="text"
                         value={
                           selectedApprovedClient
-                            ? (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid')
+                            ? (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid') +
+                              (moveInFormPropertyRent > 0 ? ` - ${(moveInFormPropertyRent * 4.5).toLocaleString()} XOF` : '')
                             : ''
                         }
                         disabled
@@ -5373,6 +5376,8 @@ const SalesManagerDashboard = () => {
                         const val = e.target.value;
                         const selectedProperty = val ? properties.find(p => String(p.ID || p.id) === val) : null;
                         if (selectedProperty) {
+                          const propertyRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
+                          setMoveInFormPropertyRent(propertyRent);
                           const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
                           const unitSelect = document.getElementById('unitNumber');
                           if (unitSelect) {
@@ -5386,9 +5391,10 @@ const SalesManagerDashboard = () => {
                           }
                           const rentInput = document.getElementsByName('rent')[0];
                           if (rentInput) {
-                            const propertyRent = selectedProperty.Rent || selectedProperty.rent || 0;
                             rentInput.value = propertyRent;
                           }
+                        } else {
+                          setMoveInFormPropertyRent(0);
                         }
                       }}>
                         <option value="">Select Property</option>
