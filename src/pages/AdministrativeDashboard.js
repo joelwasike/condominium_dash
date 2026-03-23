@@ -3051,7 +3051,13 @@ const AdministrativeDashboard = () => {
                 }) && (
                   <option value={leaseForm.property}>{leaseForm.property}</option>
                 )}
-                {properties.map(property => {
+                {properties.filter(property => {
+                  const label = (property.Address || property.address || property.name || property.Name || '').toString().trim();
+                  const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+                  const occupiedFromLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;
+                  const occupiedFromClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === label).length;
+                  return Math.max(occupiedFromLeases, occupiedFromClients) < totalUnits;
+                }).map(property => {
                   const id = property.ID || property.id;
                   const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                   return (
@@ -3504,9 +3510,12 @@ const AdministrativeDashboard = () => {
             >
               <option value="">Select property</option>
             {(properties.filter(property => {
-                const label = property.Address || property.address || property.name || property.Name || `Property ${property.ID || property.id}`;
-                const hasTenant = clients.some(c => (c.Property || c.property || '').trim() === label.trim());
-                return !hasTenant;
+                const label = (property.Address || property.address || property.name || property.Name || `Property ${property.ID || property.id}`).toString().trim();
+                const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+                const occupiedFromLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;
+                const occupiedFromClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === label).length;
+                const occupiedCount = Math.max(occupiedFromLeases, occupiedFromClients);
+                return occupiedCount < totalUnits;
               })).map(property => {
                 const id = property.ID || property.id;
                 const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
@@ -3518,6 +3527,15 @@ const AdministrativeDashboard = () => {
               })}
             {properties.length === 0 && (
               <option value="" disabled>No properties found</option>
+            )}
+            {properties.length > 0 && properties.filter(property => {
+              const label = (property.Address || property.address || property.name || property.Name || '').toString().trim();
+              const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+              const occLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;
+              const occClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === label).length;
+              return Math.max(occLeases, occClients) < totalUnits;
+            }).length === 0 && (
+              <option value="" disabled>No properties with empty units available</option>
             )}
             </select>
           </div>

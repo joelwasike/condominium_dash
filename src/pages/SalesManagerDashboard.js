@@ -5398,8 +5398,18 @@ const SalesManagerDashboard = () => {
                         }
                       }}>
                         <option value="">Select Property</option>
-                        {properties.length > 0 ? (
-                          properties.map(property => {
+                        {(() => {
+                          const withEmptyUnits = properties.filter(property => {
+                            const address = (property.Address || property.address || '').toString().trim();
+                            const total = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+                            const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
+                            if (filled !== undefined && filled !== null) return Number(filled) < total;
+                            const status = (property.Status || property.status || '').toLowerCase();
+                            if (total <= 1) return status !== 'occupied';
+                            const occupiedFromClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === address).length;
+                            return occupiedFromClients < total;
+                          });
+                          return withEmptyUnits.length > 0 ? withEmptyUnits.map(property => {
                             const propertyId = property.ID || property.id;
                             const address = property.Address || property.address || 'Unnamed Property';
                             const type = property.Type || property.type || '';
@@ -5408,12 +5418,14 @@ const SalesManagerDashboard = () => {
                             return (
                               <option key={propertyId || `property-${address}`} value={propertyId ?? ''}>
                                 {displayText}
-                            </option>
+                              </option>
                             );
-                          })
-                        ) : (
-                          <option value="" disabled>No properties available. Start backend to load properties.</option>
-                        )}
+                          }) : (
+                            <option value="" disabled>
+                              {properties.length === 0 ? 'No properties available. Start backend to load properties.' : 'No properties with empty units available.'}
+                            </option>
+                          );
+                        })()}
                       </select>
                     </div>
                     <div className="form-group">
