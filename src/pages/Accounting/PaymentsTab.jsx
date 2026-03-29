@@ -1,0 +1,345 @@
+import React from 'react';
+import { Plus, Search, Download } from 'lucide-react';
+import { Receipt } from 'lucide-react';
+import { accountingService } from '../../services/accountingService';
+import RentReceiptTemplate from '../../components/RentReceiptTemplate';
+import { t } from '../../utils/i18n';
+
+const PaymentsTab = (props) => {
+  const {
+    loading, setLoading, addNotification,
+    tenantPayments, setTenantPayments, collections, setCollections, overviewData, setOverviewData,
+    rentSummary,
+    paymentView, setPaymentView, paymentStatusFilter, setPaymentStatusFilter,
+    paymentNameFilter, setPaymentNameFilter, paymentDateStartFilter, setPaymentDateStartFilter,
+    paymentDateEndFilter, setPaymentDateEndFilter,
+    showCollectionPaymentModal, setShowCollectionPaymentModal,
+    setSelectedItemForView, setShowPaymentViewModal,
+    downloadReceipt, printPaymentReceipt, tenants
+  } = props;
+
+  const nameLower = (paymentNameFilter || '').trim().toLowerCase();
+  const dateStart = paymentDateStartFilter ? new Date(paymentDateStartFilter + 'T00:00:00') : null;
+  const dateEnd = paymentDateEndFilter ? new Date(paymentDateEndFilter + 'T23:59:59') : null;
+
+  const matchesStatus = (status) => {
+    if (paymentStatusFilter === 'all') return true;
+    const s = (status || '').toLowerCase();
+    if (paymentStatusFilter === 'approved') return s === 'approved' || s === 'collected' || s === 'paid';
+    if (paymentStatusFilter === 'pending') return s === 'pending' || s === 'awaiting';
+    if (paymentStatusFilter === 'rejected') return s === 'rejected' || s === 'failed';
+    return true;
+  };
+  const matchesName = (tenant, buyer, property, landlord) => {
+    if (!nameLower) return true;
+    const search = [tenant, buyer, property, landlord].filter(Boolean).join(' ').toLowerCase();
+    return search.includes(nameLower);
+  };
+  const matchesDate = (dateStr) => {
+    if (!dateStr) return !dateStart && !dateEnd;
+    const d = new Date(dateStr);
+    if (dateStart && d < dateStart) return false;
+    if (dateEnd && d > dateEnd) return false;
+    return true;
+  };
+
+  const filteredCollections = collections.filter(col => {
+    if (paymentView === 'tenant') return false;
+    if (paymentView === 'rent' && col.ChargeType !== 'Rent') return false;
+    if (paymentView === 'deposit' && col.ChargeType !== 'Deposit') return false;
+    if (paymentView === 'sale' && col.ChargeType !== 'Sale') return false;
+    if (!matchesStatus(col.Status)) return false;
+    if (!matchesName(col.Tenant, col.Buyer, col.Building, col.Landlord)) return false;
+    if (!matchesDate(col.Date)) return false;
+    return true;
+  });
+
+  const filteredTenantPayments = (paymentView === 'all' || paymentView === 'tenant')
+    ? tenantPayments.filter(p => {
+        if (!matchesStatus(p.Status)) return false;
+        if (!matchesName(p.Tenant, null, p.Property, null)) return false;
+        if (!matchesDate(p.Date)) return false;
+        return true;
+      })
+    : [];
+
+  const collected = rentSummary?.collectedRents ?? 0;
+  const expected = rentSummary?.expectedRentThisMonth ?? 0;
+  const paid = rentSummary?.paidRents ?? 0;
+  const unpaid = rentSummary?.unpaidRents ?? 0;
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Collected Rents</p>
+          <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#059669' }}>{collected.toFixed(2)} XOF</p>
+        </div>
+        <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Expected Rent This Month</p>
+          <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#1e40af' }}>{expected.toFixed(2)} XOF</p>
+        </div>
+        <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Paid Rents</p>
+          <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#059669' }}>{paid.toFixed(2)} XOF</p>
+        </div>
+        <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Unpaid Rents</p>
+          <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#dc2626' }}>{unpaid.toFixed(2)} XOF</p>
+        </div>
+      </div>
+
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h2>Payments & Deposits</h2>
+            <p>Manage rent payments, deposit payments, and property sales</p>
+          </div>
+          <button className="sa-primary-cta" onClick={() => setShowCollectionPaymentModal(true)} disabled={loading}>
+            <Plus size={18} /> Record Payment
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '2px solid #e5e7eb' }}>
+          {['all', 'deposit', 'sale', 'tenant'].map(view => (
+            <button key={view} onClick={() => setPaymentView(view)} style={{
+              padding: '10px 20px', border: 'none',
+              background: paymentView === view ? '#3b82f6' : 'transparent',
+              color: paymentView === view ? 'white' : '#6b7280',
+              cursor: 'pointer',
+              borderBottom: paymentView === view ? '2px solid #3b82f6' : '2px solid transparent',
+              marginBottom: '-2px'
+            }}>
+              {view === 'all' ? 'All Payments' : view === 'deposit' ? 'Deposit Payments' : view === 'sale' ? 'Property Sales' : 'Tenant Payments'}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', whiteSpace: 'nowrap' }}>Status (verify payment):</label>
+            <select value={paymentStatusFilter} onChange={(e) => setPaymentStatusFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem', minWidth: '140px' }}>
+              <option value="all">All</option>
+              <option value="approved">Approved / Verified</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Search size={18} style={{ color: '#6b7280' }} />
+            <input type="text" placeholder="Filter by tenant, buyer, property..." value={paymentNameFilter} onChange={(e) => setPaymentNameFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem', minWidth: '200px' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', whiteSpace: 'nowrap' }}>Date from:</label>
+            <input type="date" value={paymentDateStartFilter} onChange={(e) => setPaymentDateStartFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', whiteSpace: 'nowrap' }}>Date to:</label>
+            <input type="date" value={paymentDateEndFilter} onChange={(e) => setPaymentDateEndFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem' }} />
+          </div>
+          {(paymentStatusFilter !== 'all' || paymentNameFilter || paymentDateStartFilter || paymentDateEndFilter) && (
+            <button type="button" onClick={() => { setPaymentStatusFilter('all'); setPaymentNameFilter(''); setPaymentDateStartFilter(''); setPaymentDateEndFilter(''); }} style={{ padding: '8px 12px', fontSize: '0.875rem', color: '#64748b', background: 'transparent', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer' }}>
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="loading">Loading payments...</div>
+        ) : filteredCollections.length === 0 && filteredTenantPayments.length === 0 ? (
+          <div className="no-data">No payments found</div>
+        ) : (
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Type</th><th>Tenant/Buyer</th><th>Property/Building</th><th>Landlord</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Date</th><th className="table-menu"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCollections.map((collection, index) => (
+                  <tr key={`collection-${collection.ID || index}`}>
+                    <td><span className="sa-status-pill" style={{ backgroundColor: '#dbeafe', color: '#1e40af' }}>{collection.ChargeType || 'Collection'}</span></td>
+                    <td>-</td>
+                    <td><span className="sa-cell-title">{collection.Building || 'N/A'}</span></td>
+                    <td>{collection.Landlord || 'N/A'}</td>
+                    <td>{collection.Amount?.toFixed(2) || '0.00'} XOF</td>
+                    <td>Cash</td>
+                    <td><span className={`sa-status-pill ${(collection.Status || 'unknown').toLowerCase()}`}>{collection.Status || 'Unknown'}</span></td>
+                    <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
+                    <td className="table-menu">
+                      <div className="sa-row-actions">
+                        <button className="table-action-button view" onClick={() => { setSelectedItemForView({ type: 'collection', data: collection }); setShowPaymentViewModal(true); }}>{t('common.view')}</button>
+                        <button className="table-action-button edit" onClick={() => printPaymentReceipt(collection, true)}>Receipt</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredTenantPayments.map((payment, index) => (
+                  <tr key={`tenant-payment-${payment.ID || index}`}>
+                    <td><span className="sa-status-pill" style={{ backgroundColor: '#dcfce7', color: '#166534' }}>Tenant Payment</span></td>
+                    <td><span className="sa-cell-title">{payment.Tenant || 'N/A'}</span></td>
+                    <td>{payment.Property || 'N/A'}</td>
+                    <td>-</td>
+                    <td>{payment.Amount?.toFixed(2) || '0.00'} XOF</td>
+                    <td>{payment.Method || 'N/A'}</td>
+                    <td><span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>{payment.Status || 'Unknown'}</span></td>
+                    <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
+                    <td className="table-menu">
+                      <div className="sa-row-actions">
+                        <button className="table-action-button view" onClick={() => { setSelectedItemForView({ type: 'payment', data: payment }); setShowPaymentViewModal(true); }}>{t('common.view')}</button>
+                        <button className="table-action-button edit" onClick={() => downloadReceipt(payment)}>Receipt</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Collection Payment Modal (extracted from index)
+PaymentsTab.CollectionModal = (props) => {
+  const {
+    loading, setLoading, addNotification,
+    showCollectionPaymentModal, setShowCollectionPaymentModal,
+    collectionPaymentType, setCollectionPaymentType,
+    collectionPaymentForm, setCollectionPaymentForm,
+    tenants, propertiesForSale,
+    setOverviewData, setTenantPayments, setCollections
+  } = props;
+
+  return (
+    <div className="modal-overlay" onClick={() => { setShowCollectionPaymentModal(false); setCollectionPaymentType(null); }}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: collectionPaymentType ? '600px' : '500px' }}>
+        <div className="modal-header">
+          <h3>{collectionPaymentType ? 'Record Payment Details' : 'Select Payment Type'}</h3>
+          <button className="modal-close" onClick={() => { setShowCollectionPaymentModal(false); setCollectionPaymentType(null); }}>x</button>
+        </div>
+        <div className="modal-body">
+          {!collectionPaymentType ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px 0' }}>
+              <button type="button" className="action-button primary" onClick={() => setCollectionPaymentType('tenant')} style={{ padding: '16px', fontSize: '16px', textAlign: 'left' }}>
+                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Record a Tenant's Payment</div>
+                <div style={{ fontSize: '14px', opacity: 0.8 }}>Record rent or other tenant payments</div>
+              </button>
+              <button type="button" className="action-button primary" onClick={() => setCollectionPaymentType('deposit')} style={{ padding: '16px', fontSize: '16px', textAlign: 'left' }}>
+                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Record a Security Deposit</div>
+                <div style={{ fontSize: '14px', opacity: 0.8 }}>Record security deposit payments from tenants</div>
+              </button>
+              <button type="button" className="action-button primary" onClick={() => setCollectionPaymentType('sale')} style={{ padding: '16px', fontSize: '16px', textAlign: 'left' }}>
+                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Record a Property Sale</div>
+                <div style={{ fontSize: '14px', opacity: 0.8 }}>Record property sale transactions</div>
+              </button>
+            </div>
+          ) : collectionPaymentType === 'tenant' ? (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setLoading(true);
+                const paymentData = { tenant: collectionPaymentForm.tenant, property: collectionPaymentForm.property, amount: parseFloat(collectionPaymentForm.amount || '0'), method: collectionPaymentForm.method, chargeType: collectionPaymentForm.chargeType, reference: collectionPaymentForm.reference, status: 'Approved' };
+                await accountingService.recordTenantPayment(paymentData);
+                addNotification('Tenant payment recorded successfully!', 'success');
+                try { await accountingService.recordCollection({ building: collectionPaymentForm.property, landlord: collectionPaymentForm.landlord || 'N/A', amount: parseFloat(collectionPaymentForm.amount || '0'), chargeType: collectionPaymentForm.chargeType, status: 'Collected' }); } catch (collError) { console.error('Error creating collection record:', collError); }
+                const [overview, tenantPaymentsData, collectionsData] = await Promise.all([accountingService.getOverview(), accountingService.getTenantPayments(), accountingService.getCollections()]);
+                setOverviewData(overview); setTenantPayments(Array.isArray(tenantPaymentsData) ? tenantPaymentsData : []); setCollections(Array.isArray(collectionsData) ? collectionsData : []);
+                setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', paymentMethod: 'cash', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
+                setCollectionPaymentType(null); setShowCollectionPaymentModal(false);
+              } catch (error) { console.error('Error recording tenant payment:', error); addNotification(error.message || 'Failed to record tenant payment', 'error'); } finally { setLoading(false); }
+            }}>
+              <div className="form-group">
+                <label htmlFor="tenantName">Tenant *</label>
+                <select id="tenantName" value={collectionPaymentForm.tenant} onChange={(e) => { const val = e.target.value; const t = tenants.find(x => (x.tenantName || x.TenantName) === val); if (t) { setCollectionPaymentForm({...collectionPaymentForm, tenant: t.tenantName || t.TenantName || '', property: t.property || t.Property || '', amount: t.monthlyRent ?? t.MonthlyRent ?? '' }); } else { setCollectionPaymentForm({...collectionPaymentForm, tenant: val || ''}); } }} required>
+                  <option value="">Select tenant</option>
+                  {tenants.filter(t => (t.property || t.Property)).map((t) => { const name = t.tenantName || t.TenantName || ''; return <option key={t.tenantId ?? t.TenantID ?? name} value={name}>{name} {t.property || t.Property ? ` (${t.property || t.Property})` : ''}</option>; })}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="tenantProperty">Property *</label>
+                <input id="tenantProperty" type="text" value={collectionPaymentForm.property} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})} readOnly={!!(collectionPaymentForm.tenant && collectionPaymentForm.property)} required placeholder="Select a tenant to auto-fill" style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}} />
+              </div>
+              {collectionPaymentForm.tenant && (() => { const sel = tenants.find(t => (t.tenantName || t.TenantName) === collectionPaymentForm.tenant); const due = sel ? (sel.outstandingAmount ?? sel.OutstandingAmount ?? 0) : 0; const months = sel ? (sel.monthsInArrears ?? sel.MonthsInArrears ?? 0) : 0; const hasArrears = due > 0; return (<div className="form-group" style={{ padding: '12px', backgroundColor: hasArrears ? '#fef3c7' : '#f0fdf4', borderRadius: '8px', border: hasArrears ? '1px solid #f59e0b' : '1px solid #22c55e' }}><label style={{ color: hasArrears ? '#92400e' : '#166534', fontWeight: '600' }}>Amount Due (Outstanding)</label><div style={{ fontSize: '1.1rem', fontWeight: '600', color: hasArrears ? '#b45309' : '#15803d' }}>{(due || 0).toLocaleString()} XOF{months > 0 && <span style={{ fontSize: '0.85rem', fontWeight: '500', marginLeft: '8px' }}>({months} month{months > 1 ? 's' : ''} in arrears)</span>}{!hasArrears && <span style={{ fontSize: '0.85rem', fontWeight: '500', marginLeft: '8px' }}>(Up to date)</span>}</div></div>); })()}
+              <div className="form-group"><label htmlFor="tenantAmount">Amount (XOF) *</label><input id="tenantAmount" type="number" min="0" step="0.01" value={collectionPaymentForm.amount} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, amount: e.target.value})} required placeholder="Enter payment amount" /><small style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>Can include arrears, current month, or months ahead</small></div>
+              <div className="form-group"><label htmlFor="tenantMethod">Payment Method *</label><select id="tenantMethod" value={collectionPaymentForm.method} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, method: e.target.value})} required><option value="Cash">Cash</option><option value="Mobile Money">Mobile Money</option><option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option></select></div>
+              <div className="form-group"><label htmlFor="tenantChargeType">Charge Type *</label><select id="tenantChargeType" value={collectionPaymentForm.chargeType} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, chargeType: e.target.value})} required><option value="Rent">Rent</option><option value="Deposit">Deposit</option><option value="Late Fee">Late Fee</option></select></div>
+              <div className="form-group"><label htmlFor="tenantReference">Reference (optional)</label><input id="tenantReference" type="text" value={collectionPaymentForm.reference} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, reference: e.target.value})} placeholder="Receipt number or reference" /></div>
+              <div className="modal-footer"><button type="button" className="action-button secondary" onClick={() => setCollectionPaymentType(null)} disabled={loading}>Back</button><button type="submit" className="action-button primary" disabled={loading}>{loading ? t('accounting.recording') : t('accounting.recordPayment')}</button></div>
+            </form>
+          ) : collectionPaymentType === 'deposit' ? (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setLoading(true);
+                const monthlyRent = parseFloat(collectionPaymentForm.monthlyRent || '0');
+                await accountingService.recordDepositPayment({ tenant: collectionPaymentForm.tenant, property: collectionPaymentForm.property, tenantType: collectionPaymentForm.tenantType, monthlyRent, amount: monthlyRent * 4.5, monthsMultiplier: 4.5, paymentMethod: collectionPaymentForm.paymentMethod });
+                addNotification('Security deposit recorded successfully!', 'success');
+                try { await accountingService.recordCollection({ building: collectionPaymentForm.property, landlord: collectionPaymentForm.landlord || 'N/A', amount: monthlyRent * 4.5, chargeType: 'Deposit', status: 'Collected' }); } catch (collError) { console.error('Error creating collection record:', collError); }
+                const [overview, collectionsData] = await Promise.all([accountingService.getOverview(), accountingService.getCollections()]);
+                setOverviewData(overview); setCollections(Array.isArray(collectionsData) ? collectionsData : []);
+                setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', paymentMethod: 'cash', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
+                setCollectionPaymentType(null); setShowCollectionPaymentModal(false);
+              } catch (error) { console.error('Error recording deposit:', error); addNotification(error.message || 'Failed to record security deposit', 'error'); } finally { setLoading(false); }
+            }}>
+              <div className="form-group"><label>Tenant *</label><select value={collectionPaymentForm.tenant} onChange={(e) => { const val = e.target.value; const t = tenants.find(x => (x.tenantName || x.TenantName) === val); if (t) { setCollectionPaymentForm({...collectionPaymentForm, tenant: t.tenantName || t.TenantName || '', property: t.property || t.Property || '', monthlyRent: t.monthlyRent ?? t.MonthlyRent ?? '' }); } else { setCollectionPaymentForm({...collectionPaymentForm, tenant: val || ''}); } }} required><option value="">Select tenant</option>{tenants.filter(t => (t.property || t.Property)).map((t) => { const name = t.tenantName || t.TenantName || ''; return <option key={name} value={name}>{name} {t.property || t.Property ? ` (${t.property || t.Property})` : ''}</option>; })}</select></div>
+              <div className="form-group"><label>Property *</label><input type="text" value={collectionPaymentForm.property} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})} readOnly={!!(collectionPaymentForm.tenant && collectionPaymentForm.property)} required placeholder="Select a tenant to auto-fill" style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}} /></div>
+              <div className="form-group"><label>Tenant Type *</label><select value={collectionPaymentForm.tenantType} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, tenantType: e.target.value})} required><option value="individual">Individual</option><option value="company">Company</option></select><small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>Deposit: 4.5 months rent for all properties</small></div>
+              <div className="form-group"><label>Monthly Rent (XOF) *</label><input type="number" min="0" step="0.01" value={collectionPaymentForm.monthlyRent} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, monthlyRent: e.target.value})} required placeholder="Enter monthly rent amount" />{collectionPaymentForm.monthlyRent && <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>Deposit Amount: {(parseFloat(collectionPaymentForm.monthlyRent) * 4.5).toFixed(2)} XOF</small>}</div>
+              <div className="form-group"><label>Payment Method *</label><select value={collectionPaymentForm.paymentMethod} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, paymentMethod: e.target.value})} required><option value="cash">Cash</option><option value="mobile_money">Mobile Money</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option></select></div>
+              <div className="modal-footer"><button type="button" className="action-button secondary" onClick={() => setCollectionPaymentType(null)} disabled={loading}>Back</button><button type="submit" className="action-button primary" disabled={loading}>{loading ? t('accounting.recording') : t('accounting.recordPayment')}</button></div>
+            </form>
+          ) : (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setLoading(true);
+                await accountingService.recordCollection({ building: collectionPaymentForm.property, landlord: collectionPaymentForm.landlord, amount: parseFloat(collectionPaymentForm.saleAmount || '0'), chargeType: 'Sale', status: 'Collected', agencyCommission: parseFloat(collectionPaymentForm.agencyCommission || '0') || 0 });
+                addNotification('Property sale recorded successfully!', 'success');
+                const [overview, collectionsData] = await Promise.all([accountingService.getOverview(), accountingService.getCollections()]);
+                setOverviewData(overview); setCollections(Array.isArray(collectionsData) ? collectionsData : []);
+                setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', paymentMethod: 'cash', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
+                setCollectionPaymentType(null); setShowCollectionPaymentModal(false);
+              } catch (error) { console.error('Error recording property sale:', error); addNotification(error.message || 'Failed to record property sale', 'error'); } finally { setLoading(false); }
+            }}>
+              <div className="form-group"><label>Property / Building *</label><select value={collectionPaymentForm.property} onChange={(e) => { const addr = e.target.value; const p = propertiesForSale.find(x => (x.address || x.Address) === addr); if (p) { setCollectionPaymentForm({...collectionPaymentForm, property: addr, landlord: p.landlord || p.Landlord || '' }); } else { setCollectionPaymentForm({...collectionPaymentForm, property: addr}); } }} required><option value="">Select property</option>{propertiesForSale.map((p) => { const addr = p.address || p.Address || ''; return <option key={addr} value={addr}>{addr} {p.landlord || p.Landlord ? ` (${p.landlord || p.Landlord})` : ''}</option>; })}</select></div>
+              <div className="form-group"><label>Landlord / Seller *</label><input type="text" value={collectionPaymentForm.landlord} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, landlord: e.target.value})} required placeholder="Enter landlord/seller name" /></div>
+              <div className="form-group"><label>Buyer Name (optional)</label><input type="text" value={collectionPaymentForm.buyer} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, buyer: e.target.value})} placeholder="Enter buyer name" /></div>
+              <div className="form-group"><label>Sale Amount (XOF) *</label><input type="number" min="0" step="0.01" value={collectionPaymentForm.saleAmount} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, saleAmount: e.target.value, amount: e.target.value})} required placeholder="Enter sale amount" /></div>
+              <div className="form-group"><label>Agency Commission (XOF)</label><input type="number" min="0" step="0.01" value={collectionPaymentForm.agencyCommission} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, agencyCommission: e.target.value})} placeholder="Enter agency commission (optional)" /></div>
+              <div className="modal-footer"><button type="button" className="action-button secondary" onClick={() => setCollectionPaymentType(null)} disabled={loading}>Back</button><button type="submit" className="action-button primary" disabled={loading}>{loading ? t('accounting.recording') : t('accounting.recordPayment')}</button></div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// View Payment/Collection Modal
+PaymentsTab.ViewModal = (props) => {
+  const { setShowPaymentViewModal, selectedItemForView, printPaymentReceipt } = props;
+  return (
+    <div className="modal-overlay" onClick={() => setShowPaymentViewModal(false)}>
+      <div className="modal-content modal-content-receipt" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', overflow: 'auto' }}>
+        <div className="modal-header">
+          <h3>{selectedItemForView.type === 'collection' ? 'View Collection' : 'View Payment'}</h3>
+          <button className="modal-close" onClick={() => setShowPaymentViewModal(false)}>x</button>
+        </div>
+        <div className="modal-body" style={{ padding: '20px', overflow: 'auto', maxHeight: '85vh', backgroundColor: '#f0f0f0' }}>
+          <RentReceiptTemplate data={selectedItemForView.data} isCollection={selectedItemForView.type === 'collection'} />
+          <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb' }}>
+            <button type="button" className="action-button secondary" onClick={() => setShowPaymentViewModal(false)}>Close</button>
+            <button type="button" className="action-button primary" onClick={() => { printPaymentReceipt(selectedItemForView.data, selectedItemForView.type === 'collection'); setShowPaymentViewModal(false); }}>
+              <Receipt size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Download Receipt PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PaymentsTab;

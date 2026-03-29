@@ -1,0 +1,20 @@
+import React from 'react';
+import { Plus, Download } from 'lucide-react';
+
+const StatesTaxesTab = (props) => {
+  const { overviewData, expenses, selectedMonth, setSelectedMonth, addNotification, setShowExpenseModal } = props;
+  return (
+    <div><div className="sa-section-card">
+      <div className="sa-section-header"><div><h2>States & Taxes</h2><p>Monthly accounting and tax obligations</p></div><div style={{ display: 'flex', gap: '12px' }}><input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }} /><button className="sa-primary-cta" onClick={() => addNotification('Monthly statement generation coming soon', 'info')}><Download size={18} /> Generate Statement</button></div></div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+        <div style={{ padding: '20px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #93c5fd' }}><p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Declared Turnover</p><p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#0284c7' }}>{overviewData?.totalCollectedThisMonth?.toFixed(2) || '0.00'} XOF</p></div>
+        <div style={{ padding: '20px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fca5a5' }}><p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Deductible Expenses</p><p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#dc2626' }}>{overviewData?.totalExpensesThisMonth?.toFixed(2) || '0.00'} XOF</p></div>
+        <div style={{ padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}><p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Taxable Income</p><p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#059669' }}>{((overviewData?.totalCollectedThisMonth || 0) - (overviewData?.totalExpensesThisMonth || 0)).toFixed(2)} XOF</p></div>
+      </div>
+      <div style={{ marginBottom: '24px' }}><h3 style={{ marginBottom: '16px' }}>Monthly Financial Statement</h3><div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Category</th><th>Amount (XOF)</th><th>Notes</th></tr></thead><tbody><tr><td>Total Revenue</td><td>{overviewData?.totalCollectedThisMonth?.toFixed(2) || '0.00'}</td><td>All collected payments</td></tr><tr><td>Total Expenses</td><td>{overviewData?.totalExpensesThisMonth?.toFixed(2) || '0.00'}</td><td>All recorded expenses</td></tr><tr><td>Net Profit</td><td>{((overviewData?.totalCollectedThisMonth || 0) - (overviewData?.totalExpensesThisMonth || 0)).toFixed(2)}</td><td>Revenue minus expenses</td></tr></tbody></table></div></div>
+      <div style={{ marginBottom: '24px' }}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}><h3 style={{ margin: 0 }}>Tax Records</h3><button className="sa-primary-cta" onClick={() => setShowExpenseModal(true)}><Plus size={18} /> Add Tax Record</button></div>{expenses.filter(e => (e.Category || e.category) === 'Taxes').length === 0 ? <div className="no-data">No tax records found</div> : <div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Date</th><th>Property</th><th>Tax Type</th><th>Amount</th><th>Notes</th></tr></thead><tbody>{expenses.filter(e => (e.Category || e.category) === 'Taxes').map((tax, index) => (<tr key={tax.ID || tax.id || index}><td>{tax.Date ? new Date(tax.Date).toLocaleDateString() : (tax.date ? new Date(tax.date).toLocaleDateString() : 'N/A')}</td><td>{tax.Building || tax.building || 'Company-wide'}</td><td>{tax.Notes || tax.notes || 'Tax Payment'}</td><td>{(tax.Amount || tax.amount || 0).toFixed(2)} XOF</td><td>{tax.Notes || tax.notes || '-'}</td></tr>))}</tbody></table></div>}</div>
+      <div><h3 style={{ marginBottom: '16px' }}>Declaration History</h3><div className="no-data">No declaration history available</div></div>
+    </div></div>
+  );
+};
+export default StatesTaxesTab;
