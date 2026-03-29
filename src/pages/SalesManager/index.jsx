@@ -2341,7 +2341,7 @@ const SalesManagerDashboard = () => {
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
-        return <OverviewTab loading={loading} overviewData={overviewData} properties={properties} clients={clients} unpaidRents={unpaidRents} alerts={alerts} advertisements={advertisements} />;
+        return <OverviewTab loading={loading} overviewData={overviewData} properties={properties} clients={clients} unpaidRents={unpaidRents} alerts={alerts} advertisements={advertisements} currentAdIndex={currentAdIndex} setCurrentAdIndex={setCurrentAdIndex} carouselIntervalRef={carouselIntervalRef} />;
       case 'occupancy':
         return <OccupancyTab properties={properties} clients={clients} propertyStatusFilter={propertyStatusFilter} setPropertyStatusFilter={setPropertyStatusFilter} propertyTypeFilter={propertyTypeFilter} setPropertyTypeFilter={setPropertyTypeFilter} propertyUrgencyFilter={propertyUrgencyFilter} setPropertyUrgencyFilter={setPropertyUrgencyFilter} occupancyDetailView={occupancyDetailView} setOccupancyDetailView={setOccupancyDetailView} occupancySelectedProperty={occupancySelectedProperty} setOccupancySelectedProperty={setOccupancySelectedProperty} occupancyDetailData={occupancyDetailData} setOccupancyDetailData={setOccupancyDetailData} occupancyDetailLoading={occupancyDetailLoading} handleOpenOccupancyDetail={handleOpenOccupancyDetail} openEditPropertyModal={openEditPropertyModal} />;
       case 'sales-tracking':
@@ -2367,7 +2367,7 @@ const SalesManagerDashboard = () => {
           </div>
         );
       default:
-        return <OverviewTab loading={loading} overviewData={overviewData} properties={properties} clients={clients} unpaidRents={unpaidRents} alerts={alerts} advertisements={advertisements} />;
+        return <OverviewTab loading={loading} overviewData={overviewData} properties={properties} clients={clients} unpaidRents={unpaidRents} alerts={alerts} advertisements={advertisements} currentAdIndex={currentAdIndex} setCurrentAdIndex={setCurrentAdIndex} carouselIntervalRef={carouselIntervalRef} />;
     }
   };
 

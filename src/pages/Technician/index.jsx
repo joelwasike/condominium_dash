@@ -31,6 +31,12 @@ import {
 import { technicianService } from '../../services/technicianService';
 import { messagingService } from '../../services/messagingService';
 import { API_CONFIG } from '../../config/api';
+import AdvertisementsList from '../../components/AdvertisementsList';
+import AdCarousel from '../../components/AdCarousel';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+import MessagingPanel from '../../components/MessagingPanel';
 import { isDemoMode, getTechnicianDemoData } from '../../utils/demoData';
 import '../TechnicianDashboard.css';
 import '../SuperAdminDashboard.css';
@@ -1079,17 +1085,11 @@ const TechnicianDashboard = () => {
       monthlyCompleted.push(completedCount);
     }
 
-    const maxValue = Math.max(1, ...monthlyRequests, ...monthlyCompleted);
-    const chartWidth = 300;
-    const chartHeight = 140;
-    const chartPadding = 10;
-    const toPoint = (value, index, count) => {
-      const x = chartPadding + (index * (chartWidth - chartPadding * 2)) / (count - 1 || 1);
-      const y = chartHeight - chartPadding - (value / maxValue) * (chartHeight - chartPadding * 2);
-      return `${x},${y}`;
-    };
-    const requestsPath = monthlyRequests.map((v, i) => toPoint(v, i, monthlyRequests.length)).join(' ');
-    const completedPath = monthlyCompleted.map((v, i) => toPoint(v, i, monthlyCompleted.length)).join(' ');
+    const techChartData = monthLabels.map((label, i) => ({
+      month: label,
+      requests: monthlyRequests[i],
+      completed: monthlyCompleted[i],
+    }));
 
     return (
       <div className="sa-overview-page">
@@ -1103,26 +1103,28 @@ const TechnicianDashboard = () => {
               <span className="sa-legend-item sa-legend-expected">Requests</span>
               <span className="sa-legend-item sa-legend-current">Completed</span>
             </div>
-            <div style={{ width: '100%', height: '180px' }}>
-              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} width="100%" height="180" role="img" aria-label="Maintenance requests chart">
-                <polyline
-                  fill="none"
-                  stroke="#7c3aed"
-                  strokeWidth="3"
-                  points={requestsPath}
-                />
-                <polyline
-                  fill="none"
-                  stroke="#22c55e"
-                  strokeWidth="3"
-                  points={completedPath}
-                />
-              </svg>
-            </div>
-            <div className="sa-chart-footer">
-              {monthLabels.map(label => (
-                <span key={label}>{label}</span>
-              ))}
+            <div style={{ width: '100%', height: '250px', marginTop: '20px' }}>
+              <ResponsiveContainer>
+                <AreaChart data={techChartData} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+                  <defs>
+                    <linearGradient id="colorTechRequests" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorTechCompleted" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis dataKey="month" stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                  <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', padding: '8px 12px' }} />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} iconType="line" />
+                  <Area type="monotone" dataKey="requests" stroke="#8b5cf6" strokeWidth={3} fill="url(#colorTechRequests)" dot={{ fill: '#8b5cf6', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} name="Requests" />
+                  <Area type="monotone" dataKey="completed" stroke="#22c55e" strokeWidth={3} fill="url(#colorTechCompleted)" dot={{ fill: '#22c55e', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} name="Completed" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
@@ -1177,94 +1179,7 @@ const TechnicianDashboard = () => {
             </div>
             {/* Advertisements Display - Replacing Banner Card */}
             {advertisements.length > 0 ? (
-              <div style={{
-                gridColumn: 'span 2',
-                minHeight: '400px',
-                padding: '32px',
-                backgroundColor: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '24px',
-                overflowX: 'auto'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  gap: '24px',
-                  flexWrap: 'nowrap',
-                  overflowX: 'auto',
-                  paddingBottom: '16px',
-                  width: '100%'
-                }}>
-                  {advertisements.map((ad, index) => {
-                    const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-                    const fullImageUrl = imageUrl 
-                      ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                      : null;
-
-                    return (
-                      <div 
-                        key={`ad-${ad.ID || ad.id || index}`}
-                        style={{
-                          minWidth: '350px',
-                          maxWidth: '450px',
-                          padding: '20px',
-                          backgroundColor: '#f9fafb',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          flexShrink: 0
-                        }}
-                      >
-                        {fullImageUrl && (
-                          <img 
-                            src={fullImageUrl} 
-                            alt={ad.Title || ad.title || 'Advertisement'} 
-                            style={{
-                              width: '100%',
-                              height: 'auto',
-                              maxHeight: '250px',
-                              objectFit: 'contain',
-                              borderRadius: '8px',
-                              marginBottom: '16px'
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        )}
-                        <h3 style={{ 
-                          margin: '0 0 8px 0', 
-                          fontSize: '1.1rem', 
-                          color: '#1f2937',
-                          fontWeight: '600'
-                        }}>
-                          {ad.Title || ad.title || 'Untitled Advertisement'}
-                        </h3>
-                        <p style={{ 
-                          margin: '0 0 12px 0', 
-                          fontSize: '0.9rem', 
-                          color: '#6b7280',
-                          lineHeight: '1.5'
-                        }}>
-                          {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
-                        </p>
-                        {ad.CreatedAt && (
-                          <span style={{ 
-                            fontSize: '0.8rem', 
-                            color: '#9ca3af'
-                          }}>
-                            Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <AdCarousel advertisements={advertisements} currentAdIndex={currentAdIndex} setCurrentAdIndex={setCurrentAdIndex} carouselIntervalRef={carouselIntervalRef} />
             ) : (
               <div className="sa-banner-card">
                 <div className="sa-banner-text">
@@ -1773,153 +1688,16 @@ const TechnicianDashboard = () => {
   };
 
   const renderMessages = () => (
-    <div className="sa-chat-page">
-      <div className="sa-chat-layout">
-        <div className="sa-chat-list">
-          <h3>Users</h3>
-          <ul>
-            {chatUsers.map((user) => {
-              const active = user.userId === selectedUserId;
-              return (
-                <li
-                  key={user.userId}
-                  className={active ? 'active' : ''}
-                  onClick={() => loadChatForUser(user.userId)}
-                >
-                  <div className="sa-cell-main">
-                    <span className="sa-cell-title">{user.name || 'User'}</span>
-                    <span className="sa-cell-sub">{user.email || ''}</span>
-                    {user.role && (
-                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                        {user.role}
-                      </span>
-                    )}
-                    {user.unreadCount > 0 && (
-                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
-                        {user.unreadCount} unread
-                      </span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-            {chatUsers.length === 0 && (
-              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
-                No users available
-              </li>
-            )}
-          </ul>
-      </div>
-
-        <div className="sa-chat-conversation">
-          <div className="sa-chat-header">
-            <h3>Messages</h3>
-            {selectedUserId && (
-              <span className="sa-chat-subtitle">
-                Chat with{' '}
-                {
-                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
-                    .name || 'User'
-                }
-              </span>
-            )}
-      </div>
-          <div className="sa-chat-messages">
-            {chatMessages.map((msg, index) => {
-              const messageContent = msg.content || msg.Content || '';
-              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
-              const messageFromUserId = msg.fromUserId || msg.FromUserId;
-              const messageId = msg.id || msg.ID || index;
-              
-              // Determine if message is outgoing or incoming
-              const storedUser = localStorage.getItem('user');
-              let isOutgoing = false;
-              if (storedUser) {
-                try {
-                  const user = JSON.parse(storedUser);
-                  const currentUserId = user.id || user.ID;
-                  isOutgoing = String(messageFromUserId) === String(currentUserId);
-                } catch (e) {
-                  // Default to incoming if we can't parse user
-                }
-              }
-              
-              return (
-                <div
-                  key={`msg-${messageId}`}
-                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
-                >
-                  <p>{messageContent}</p>
-                  <span className="sa-chat-meta">
-                    {messageCreatedAt
-                      ? new Date(messageCreatedAt).toLocaleString()
-                      : ''}
-                  </span>
-                </div>
-              );
-            })}
-            {chatMessages.length === 0 && (
-              <div className="sa-table-empty">
-                Select a conversation on the left to start chatting.
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-          <div className="sa-chat-input-row">
-            <input
-              type="text"
-              placeholder="Type a message..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              disabled={!selectedUserId}
-            />
-            <button 
-              className="sa-primary-cta" 
-              onClick={handleSendMessage}
-              disabled={!selectedUserId || !chatInput.trim()}
-            >
-              <MessageCircle size={16} />
-              Send
-            </button>
-          </div>
-        </div>
-        
-        <div className="sa-chat-details">
-          <h4>Contact Details</h4>
-          {selectedUserId ? (
-            (() => {
-              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
-              return (
-                <>
-                  <p>
-                    <strong>Name:</strong> {user.name || 'User'}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {user.email || 'N/A'}
-                  </p>
-                  <p>
-                    <strong>Role:</strong> {user.role || 'N/A'}
-                  </p>
-                  {user.company && (
-                    <p>
-                      <strong>Company:</strong> {user.company}
-                    </p>
-                  )}
-                </>
-              );
-            })()
-          ) : (
-            <p>Select a user to view details.</p>
-          )}
-        </div>
-      </div>
-    </div>
+    <MessagingPanel
+      chatUsers={chatUsers}
+      selectedUserId={selectedUserId}
+      chatMessages={chatMessages}
+      chatInput={chatInput}
+      setChatInput={setChatInput}
+      loadChatForUser={loadChatForUser}
+      handleSendMessage={handleSendMessage}
+      messagesEndRef={messagesEndRef}
+    />
   );
 
   const renderProgress = () => (
@@ -2165,58 +1943,7 @@ const TechnicianDashboard = () => {
   };
 
   const renderAdvertisements = () => {
-    return (
-      <div className="sa-ads-page">
-        <div className="sa-ads-header">
-          <div>
-            <h2>Advertisements</h2>
-            <p>View active advertisements posted by Super Admin</p>
-            </div>
-            </div>
-
-        <div className="sa-ads-list">
-          {advertisements.length > 0 ? (
-            advertisements.map((ad, index) => {
-              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-              const fullImageUrl = imageUrl 
-                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                : null;
-
-              return (
-                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
-                  <div className="sa-ad-status-column">
-                    <span className="sa-ad-status published">Active</span>
-          </div>
-                  <div className="sa-ad-main">
-                    {fullImageUrl && (
-                      <img 
-                        src={fullImageUrl} 
-                        alt={ad.Title || ad.title || 'Advertisement'} 
-                        className="sa-ad-image"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
-                    <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
-                    {ad.CreatedAt && (
-                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
-                        Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
-                      </span>
-                    )}
-            </div>
-            </div>
-              );
-            })
-          ) : (
-            <div className="sa-table-empty">
-              No active advertisements available at this time.
-          </div>
-          )}
-      </div>
-    </div>
-  );
+    return <AdvertisementsList advertisements={advertisements} />;
   };
 
   const handleContactSubmit = async (e) => {

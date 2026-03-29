@@ -34,6 +34,8 @@ import '../AdministrativeDashboard.css';
 import { adminService } from '../../services/adminService';
 import { messagingService } from '../../services/messagingService';
 import { API_CONFIG } from '../../config/api';
+import AdvertisementsList from '../../components/AdvertisementsList';
+import MessagingPanel from '../../components/MessagingPanel';
 import { isDemoMode, getAdministrativeDemoData } from '../../utils/demoData';
 import { t, getLanguage } from '../../utils/i18n';
 
@@ -1705,153 +1707,16 @@ const AdministrativeDashboard = () => {
 
   // Render messaging page
   const renderMessages = () => (
-    <div className="sa-chat-page">
-      <div className="sa-chat-layout">
-        <div className="sa-chat-list">
-          <h3>Users</h3>
-          <ul>
-            {chatUsers.map((user) => {
-              const active = user.userId === selectedUserId;
-              return (
-                <li
-                  key={`chat-user-${user.userId}`}
-                  className={active ? 'active' : ''}
-                  onClick={() => loadChatForUser(user.userId)}
-                >
-                  <div className="sa-cell-main">
-                    <span className="sa-cell-title">{user.name || 'User'}</span>
-                    <span className="sa-cell-sub">{user.email || ''}</span>
-                    {user.role && (
-                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                        {user.role}
-                      </span>
-                    )}
-                    {user.unreadCount > 0 && (
-                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
-                        {user.unreadCount} unread
-                      </span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-            {chatUsers.length === 0 && (
-              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
-                No users available
-              </li>
-            )}
-          </ul>
-        </div>
-        
-        <div className="sa-chat-conversation">
-          <div className="sa-chat-header">
-            <h3>Messages</h3>
-            {selectedUserId && (
-              <span className="sa-chat-subtitle">
-                Chat with{' '}
-                {
-                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
-                    .name || 'User'
-                }
-              </span>
-            )}
-          </div>
-          <div className="sa-chat-messages">
-            {chatMessages.map((msg, index) => {
-              const messageContent = msg.content || msg.Content || '';
-              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
-              const messageFromUserId = msg.fromUserId || msg.FromUserId;
-              const messageId = msg.id || msg.ID || index;
-              
-              const storedUser = localStorage.getItem('user');
-              let isOutgoing = false;
-              if (storedUser) {
-                try {
-                  const user = JSON.parse(storedUser);
-                  const currentUserId = user.id || user.ID;
-                  isOutgoing = String(messageFromUserId) === String(currentUserId);
-                } catch (e) {
-                }
-              }
-              
-              return (
-                <div
-                  key={`msg-${messageId}`}
-                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
-                >
-                  <p>{messageContent}</p>
-                  <span className="sa-chat-meta">
-                    {messageCreatedAt
-                      ? new Date(messageCreatedAt).toLocaleString()
-                      : ''}
-                  </span>
-                </div>
-              );
-            })}
-            {chatMessages.length === 0 && (
-              <div className="sa-table-empty">
-                {selectedUserId 
-                  ? 'No messages yet. Start the conversation!'
-                  : 'Select a conversation on the left to start messaging.'}
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-          <div className="sa-chat-input-row">
-            <input
-              type="text"
-              placeholder="Reply..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              disabled={!selectedUserId}
-            />
-            <button 
-              className="sa-primary-cta" 
-              onClick={handleSendMessage}
-              disabled={!selectedUserId || !chatInput.trim()}
-            >
-              <MessageCircle size={16} />
-              Send
-            </button>
-          </div>
-        </div>
-        
-        <div className="sa-chat-details">
-          <h4>Contact Details</h4>
-          {selectedUserId ? (
-            (() => {
-              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
-              return (
-                <>
-                  <p>
-                    <strong>Name:</strong> {user.name || 'N/A'}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {user.email || 'N/A'}
-                  </p>
-                  <p>
-                    <strong>Role:</strong> {user.role || 'N/A'}
-                  </p>
-                  {user.company && (
-                    <p>
-                      <strong>Company:</strong> {user.company}
-                    </p>
-                  )}
-                </>
-              );
-            })()
-          ) : (
-            <p>Select a conversation to view details.</p>
-          )}
-        </div>
-      </div>
-    </div>
+    <MessagingPanel
+      chatUsers={chatUsers}
+      selectedUserId={selectedUserId}
+      chatMessages={chatMessages}
+      chatInput={chatInput}
+      setChatInput={setChatInput}
+      loadChatForUser={loadChatForUser}
+      handleSendMessage={handleSendMessage}
+      messagesEndRef={messagesEndRef}
+    />
   );
 
   // Load advertisements
@@ -1867,58 +1732,7 @@ const AdministrativeDashboard = () => {
   };
 
   const renderAdvertisements = () => {
-    return (
-      <div className="sa-ads-page">
-        <div className="sa-ads-header">
-          <div>
-            <h2>Advertisements</h2>
-            <p>View active advertisements posted by Super Admin</p>
-          </div>
-        </div>
-
-        <div className="sa-ads-list">
-          {advertisements.length > 0 ? (
-            advertisements.map((ad, index) => {
-              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-              const fullImageUrl = imageUrl 
-                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                : null;
-
-              return (
-                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
-                  <div className="sa-ad-status-column">
-                    <span className="sa-ad-status published">Active</span>
-                  </div>
-                  <div className="sa-ad-main">
-                    {fullImageUrl && (
-                      <img 
-                        src={fullImageUrl} 
-                        alt={ad.Title || ad.title || 'Advertisement'} 
-                        className="sa-ad-image"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
-                    <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
-                    {ad.CreatedAt && (
-                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
-                        Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="sa-table-empty">
-              No active advertisements available at this time.
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return <AdvertisementsList advertisements={advertisements} />;
   };
 
   const handleApproveTransfer = async (id) => {

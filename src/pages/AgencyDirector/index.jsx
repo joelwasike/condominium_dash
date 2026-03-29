@@ -17,8 +17,6 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import {
-  LineChart,
-  Line,
   Area,
   AreaChart,
   BarChart,
@@ -32,6 +30,9 @@ import {
 } from 'recharts';
 import { agencyDirectorService } from '../../services/agencyDirectorService';
 import { API_CONFIG } from '../../config/api';
+import AdvertisementsList from '../../components/AdvertisementsList';
+import AdCarousel from '../../components/AdCarousel';
+import MessagingPanel from '../../components/MessagingPanel';
 import { isDemoMode, getAgencyDirectorDemoData } from '../../utils/demoData';
 import RoleLayout from '../../components/RoleLayout';
 import Modal from '../../components/Modal';
@@ -3229,15 +3230,25 @@ const AgencyDirectorDashboard = () => {
         <div style={{ width: '100%', height: '400px', padding: '20px' }}>
           {prepareTransferHistoryChartData.length > 0 ? (
             <ResponsiveContainer>
-              <LineChart data={prepareTransferHistoryChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
-                <Legend />
-                <Line type="monotone" dataKey="netAmount" stroke="#3b82f6" strokeWidth={2} name="Net Amount" />
-                <Line type="monotone" dataKey="commission" stroke="#10b981" strokeWidth={2} name="Commission" />
-              </LineChart>
+              <AreaChart data={prepareTransferHistoryChartData}>
+                <defs>
+                  <linearGradient id="colorNetAmount" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorCommission" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis dataKey="date" stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', padding: '8px 12px' }} formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Legend wrapperStyle={{ paddingTop: '10px' }} iconType="line" />
+                <Area type="monotone" dataKey="netAmount" stroke="#3b82f6" strokeWidth={3} fill="url(#colorNetAmount)" dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} name="Net Amount" />
+                <Area type="monotone" dataKey="commission" stroke="#10b981" strokeWidth={3} fill="url(#colorCommission)" dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} name="Commission" />
+              </AreaChart>
             </ResponsiveContainer>
           ) : (
             <div style={{ textAlign: 'center', padding: '100px', color: '#9ca3af' }}>No transfer data available</div>
@@ -3255,11 +3266,11 @@ const AgencyDirectorDashboard = () => {
           {prepareExpensesPerBuildingChartData.length > 0 ? (
             <ResponsiveContainer>
               <BarChart data={prepareExpensesPerBuildingChartData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="building" type="category" width={150} />
-                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
-                <Bar dataKey="amount" fill="#3b82f6" name="Expenses" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis type="number" stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <YAxis dataKey="building" type="category" width={150} stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', padding: '8px 12px' }} formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Bar dataKey="amount" fill="#3b82f6" name="Expenses" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -3278,11 +3289,11 @@ const AgencyDirectorDashboard = () => {
           {prepareExpensesPerOwnerChartData.length > 0 ? (
             <ResponsiveContainer>
               <BarChart data={prepareExpensesPerOwnerChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="owner" angle={-45} textAnchor="end" height={100} />
-                <YAxis />
-                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
-                <Bar dataKey="amount" fill="#10b981" name="Expenses" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis dataKey="owner" angle={-45} textAnchor="end" height={100} stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', padding: '8px 12px' }} formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Bar dataKey="amount" fill="#10b981" name="Expenses" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -3301,12 +3312,12 @@ const AgencyDirectorDashboard = () => {
           <div style={{ width: '100%', height: '400px', padding: '20px' }}>
             <ResponsiveContainer>
               <BarChart data={prepareCommissionsChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
-                <Legend />
-                <Bar dataKey="commission" fill="#f59e0b" name="Commission" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis dataKey="month" stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', padding: '8px 12px' }} formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                <Bar dataKey="commission" fill="#f59e0b" name="Commission" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -3323,11 +3334,11 @@ const AgencyDirectorDashboard = () => {
           <div style={{ width: '100%', height: '400px', padding: '20px' }}>
             <ResponsiveContainer>
               <BarChart data={prepareUnpaidRentChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="tenant" angle={-45} textAnchor="end" height={100} />
-                <YAxis />
-                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
-                <Bar dataKey="amount" fill="#ef4444" name="Unpaid Amount" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis dataKey="tenant" angle={-45} textAnchor="end" height={100} stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', padding: '8px 12px' }} formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Bar dataKey="amount" fill="#ef4444" name="Unpaid Amount" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -3343,13 +3354,19 @@ const AgencyDirectorDashboard = () => {
         <div style={{ width: '100%', height: '400px', padding: '20px' }}>
           {prepareInternalExpensesChartData.length > 0 ? (
             <ResponsiveContainer>
-              <LineChart data={prepareInternalExpensesChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip formatter={(value) => `${value.toLocaleString()} FCFA`} />
-                <Line type="monotone" dataKey="amount" stroke="#8b5cf6" strokeWidth={2} name="Internal Expenses" />
-              </LineChart>
+              <AreaChart data={prepareInternalExpensesChartData}>
+                <defs>
+                  <linearGradient id="colorInternalExpenses" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis dataKey="date" stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', padding: '8px 12px' }} formatter={(value) => `${value.toLocaleString()} FCFA`} />
+                <Area type="monotone" dataKey="amount" stroke="#8b5cf6" strokeWidth={3} fill="url(#colorInternalExpenses)" dot={{ fill: '#8b5cf6', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} name="Internal Expenses" />
+              </AreaChart>
             </ResponsiveContainer>
           ) : (
             <div style={{ textAlign: 'center', padding: '100px', color: '#9ca3af' }}>No internal expense data available</div>
@@ -3362,157 +3379,16 @@ const AgencyDirectorDashboard = () => {
 
   // Render messaging/chat page
   const renderMessages = () => (
-    <div className="sa-chat-page">
-      <div className="sa-chat-layout">
-        <div className="sa-chat-list">
-          <h3>Users</h3>
-          <ul>
-            {chatUsers.map((user) => {
-              const active = user.userId === selectedUserId;
-              return (
-                <li
-                  key={`chat-user-${user.userId}`}
-                  className={active ? 'active' : ''}
-                  onClick={() => loadChatForUser(user.userId)}
-                >
-                  <div className="sa-cell-main">
-                    <span className="sa-cell-title">{user.name || 'User'}</span>
-                    <span className="sa-cell-sub">{user.email || ''}</span>
-                    {user.role === 'superadmin' && (
-                      <span style={{
-                        display: 'inline-block',
-                        background: '#fef3c7',
-                        color: '#92400e',
-                        borderRadius: '4px',
-                        padding: '2px 6px',
-                        fontSize: '0.65rem',
-                        marginTop: '4px'
-                      }}>
-                        Super Admin
-                      </span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-            {chatUsers.length === 0 && (
-              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
-                No users available
-              </li>
-            )}
-          </ul>
-        </div>
-        
-        <div className="sa-chat-conversation">
-          <div className="sa-chat-header">
-            <h3>Messages</h3>
-            {selectedUserId && (
-              <span className="sa-chat-subtitle">
-                Chat with{' '}
-                {
-                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
-                    .name || 'User'
-                }
-              </span>
-            )}
-          </div>
-          <div className="sa-chat-messages">
-            {chatMessages.map((msg, index) => {
-              // Handle both lowercase and camelCase field names
-              // Note: Messages may include a 'type' field ('message' or 'superadmin_message')
-              // to distinguish between Message and SuperAdminMessage tables, but this is
-              // handled automatically by the backend and doesn't require special UI handling
-              const messageContent = msg.content || msg.Content || '';
-              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
-              const messageFromUserId = msg.fromUserId || msg.FromUserId;
-              const messageId = msg.id || msg.ID || index;
-              
-              // Determine if message is outgoing or incoming
-              // Compare IDs as strings to handle type mismatches
-              const storedUser = localStorage.getItem('user');
-              let isOutgoing = false;
-              if (storedUser) {
-                try {
-                  const user = JSON.parse(storedUser);
-                  const currentUserId = user.id || user.ID;
-                  // Convert both to strings for reliable comparison
-                  isOutgoing = String(messageFromUserId) === String(currentUserId);
-                } catch (e) {
-                  // Default to incoming if we can't parse user
-                }
-              }
-              
-              return (
-                <div
-                  key={`msg-${messageId}`}
-                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
-                >
-                  <p>{messageContent}</p>
-                  <span className="sa-chat-meta">
-                    {messageCreatedAt
-                      ? new Date(messageCreatedAt).toLocaleString()
-                      : ''}
-                  </span>
-                </div>
-              );
-            })}
-            {chatMessages.length === 0 && (
-              <div className="sa-table-empty">
-                Select a conversation on the left to start chatting.
-              </div>
-            )}
-          </div>
-          <div className="sa-chat-input-row">
-            <input
-              type="text"
-              placeholder="Type a message..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              disabled={!selectedUserId}
-            />
-            <button className="sa-primary-cta" onClick={handleSendMessage} disabled={!selectedUserId}>
-              <MessageCircle size={16} />
-              Send
-            </button>
-          </div>
-        </div>
-        
-        <div className="sa-chat-details">
-          <h4>Contact Details</h4>
-          {selectedUserId ? (
-            (() => {
-              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
-              return (
-                <>
-                  <p>
-                    <strong>Name:</strong> {user.name || 'User'}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {user.email || 'N/A'}
-                  </p>
-                  <p>
-                    <strong>Role:</strong> {user.role || 'N/A'}
-                  </p>
-                  {user.company && (
-                    <p>
-                      <strong>Company:</strong> {user.company}
-                    </p>
-                  )}
-                </>
-              );
-            })()
-          ) : (
-            <p>Select a user to view details.</p>
-          )}
-        </div>
-      </div>
-    </div>
+    <MessagingPanel
+      chatUsers={chatUsers}
+      selectedUserId={selectedUserId}
+      chatMessages={chatMessages}
+      chatInput={chatInput}
+      setChatInput={setChatInput}
+      loadChatForUser={loadChatForUser}
+      handleSendMessage={handleSendMessage}
+      messagesEndRef={messagesEndRef}
+    />
   );
 
   // Load advertisements
@@ -3528,58 +3404,7 @@ const AgencyDirectorDashboard = () => {
   };
 
   const renderAdvertisements = () => {
-    return (
-      <div className="sa-ads-page">
-        <div className="sa-ads-header">
-          <div>
-            <h2>Advertisements</h2>
-            <p>View active advertisements posted by Super Admin</p>
-          </div>
-        </div>
-
-        <div className="sa-ads-list">
-          {advertisements.length > 0 ? (
-            advertisements.map((ad, index) => {
-              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-              const fullImageUrl = imageUrl 
-                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                : null;
-
-              return (
-                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
-                  <div className="sa-ad-status-column">
-                    <span className="sa-ad-status published">Active</span>
-                  </div>
-                  <div className="sa-ad-main">
-                    {fullImageUrl && (
-                      <img 
-                        src={fullImageUrl} 
-                        alt={ad.Title || ad.title || 'Advertisement'} 
-                        className="sa-ad-image"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
-                    <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
-                    {ad.CreatedAt && (
-                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
-                        Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="sa-table-empty">
-              No active advertisements available at this time.
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return <AdvertisementsList advertisements={advertisements} />;
   };
 
   // Combined Management page with tabs

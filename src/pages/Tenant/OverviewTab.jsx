@@ -41,7 +41,7 @@ const OverviewTab = ({ loading, overviewData, payments, maintenanceRequests }) =
             <span className="sa-legend-item sa-legend-expected">Payments (XOF)</span>
             <span className="sa-legend-item sa-legend-current">Maintenance Requests</span>
           </div>
-          <div style={{ width: '100%', height: '200px', marginTop: '20px' }}>
+          <div style={{ width: '100%', height: '250px', marginTop: '20px' }}>
             <ResponsiveContainer>
               <AreaChart
                 data={(() => {
@@ -128,7 +128,7 @@ const OverviewTab = ({ loading, overviewData, payments, maintenanceRequests }) =
                 />
                 <Area
                   yAxisId="left"
-                  type="natural"
+                  type="monotone"
                   dataKey="payments"
                   stroke="#3b82f6"
                   strokeWidth={3}
@@ -139,7 +139,7 @@ const OverviewTab = ({ loading, overviewData, payments, maintenanceRequests }) =
                 />
                 <Area
                   yAxisId="right"
-                  type="natural"
+                  type="monotone"
                   dataKey="maintenance"
                   stroke="#10b981"
                   strokeWidth={3}
