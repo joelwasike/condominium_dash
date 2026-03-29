@@ -200,7 +200,14 @@ export const apiRequest = async (url: string, options: RequestInit = {}): Promis
 
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      return await response.json();
+      const json = await response.json();
+      // Auto-unwrap paginated responses: if the response looks like {data: [...], total, page, ...},
+      // return just the data array so existing frontend code (which expects flat arrays) keeps working.
+      // Components that need pagination metadata should use the React Query hooks instead.
+      if (json && Array.isArray(json.data) && typeof json.total === 'number' && typeof json.page === 'number') {
+        return json.data;
+      }
+      return json;
     } else {
       // Handle non-JSON responses
       const text = await response.text();
@@ -227,4 +234,36 @@ export const apiRequest = async (url: string, options: RequestInit = {}): Promis
 
     throw error;
   }
+};
+
+// API request that preserves the full paginated response (for React Query hooks)
+export const apiRequestPaginated = async (url: string, options: RequestInit = {}): Promise<any> => {
+  const optionHeaders = options.headers as Record<string, string> | undefined;
+  const hasContentType = optionHeaders && optionHeaders['Content-Type'];
+  const authHeaders = getAuthHeaders(!hasContentType);
+
+  const config: RequestInit = {
+    ...options,
+    headers: {
+      ...authHeaders,
+      ...(optionHeaders || {}),
+    },
+  };
+
+  if (config.body && config.body instanceof FormData) {
+    delete (config.headers as Record<string, string>)['Content-Type'];
+  }
+
+  const response = await fetch(url, config);
+  if (!response.ok) {
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    try {
+      const errorData = await response.text();
+      const errorJson = JSON.parse(errorData);
+      errorMessage = errorJson.error || errorJson.message || errorMessage;
+    } catch {}
+    throw new Error(errorMessage);
+  }
+
+  return await response.json();
 };
