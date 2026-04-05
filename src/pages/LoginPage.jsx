@@ -132,19 +132,19 @@ const LoginPage = ({ onLogin }) => {
         onLogin(userToStore);
         // Sync profile picture from /api/profile so avatar is up to date even if login response was cached
         profileService.getProfile().then((profile) => {
-          const pictureUrl = profile.profilePictureURL || profile.profilePicture || profile.profile_picture;
-          if (pictureUrl) {
-            try {
-              const stored = localStorage.getItem('user');
-              if (stored) {
-                const user = JSON.parse(stored);
-                user.profilePictureURL = pictureUrl;
-                if (profile.name) user.name = profile.name;
-                localStorage.setItem('user', JSON.stringify(user));
-                window.dispatchEvent(new Event('userProfileUpdated'));
-              }
-            } catch (e) { /* ignore */ }
-          }
+          try {
+            const stored = localStorage.getItem('user');
+            if (stored) {
+              const user = JSON.parse(stored);
+              const pictureUrl = profile.profilePictureURL || profile.profilePicture || profile.profile_picture;
+              if (pictureUrl) user.profilePictureURL = pictureUrl;
+              if (profile.name) user.name = profile.name;
+              // Sync company logo URL
+              if (profile.companyLogoURL) user.companyLogoURL = profile.companyLogoURL;
+              localStorage.setItem('user', JSON.stringify(user));
+              window.dispatchEvent(new Event('userProfileUpdated'));
+            }
+          } catch (e) { /* ignore */ }
         }).catch(() => { /* ignore */ });
       } else {
         const message = data?.error || `Login failed (HTTP ${response.status})`;

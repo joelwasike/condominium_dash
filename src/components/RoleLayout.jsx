@@ -33,16 +33,17 @@ const RoleLayout = ({
   defaultDashboardRoute = '/'
 }) => {
   // Auto-detect company logo from localStorage (set during login)
+  // Company logo from API always takes priority over hardcoded fallbacks
   const brand = useMemo(() => {
     const b = { ...brandProp };
     try {
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
       const companyLogo = storedUser.companyLogoURL;
-      if (companyLogo && !b.logoImage) {
+      if (companyLogo) {
         b.logoImage = companyLogo;
       }
       // Use company name if available
-      if (storedUser.company && b.name === 'SAAF IMMO') {
+      if (storedUser.company) {
         b.name = storedUser.company;
       }
     } catch {}
