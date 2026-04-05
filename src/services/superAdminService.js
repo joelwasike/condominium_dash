@@ -6,7 +6,14 @@ const parseJson = async (response) => {
   if (response.status === 204) return null;
   const text = await response.text();
   if (!text) return null;
-  try { return JSON.parse(text); } catch { return null; }
+  try {
+    const json = JSON.parse(text);
+    // Auto-unwrap paginated responses: {data: [...], total, page, ...} → just the array
+    if (json && Array.isArray(json.data) && typeof json.total === 'number' && typeof json.page === 'number') {
+      return json.data;
+    }
+    return json;
+  } catch { return null; }
 };
 
 const getAuthHeaders = (includeContentType = true) => {

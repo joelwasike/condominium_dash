@@ -13,7 +13,12 @@ const parseJson = async (response) => {
   }
 
   try {
-    return JSON.parse(text);
+    const json = JSON.parse(text);
+    // Auto-unwrap paginated responses: {data: [...], total, page, ...} → just the array
+    if (json && Array.isArray(json.data) && typeof json.total === 'number' && typeof json.page === 'number') {
+      return json.data;
+    }
+    return json;
   } catch (error) {
     console.warn('Failed to parse JSON response:', error);
     return null;
