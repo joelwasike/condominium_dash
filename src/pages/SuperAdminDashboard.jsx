@@ -16,8 +16,11 @@ import {
   UserCheck,
   XCircle,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Image
 } from 'lucide-react';
+import { CLOUDINARY_CONFIG } from '../config/cloudinary';
 import {
   AreaChart,
   Area,
@@ -120,6 +123,42 @@ const SuperAdminDashboard = () => {
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
   const [companyForm, setCompanyForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '', logoURL: '' });
+  const [logoUploading, setLogoUploading] = useState(false);
+
+  const handleLogoUpload = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      addNotification('Please select an image file (JPG, PNG, etc.)', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      addNotification('Logo must be under 5MB', 'error');
+      return;
+    }
+    setLogoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+      formData.append('folder', 'agency-logos');
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.secure_url) {
+        setCompanyForm(prev => ({ ...prev, logoURL: data.secure_url }));
+        addNotification('Logo uploaded!', 'success');
+      } else {
+        throw new Error(data.error?.message || 'Upload failed');
+      }
+    } catch (err) {
+      console.error('Logo upload error:', err);
+      addNotification('Failed to upload logo: ' + err.message, 'error');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
 
   // Agency Admin Modal
   const [showAgencyAdminModal, setShowAgencyAdminModal] = useState(false);
@@ -544,13 +583,44 @@ const SuperAdminDashboard = () => {
             <input style={inputStyle} type="text" value={companyForm.licenseNumber} onChange={(e) => setCompanyForm(prev => ({ ...prev, licenseNumber: e.target.value }))} placeholder="License / Registration number" />
           </div>
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Agency Logo URL</label>
-            <input style={inputStyle} type="url" value={companyForm.logoURL} onChange={(e) => setCompanyForm(prev => ({ ...prev, logoURL: e.target.value }))} placeholder="https://example.com/logo.png (Cloudinary URL)" />
-            {companyForm.logoURL && (
-              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <img src={companyForm.logoURL} alt="Logo preview" style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e2e8f0' }} onError={(e) => { e.target.style.display = 'none'; }} />
-                <span style={{ fontSize: '0.8rem', color: '#10b981' }}>Logo preview</span>
+            <label style={labelStyle}>Agency Logo</label>
+            {companyForm.logoURL ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <img src={companyForm.logoURL} alt="Agency logo" style={{ width: '64px', height: '64px', objectFit: 'contain', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff' }} onError={(e) => { e.target.src = ''; e.target.style.display = 'none'; }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '0.85rem', fontWeight: 600, color: '#10b981' }}>Logo uploaded</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8', wordBreak: 'break-all' }}>{companyForm.logoURL.substring(companyForm.logoURL.lastIndexOf('/') + 1).substring(0, 40)}...</p>
+                </div>
+                <button type="button" onClick={() => setCompanyForm(prev => ({ ...prev, logoURL: '' }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px' }}>
+                  <XCircle size={20} />
+                </button>
               </div>
+            ) : (
+              <label style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '24px 16px', borderRadius: '12px', border: '2px dashed #d1d5db',
+                background: logoUploading ? '#f1f5f9' : '#fafbfc', cursor: logoUploading ? 'wait' : 'pointer',
+                transition: 'all 0.2s', gap: '8px',
+              }}
+                onMouseEnter={(e) => { if (!logoUploading) e.currentTarget.style.borderColor = '#3b82f6'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; }}
+              >
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files[0]) handleLogoUpload(e.target.files[0]); }} disabled={logoUploading} />
+                {logoUploading ? (
+                  <>
+                    <RefreshCw size={28} style={{ color: '#3b82f6', animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontSize: '0.85rem', color: '#3b82f6', fontWeight: 500 }}>Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Image size={24} style={{ color: '#3b82f6' }} />
+                    </div>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>Click to upload logo</span>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>JPG, PNG up to 5MB</span>
+                  </>
+                )}
+              </label>
             )}
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
