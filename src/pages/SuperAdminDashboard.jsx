@@ -945,66 +945,163 @@ const SuperAdminDashboard = () => {
   /* ═════════════════════════════════════════════════
      5. ADVERTISEMENTS TAB
   ═════════════════════════════════════════════════ */
+  const [adPublishing, setAdPublishing] = useState(false);
+  const [adImagePreview, setAdImagePreview] = useState(null);
+  const adFileRef = useRef(null);
+
+  const handleAdImageSelect = (file) => {
+    if (!file) return;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      addNotification('Invalid file type. Use JPG, PNG, GIF, or WebP.', 'error');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      addNotification('Image must be under 10MB', 'error');
+      return;
+    }
+    setNewAd(prev => ({ ...prev, image: file }));
+    const reader = new FileReader();
+    reader.onload = (e) => setAdImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+  };
+
   const handleCreateAd = async (e) => {
     e.preventDefault();
     if (!newAd.title || !newAd.text) { addNotification('Please provide a title and description.', 'warning'); return; }
-    if (!newAd.image) { addNotification('Please upload an image file.', 'warning'); return; }
+    if (!newAd.image) { addNotification('Please upload an image.', 'warning'); return; }
+    setAdPublishing(true);
     try {
       await superAdminService.createAdvertisement(newAd);
-      addNotification('Advertisement created successfully!', 'success');
+      addNotification('Advertisement published!', 'success');
       setNewAd({ title: '', text: '', image: null });
-      const fileInput = document.querySelector('input[type="file"][name="ad-image"]');
-      if (fileInput) fileInput.value = '';
+      setAdImagePreview(null);
+      if (adFileRef.current) adFileRef.current.value = '';
       await loadData();
     } catch (error) {
       console.error('Error creating ad:', error);
       addNotification(error.message || 'Failed to create advertisement', 'error');
+    } finally {
+      setAdPublishing(false);
     }
   };
 
   const renderAds = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <AdvertisementsList advertisements={ads} />
+      {/* Header */}
+      <div>
+        <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700, color: '#1e293b' }}>Advertisements</h2>
+        <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+          Manage global advertisements visible to all agencies ({ads.length} active)
+        </p>
+      </div>
 
-      {/* Create Ad form */}
-      <div style={cardBase}>
-        <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Create New Advertisement</h3>
-        <form onSubmit={handleCreateAd}>
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Title *</label>
-            <input style={inputStyle} type="text" placeholder="Advertisement title" value={newAd.title} onChange={(e) => setNewAd(prev => ({ ...prev, title: e.target.value }))} required />
+      {/* Create Ad card */}
+      <div style={{ ...cardBase, background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)', border: '1px solid #dbeafe' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Megaphone size={20} style={{ color: '#fff' }} />
           </div>
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Description *</label>
-            <textarea style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }} placeholder="Advertisement description..." value={newAd.text} onChange={(e) => setNewAd(prev => ({ ...prev, text: e.target.value }))} required />
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#1e293b' }}>Create New Advertisement</h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>This will be visible to all agencies and their users</p>
           </div>
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Image *</label>
-            <input
-              style={inputStyle}
-              type="file"
-              name="ad-image"
-              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-                  if (!validTypes.includes(file.type)) {
-                    addNotification('Invalid file type. Allowed: jpg, jpeg, png, gif, webp', 'error');
-                    e.target.value = '';
-                    return;
-                  }
-                  setNewAd(prev => ({ ...prev, image: file }));
-                } else {
-                  setNewAd(prev => ({ ...prev, image: null }));
-                }
-              }}
-              required
-            />
+        </div>
+
+        <form onSubmit={handleCreateAd} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {/* Left: Text fields */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Title</label>
+                <input
+                  style={inputStyle}
+                  type="text"
+                  placeholder="e.g. New Year Promotion"
+                  value={newAd.title}
+                  onChange={(e) => setNewAd(prev => ({ ...prev, title: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Description</label>
+                <textarea
+                  style={{ ...inputStyle, minHeight: '120px', resize: 'vertical' }}
+                  placeholder="Describe the advertisement..."
+                  value={newAd.text}
+                  onChange={(e) => setNewAd(prev => ({ ...prev, text: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Right: Image upload */}
+            <div>
+              <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Image</label>
+              {adImagePreview ? (
+                <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '2px solid #e2e8f0', height: '200px' }}>
+                  <img src={adImagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    type="button"
+                    onClick={() => { setNewAd(prev => ({ ...prev, image: null })); setAdImagePreview(null); if (adFileRef.current) adFileRef.current.value = ''; }}
+                    style={{
+                      position: 'absolute', top: '8px', right: '8px', width: '32px', height: '32px', borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                    }}
+                  >
+                    ×
+                  </button>
+                  <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem' }}>
+                    {newAd.image?.name}
+                  </div>
+                </div>
+              ) : (
+                <label
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    height: '200px', borderRadius: '14px', border: '2px dashed #cbd5e1',
+                    background: '#fff', cursor: 'pointer', transition: 'all 0.2s', gap: '10px',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#f0f7ff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; }}
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#f0f7ff'; }}
+                  onDragLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; }}
+                  onDrop={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; if (e.dataTransfer.files[0]) handleAdImageSelect(e.dataTransfer.files[0]); }}
+                >
+                  <input ref={adFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files[0]) handleAdImageSelect(e.target.files[0]); }} />
+                  <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Upload size={24} style={{ color: '#3b82f6' }} />
+                  </div>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>Drop image here or click to browse</span>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>JPG, PNG, GIF, WebP — max 10MB</span>
+                </label>
+              )}
+            </div>
           </div>
-          <button type="submit" style={btnPrimary}><Megaphone size={16} /> Publish Advertisement</button>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
+            <button type="submit" disabled={adPublishing} style={{
+              ...btnPrimary,
+              opacity: adPublishing ? 0.7 : 1,
+              cursor: adPublishing ? 'wait' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 28px',
+            }}>
+              {adPublishing ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Megaphone size={16} />}
+              {adPublishing ? 'Publishing...' : 'Publish Advertisement'}
+            </button>
+          </div>
         </form>
       </div>
+
+      {/* Existing ads */}
+      {ads.length > 0 ? (
+        <AdvertisementsList advertisements={ads} />
+      ) : (
+        <div style={{ ...cardBase, textAlign: 'center', padding: '48px 20px', color: '#94a3b8' }}>
+          <Megaphone size={40} style={{ color: '#cbd5e1', marginBottom: '12px' }} />
+          <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: '#64748b' }}>No advertisements yet</p>
+          <p style={{ margin: 0, fontSize: '0.85rem' }}>Create your first advertisement above to reach all agencies.</p>
+        </div>
+      )}
     </div>
   );
 
