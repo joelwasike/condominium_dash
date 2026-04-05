@@ -119,7 +119,7 @@ const SuperAdminDashboard = () => {
   // Company Modal
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
-  const [companyForm, setCompanyForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '' });
+  const [companyForm, setCompanyForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '', logoURL: '' });
 
   // Agency Admin Modal
   const [showAgencyAdminModal, setShowAgencyAdminModal] = useState(false);
@@ -369,7 +369,7 @@ const SuperAdminDashboard = () => {
 
   const handleOpenAddCompany = () => {
     setEditingCompany(null);
-    setCompanyForm({ name: '', email: '', phone: '', address: '', licenseNumber: '' });
+    setCompanyForm({ name: '', email: '', phone: '', address: '', licenseNumber: '', logoURL: '' });
     setShowCompanyModal(true);
   };
 
@@ -381,6 +381,7 @@ const SuperAdminDashboard = () => {
       phone: company.Phone || company.phone || '',
       address: company.Address || company.address || '',
       licenseNumber: company.LicenseNumber || company.licenseNumber || '',
+      logoURL: company.LogoURL || company.logoURL || '',
     });
     setShowCompanyModal(true);
   };
@@ -541,6 +542,16 @@ const SuperAdminDashboard = () => {
           <div style={formGroupStyle}>
             <label style={labelStyle}>License Number</label>
             <input style={inputStyle} type="text" value={companyForm.licenseNumber} onChange={(e) => setCompanyForm(prev => ({ ...prev, licenseNumber: e.target.value }))} placeholder="License / Registration number" />
+          </div>
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>Agency Logo URL</label>
+            <input style={inputStyle} type="url" value={companyForm.logoURL} onChange={(e) => setCompanyForm(prev => ({ ...prev, logoURL: e.target.value }))} placeholder="https://example.com/logo.png (Cloudinary URL)" />
+            {companyForm.logoURL && (
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img src={companyForm.logoURL} alt="Logo preview" style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e2e8f0' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                <span style={{ fontSize: '0.8rem', color: '#10b981' }}>Logo preview</span>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
             <button type="button" style={btnOutline} onClick={() => setShowCompanyModal(false)}>Cancel</button>

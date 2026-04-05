@@ -18,7 +18,7 @@ const roleLabels = {
 };
 
 const RoleLayout = ({
-  brand = { name: 'SAAF IMMO', caption: 'Operations', logo: 'SAAF', logoImage: null },
+  brand: brandProp = { name: 'SAAF IMMO', caption: 'Operations', logo: 'SAAF', logoImage: null },
   menu = [],
   footerActions,
   children,
@@ -32,6 +32,23 @@ const RoleLayout = ({
   onSearch,
   defaultDashboardRoute = '/'
 }) => {
+  // Auto-detect company logo from localStorage (set during login)
+  const brand = useMemo(() => {
+    const b = { ...brandProp };
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const companyLogo = storedUser.companyLogoURL;
+      if (companyLogo && !b.logoImage) {
+        b.logoImage = companyLogo;
+      }
+      // Use company name if available
+      if (storedUser.company && b.name === 'SAAF IMMO') {
+        b.name = storedUser.company;
+      }
+    } catch {}
+    return b;
+  }, [brandProp]);
+
   const [internalActive, setInternalActive] = useState(menu[0]?.id || null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
