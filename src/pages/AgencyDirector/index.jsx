@@ -1071,10 +1071,20 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
+  const getCurrentUserId = () => {
+    try { const u = JSON.parse(localStorage.getItem('user') || '{}'); return u.id || u.ID; } catch { return null; }
+  };
+
   const handleDeleteUser = async (user) => {
-    if (window.confirm(`Delete user ${user.Name || user.name}?`)) {
+    const userId = user.ID || user.id || user;
+    const currentId = getCurrentUserId();
+    if (String(userId) === String(currentId)) {
+      addNotification('You cannot delete your own account', 'error');
+      return;
+    }
+    if (window.confirm(`Delete user ${user.Name || user.name || ''}?`)) {
       try {
-        await agencyDirectorService.deleteUser(user.ID || user.id);
+        await agencyDirectorService.deleteUser(userId);
         addNotification('User deleted successfully!', 'success');
         await loadData();
       } catch (error) {
@@ -1735,7 +1745,9 @@ const AgencyDirectorDashboard = () => {
                 </td>
                 <td className="sa-row-actions">
                   <button className="sa-icon-button" onClick={() => handleOpenEditUser(user)} title="Edit">✏️</button>
-                  <button className="sa-icon-button" onClick={() => handleDeleteUser(user)} title="Delete">🗑️</button>
+                  {String(user.ID || user.id) !== String(getCurrentUserId()) && (
+                    <button className="sa-icon-button" onClick={() => handleDeleteUser(user)} title="Delete">🗑️</button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -3508,7 +3520,7 @@ const AgencyDirectorDashboard = () => {
                     >
                       Edit
                     </button>
-                    {user.role !== 'superadmin' && user.Role !== 'superadmin' && (
+                    {user.role !== 'superadmin' && user.Role !== 'superadmin' && String(user.id || user.ID) !== String(getCurrentUserId()) && (
                       <button
                         className="sa-action-btn sa-action-delete"
                         onClick={() => handleDeleteUser(user.id || user.ID)}
