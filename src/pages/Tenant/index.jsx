@@ -92,15 +92,20 @@ const TenantDashboard = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
-    paymentMethod: '',
-    reference: ''
+    provider: '',
+    phone: '',
+    otp: ''
   });
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentTxId, setPaymentTxId] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState(null); // null | 'initiated' | 'success' | 'failed'
   const [showBillsModal, setShowBillsModal] = useState(false);
   const [billsForm, setBillsForm] = useState({
     billType: 'water',
     amount: '',
-    paymentMethod: '',
-    reference: ''
+    provider: '',
+    phone: '',
+    otp: ''
   });
   const [showTerminateLeaseModal, setShowTerminateLeaseModal] = useState(false);
   const [terminateLeaseForm, setTerminateLeaseForm] = useState({
@@ -914,30 +919,60 @@ const TenantDashboard = () => {
     }
   };
 
+  // Poll MoMo transaction status until resolved
+  const pollPaymentStatus = async (txId, maxAttempts = 30) => {
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(r => setTimeout(r, 5000)); // wait 5 seconds between polls
+      try {
+        const result = await tenantService.checkMoMoStatus(txId);
+        const status = result?.response?.status || result?.status || '';
+        if (status.toUpperCase() === 'SUCCESSFUL' || status === 'success') {
+          setPaymentStatus('success');
+          addNotification('Payment confirmed! Your rent has been paid.', 'success');
+          await loadPayments();
+          return;
+        } else if (status.toUpperCase() === 'FAILED' || status === 'failed') {
+          setPaymentStatus('failed');
+          addNotification('Payment failed. Please try again.', 'error');
+          return;
+        }
+        // Still pending, continue polling
+      } catch (err) {
+        console.error('Status check error:', err);
+      }
+    }
+    // Timed out
+    setPaymentStatus('failed');
+    addNotification('Payment timed out. Check your phone and try again.', 'error');
+  };
+
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
 
+    if (!paymentForm.provider) {
+      addNotification('Please select a payment provider', 'error');
+      return;
+    }
+    if (!paymentForm.phone) {
+      addNotification('Please enter your phone number', 'error');
+      return;
+    }
+    if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
+      addNotification('Please enter a valid amount', 'error');
+      return;
+    }
+    if (paymentForm.provider === 'om' && !paymentForm.otp) {
+      addNotification('OTP is required for Orange Money payments', 'error');
+      return;
+    }
+
     try {
-      setLoading(true);
-      
-      // Get tenant name from user profile or overview data
-      let tenantName = 'Current Tenant';
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          tenantName = user.name || user.Name || tenantName;
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-        }
-      }
-      // Also check overviewData for tenant name
-      if (overviewData && overviewData.tenant) {
-        tenantName = overviewData.tenant;
-      }
-      
-      // Get property from lease info, overview data, or use default
-      let property = 'Apartment 4B, 123 Main St';
+      setPaymentProcessing(true);
+      setPaymentStatus('initiated');
+      setPaymentTxId(null);
+
+      // Get property from lease info or overview data
+      let property = 'Property';
       if (leaseInfo && leaseInfo.property) {
         property = leaseInfo.property;
       } else if (overviewData) {
@@ -947,50 +982,49 @@ const TenantDashboard = () => {
           property = overviewData.property;
         }
       }
-      
-      // Backend expects lowercase field names and "Mobile Money" as method value
-      // Validate payment method
-      if (paymentForm.paymentMethod !== 'Mobile Money') {
-        addNotification('Payment method must be Mobile Money', 'error');
-        setLoading(false);
-        return;
+
+      const result = await tenantService.payViaMoMo({
+        provider: paymentForm.provider,
+        phone: paymentForm.phone,
+        amount: parseFloat(paymentForm.amount),
+        property,
+        chargeType: 'Rent'
+      });
+
+      const txId = result?.partner_transaction_id || result?.momo_transaction_id || '';
+      setPaymentTxId(txId);
+      addNotification('Payment initiated! Please confirm on your phone.', 'info');
+
+      // Start polling for status
+      if (txId) {
+        pollPaymentStatus(txId);
       }
 
-      const paymentData = {
-        tenant: tenantName,
-        property: property,
-        amount: parseFloat(paymentForm.amount),
-        method: paymentForm.paymentMethod, // Must be "Mobile Money"
-        chargeType: 'rent',
-        reference: paymentForm.reference
-      };
-
-      console.log('Submitting payment with data:', paymentData);
-      await tenantService.recordPayment(paymentData);
-      addNotification('Payment submitted successfully!', 'success');
-
-      // Reset form and close modal
-      setPaymentForm({ amount: '', paymentMethod: '', reference: '' });
-      setShowPaymentModal(false);
-
-      // Reload payments from server to ensure we have the latest data
-      await loadPayments();
     } catch (error) {
-      console.error('Error submitting payment:', error);
-      addNotification(error.message || 'Failed to submit payment', 'error');
+      console.error('Error initiating payment:', error);
+      setPaymentStatus('failed');
+      addNotification(error.message || 'Failed to initiate payment', 'error');
     } finally {
-      setLoading(false);
+      setPaymentProcessing(false);
     }
+  };
+
+  const resetPaymentModal = () => {
+    setShowPaymentModal(false);
+    setPaymentForm({ amount: '', provider: '', phone: '', otp: '' });
+    setPaymentProcessing(false);
+    setPaymentTxId(null);
+    setPaymentStatus(null);
   };
 
   const handleBillsSubmit = async (e) => {
     e.preventDefault();
-    if (!billsForm.amount || !billsForm.paymentMethod || !billsForm.reference) {
+    if (!billsForm.amount || !billsForm.provider || !billsForm.phone) {
       addNotification('Please fill in all required fields', 'error');
       return;
     }
-    if (billsForm.paymentMethod !== 'Mobile Money') {
-      addNotification('Payment method must be Mobile Money', 'error');
+    if (billsForm.provider === 'om' && !billsForm.otp) {
+      addNotification('OTP is required for Orange Money payments', 'error');
       return;
     }
     try {
@@ -1008,17 +1042,15 @@ const TenantDashboard = () => {
         property = overviewData.property;
       }
       const chargeType = billsForm.billType === 'water' ? 'Water' : 'Electricity';
-      const paymentData = {
-        tenant: tenantName,
-        property,
+      await tenantService.payViaMoMo({
+        provider: billsForm.provider,
+        phone: billsForm.phone,
         amount: parseFloat(billsForm.amount),
-        method: billsForm.paymentMethod,
+        property,
         chargeType,
-        reference: billsForm.reference
-      };
-      await tenantService.recordPayment(paymentData);
-      addNotification(`${chargeType} bill payment submitted successfully!`, 'success');
-      setBillsForm({ billType: 'water', amount: '', paymentMethod: '', reference: '' });
+      });
+      addNotification(`${chargeType} bill payment initiated! Confirm on your phone.`, 'info');
+      setBillsForm({ billType: 'water', amount: '', provider: '', phone: '', otp: '' });
       setShowBillsModal(false);
       await loadPayments();
     } catch (error) {
@@ -2229,59 +2261,125 @@ Thank you for your payment!
         <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Make Payment</h3>
-              <button className="modal-close" onClick={() => setShowPaymentModal(false)}>×</button>
+              <h3>Pay Rent via Mobile Money</h3>
+              <button className="modal-close" onClick={resetPaymentModal}>×</button>
             </div>
             <div className="modal-body">
-              <form onSubmit={handlePaymentSubmit} className="modal-form">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="amount">Amount</label>
-                    <input
-                      type="number"
-                      id="amount"
-                      value={paymentForm.amount}
-                      onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="Enter amount"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="paymentMethod">Payment Method</label>
-                    <select
-                      id="paymentMethod"
-                      value={paymentForm.paymentMethod}
-                      onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                      required
-                    >
-                      <option value="">Select payment method</option>
-                      <option value="Mobile Money">Mobile Money</option>
-                    </select>
+              {/* Payment status feedback */}
+              {paymentStatus === 'initiated' && paymentTxId && (
+                <div style={{ padding: '16px', borderRadius: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', marginBottom: '16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📱</div>
+                  <p style={{ margin: '0 0 4px', fontWeight: 600, color: '#1e40af' }}>Confirm on your phone</p>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#3b82f6' }}>A payment prompt has been sent to your phone. Please confirm to complete the payment.</p>
+                  <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6', animation: 'pulse 1.5s infinite' }} />
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6', animation: 'pulse 1.5s infinite 0.3s' }} />
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6', animation: 'pulse 1.5s infinite 0.6s' }} />
                   </div>
                 </div>
-
-                <div className="form-group">
-                  <label htmlFor="reference">Reference Number</label>
-                  <input
-                    type="text"
-                    id="reference"
-                    value={paymentForm.reference}
-                    onChange={(e) => setPaymentForm(prev => ({ ...prev, reference: e.target.value }))}
-                    placeholder="Enter transaction reference"
-                    required
-                  />
+              )}
+              {paymentStatus === 'success' && (
+                <div style={{ padding: '16px', borderRadius: '12px', background: '#f0fdf4', border: '1px solid #bbf7d0', marginBottom: '16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✅</div>
+                  <p style={{ margin: '0 0 4px', fontWeight: 600, color: '#166534' }}>Payment Successful!</p>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#16a34a' }}>Your rent payment has been confirmed.</p>
+                  <button type="button" className="action-button primary" style={{ marginTop: '12px' }} onClick={resetPaymentModal}>Done</button>
                 </div>
-
-                <div className="modal-footer">
-                  <button type="button" className="action-button secondary" onClick={() => setShowPaymentModal(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="action-button primary" disabled={loading}>
-                    {loading ? 'Submitting...' : 'Submit Payment'}
-                  </button>
+              )}
+              {paymentStatus === 'failed' && (
+                <div style={{ padding: '16px', borderRadius: '12px', background: '#fef2f2', border: '1px solid #fecaca', marginBottom: '16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>❌</div>
+                  <p style={{ margin: '0 0 4px', fontWeight: 600, color: '#991b1b' }}>Payment Failed</p>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#dc2626' }}>The payment could not be completed. Please try again.</p>
+                  <button type="button" className="action-button primary" style={{ marginTop: '12px' }} onClick={() => { setPaymentStatus(null); setPaymentTxId(null); }}>Try Again</button>
                 </div>
-              </form>
+              )}
+
+              {/* Payment form — hidden while processing */}
+              {!paymentStatus && (
+                <form onSubmit={handlePaymentSubmit} className="modal-form">
+                  <div className="form-group">
+                    <label>Payment Provider</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '4px' }}>
+                      {[
+                        { id: 'mtn', label: 'MTN MoMo', color: '#ffc107', textColor: '#000' },
+                        { id: 'om', label: 'Orange Money', color: '#ff6600', textColor: '#fff' },
+                        { id: 'moov', label: 'MOOV Money', color: '#0066cc', textColor: '#fff' },
+                        { id: 'wave', label: 'Wave', color: '#1dc3e2', textColor: '#fff' },
+                        { id: 'djamo', label: 'Djamo', color: '#6c5ce7', textColor: '#fff' },
+                      ].map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setPaymentForm(prev => ({ ...prev, provider: p.id }))}
+                          style={{
+                            padding: '12px 8px',
+                            borderRadius: '10px',
+                            border: paymentForm.provider === p.id ? '2px solid ' + p.color : '2px solid #e2e8f0',
+                            background: paymentForm.provider === p.id ? p.color : '#fff',
+                            color: paymentForm.provider === p.id ? p.textColor : '#374151',
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            textAlign: 'center'
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="payPhone">Phone Number</label>
+                      <input
+                        type="tel"
+                        id="payPhone"
+                        value={paymentForm.phone}
+                        onChange={(e) => setPaymentForm(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="e.g. 0500385264"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="payAmount">Amount (XOF)</label>
+                      <input
+                        type="number"
+                        id="payAmount"
+                        value={paymentForm.amount}
+                        onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                        placeholder="Enter amount"
+                        min="1"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {paymentForm.provider === 'om' && (
+                    <div className="form-group">
+                      <label htmlFor="payOTP">OTP Code (Orange Money)</label>
+                      <input
+                        type="text"
+                        id="payOTP"
+                        value={paymentForm.otp}
+                        onChange={(e) => setPaymentForm(prev => ({ ...prev, otp: e.target.value }))}
+                        placeholder="Enter OTP received on your phone"
+                        required
+                      />
+                      <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>Dial #144*82# to get your OTP code</small>
+                    </div>
+                  )}
+
+                  <div className="modal-footer">
+                    <button type="button" className="action-button secondary" onClick={resetPaymentModal}>Cancel</button>
+                    <button type="submit" className="action-button primary" disabled={paymentProcessing}>
+                      {paymentProcessing ? 'Processing...' : 'Pay Now'}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>
@@ -2308,7 +2406,50 @@ Thank you for your payment!
                     <option value="electricity">Electricity</option>
                   </select>
                 </div>
+                <div className="form-group">
+                  <label>Payment Provider</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '4px' }}>
+                    {[
+                      { id: 'mtn', label: 'MTN MoMo', color: '#ffc107', textColor: '#000' },
+                      { id: 'om', label: 'Orange Money', color: '#ff6600', textColor: '#fff' },
+                      { id: 'moov', label: 'MOOV Money', color: '#0066cc', textColor: '#fff' },
+                      { id: 'wave', label: 'Wave', color: '#1dc3e2', textColor: '#fff' },
+                      { id: 'djamo', label: 'Djamo', color: '#6c5ce7', textColor: '#fff' },
+                    ].map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setBillsForm(prev => ({ ...prev, provider: p.id }))}
+                        style={{
+                          padding: '12px 8px',
+                          borderRadius: '10px',
+                          border: billsForm.provider === p.id ? '2px solid ' + p.color : '2px solid #e2e8f0',
+                          background: billsForm.provider === p.id ? p.color : '#fff',
+                          color: billsForm.provider === p.id ? p.textColor : '#374151',
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="billsPhone">Phone Number</label>
+                    <input
+                      type="tel"
+                      id="billsPhone"
+                      value={billsForm.phone}
+                      onChange={(e) => setBillsForm(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="e.g. 0500385264"
+                      required
+                    />
+                  </div>
                   <div className="form-group">
                     <label htmlFor="billsAmount">Amount (XOF)</label>
                     <input
@@ -2321,36 +2462,27 @@ Thank you for your payment!
                       min="1"
                     />
                   </div>
+                </div>
+                {billsForm.provider === 'om' && (
                   <div className="form-group">
-                    <label htmlFor="billsPaymentMethod">Payment Method</label>
-                    <select
-                      id="billsPaymentMethod"
-                      value={billsForm.paymentMethod}
-                      onChange={(e) => setBillsForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                    <label htmlFor="billsOTP">OTP Code (Orange Money)</label>
+                    <input
+                      type="text"
+                      id="billsOTP"
+                      value={billsForm.otp}
+                      onChange={(e) => setBillsForm(prev => ({ ...prev, otp: e.target.value }))}
+                      placeholder="Enter OTP received on your phone"
                       required
-                    >
-                      <option value="">Select payment method</option>
-                      <option value="Mobile Money">Mobile Money</option>
-                    </select>
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>Dial #144*82# to get your OTP code</small>
                   </div>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="billsReference">Reference Number</label>
-                  <input
-                    type="text"
-                    id="billsReference"
-                    value={billsForm.reference}
-                    onChange={(e) => setBillsForm(prev => ({ ...prev, reference: e.target.value }))}
-                    placeholder="Enter transaction reference"
-                    required
-                  />
-                </div>
+                )}
                 <div className="modal-footer">
                   <button type="button" className="action-button secondary" onClick={() => setShowBillsModal(false)}>
                     Cancel
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
-                    {loading ? 'Submitting...' : 'Submit Payment'}
+                    {loading ? 'Processing...' : 'Pay Now'}
                   </button>
                 </div>
               </form>
