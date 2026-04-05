@@ -1097,7 +1097,8 @@ const AgencyDirectorDashboard = () => {
   const getEmptyOwnerForm = () => ({
     name: '', email: '', phone: '', password: '',
     rentalMandate: null, salesMandate: null, idCopy: null, landTitle: null, propertyPhotos: [],
-    rib: '', commissionPercentage: ''
+    rib: '', commissionPercentage: '',
+    propertyIds: [] // IDs of properties to assign to this owner
   });
 
   const handleOpenAddOwner = () => {
@@ -1213,7 +1214,8 @@ const AgencyDirectorDashboard = () => {
         rib: ownerForm.rib || undefined,
         landTitleURL: landTitleURL || undefined,
         propertyPhotos: propertyPhotosUrls.length > 0 ? JSON.stringify(propertyPhotosUrls) : undefined,
-        commissionPercentage: ownerForm.commissionPercentage ? parseFloat(ownerForm.commissionPercentage) : undefined
+        commissionPercentage: ownerForm.commissionPercentage ? parseFloat(ownerForm.commissionPercentage) : undefined,
+        propertyIds: ownerForm.propertyIds.filter(id => id).map(id => parseInt(id, 10))
       };
       if (!editingOwner) {
         ownerData.password = ownerForm.password;
@@ -1788,17 +1790,12 @@ const AgencyDirectorDashboard = () => {
               <option value="technician">Technician</option>
               <option value="accounting">Accounting</option>
               <option value="admin">Admin</option>
-              <option value="landlord">Landlord</option>
               <option value="salesmanager">Sales Manager</option>
               <option value="agency_director">Agency Director</option>
             </select>
             <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-              Company will be automatically set from your account
-              {!editingUser && userForm.role === 'landlord' && (
-                <span style={{ color: '#dc2626', display: 'block', marginTop: '4px' }}>
-                  ⚠️ Properties are required for landlords
-                </span>
-              )}
+              Company will be automatically set from your account.
+              To add a landlord/owner, use the Owners page in Contracts.
             </small>
           </div>
           
@@ -4454,17 +4451,12 @@ const AgencyDirectorDashboard = () => {
               <option value="technician">Technician</option>
               <option value="accounting">Accounting</option>
               <option value="admin">Admin</option>
-              <option value="landlord">Landlord</option>
               <option value="salesmanager">Sales Manager</option>
               <option value="agency_director">Agency Director</option>
             </select>
             <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-              Company will be automatically set from your account
-              {!editingUser && userForm.role === 'landlord' && (
-                <span style={{ color: '#dc2626', display: 'block', marginTop: '4px' }}>
-                  ⚠️ Properties are required for landlords
-                </span>
-              )}
+              Company will be automatically set from your account.
+              To add a landlord/owner, use the Owners page in Contracts.
             </small>
           </div>
           
@@ -4706,6 +4698,51 @@ const AgencyDirectorDashboard = () => {
               <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#059669' }}>{ownerForm.propertyPhotos.length} file(s) selected</div>
             )}
           </div>
+          {/* Assign Properties */}
+          <div className="sa-form-group" style={{ padding: '16px', background: '#f0f7ff', borderRadius: '10px', border: '1px solid #dbeafe' }}>
+            <label style={{ fontWeight: 600, color: '#1e40af', marginBottom: '10px', display: 'block' }}>
+              Assign Properties to this Owner
+            </label>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 12px' }}>
+              Select the properties this owner manages. You can assign multiple properties.
+            </p>
+            {(ownerForm.propertyIds || []).map((pid, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                <select
+                  value={pid}
+                  onChange={(e) => {
+                    const updated = [...(ownerForm.propertyIds || [])];
+                    updated[idx] = e.target.value;
+                    setOwnerForm({ ...ownerForm, propertyIds: updated });
+                  }}
+                  style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                >
+                  <option value="">-- Select a property --</option>
+                  {properties.filter(p => {
+                    const propId = String(p.id || p.ID);
+                    // Show if it's the current selection or not already picked
+                    return propId === String(pid) || !(ownerForm.propertyIds || []).includes(propId);
+                  }).map(p => (
+                    <option key={p.id || p.ID} value={p.id || p.ID}>
+                      {p.address || p.Address} — {p.type || p.Type || 'N/A'} ({(p.rent || p.Rent || 0).toLocaleString()} XOF)
+                    </option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => {
+                  const updated = (ownerForm.propertyIds || []).filter((_, i) => i !== idx);
+                  setOwnerForm({ ...ownerForm, propertyIds: updated });
+                }} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 10px', cursor: 'pointer', fontSize: '0.85rem' }}>×</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => setOwnerForm({ ...ownerForm, propertyIds: [...(ownerForm.propertyIds || []), ''] })}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+              <Plus size={14} /> Add Property
+            </button>
+            {properties.length === 0 && (
+              <p style={{ fontSize: '0.8rem', color: '#f59e0b', marginTop: '8px' }}>No properties available. Create properties first in the Properties tab.</p>
+            )}
+          </div>
+
           <div className="sa-form-group">
             <label>Commission percentage (agency type) <span style={{ color: '#6b7280', fontWeight: 'normal' }}>%</span></label>
             <input type="number" value={ownerForm.commissionPercentage} onChange={(e) => setOwnerForm({...ownerForm, commissionPercentage: e.target.value})} placeholder="0" min="0" max="100" step="0.01" />
