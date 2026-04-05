@@ -110,7 +110,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
     );
   }
 
-  if (!indicators || !yearlyComparison) {
+  if (!indicators) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <p>No analytics data available. Please ensure you have data in the system.</p>
@@ -118,7 +118,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
     );
   }
 
-  const summary = yearlyComparison.summary || {};
+  const summary = (yearlyComparison && yearlyComparison.summary) || {};
   const paymentPerf = indicators.paymentPerformance || {};
   const costsMaint = indicators.costsMaintenance || {};
   const expensesCtrl = indicators.expensesControl || {};
@@ -217,7 +217,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
             <p>Revenue, expenses, commissions, and net income trends</p>
           </div>
           <div style={{ width: '100%', height: '300px', padding: '20px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
                   data={financialOverviewData}
@@ -247,7 +247,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
             <p>Annual net profit by year</p>
           </div>
           <div style={{ width: '100%', height: '300px', padding: '20px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
                   data={netProfitData}
@@ -333,7 +333,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
             <p>Commissions & % of Revenue</p>
           </div>
           <div style={{ width: '100%', height: '300px', padding: '20px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
                   data={commissionData}
@@ -363,7 +363,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
             <p>Total Expenses & Ratio</p>
           </div>
           <div style={{ width: '100%', height: '300px', padding: '20px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
                   data={expenseData}
@@ -471,7 +471,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
             <p>Most profitable properties</p>
           </div>
           <div style={{ width: '100%', height: '250px', padding: '20px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
                   data={top5ProfitableBuildings}
@@ -501,7 +501,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
             <p>Most expensive properties</p>
           </div>
           <div style={{ width: '100%', height: '250px', padding: '20px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
                   data={top5ExpensiveBuildings}
@@ -533,7 +533,7 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
             <p>Month-over-month comparison: last month, this month, and so on</p>
           </div>
           <div style={{ width: '100%', height: '400px', padding: '20px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart
                 data={monthlyComparison}
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}

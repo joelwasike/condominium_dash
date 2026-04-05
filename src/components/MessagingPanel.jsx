@@ -118,7 +118,7 @@ export default function MessagingPanel({
   }, [chatMessages]);
 
   return (
-    <div style={s.root}>
+    <div style={{ ...s.root, gridTemplateColumns: selectedUser ? '320px 1fr 280px' : '320px 1fr' }}>
       {/* ─── Sidebar: User list ─── */}
       <div style={{ ...s.sidebar, ...(mobileView === 'chat' ? s.sidebarHiddenMobile : {}) }}>
         {/* Search header */}

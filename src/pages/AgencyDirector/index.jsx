@@ -50,6 +50,7 @@ const AgencyDirectorDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   // Data states
   const [overviewData, setOverviewData] = useState(null);
@@ -701,7 +702,8 @@ const AgencyDirectorDashboard = () => {
     } finally {
       setAnalyticsLoading(false);
     }
-  }, [addNotification, transferHistory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addNotification]);
 
   useEffect(() => {
     loadData();
@@ -3158,8 +3160,8 @@ const AgencyDirectorDashboard = () => {
 
   // Render Analytics/Reports page
   const renderAnalytics = () => {
-    // Use new comprehensive analytics page if data is available
-    if (analyticsIndicators && yearlyComparison) {
+    // Use new comprehensive analytics page if indicator data is available
+    if (analyticsIndicators) {
       return (
         <AnalyticsPage 
           indicators={analyticsIndicators}
