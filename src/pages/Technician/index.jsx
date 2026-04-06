@@ -34,7 +34,7 @@ import { API_CONFIG } from '../../config/api';
 import AdvertisementsList from '../../components/AdvertisementsList';
 import AdCarousel from '../../components/AdCarousel';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import MessagingPanel from '../../components/MessagingPanel';
 import { isDemoMode, getTechnicianDemoData } from '../../utils/demoData';
@@ -1049,7 +1049,7 @@ const TechnicianDashboard = () => {
 
   const renderOverview = () => {
     if (loading) {
-      return <div className="sa-table-empty">Loading overview data...</div>;
+      return <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Loading overview data...</div>;
     }
 
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -1091,123 +1091,101 @@ const TechnicianDashboard = () => {
       completed: monthlyCompleted[i],
     }));
 
+    const card = { background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
+
+    const metricCards = [
+      { label: 'Pending Requests', sub: 'Awaiting processing', value: requests.filter(r => (r.Status || r.status) === 'Pending').length, color: '#8b5cf6', bg: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', white: true, tab: 'maintenance' },
+      { label: 'Quotes to Validate', sub: 'Awaiting validation', value: quotes.filter(q => (q.Status || q.status) === 'Sent' || (q.Status || q.status) === 'Pending').length, color: '#22c55e', bg: 'linear-gradient(135deg,#22c55e,#16a34a)', white: true, tab: 'quotes' },
+      { label: 'Urgent Work', sub: 'High priority', value: overviewData?.urgentTicketsPending || 0, color: '#ef4444', tab: 'works' },
+      { label: 'Important Alerts', sub: 'Requires attention', value: requests.filter(r => { const priority = (r.Priority || r.priority || '').toLowerCase(); return priority === 'urgent' && (r.Status || r.status) !== 'Completed'; }).length, color: '#f59e0b' },
+      { label: 'Monthly Requests', sub: 'This month', value: requests.filter(r => { const d = r.CreatedAt || r.createdAt || r.Date || r.date; if (!d) return false; const rd = new Date(d); const n = new Date(); return rd.getMonth() === n.getMonth() && rd.getFullYear() === n.getFullYear(); }).length, color: '#06b6d4' },
+      { label: 'Avg Resolution Time', sub: 'Days to complete', value: overviewData?.averageResolutionTime ? `${overviewData.averageResolutionTime.toFixed(1)} days` : 'N/A', color: '#ec4899' },
+    ];
+
     return (
-      <div className="sa-overview-page">
-        <div className="sa-overview-top">
-          <div className="sa-overview-chart-card">
-            <div className="sa-card-header">
-              <h2>Technician Dashboard</h2>
-              <span className="sa-card-subtitle">Welcome, {userName}!</span>
-            </div>
-            <div className="sa-mini-legend">
-              <span className="sa-legend-item sa-legend-expected">Requests</span>
-              <span className="sa-legend-item sa-legend-current">Completed</span>
-            </div>
-            <div style={{ width: '100%', height: '250px', marginTop: '20px' }}>
-              <ResponsiveContainer>
-                <AreaChart data={techChartData} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
-                  <defs>
-                    <linearGradient id="colorTechRequests" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorTechCompleted" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                  <XAxis dataKey="month" stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
-                  <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
-                  <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', padding: '8px 12px' }} />
-                  <Legend wrapperStyle={{ paddingTop: '10px' }} iconType="line" />
-                  <Area type="monotone" dataKey="requests" stroke="#8b5cf6" strokeWidth={3} fill="url(#colorTechRequests)" dot={{ fill: '#8b5cf6', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} name="Requests" />
-                  <Area type="monotone" dataKey="completed" stroke="#22c55e" strokeWidth={3} fill="url(#colorTechCompleted)" dot={{ fill: '#22c55e', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} name="Completed" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Top row: chart + metrics */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '24px' }}>
+          {/* Chart card */}
+          <div style={{ ...card }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>Technician Dashboard</h3>
+            <p style={{ margin: '0 0 16px', fontSize: '0.8rem', color: '#94a3b8' }}>Welcome, {userName}! — Requests vs Completed</p>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={techChartData} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+                <defs>
+                  <linearGradient id="colorTechRequests" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorTechCompleted" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis dataKey="month" stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', padding: '8px 12px' }} />
+                <Area type="monotone" dataKey="requests" stroke="#8b5cf6" strokeWidth={3} fill="url(#colorTechRequests)" dot={{ fill: '#8b5cf6', r: 4, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} name="Requests" />
+                <Area type="monotone" dataKey="completed" stroke="#22c55e" strokeWidth={3} fill="url(#colorTechCompleted)" dot={{ fill: '#22c55e', r: 4, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} name="Completed" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
 
-          <div className="sa-overview-metrics">
-            {/* Pending Requests */}
-            <div className="sa-metric-card sa-metric-primary" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('maintenance')}>
-              <p className="sa-metric-label">Pending Requests</p>
-              <p className="sa-metric-period">Awaiting processing</p>
-              <p className="sa-metric-value">{requests.filter(r => (r.Status || r.status) === 'Pending').length}</p>
-            </div>
-            
-            {/* Quotes to be Validated */}
-            <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('quotes')}>
-              <p className="sa-metric-label">Quotes to be Validated</p>
-              <p className="sa-metric-period">Awaiting validation</p>
-              <p className="sa-metric-value">{quotes.filter(q => (q.Status || q.status) === 'Sent' || (q.Status || q.status) === 'Pending').length}</p>
-            </div>
-            
-            {/* Urgent Work */}
-            <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('works')}>
-              <p className="sa-metric-label">Urgent Work</p>
-              <p className="sa-metric-period">High priority</p>
-              <p className="sa-metric-value">{overviewData?.urgentTicketsPending || 0}</p>
-            </div>
-            
-            {/* Important Alerts */}
-            <div className="sa-metric-card">
-              <p className="sa-metric-label">Important Alerts</p>
-              <p className="sa-metric-period">Requires attention</p>
-              <p className="sa-metric-value">{requests.filter(r => {
-                const priority = (r.Priority || r.priority || '').toLowerCase();
-                return priority === 'urgent' && (r.Status || r.status) !== 'Completed';
-              }).length}</p>
-            </div>
-            
-            {/* Monthly Indicators */}
-            <div className="sa-metric-card">
-              <p className="sa-metric-label">Monthly Requests</p>
-              <p className="sa-metric-period">This month</p>
-              <p className="sa-metric-value">{requests.filter(r => {
-                const date = r.CreatedAt || r.createdAt || r.Date || r.date;
-                if (!date) return false;
-                const reqDate = new Date(date);
-                const now = new Date();
-                return reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
-              }).length}</p>
-            </div>
-            
-            <div className="sa-metric-card">
-              <p className="sa-metric-label">Average Resolution Time</p>
-              <p className="sa-metric-number">{overviewData?.averageResolutionTime ? `${overviewData.averageResolutionTime.toFixed(1)} days` : 'N/A'}</p>
-            </div>
-            {/* Advertisements Display - Replacing Banner Card */}
-            {advertisements.length > 0 ? (
-              <AdCarousel advertisements={advertisements} currentAdIndex={currentAdIndex} setCurrentAdIndex={setCurrentAdIndex} carouselIntervalRef={carouselIntervalRef} />
-            ) : (
-              <div className="sa-banner-card">
-                <div className="sa-banner-text">
-                  <h3>Maintenance Management</h3>
-                  <p>
-                    Manage inspections, tasks, and maintenance operations all in one place.
-                  </p>
+          {/* Metrics grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignContent: 'start' }}>
+            {metricCards.map((m, i) => {
+              return (
+                <div key={i}
+                  style={{ ...card, ...(m.bg ? { background: m.bg } : {}), cursor: m.tab ? 'pointer' : 'default', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                  onClick={() => m.tab && setActiveTab(m.tab)}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,23,42,0.12)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 12px rgba(15,23,42,0.06)'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: m.white ? 'rgba(255,255,255,0.2)' : `${m.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '1.1rem', color: m.white ? '#fff' : m.color }}>
+                        {i === 0 ? '\u{1F4CB}' : i === 1 ? '\u{2705}' : i === 2 ? '\u{26A0}' : i === 3 ? '\u{1F514}' : i === 4 ? '\u{1F4C5}' : '\u{23F1}'}
+                      </span>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 500, color: m.white ? 'rgba(255,255,255,0.8)' : '#64748b' }}>{m.label}</p>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: m.white ? 'rgba(255,255,255,0.6)' : '#94a3b8' }}>{m.sub}</p>
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '1.6rem', fontWeight: 700, color: m.white ? '#fff' : '#1e293b' }}>{m.value}</p>
                 </div>
-              </div>
-            )}
+              );
+            })}
           </div>
         </div>
 
-        <div className="sa-section-card" style={{ marginTop: '24px' }}>
-          <div className="sa-section-header">
-            <h3>Quick Actions</h3>
-            <p>Manage your maintenance operations and view key metrics.</p>
+        {/* Ad Carousel */}
+        {advertisements.length > 0 ? (
+          <AdCarousel advertisements={advertisements} currentAdIndex={currentAdIndex} setCurrentAdIndex={setCurrentAdIndex} carouselIntervalRef={carouselIntervalRef} />
+        ) : (
+          <div style={{ ...card, background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)' }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>Maintenance Management</h3>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Manage inspections, tasks, and maintenance operations all in one place.</p>
           </div>
-          <div style={{ padding: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('tasks')}>
-                <p className="sa-metric-label">Total Cost of Ongoing Repairs</p>
-                <p className="sa-metric-value">${(overviewData?.totalCostOfOngoingRepairs || 0).toLocaleString()}</p>
-              </div>
+        )}
+
+        {/* Quick Actions */}
+        <div style={{ ...card }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>Quick Actions</h3>
+          <p style={{ margin: '0 0 16px', fontSize: '0.8rem', color: '#94a3b8' }}>Manage your maintenance operations and view key metrics.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div
+              style={{ ...card, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+              onClick={() => setActiveTab('tasks')}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,23,42,0.12)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 12px rgba(15,23,42,0.06)'; }}
+            >
+              <p style={{ margin: '0 0 8px', fontSize: '0.8rem', fontWeight: 500, color: '#64748b' }}>Total Cost of Ongoing Repairs</p>
+              <p style={{ margin: 0, fontSize: '1.6rem', fontWeight: 700, color: '#1e293b' }}>${(overviewData?.totalCostOfOngoingRepairs || 0).toLocaleString()}</p>
             </div>
           </div>
         </div>
-
       </div>
     );
   };
