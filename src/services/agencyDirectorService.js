@@ -518,18 +518,10 @@ export const agencyDirectorService = {
   // Backend returns 401 for sales manager routes when using agency director token, so try agency-director first.
   getOwnerAssets: async (ownerId) => {
     const headers = getAuthHeaders(false);
-    // 1. Try agency-director endpoint (backend may have it)
-    let response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners/${ownerId}/properties`, {
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners/${ownerId}/properties`, {
       method: 'GET',
       headers: headers,
     });
-    if (!response.ok) {
-      // 2. Fallback: sales manager (will 401 for agency director – frontend then derives from properties)
-      response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/owners/${ownerId}/properties`, {
-        method: 'GET',
-        headers: headers,
-      });
-    }
     if (!response.ok) throw new Error('Failed to fetch owner assets');
     return parseJson(response);
   },
