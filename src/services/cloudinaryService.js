@@ -16,11 +16,11 @@ export const cloudinaryService = {
     formData.append('file', file);
     formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
     formData.append('folder', folder);
-    formData.append('cloud_name', CLOUDINARY_CONFIG.cloudName);
 
     try {
+      // Use /auto/upload to handle all file types (images, PDFs, docs)
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/upload`,
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`,
         {
           method: 'POST',
           body: formData,
@@ -28,7 +28,8 @@ export const cloudinaryService = {
       );
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `Upload failed: ${response.statusText}`);
       }
 
       const result = await response.json();
