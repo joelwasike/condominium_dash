@@ -17,10 +17,13 @@ export const cloudinaryService = {
     formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
     formData.append('folder', folder);
 
+    // Determine resource type: images use /image/upload, PDFs/docs use /raw/upload
+    const isImage = file.type && file.type.startsWith('image/');
+    const resourceType = isImage ? 'image' : 'raw';
+
     try {
-      // Use /auto/upload to handle all file types (images, PDFs, docs)
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`,
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/${resourceType}/upload`,
         {
           method: 'POST',
           body: formData,
