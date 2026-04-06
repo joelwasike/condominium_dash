@@ -2,6 +2,36 @@ import React, { useState } from 'react';
 import { Plus, Filter, FileSpreadsheet, ArrowLeft, Users, Mail, Phone, MapPin, DollarSign, Building, AlertTriangle, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle } from 'lucide-react';
 import { salesManagerService } from '../../services/salesManagerService';
 
+const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
+const tableStyle = { width: '100%', borderCollapse: 'collapse' };
+const thStyle = { padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid #f1f5f9' };
+const tdStyle = { padding: '14px 16px', fontSize: '0.88rem', color: '#334155', borderBottom: '1px solid #f8fafc' };
+const statusPill = (s) => {
+  const sl = (s || '').toLowerCase();
+  const m = { occupied: { bg: '#dcfce7', c: '#166534' }, vacant: { bg: '#fef3c7', c: '#92400e' }, active: { bg: '#dcfce7', c: '#166534' }, inactive: { bg: '#fee2e2', c: '#991b1b' }, pending: { bg: '#fef3c7', c: '#92400e' }, completed: { bg: '#dcfce7', c: '#166534' }, available: { bg: '#dbeafe', c: '#1d4ed8' }, sold: { bg: '#f3e8ff', c: '#7c3aed' }, rented: { bg: '#d1fae5', c: '#065f46' } };
+  const { bg, c } = m[sl] || { bg: '#f1f5f9', c: '#475569' };
+  return { display: 'inline-block', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 600, background: bg, color: c };
+};
+const btnPrimary = { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' };
+const btnOutline = { padding: '8px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 500, fontSize: '0.85rem', cursor: 'pointer' };
+const searchBar = { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', minWidth: '220px' };
+const filterBtn = (active) => ({ padding: '8px 16px', borderRadius: '10px', border: active ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: active ? '#eff6ff' : '#fff', color: active ? '#2563eb' : '#64748b', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' });
+const selectStyle = { padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#334155', background: '#fff', cursor: 'pointer', outline: 'none' };
+const backBtn = { display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '10px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 500 };
+
+const metricCard = { background: '#fff', borderRadius: '14px', padding: '18px 22px', boxShadow: '0 1px 8px rgba(15,23,42,0.05)', border: '1px solid #f1f5f9', minWidth: '140px', flex: '1 1 140px' };
+const metricLabel = { margin: 0, fontSize: '0.78rem', color: '#94a3b8', fontWeight: 500 };
+const metricValue = { margin: '6px 0 0', fontSize: '1.45rem', fontWeight: 700, color: '#1e293b' };
+const emptyRow = { padding: '32px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' };
+const dlItem = { marginBottom: '12px' };
+const dtStyle = { fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px', fontWeight: 500 };
+const ddStyle = { margin: 0, fontSize: '0.9rem', color: '#1e293b' };
+const alertItem = { padding: '12px 14px', borderRadius: '10px', background: '#f8fafc', borderLeft: '3px solid #3b82f6' };
+const alertTitle = { fontWeight: 600, fontSize: '0.88rem', color: '#1e293b', marginBottom: '2px' };
+const alertMeta = { fontSize: '0.78rem', color: '#94a3b8' };
+const sectionTitle = { margin: 0, fontSize: '1rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' };
+const subText = { margin: 0, fontSize: '0.85rem', color: '#94a3b8' };
+
 const ClientsTab = ({
   loading,
   clients,
@@ -37,9 +67,9 @@ const ClientsTab = ({
   if (selectedTenantId) {
     if (tenantDetailLoading) {
       return (
-        <div className="sa-clients-page">
-          <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
-            <p className="sa-cell-sub" style={{ margin: 0 }}>Loading tenant details…</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+          <div style={{ ...card, padding: '48px', textAlign: 'center' }}>
+            <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Loading tenant details...</p>
           </div>
         </div>
       );
@@ -47,18 +77,17 @@ const ClientsTab = ({
     const c = tenantDetail?.client;
     if (!c) {
       return (
-        <div className="sa-clients-page">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
           <button
             type="button"
-            className="sa-outline-button sa-tenant-detail-back-btn"
+            style={{ ...backBtn, marginBottom: '16px' }}
             onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
-            style={{ marginBottom: '16px' }}
           >
             <ArrowLeft size={16} />
             Back to list
           </button>
-          <div className="sa-section-card">
-            <p className="sa-cell-sub" style={{ margin: 0 }}>Tenant not found or failed to load.</p>
+          <div style={card}>
+            <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Tenant not found or failed to load.</p>
           </div>
         </div>
       );
@@ -101,11 +130,11 @@ const ClientsTab = ({
     const updatedAt = c.UpdatedAt ?? c.updatedAt;
 
     return (
-      <div className="sa-clients-page">
-        <div className="sa-clients-header" style={{ marginBottom: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        <div style={{ marginBottom: '20px' }}>
           <button
             type="button"
-            className="sa-outline-button sa-tenant-detail-back-btn"
+            style={backBtn}
             onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
           >
             <ArrowLeft size={16} />
@@ -113,73 +142,75 @@ const ClientsTab = ({
           </button>
         </div>
 
-        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
-          <div className="sa-tenant-detail-hero">
-            <div className="sa-tenant-detail-avatar">
+        <div style={{ ...card, marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 700, flexShrink: 0 }}>
               {(name || 'T').charAt(0).toUpperCase()}
             </div>
             <div>
-              <h2>{name}</h2>
-              <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`} style={{ marginRight: '8px' }}>
-                {status}
-              </span>
-              {propertyAddr && propertyAddr !== '—' && (
-                <span className="sa-tenant-detail-meta">
-                  <MapPin size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                  {propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
+              <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b' }}>{name}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '6px' }}>
+                <span style={statusPill(status)}>
+                  {status}
                 </span>
-              )}
+                {propertyAddr && propertyAddr !== '—' && (
+                  <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MapPin size={14} />
+                    {propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="sa-tenant-detail-grid">
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><Users size={18} /> Personal information</h3>
-            <dl className="sa-tenant-detail-dl">
-              <div><dt>Name</dt><dd>{name}</dd></div>
-              {email && <div><dt>Email</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {email}</dd></div>}
-              {phone && <div><dt>Phone</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</dd></div>}
-              <div><dt>Status</dt><dd><span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`}>{status}</span></dd></div>
-              {createdAt && <div><dt>Member since</dt><dd>{new Date(createdAt).toLocaleDateString()}</dd></div>}
-            </dl>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+          <div style={card}>
+            <h3 style={sectionTitle}><Users size={18} /> Personal information</h3>
+            <div style={{ marginTop: '16px' }}>
+              <div style={dlItem}><div style={dtStyle}>Name</div><div style={ddStyle}>{name}</div></div>
+              {email && <div style={dlItem}><div style={dtStyle}>Email</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {email}</div></div>}
+              {phone && <div style={dlItem}><div style={dtStyle}>Phone</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</div></div>}
+              <div style={dlItem}><div style={dtStyle}>Status</div><div style={ddStyle}><span style={statusPill(status)}>{status}</span></div></div>
+              {createdAt && <div style={dlItem}><div style={dtStyle}>Member since</div><div style={ddStyle}>{new Date(createdAt).toLocaleDateString()}</div></div>}
+            </div>
             <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <FileCheck size={16} /> Files & documents
             </h4>
-            <p className="sa-cell-sub" style={{ margin: 0 }}>No files uploaded yet. ID and other tenant documents can be added here for viewing.</p>
+            <p style={subText}>No files uploaded yet. ID and other tenant documents can be added here for viewing.</p>
           </div>
 
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><DollarSign size={18} /> Rent & payment</h3>
-            <dl className="sa-tenant-detail-dl">
-              <div><dt>Property</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</dd></div>
-              {unitNumber && unitNumber !== '—' && <div><dt>Unit</dt><dd>{unitNumber}</dd></div>}
-              <div><dt>Monthly rent</dt><dd className="sa-tenant-detail-value-bold">{Number(amount).toLocaleString()} XOF</dd></div>
-              <div><dt>Last payment</dt><dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</dd></div>
-            </dl>
+          <div style={card}>
+            <h3 style={sectionTitle}><DollarSign size={18} /> Rent & payment</h3>
+            <div style={{ marginTop: '16px' }}>
+              <div style={dlItem}><div style={dtStyle}>Property</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</div></div>
+              {unitNumber && unitNumber !== '—' && <div style={dlItem}><div style={dtStyle}>Unit</div><div style={ddStyle}>{unitNumber}</div></div>}
+              <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={{ ...ddStyle, fontWeight: 700, fontSize: '1.1rem' }}>{Number(amount).toLocaleString()} XOF</div></div>
+              <div style={dlItem}><div style={dtStyle}>Last payment</div><div style={ddStyle}>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</div></div>
+            </div>
           </div>
 
           {prop && (
-            <div className="sa-section-card sa-tenant-detail-card">
-              <h3><Building size={18} /> Property details</h3>
-              <dl className="sa-tenant-detail-dl">
-                <div><dt>Type</dt><dd>{prop.type || prop.Type || '—'}</dd></div>
-                {(prop.bedrooms ?? prop.Bedrooms) != null && <div><dt>Bedrooms</dt><dd>{prop.bedrooms ?? prop.Bedrooms}</dd></div>}
-                {(prop.bathrooms ?? prop.Bathrooms) != null && <div><dt>Bathrooms</dt><dd>{prop.bathrooms ?? prop.Bathrooms}</dd></div>}
-                <div><dt>Property status</dt><dd><span className={`sa-status-pill ${(prop.status || prop.Status || '').toLowerCase()}`}>{prop.status || prop.Status || '—'}</span></dd></div>
-              </dl>
+            <div style={card}>
+              <h3 style={sectionTitle}><Building size={18} /> Property details</h3>
+              <div style={{ marginTop: '16px' }}>
+                <div style={dlItem}><div style={dtStyle}>Type</div><div style={ddStyle}>{prop.type || prop.Type || '—'}</div></div>
+                {(prop.bedrooms ?? prop.Bedrooms) != null && <div style={dlItem}><div style={dtStyle}>Bedrooms</div><div style={ddStyle}>{prop.bedrooms ?? prop.Bedrooms}</div></div>}
+                {(prop.bathrooms ?? prop.Bathrooms) != null && <div style={dlItem}><div style={dtStyle}>Bathrooms</div><div style={ddStyle}>{prop.bathrooms ?? prop.Bathrooms}</div></div>}
+                <div style={dlItem}><div style={dtStyle}>Property status</div><div style={ddStyle}><span style={statusPill((prop.status || prop.Status || '').toLowerCase())}>{prop.status || prop.Status || '—'}</span></div></div>
+              </div>
             </div>
           )}
 
-          <div className="sa-section-card sa-tenant-detail-card" style={alertList.length ? undefined : { gridColumn: '1 / -1' }}>
-            <h3><AlertTriangle size={18} /> Alerts & activity</h3>
+          <div style={{ ...card, ...(alertList.length ? {} : { gridColumn: '1 / -1' }) }}>
+            <h3 style={sectionTitle}><AlertTriangle size={18} /> Alerts & activity</h3>
             {alertList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {alertList.map((alert, idx) => (
-                  <li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item">
-                    <div className="sa-tenant-detail-alert-title">{alert.Title || alert.title || 'Alert'}</div>
-                    {alert.Message && <div className="sa-cell-sub" style={{ marginBottom: '4px' }}>{alert.Message}</div>}
-                    <div className="sa-tenant-detail-alert-meta">
+                  <li key={alert.ID || alert.id || idx} style={alertItem}>
+                    <div style={alertTitle}>{alert.Title || alert.title || 'Alert'}</div>
+                    {alert.Message && <div style={{ ...subText, marginBottom: '4px' }}>{alert.Message}</div>}
+                    <div style={alertMeta}>
                       {(alert.Urgency || alert.urgency || '').toLowerCase()} · {alert.Status || alert.status || 'Open'}
                       {alert.Amount != null && ` · ${Number(alert.Amount).toLocaleString()} XOF`}
                     </div>
@@ -187,14 +218,14 @@ const ClientsTab = ({
                 ))}
               </ul>
             ) : (
-              <p className="sa-cell-sub">No alerts for this tenant.</p>
+              <p style={{ ...subText, marginTop: '12px' }}>No alerts for this tenant.</p>
             )}
           </div>
 
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><Wrench size={18} /> Maintenances requested</h3>
+          <div style={card}>
+            <h3 style={sectionTitle}><Wrench size={18} /> Maintenances requested</h3>
             {maintenancesList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {maintenancesList.map((m, idx) => {
                   const mid = m.ID ?? m.id;
                   const openMaintenanceDetail = () => {
@@ -209,15 +240,14 @@ const ClientsTab = ({
                   return (
                     <li
                       key={mid ?? idx}
-                      className="sa-tenant-detail-alert-item"
+                      style={{ ...alertItem, cursor: mid != null ? 'pointer' : 'default' }}
                       role="button"
                       tabIndex={0}
                       onClick={openMaintenanceDetail}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMaintenanceDetail(); } }}
-                      style={{ cursor: mid != null ? 'pointer' : 'default' }}
                     >
-                      <div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div>
-                      <div className="sa-tenant-detail-alert-meta">
+                      <div style={alertTitle}>{m.Issue || m.issue || 'Maintenance'}</div>
+                      <div style={alertMeta}>
                         {(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}
                         {m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}
                       </div>
@@ -226,20 +256,20 @@ const ClientsTab = ({
                 })}
               </ul>
             ) : (
-              <p className="sa-cell-sub">No maintenance requests for this tenant.</p>
+              <p style={{ ...subText, marginTop: '12px' }}>No maintenance requests for this tenant.</p>
             )}
           </div>
 
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><Receipt size={18} /> Recent payment history</h3>
+          <div style={card}>
+            <h3 style={sectionTitle}><Receipt size={18} /> Recent payment history</h3>
             {paymentsList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {paymentsList.slice(0, 10).map((p, idx) => (
-                  <li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
-                    <div className="sa-tenant-detail-alert-title">
+                  <li key={p.ID || p.id || idx} style={{ ...alertItem, borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+                    <div style={alertTitle}>
                       {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
                     </div>
-                    <div className="sa-tenant-detail-alert-meta">
+                    <div style={alertMeta}>
                       {p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}
                       {(p.Method || p.method) && ` · ${p.Method || p.method}`}
                     </div>
@@ -247,69 +277,67 @@ const ClientsTab = ({
                 ))}
               </ul>
             ) : (
-              <p className="sa-cell-sub">No payment history for this tenant.</p>
+              <p style={{ ...subText, marginTop: '12px' }}>No payment history for this tenant.</p>
             )}
           </div>
 
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><StickyNote size={18} /> Private notes</h3>
+          <div style={card}>
+            <h3 style={sectionTitle}><StickyNote size={18} /> Private notes</h3>
             <textarea
               value={privateNoteInput}
               onChange={(e) => setPrivateNoteInput(e.target.value)}
               placeholder="Add a note for future reference (visible only to sales managers)..."
               rows={2}
-              className="sa-tenant-detail-notes-input"
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginBottom: '10px' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginTop: '12px', marginBottom: '10px', boxSizing: 'border-box' }}
             />
             <button
               type="button"
-              className="sa-primary-cta"
+              style={{ ...btnPrimary, marginBottom: '16px' }}
               onClick={handleAddPrivateNote}
               disabled={!privateNoteInput.trim() || addingNote}
-              style={{ marginBottom: '16px' }}
             >
-              {addingNote ? 'Adding…' : 'Add note'}
+              {addingNote ? 'Adding...' : 'Add note'}
             </button>
             {privateNotesList.length > 0 ? (
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {privateNotesList.map((n) => (
-                  <li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}>
-                    <div className="sa-tenant-detail-alert-title">{n.note ?? n.Note}</div>
-                    <div className="sa-tenant-detail-alert-meta">
+                  <li key={n.id ?? n.ID} style={{ ...alertItem, borderLeftColor: '#6366f1' }}>
+                    <div style={alertTitle}>{n.note ?? n.Note}</div>
+                    <div style={alertMeta}>
                       {n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="sa-cell-sub">No private notes yet.</p>
+              <p style={{ ...subText, marginTop: '0' }}>No private notes yet.</p>
             )}
           </div>
 
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><AlertCircle size={18} /> Quick actions</h3>
-            <div className="sa-tenant-detail-quick-actions">
-              <button type="button" className="sa-outline-button" onClick={() => handleQuickAction('Generate Receipt')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <div style={card}>
+            <h3 style={sectionTitle}><AlertCircle size={18} /> Quick actions</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
+              <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => handleQuickAction('Generate Receipt')}>
                 <Receipt size={16} /> Generate Receipt
               </button>
-              <button type="button" className="sa-outline-button" onClick={() => handleQuickAction('Send Reminder SMS')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => handleQuickAction('Send Reminder SMS')}>
                 <MessageSquare size={16} /> Send Reminder SMS
               </button>
-              <button type="button" className="sa-outline-button" onClick={() => handleQuickAction('Report Incident')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => handleQuickAction('Report Incident')}>
                 <AlertCircle size={16} /> Report Incident
               </button>
             </div>
           </div>
         </div>
 
-        <div className="sa-section-card" style={{ marginTop: '20px' }}>
-          <div className="sa-tenant-detail-footer">
-            <span className="sa-tenant-detail-updated">
+        <div style={{ ...card, marginTop: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
               Last updated: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}
             </span>
             <button
               type="button"
-              className="sa-primary-cta"
+              style={btnPrimary}
               onClick={() => {
                 setEditingClient(c);
                 setShowEditClientModal(true);
@@ -324,43 +352,43 @@ const ClientsTab = ({
 
         {/* Maintenance detail modal (when clicking a maintenance in tenant detail) */}
         {(maintenanceDetail != null || maintenanceDetailLoading) && (
-          <div className="modal-overlay" onClick={() => { if (!maintenanceDetailLoading) { setMaintenanceDetail(null); } }}>
-            <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3>Maintenance request details</h3>
-                <button type="button" className="modal-close" onClick={() => setMaintenanceDetail(null)} disabled={maintenanceDetailLoading}>×</button>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => { if (!maintenanceDetailLoading) { setMaintenanceDetail(null); } }}>
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Maintenance request details</h3>
+                <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8', padding: '4px' }} onClick={() => setMaintenanceDetail(null)} disabled={maintenanceDetailLoading}>x</button>
               </div>
-              <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                 {maintenanceDetailLoading ? (
-                  <p className="sa-cell-sub" style={{ margin: 0 }}>Loading…</p>
+                  <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Loading...</p>
                 ) : maintenanceDetail ? (
-                  <div className="sa-tenant-detail-dl" style={{ display: 'grid', gap: '12px' }}>
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Property</dt><dd style={{ margin: 0 }}>{maintenanceDetail.property ?? maintenanceDetail.Property ?? '—'}</dd></div>
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Tenant</dt><dd style={{ margin: 0 }}>{maintenanceDetail.tenant ?? maintenanceDetail.Tenant ?? '—'}</dd></div>
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Title</dt><dd style={{ margin: 0 }}>{maintenanceDetail.title ?? maintenanceDetail.Title ?? maintenanceDetail.issue ?? maintenanceDetail.Issue ?? '—'}</dd></div>
-                    {(maintenanceDetail.description ?? maintenanceDetail.Description) && <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Description</dt><dd style={{ margin: 0 }}>{maintenanceDetail.description ?? maintenanceDetail.Description}</dd></div>}
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Priority</dt><dd style={{ margin: 0 }}><span className={`sa-status-pill ${(maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '').toLowerCase()}`}>{maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '—'}</span></dd></div>
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Status</dt><dd style={{ margin: 0 }}><span className={`sa-status-pill ${(maintenanceDetail.status ?? maintenanceDetail.Status ?? '').toLowerCase().replace(/\s+/g, '-')}`}>{maintenanceDetail.status ?? maintenanceDetail.Status ?? '—'}</span></dd></div>
-                    {(maintenanceDetail.assigned ?? maintenanceDetail.Assigned) && <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Assigned to</dt><dd style={{ margin: 0 }}>{maintenanceDetail.assigned ?? maintenanceDetail.Assigned}</dd></div>}
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Date reported</dt><dd style={{ margin: 0 }}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : (maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—')}</dd></div>
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Created</dt><dd style={{ margin: 0 }}>{maintenanceDetail.createdAt ? new Date(maintenanceDetail.createdAt).toLocaleString() : (maintenanceDetail.CreatedAt ? new Date(maintenanceDetail.CreatedAt).toLocaleString() : '—')}</dd></div>
-                    {(maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours) != null && <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Estimated hours</dt><dd style={{ margin: 0 }}>{maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours}</dd></div>}
-                    {(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost) != null && <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Estimated cost</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost).toLocaleString()} XOF</dd></div>}
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Quote generated</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.quoteGenerated ?? maintenanceDetail.QuoteGenerated) ? 'Yes' : 'No'}</dd></div>
-                    {(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate) && <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Work start date</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate).toLocaleDateString()}</dd></div>}
-                    {(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate) && <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Work end date</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate).toLocaleDateString()}</dd></div>}
-                    {(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt) && <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Completed at</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt).toLocaleString()}</dd></div>}
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Archived</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.archived ?? maintenanceDetail.Archived) ? 'Yes' : 'No'}</dd></div>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    <div><div style={dtStyle}>Property</div><div style={ddStyle}>{maintenanceDetail.property ?? maintenanceDetail.Property ?? '—'}</div></div>
+                    <div><div style={dtStyle}>Tenant</div><div style={ddStyle}>{maintenanceDetail.tenant ?? maintenanceDetail.Tenant ?? '—'}</div></div>
+                    <div><div style={dtStyle}>Title</div><div style={ddStyle}>{maintenanceDetail.title ?? maintenanceDetail.Title ?? maintenanceDetail.issue ?? maintenanceDetail.Issue ?? '—'}</div></div>
+                    {(maintenanceDetail.description ?? maintenanceDetail.Description) && <div><div style={dtStyle}>Description</div><div style={ddStyle}>{maintenanceDetail.description ?? maintenanceDetail.Description}</div></div>}
+                    <div><div style={dtStyle}>Priority</div><div style={ddStyle}><span style={statusPill((maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '').toLowerCase())}>{maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '—'}</span></div></div>
+                    <div><div style={dtStyle}>Status</div><div style={ddStyle}><span style={statusPill((maintenanceDetail.status ?? maintenanceDetail.Status ?? '').toLowerCase().replace(/\s+/g, '-'))}>{maintenanceDetail.status ?? maintenanceDetail.Status ?? '—'}</span></div></div>
+                    {(maintenanceDetail.assigned ?? maintenanceDetail.Assigned) && <div><div style={dtStyle}>Assigned to</div><div style={ddStyle}>{maintenanceDetail.assigned ?? maintenanceDetail.Assigned}</div></div>}
+                    <div><div style={dtStyle}>Date reported</div><div style={ddStyle}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : (maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—')}</div></div>
+                    <div><div style={dtStyle}>Created</div><div style={ddStyle}>{maintenanceDetail.createdAt ? new Date(maintenanceDetail.createdAt).toLocaleString() : (maintenanceDetail.CreatedAt ? new Date(maintenanceDetail.CreatedAt).toLocaleString() : '—')}</div></div>
+                    {(maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours) != null && <div><div style={dtStyle}>Estimated hours</div><div style={ddStyle}>{maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours}</div></div>}
+                    {(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost) != null && <div><div style={dtStyle}>Estimated cost</div><div style={ddStyle}>{(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost).toLocaleString()} XOF</div></div>}
+                    <div><div style={dtStyle}>Quote generated</div><div style={ddStyle}>{(maintenanceDetail.quoteGenerated ?? maintenanceDetail.QuoteGenerated) ? 'Yes' : 'No'}</div></div>
+                    {(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate) && <div><div style={dtStyle}>Work start date</div><div style={ddStyle}>{new Date(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate).toLocaleDateString()}</div></div>}
+                    {(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate) && <div><div style={dtStyle}>Work end date</div><div style={ddStyle}>{new Date(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate).toLocaleDateString()}</div></div>}
+                    {(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt) && <div><div style={dtStyle}>Completed at</div><div style={ddStyle}>{new Date(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt).toLocaleString()}</div></div>}
+                    <div><div style={dtStyle}>Archived</div><div style={ddStyle}>{(maintenanceDetail.archived ?? maintenanceDetail.Archived) ? 'Yes' : 'No'}</div></div>
                     {Array.isArray(maintenanceDetail.photos ?? maintenanceDetail.Photos) && (maintenanceDetail.photos ?? maintenanceDetail.Photos).length > 0 && (
                       <div>
-                        <dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '8px' }}>Photos</dt>
-                        <dd style={{ margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ ...dtStyle, marginBottom: '8px' }}>Photos</div>
+                        <div style={{ margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                           {(maintenanceDetail.photos ?? maintenanceDetail.Photos).map((url, i) => (
                             <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
                               <img src={url} alt={`Photo ${i + 1}`} style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
                             </a>
                           ))}
-                        </dd>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -375,15 +403,15 @@ const ClientsTab = ({
 
   // Clients list view
   return (
-    <div className="sa-clients-page">
-      <div className="sa-clients-header">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
         <div>
-          <h2>Tenant List</h2>
-          <p>{filteredClients.length} results found</p>
+          <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b' }}>Tenant List</h2>
+          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>{filteredClients.length} results found</p>
         </div>
-        <div className="sa-clients-header-right">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button
-            className="sa-primary-cta"
+            style={btnPrimary}
             onClick={() => {
               setImportMode('manual');
               setExcelFile(null);
@@ -395,65 +423,64 @@ const ClientsTab = ({
           </button>
           <button
             type="button"
-            className="sa-primary-cta secondary"
-            style={{ marginLeft: '8px' }}
+            style={{ ...btnOutline, display: 'flex', alignItems: 'center', gap: '6px' }}
             onClick={() => {
               setImportMode('excel');
               setExcelFile(null);
               setShowTenantCreationModal(true);
             }}
           >
-            <FileSpreadsheet size={16} style={{ marginRight: '4px' }} />
+            <FileSpreadsheet size={16} />
             Import from Excel
           </button>
-          <button className="sa-sort-button">Sort: Creation Date</button>
-          <button className="sa-date-button">
+          <button style={btnOutline}>Sort: Creation Date</button>
+          <button style={btnOutline}>
             {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </button>
         </div>
       </div>
 
-      <div className="sa-overview-metrics">
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Active Tenants</p>
-          <p className="sa-metric-number">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+        <div style={metricCard}>
+          <p style={metricLabel}>Active Tenants</p>
+          <p style={metricValue}>
             {filteredClients.filter(client => (client.Status || client.status || '').toString().toLowerCase() === 'active').length}
-            <span className="sa-metric-trend positive">+1.5%</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a', marginLeft: '8px' }}>+1.5%</span>
           </p>
         </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Overdue Accounts</p>
-          <p className="sa-metric-number">
+        <div style={metricCard}>
+          <p style={metricLabel}>Overdue Accounts</p>
+          <p style={metricValue}>
             {filteredClients.filter(client => (client.Status || client.status || '').toString().toLowerCase() === 'overdue').length}
-            <span className="sa-metric-trend negative">-1.5%</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', marginLeft: '8px' }}>-1.5%</span>
           </p>
-          </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Waiting List</p>
-          <p className="sa-metric-value">
+        </div>
+        <div style={metricCard}>
+          <p style={metricLabel}>Waiting List</p>
+          <p style={metricValue}>
             {filteredClients.filter(client => {
               const s = (client.Status || client.status || '').toString().toLowerCase().replace(/\s+/g, ' ');
               return s === 'waiting list' || s === 'waitinglist';
             }).length}
           </p>
-          </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Monthly Revenue</p>
-          <p className="sa-metric-value">
-              {filteredClients.reduce(
-                (sum, client) => sum + (client.Amount || client.amount || 0),
-                0
-              ).toLocaleString()} XOF
+        </div>
+        <div style={metricCard}>
+          <p style={metricLabel}>Total Monthly Revenue</p>
+          <p style={metricValue}>
+            {filteredClients.reduce(
+              (sum, client) => sum + (client.Amount || client.amount || 0),
+              0
+            ).toLocaleString()} XOF
           </p>
         </div>
       </div>
 
-      <div className="sa-transactions-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
         <Filter size={16} style={{ color: '#6b7280' }} />
         <select
           value={clientStatusFilter}
           onChange={(e) => setClientStatusFilter(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '140px', fontSize: '0.875rem' }}
+          style={selectStyle}
           aria-label="Filter by status"
         >
           <option value="">All statuses</option>
@@ -467,7 +494,7 @@ const ClientsTab = ({
           placeholder="Search by name, email, phone"
           value={clientSearchText}
           onChange={(e) => setClientSearchText(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '200px', fontSize: '0.875rem' }}
+          style={{ ...searchBar, padding: '10px 14px' }}
           aria-label="Search tenants"
         />
         <input
@@ -475,14 +502,13 @@ const ClientsTab = ({
           placeholder="Filter by property"
           value={clientPropertyFilter}
           onChange={(e) => setClientPropertyFilter(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '180px', fontSize: '0.875rem' }}
+          style={{ ...searchBar, padding: '10px 14px', minWidth: '180px' }}
           aria-label="Filter by property"
         />
         {(clientStatusFilter || clientPropertyFilter || clientSearchText) && (
           <button
             type="button"
-            className="action-button secondary"
-            style={{ padding: '8px 14px', fontSize: '0.875rem' }}
+            style={btnOutline}
             onClick={() => {
               setClientStatusFilter('');
               setClientPropertyFilter('');
@@ -490,27 +516,27 @@ const ClientsTab = ({
             }}
           >
             Clear filters
-        </button>
+          </button>
         )}
       </div>
 
-      <div className="sa-section-card">
-        <div className="sa-section-header">
-          <h3>Tenants</h3>
-          <p>Manage all tenant profiles and track their status.</p>
+      <div style={card}>
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Tenants</h3>
+          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Manage all tenant profiles and track their status.</p>
         </div>
-        <div className="sa-table-wrapper">
-          <table className="sa-table">
+        <div style={{ overflowX: 'auto' }}>
+          <table style={tableStyle}>
           <thead>
             <tr>
-                <th />
-                <th>Client</th>
-              <th>Property</th>
-              <th>Status</th>
-              <th>Last Payment</th>
-              <th>Amount</th>
-              <th>Contact</th>
-                <th />
+                <th style={thStyle} />
+                <th style={thStyle}>Client</th>
+              <th style={thStyle}>Property</th>
+              <th style={thStyle}>Status</th>
+              <th style={thStyle}>Last Payment</th>
+              <th style={thStyle}>Amount</th>
+              <th style={thStyle}>Contact</th>
+                <th style={thStyle} />
             </tr>
           </thead>
           <tbody>
@@ -526,38 +552,38 @@ const ClientsTab = ({
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (clientId != null) setSelectedTenantId(clientId); } }}
                 style={{ cursor: clientId != null ? 'pointer' : 'default' }}
               >
-                <td onClick={(e) => e.stopPropagation()}>
+                <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" />
                 </td>
-                    <td>
-                      <div className="sa-cell-main">
-                        <span className="sa-cell-title">{client.Name || client.name || 'N/A'}</span>
-                        <span className="sa-cell-sub">{client.Email || client.email || 'N/A'}</span>
-                  </div>
+                    <td style={tdStyle}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#1e293b', display: 'block' }}>{client.Name || client.name || 'N/A'}</span>
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{client.Email || client.email || 'N/A'}</span>
+                      </div>
                 </td>
-                    <td>{client.Property || client.property || 'N/A'}</td>
-                    <td>
-                      <span className={`sa-status-pill ${(client.Status || client.status || 'unknown').toLowerCase().replace(' ', '-')}`}>
+                    <td style={tdStyle}>{client.Property || client.property || 'N/A'}</td>
+                    <td style={tdStyle}>
+                      <span style={statusPill((client.Status || client.status || 'unknown').toLowerCase())}>
                         {client.Status || client.status || 'Unknown'}
                       </span>
                     </td>
-                    <td>{(client.LastPayment || client.lastPayment) ? new Date(client.LastPayment || client.lastPayment).toLocaleDateString() : 'N/A'}</td>
-                    <td>{(client.Amount || client.amount || 0).toLocaleString()} XOF</td>
-                    <td>
-                      <div className="sa-cell-main">
-                        <span className="sa-cell-title">{client.Phone || client.phone || 'N/A'}</span>
-                        <span className="sa-cell-sub">{client.Email || client.email || 'N/A'}</span>
+                    <td style={tdStyle}>{(client.LastPayment || client.lastPayment) ? new Date(client.LastPayment || client.lastPayment).toLocaleDateString() : 'N/A'}</td>
+                    <td style={tdStyle}>{(client.Amount || client.amount || 0).toLocaleString()} XOF</td>
+                    <td style={tdStyle}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#1e293b', display: 'block' }}>{client.Phone || client.phone || 'N/A'}</span>
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{client.Email || client.email || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="sa-row-actions" onClick={(e) => e.stopPropagation()}>
-                      <button className="sa-icon-button" onClick={() => handleEditClient(client)} title="Edit">✏️</button>
+                    <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                      <button style={{ ...btnOutline, padding: '6px 12px' }} onClick={() => handleEditClient(client)} title="Edit">Edit</button>
                 </td>
               </tr>
                 );
               })
             ) : (
               <tr>
-                  <td colSpan={8} className="sa-table-empty">No tenants found. Start the backend to see real data.</td>
+                  <td colSpan={8} style={emptyRow}>No tenants found. Start the backend to see real data.</td>
               </tr>
             )}
           </tbody>
@@ -567,38 +593,38 @@ const ClientsTab = ({
 
       {/* Waiting List Section */}
       {waitingListClients.length > 0 && (
-        <div className="sa-section-card" style={{ marginTop: '24px' }}>
-          <div className="sa-section-header">
-            <h3>Waiting List Tenants</h3>
-            <p>Tenants waiting for available properties.</p>
+        <div style={{ ...card, marginTop: '24px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Waiting List Tenants</h3>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Tenants waiting for available properties.</p>
           </div>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tableStyle}>
               <thead>
                 <tr>
-                  <th />
-                  <th>Tenant</th>
-                  <th>Contact</th>
-                  <th>Preferred Property</th>
-                  <th>Status</th>
-                  <th />
+                  <th style={thStyle} />
+                  <th style={thStyle}>Tenant</th>
+                  <th style={thStyle}>Contact</th>
+                  <th style={thStyle}>Preferred Property</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={thStyle} />
                 </tr>
               </thead>
               <tbody>
                 {waitingListClients.map(client => (
                   <tr key={client.ID || client.id}>
-                    <td><input type="checkbox" /></td>
-                    <td>
-                      <div className="sa-cell-main">
-                        <span className="sa-cell-title">{client.Name || client.name || 'N/A'}</span>
-                        <span className="sa-cell-sub">{client.Email || client.email || 'N/A'}</span>
+                    <td style={tdStyle}><input type="checkbox" /></td>
+                    <td style={tdStyle}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#1e293b', display: 'block' }}>{client.Name || client.name || 'N/A'}</span>
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{client.Email || client.email || 'N/A'}</span>
                       </div>
                     </td>
-                    <td>{client.Phone || client.phone || 'N/A'}</td>
-                    <td>{client.Property || client.property || 'Any'}</td>
-                    <td><span className="sa-status-pill pending">Waiting List</span></td>
-                    <td className="sa-row-actions">
-                      <button className="sa-icon-button" onClick={() => handleEditClient(client)} title="Edit">✏️</button>
+                    <td style={tdStyle}>{client.Phone || client.phone || 'N/A'}</td>
+                    <td style={tdStyle}>{client.Property || client.property || 'Any'}</td>
+                    <td style={tdStyle}><span style={statusPill('pending')}>Waiting List</span></td>
+                    <td style={tdStyle}>
+                      <button style={{ ...btnOutline, padding: '6px 12px' }} onClick={() => handleEditClient(client)} title="Edit">Edit</button>
                     </td>
                   </tr>
                 ))}
@@ -610,40 +636,40 @@ const ClientsTab = ({
 
       {/* Unpaid Rents Section */}
       {unpaidRents.length > 0 && (
-        <div className="sa-section-card" style={{ marginTop: '24px' }}>
-          <div className="sa-section-header">
-            <h3>Unpaid Rents</h3>
-            <p>Manage overdue payments and update payment status.</p>
+        <div style={{ ...card, marginTop: '24px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Unpaid Rents</h3>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Manage overdue payments and update payment status.</p>
           </div>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tableStyle}>
               <thead>
                 <tr>
-                  <th />
-                  <th>Tenant</th>
-                  <th>Property</th>
-                  <th>Amount</th>
-                  <th>Due Date</th>
-                  <th>Status</th>
-                  <th />
+                  <th style={thStyle} />
+                  <th style={thStyle}>Tenant</th>
+                  <th style={thStyle}>Property</th>
+                  <th style={thStyle}>Amount</th>
+                  <th style={thStyle}>Due Date</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={thStyle} />
                 </tr>
               </thead>
               <tbody>
                 {unpaidRents.map(unpaid => (
                   <tr key={unpaid.ID || unpaid.id}>
-                    <td><input type="checkbox" /></td>
-                    <td>
-                      <div className="sa-cell-main">
-                        <span className="sa-cell-title">{unpaid.Name || unpaid.ClientName || 'N/A'}</span>
-                        <span className="sa-cell-sub">{unpaid.Email || unpaid.ClientEmail || 'N/A'}</span>
+                    <td style={tdStyle}><input type="checkbox" /></td>
+                    <td style={tdStyle}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#1e293b', display: 'block' }}>{unpaid.Name || unpaid.ClientName || 'N/A'}</span>
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{unpaid.Email || unpaid.ClientEmail || 'N/A'}</span>
                       </div>
                     </td>
-                    <td>{unpaid.Property || 'N/A'}</td>
-                    <td>{(unpaid.Amount || 0).toLocaleString()} XOF</td>
-                    <td>{unpaid.DueDate ? new Date(unpaid.DueDate).toLocaleDateString() : 'N/A'}</td>
-                    <td><span className="sa-status-pill overdue">{unpaid.Status || 'Overdue'}</span></td>
-                    <td className="sa-row-actions">
-                      <button className="sa-icon-button" onClick={() => handleEditUnpaidRent(unpaid)} title="Update Payment">💰</button>
+                    <td style={tdStyle}>{unpaid.Property || 'N/A'}</td>
+                    <td style={tdStyle}>{(unpaid.Amount || 0).toLocaleString()} XOF</td>
+                    <td style={tdStyle}>{unpaid.DueDate ? new Date(unpaid.DueDate).toLocaleDateString() : 'N/A'}</td>
+                    <td style={tdStyle}><span style={statusPill('inactive')}>{unpaid.Status || 'Overdue'}</span></td>
+                    <td style={tdStyle}>
+                      <button style={{ ...btnOutline, padding: '6px 12px' }} onClick={() => handleEditUnpaidRent(unpaid)} title="Update Payment">Update</button>
                     </td>
                   </tr>
                 ))}

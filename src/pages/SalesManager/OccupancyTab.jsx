@@ -9,6 +9,28 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
+const tableStyle = { width: '100%', borderCollapse: 'collapse' };
+const thStyle = { padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid #f1f5f9' };
+const tdStyle = { padding: '14px 16px', fontSize: '0.88rem', color: '#334155', borderBottom: '1px solid #f8fafc' };
+const statusPill = (s) => {
+  const sl = (s || '').toLowerCase();
+  const m = { occupied: { bg: '#dcfce7', c: '#166534' }, vacant: { bg: '#fef3c7', c: '#92400e' }, active: { bg: '#dcfce7', c: '#166534' }, inactive: { bg: '#fee2e2', c: '#991b1b' }, pending: { bg: '#fef3c7', c: '#92400e' }, completed: { bg: '#dcfce7', c: '#166534' }, available: { bg: '#dbeafe', c: '#1d4ed8' }, sold: { bg: '#f3e8ff', c: '#7c3aed' }, rented: { bg: '#d1fae5', c: '#065f46' } };
+  const { bg, c } = m[sl] || { bg: '#f1f5f9', c: '#475569' };
+  return { display: 'inline-block', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 600, background: bg, color: c };
+};
+const btnPrimary = { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' };
+const btnOutline = { padding: '8px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 500, fontSize: '0.85rem', cursor: 'pointer' };
+const searchBar = { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', minWidth: '220px' };
+const filterBtn = (active) => ({ padding: '8px 16px', borderRadius: '10px', border: active ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: active ? '#eff6ff' : '#fff', color: active ? '#2563eb' : '#64748b', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' });
+const selectStyle = { padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#334155', background: '#fff', cursor: 'pointer', outline: 'none' };
+const backBtn = { display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '10px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 500 };
+
+const metricCard = { background: '#fff', borderRadius: '14px', padding: '18px 22px', boxShadow: '0 1px 8px rgba(15,23,42,0.05)', border: '1px solid #f1f5f9', minWidth: '140px', flex: '1 1 140px' };
+const metricLabel = { margin: 0, fontSize: '0.78rem', color: '#94a3b8', fontWeight: 500 };
+const metricValue = { margin: '6px 0 0', fontSize: '1.45rem', fontWeight: 700, color: '#1e293b' };
+const emptyRow = { padding: '32px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' };
+
 const OccupancyTab = ({
   properties,
   clients,
@@ -87,50 +109,50 @@ const OccupancyTab = ({
     ].filter((d) => d.value > 0);
 
     return (
-      <div className="sa-occupancy-page">
-        <div className="sa-occupancy-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setOccupancyDetailView('list'); setOccupancySelectedProperty(null); setOccupancyDetailData(null); }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button type="button" style={backBtn} onClick={() => { setOccupancyDetailView('list'); setOccupancySelectedProperty(null); setOccupancyDetailData(null); }}>
             <ArrowLeft size={18} />
             Back
           </button>
           <div>
-            <h2>Occupancy: {buildingName}</h2>
+            <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b' }}>Occupancy: {buildingName}</h2>
             <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>Units, tenants and occupancy overview</p>
           </div>
         </div>
         {occupancyDetailLoading ? (
-          <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
-            <p className="sa-cell-sub" style={{ margin: 0 }}>Loading…</p>
+          <div style={{ ...card, padding: '48px', textAlign: 'center', marginTop: '20px' }}>
+            <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Loading...</p>
           </div>
         ) : (
           <>
-            <div className="sa-occupancy-metrics" style={{ marginTop: '20px' }}>
-              <div className="sa-metric-card">
-                <p className="sa-metric-label">Total Units</p>
-                <p className="sa-metric-value">{totalUnits}</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '20px' }}>
+              <div style={metricCard}>
+                <p style={metricLabel}>Total Units</p>
+                <p style={metricValue}>{totalUnits}</p>
               </div>
-              <div className="sa-metric-card">
-                <p className="sa-metric-label">Occupied</p>
-                <p className="sa-metric-value">{occupiedCountDetail}</p>
+              <div style={metricCard}>
+                <p style={metricLabel}>Occupied</p>
+                <p style={metricValue}>{occupiedCountDetail}</p>
               </div>
-              <div className="sa-metric-card">
-                <p className="sa-metric-label">Vacant</p>
-                <p className="sa-metric-value">{vacantCountDetail}</p>
+              <div style={metricCard}>
+                <p style={metricLabel}>Vacant</p>
+                <p style={metricValue}>{vacantCountDetail}</p>
               </div>
-              <div className="sa-metric-card">
-                <p className="sa-metric-label">Occupancy Rate</p>
-                <p className="sa-metric-value">{occupancyRateDetail}%</p>
+              <div style={metricCard}>
+                <p style={metricLabel}>Occupancy Rate</p>
+                <p style={metricValue}>{occupancyRateDetail}%</p>
               </div>
-              <div className="sa-metric-card">
-                <p className="sa-metric-label">Total Rent (monthly)</p>
-                <p className="sa-metric-value">{totalRent.toLocaleString()} XOF</p>
+              <div style={metricCard}>
+                <p style={metricLabel}>Total Rent (monthly)</p>
+                <p style={metricValue}>{totalRent.toLocaleString()} XOF</p>
               </div>
             </div>
             {pieData.length > 0 && (
-              <div className="sa-section-card" style={{ marginTop: '20px' }}>
-                <h3 style={{ margin: '0 0 16px 0' }}>Occupancy</h3>
+              <div style={{ ...card, marginTop: '20px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#1e293b' }}>Occupancy</h3>
                 <div style={{ width: '100%', maxWidth: 340, height: 260, margin: '0 auto' }}>
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
                       <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={72}>
                         {pieData.map((entry) => (
@@ -144,18 +166,18 @@ const OccupancyTab = ({
                 </div>
               </div>
             )}
-            <div className="sa-section-card" style={{ marginTop: '20px' }}>
-              <h3 style={{ margin: '0 0 12px 0' }}>Occupied units</h3>
+            <div style={{ ...card, marginTop: '20px' }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#1e293b' }}>Occupied units</h3>
               <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '0.875rem' }}>Units with current tenants</p>
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
+              <div style={{ overflowX: 'auto' }}>
+                <table style={tableStyle}>
                   <thead>
                     <tr>
-                      <th>Unit</th>
-                      <th>Tenant</th>
-                      <th>Rent</th>
-                      <th>Enter date</th>
-                      <th>Status</th>
+                      <th style={thStyle}>Unit</th>
+                      <th style={thStyle}>Tenant</th>
+                      <th style={thStyle}>Rent</th>
+                      <th style={thStyle}>Enter date</th>
+                      <th style={thStyle}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -164,56 +186,56 @@ const OccupancyTab = ({
                         const tenantName = u.tenant || u.Tenant || '';
                         return (
                         <tr key={u.id || i}>
-                          <td>
+                          <td style={tdStyle}>
                             {u.unitNumber || u.name || `Unit ${i + 1}`}
                             {tenantName ? <span style={{ color: '#6b7280', fontSize: '0.875rem' }}> – {tenantName}</span> : null}
                           </td>
-                          <td>{tenantName || '—'}</td>
-                          <td>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
-                          <td>{u.enterDate || '—'}</td>
-                          <td><span className="sa-status-pill occupied">{u.status || u.statut || 'Occupied'}</span></td>
+                          <td style={tdStyle}>{tenantName || '—'}</td>
+                          <td style={tdStyle}>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
+                          <td style={tdStyle}>{u.enterDate || '—'}</td>
+                          <td style={tdStyle}><span style={statusPill(u.status || u.statut || 'Occupied')}>{u.status || u.statut || 'Occupied'}</span></td>
                         </tr>
                         );
                       })
                     ) : (
-                      <tr><td colSpan={5} className="sa-table-empty">No occupied units</td></tr>
+                      <tr><td colSpan={5} style={emptyRow}>No occupied units</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
-            <div className="sa-section-card" style={{ marginTop: '20px' }}>
-              <h3 style={{ margin: '0 0 12px 0' }}>Vacant units</h3>
+            <div style={{ ...card, marginTop: '20px' }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#1e293b' }}>Vacant units</h3>
               <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '0.875rem' }}>Available units</p>
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
+              <div style={{ overflowX: 'auto' }}>
+                <table style={tableStyle}>
                   <thead>
                     <tr>
-                      <th>Unit</th>
-                      <th>Rent</th>
-                      <th>Type</th>
-                      <th>Status</th>
+                      <th style={thStyle}>Unit</th>
+                      <th style={thStyle}>Rent</th>
+                      <th style={thStyle}>Type</th>
+                      <th style={thStyle}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {vacantUnits.length > 0 ? (
                       vacantUnits.map((u, i) => (
                         <tr key={u.id || i}>
-                          <td>{u.unitNumber || u.name || `Unit ${i + 1}`}</td>
-                          <td>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
-                          <td>{u.type || '—'}</td>
-                          <td><span className="sa-status-pill vacant">{u.status || u.statut || 'Vacant'}</span></td>
+                          <td style={tdStyle}>{u.unitNumber || u.name || `Unit ${i + 1}`}</td>
+                          <td style={tdStyle}>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
+                          <td style={tdStyle}>{u.type || '—'}</td>
+                          <td style={tdStyle}><span style={statusPill(u.status || u.statut || 'Vacant')}>{u.status || u.statut || 'Vacant'}</span></td>
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan={4} className="sa-table-empty">No vacant units</td></tr>
+                      <tr><td colSpan={4} style={emptyRow}>No vacant units</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
             {totalUnits === 0 && (
-              <div className="sa-section-card" style={{ marginTop: '20px', padding: '24px', textAlign: 'center', color: '#6b7280' }}>
+              <div style={{ ...card, marginTop: '20px', padding: '24px', textAlign: 'center', color: '#6b7280' }}>
                 <p style={{ margin: 0 }}>This property has no units in the system yet.</p>
               </div>
             )}
@@ -224,112 +246,105 @@ const OccupancyTab = ({
   }
 
   return (
-    <div className="sa-occupancy-page">
-      <div className="sa-occupancy-header">
-        <div>
-          <h2>Property Occupancy Overview</h2>
-        <p>Monitor occupancy status and manage vacant properties</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b' }}>Property Occupancy Overview</h2>
+        <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.9rem' }}>Monitor occupancy status and manage vacant properties</p>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+        <div style={metricCard}>
+          <p style={metricLabel}>Total Properties</p>
+          <p style={metricValue}>{totalProperties}</p>
+        </div>
+        <div style={metricCard}>
+          <p style={metricLabel}>Total Villas</p>
+          <p style={metricValue}>{totalVillas}</p>
+        </div>
+        <div style={metricCard}>
+          <p style={metricLabel}>Total Tenants</p>
+          <p style={metricValue}>{clients.length}</p>
+        </div>
+        <div style={metricCard}>
+          <p style={metricLabel}>Occupied Properties</p>
+          <p style={metricValue}>{occupiedProperties}</p>
+        </div>
+        <div style={metricCard}>
+          <p style={metricLabel}>Vacant Properties</p>
+          <p style={metricValue}>{vacantProperties}</p>
+        </div>
+        <div style={metricCard}>
+          <p style={metricLabel}>Occupied Villas</p>
+          <p style={metricValue}>{occupiedVillas}</p>
+        </div>
+        <div style={metricCard}>
+          <p style={metricLabel}>Vacant Villas</p>
+          <p style={metricValue}>{vacantVillas}</p>
+        </div>
+        <div style={metricCard}>
+          <p style={metricLabel}>Occupancy Rate</p>
+          <p style={metricValue}>{occupancyRate}%</p>
         </div>
       </div>
 
-      <div className="sa-occupancy-metrics">
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Properties</p>
-          <p className="sa-metric-value">{totalProperties}</p>
-          </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Villas</p>
-          <p className="sa-metric-value">{totalVillas}</p>
-          </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Total Tenants</p>
-          <p className="sa-metric-value">{clients.length}</p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Occupied Properties</p>
-          <p className="sa-metric-value">{occupiedProperties}</p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Vacant Properties</p>
-          <p className="sa-metric-value">{vacantProperties}</p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Occupied Villas</p>
-          <p className="sa-metric-value">{occupiedVillas}</p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Vacant Villas</p>
-          <p className="sa-metric-value">{vacantVillas}</p>
-        </div>
-        <div className="sa-metric-card">
-          <p className="sa-metric-label">Occupancy Rate</p>
-          <p className="sa-metric-value">{occupancyRate}%</p>
-        </div>
-      </div>
-
-      <div className="sa-transactions-filters">
-        <button className="sa-filter-button" onClick={() => {
-          const filters = document.querySelector('.sa-property-filters');
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+        <button style={{ ...btnOutline, display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => {
+          const filters = document.querySelector('[data-property-filters]');
           if (filters) filters.style.display = filters.style.display === 'none' ? 'flex' : 'none';
         }}>
           <Filter size={16} />
           Filter
         </button>
         <select
-          className="sa-filter-button"
+          style={selectStyle}
           value={propertyStatusFilter}
           onChange={(e) => setPropertyStatusFilter(e.target.value)}
-          style={{ padding: '8px 14px', cursor: 'pointer' }}
         >
           <option value="">All Status</option>
           <option value="Vacant">Vacant</option>
           <option value="Occupied">Occupied</option>
-          </select>
+        </select>
         <select
-          className="sa-filter-button"
+          style={selectStyle}
           value={propertyTypeFilter}
           onChange={(e) => setPropertyTypeFilter(e.target.value)}
-          style={{ padding: '8px 14px', cursor: 'pointer' }}
         >
           <option value="">All Types</option>
           <option value="Apartment">Apartment</option>
           <option value="House">House</option>
           <option value="Condo">Condo</option>
           <option value="Studio">Studio</option>
-          </select>
+        </select>
         <select
-          className="sa-filter-button"
+          style={selectStyle}
           value={propertyUrgencyFilter}
           onChange={(e) => setPropertyUrgencyFilter(e.target.value)}
-          style={{ padding: '8px 14px', cursor: 'pointer' }}
         >
           <option value="">All Urgency</option>
-            <option value="urgent">Urgent</option>
-            <option value="high">High</option>
-            <option value="normal">Normal</option>
-          </select>
+          <option value="urgent">Urgent</option>
+          <option value="high">High</option>
+          <option value="normal">Normal</option>
+        </select>
       </div>
 
-      <div className="sa-section-card">
-        <div className="sa-section-header">
-          <div>
-            <h3>Properties</h3>
-            <p>Manage all properties and their occupancy status.</p>
-          </div>
+      <div style={card}>
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Properties</h3>
+          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Manage all properties and their occupancy status.</p>
         </div>
-        <div className="sa-table-wrapper">
-          <table className="sa-table">
+        <div style={{ overflowX: 'auto' }}>
+          <table style={tableStyle}>
           <thead>
             <tr>
-                <th />
-                <th>Property</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Units (filled / total)</th>
-              <th>Property Type</th>
-              <th>Rent</th>
-              <th>Urgency</th>
-              <th>Actions</th>
+                <th style={thStyle} />
+                <th style={thStyle}>Property</th>
+              <th style={thStyle}>Type</th>
+              <th style={thStyle}>Status</th>
+              <th style={thStyle}>Units (filled / total)</th>
+              <th style={thStyle}>Property Type</th>
+              <th style={thStyle}>Rent</th>
+              <th style={thStyle}>Urgency</th>
+              <th style={thStyle}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -349,67 +364,67 @@ const OccupancyTab = ({
                       tabIndex={0}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpenOccupancyDetail(property); } }}
                     >
-                      <td onClick={(e) => e.stopPropagation()}>
+                      <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" />
                       </td>
-                      <td>
-                        <div className="sa-cell-main">
-                          <span className="sa-cell-title">{property.Address || property.address || 'N/A'}</span>
+                      <td style={tdStyle}>
+                        <div>
+                          <span style={{ fontWeight: 600, color: '#1e293b' }}>{property.Address || property.address || 'N/A'}</span>
                         </div>
                       </td>
-                      <td>
-                        <div className="sa-cell-main">
-                          <span className="sa-cell-title">{property.Type || property.type || 'N/A'}</span>
+                      <td style={tdStyle}>
+                        <div>
+                          <span style={{ fontWeight: 600, color: '#1e293b' }}>{property.Type || property.type || 'N/A'}</span>
                           {property.BuildingType || property.buildingType ? (
-                            <span className="sa-cell-sub">({property.BuildingType || property.buildingType})</span>
+                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8' }}>({property.BuildingType || property.buildingType})</span>
                           ) : null}
                         </div>
                       </td>
-                      <td>
-                        <span className={`sa-status-pill ${isFull ? 'occupied' : 'vacant'}`}>
+                      <td style={tdStyle}>
+                        <span style={statusPill(isFull ? 'occupied' : 'vacant')}>
                           {isFull ? 'Occupied' : (remaining > 0 ? 'Partially filled' : (property.Status || property.status || 'Unknown'))}
-                    </span>
-                  </td>
-                      <td>
-                        <div className="sa-cell-main">
-                          <span className="sa-cell-title">{filledUnits} / {totalUnits}</span>
+                        </span>
+                      </td>
+                      <td style={tdStyle}>
+                        <div>
+                          <span style={{ fontWeight: 600, color: '#1e293b' }}>{filledUnits} / {totalUnits}</span>
                           {remaining > 0 && (
-                            <span className="sa-cell-sub" style={{ display: 'block', fontSize: '0.8rem', color: '#6b7280' }}>
+                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#6b7280' }}>
                               {remaining} remaining
                             </span>
                           )}
                         </div>
                       </td>
-                      <td>
-                        <div className="sa-cell-main">
-                          <span className="sa-cell-title">{property.PropertyType || property.propertyType || 'N/A'}</span>
+                      <td style={tdStyle}>
+                        <div>
+                          <span style={{ fontWeight: 600, color: '#1e293b' }}>{property.PropertyType || property.propertyType || 'N/A'}</span>
                         </div>
                       </td>
-                      <td>{property.Rent || property.rent ? `${property.Rent || property.rent} XOF/month` : 'N/A'}</td>
-                      <td>
+                      <td style={tdStyle}>{property.Rent || property.rent ? `${property.Rent || property.rent} XOF/month` : 'N/A'}</td>
+                      <td style={tdStyle}>
                         {property.Urgency || property.urgency ? (
-                          <span className={`sa-status-pill ${(property.Urgency || property.urgency).toLowerCase()}`}>
+                          <span style={statusPill((property.Urgency || property.urgency).toLowerCase())}>
                             {property.Urgency || property.urgency}
-                      </span>
-                    ) : (
-                      'N/A'
-                    )}
-                  </td>
-                  <td onClick={(e) => e.stopPropagation()}>
+                          </span>
+                        ) : (
+                          'N/A'
+                        )}
+                      </td>
+                      <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                         <button
-                          className="sa-action-button"
+                          style={{ ...btnOutline, padding: '6px 12px' }}
                           onClick={() => openEditPropertyModal(property)}
                           title="Edit Property"
                         >
-                          ✏️
-                    </button>
-                  </td>
-                </tr>
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })
             ) : (
               <tr>
-                  <td colSpan={9} className="sa-table-empty">No properties found. Create your first property to get started.</td>
+                <td colSpan={9} style={emptyRow}>No properties found. Create your first property to get started.</td>
               </tr>
             )}
           </tbody>
