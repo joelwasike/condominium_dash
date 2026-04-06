@@ -2,38 +2,50 @@ import React from 'react';
 import { Plus, FileX, UserPlus, Zap, Download } from 'lucide-react';
 import { isDemoMode } from '../../utils/demoData';
 
+const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
+const tableStyle = { width: '100%', borderCollapse: 'collapse' };
+const thStyle = { padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid #f1f5f9' };
+const tdStyle = { padding: '14px 16px', fontSize: '0.88rem', color: '#334155', borderBottom: '1px solid #f8fafc' };
+const statusPill = (s) => {
+  const sl = (s || '').toLowerCase();
+  const m = { pending: { bg: '#fef3c7', c: '#92400e' }, approved: { bg: '#dcfce7', c: '#166534' }, completed: { bg: '#dcfce7', c: '#166534' }, rejected: { bg: '#fee2e2', c: '#991b1b' }, 'in progress': { bg: '#dbeafe', c: '#1d4ed8' }, inprogress: { bg: '#dbeafe', c: '#1d4ed8' }, low: { bg: '#dbeafe', c: '#1d4ed8' }, medium: { bg: '#fef3c7', c: '#92400e' }, high: { bg: '#fee2e2', c: '#991b1b' }, urgent: { bg: '#fee2e2', c: '#991b1b' }, critical: { bg: '#fce7f3', c: '#9d174d' }, processing: { bg: '#e0e7ff', c: '#3730a3' }, successful: { bg: '#dcfce7', c: '#166534' }, failed: { bg: '#fee2e2', c: '#991b1b' } };
+  const { bg, c } = m[sl] || { bg: '#f1f5f9', c: '#475569' };
+  return { display: 'inline-block', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 600, background: bg, color: c };
+};
+const btnPrimary = { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' };
+const emptyState = { padding: '48px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' };
+
 const PaymentsTab = ({
   loading, payments, transferRequests, paymentsTab, setPaymentsTab,
   setShowPaymentModal, setShowBillsModal, setShowTerminateLeaseModal,
   setShowTransferPaymentModal, leaseInfo, setLeaseInfo, overviewData,
   tenantService, downloadReceipt
 }) => (
-  <div className="sa-section-card">
-    <div className="sa-section-header">
+  <div style={card}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
       <div>
-        <h2>Payment Management</h2>
-        <p>Make payments, view payment history, and transfer payment requests</p>
+        <h2 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>Payment Management</h2>
+        <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>Make payments, view payment history, and transfer payment requests</p>
       </div>
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <button className="sa-primary-cta" onClick={() => setShowPaymentModal(true)} disabled={loading}>
+        <button style={{ ...btnPrimary }} onClick={() => setShowPaymentModal(true)} disabled={loading}>
           <Plus size={18} />
           Make Payment
         </button>
-        <button className="sa-primary-cta" onClick={() => setShowBillsModal(true)} disabled={loading} style={{ backgroundColor: '#0ea5e9' }}>
+        <button style={{ ...btnPrimary, background: 'linear-gradient(135deg,#0ea5e9,#0284c7)' }} onClick={() => setShowBillsModal(true)} disabled={loading}>
           <Zap size={18} />
           Pay Bills
         </button>
         <button
-          className="sa-primary-cta"
+          style={{ ...btnPrimary, background: 'linear-gradient(135deg,#ef4444,#dc2626)' }}
           onClick={() => setShowTerminateLeaseModal(true)}
           disabled={loading}
-          style={{ backgroundColor: '#ef4444' }}
         >
           <FileX size={18} />
           Terminate My Lease
         </button>
         <button
-          className="sa-primary-cta"
+          style={{ ...btnPrimary, background: 'linear-gradient(135deg,#10b981,#059669)' }}
           onClick={async () => {
             if (!leaseInfo && !isDemoMode()) {
               try {
@@ -46,7 +58,6 @@ const PaymentsTab = ({
             setShowTransferPaymentModal(true);
           }}
           disabled={loading}
-          style={{ backgroundColor: '#3b82f6' }}
         >
           <UserPlus size={18} />
           Transfer Payment Request
@@ -62,7 +73,8 @@ const PaymentsTab = ({
           padding: '12px 24px', border: 'none', background: 'transparent',
           color: paymentsTab === 'payments' ? '#7c3aed' : '#6b7280',
           borderBottom: paymentsTab === 'payments' ? '2px solid #7c3aed' : '2px solid transparent',
-          cursor: 'pointer', fontWeight: paymentsTab === 'payments' ? '600' : '400', marginBottom: '-2px'
+          cursor: 'pointer', fontWeight: paymentsTab === 'payments' ? '600' : '400', marginBottom: '-2px',
+          fontSize: '0.9rem'
         }}
       >
         Payment history
@@ -74,7 +86,8 @@ const PaymentsTab = ({
           padding: '12px 24px', border: 'none', background: 'transparent',
           color: paymentsTab === 'transfers' ? '#7c3aed' : '#6b7280',
           borderBottom: paymentsTab === 'transfers' ? '2px solid #7c3aed' : '2px solid transparent',
-          cursor: 'pointer', fontWeight: paymentsTab === 'transfers' ? '600' : '400', marginBottom: '-2px'
+          cursor: 'pointer', fontWeight: paymentsTab === 'transfers' ? '600' : '400', marginBottom: '-2px',
+          fontSize: '0.9rem'
         }}
       >
         Transfer payment requests
@@ -84,15 +97,21 @@ const PaymentsTab = ({
     {paymentsTab === 'payments' && (
       <>
         {loading ? (
-          <div className="sa-table-empty">Loading payments...</div>
+          <div style={emptyState}>Loading payments...</div>
         ) : payments.length === 0 ? (
-          <div className="sa-table-empty">No payments found</div>
+          <div style={emptyState}>No payments found</div>
         ) : (
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tableStyle}>
               <thead>
                 <tr>
-                  <th>No</th><th>Date</th><th>Description</th><th>Amount</th><th>Method</th><th>Status</th><th className="table-menu"></th>
+                  <th style={thStyle}>No</th>
+                  <th style={thStyle}>Date</th>
+                  <th style={thStyle}>Description</th>
+                  <th style={thStyle}>Amount</th>
+                  <th style={thStyle}>Method</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={{ ...thStyle, width: '120px' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -104,24 +123,31 @@ const PaymentsTab = ({
                   const method = payment.Method || payment.method || 'N/A';
                   const status = payment.Status || payment.status || 'Pending';
                   return (
-                    <tr key={paymentId || `payment-${index}`}>
-                      <td>{index + 1}</td>
-                      <td>{paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</td>
-                      <td>
-                        <div className="sa-cell-main">
-                          <span className="sa-cell-title">{chargeType}</span>
-                          {payment.reference && (<span className="sa-cell-sub">Ref: {payment.reference}</span>)}
+                    <tr key={paymentId || `payment-${index}`}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = ''; }}
+                    >
+                      <td style={tdStyle}>{index + 1}</td>
+                      <td style={tdStyle}>{paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</td>
+                      <td style={tdStyle}>
+                        <div>
+                          <span style={{ fontWeight: 600, color: '#1e293b', display: 'block' }}>{chargeType}</span>
+                          {payment.reference && (<span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Ref: {payment.reference}</span>)}
                         </div>
                       </td>
-                      <td>{typeof amount === 'number' ? amount.toLocaleString() : amount} XOF</td>
-                      <td>{method}</td>
-                      <td><span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>{status}</span></td>
-                      <td className="table-menu">
-                        <div className="table-actions">
-                          <button className="table-action-button view" onClick={() => downloadReceipt(paymentId)} title="Download Receipt">
-                            <Download size={14} /> Download
-                          </button>
-                        </div>
+                      <td style={{ ...tdStyle, fontWeight: 600 }}>{typeof amount === 'number' ? amount.toLocaleString() : amount} XOF</td>
+                      <td style={tdStyle}>{method}</td>
+                      <td style={tdStyle}><span style={statusPill(status)}>{status}</span></td>
+                      <td style={{ ...tdStyle, width: '120px' }}>
+                        <button
+                          onClick={() => downloadReceipt(paymentId)}
+                          title="Download Receipt"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+                        >
+                          <Download size={14} /> Download
+                        </button>
                       </td>
                     </tr>
                   );
@@ -136,14 +162,20 @@ const PaymentsTab = ({
     {paymentsTab === 'transfers' && (
       <>
         {loading ? (
-          <div className="sa-table-empty">Loading transfer requests...</div>
+          <div style={emptyState}>Loading transfer requests...</div>
         ) : transferRequests.length === 0 ? (
-          <div className="sa-table-empty">No transfer requests yet. Use &quot;Transfer Payment Request&quot; to submit one.</div>
+          <div style={emptyState}>No transfer requests yet. Use &quot;Transfer Payment Request&quot; to submit one.</div>
         ) : (
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tableStyle}>
               <thead>
-                <tr><th>No</th><th>Property</th><th>New client (recipient)</th><th>Request date</th><th>Status</th></tr>
+                <tr>
+                  <th style={thStyle}>No</th>
+                  <th style={thStyle}>Property</th>
+                  <th style={thStyle}>New client (recipient)</th>
+                  <th style={thStyle}>Request date</th>
+                  <th style={thStyle}>Status</th>
+                </tr>
               </thead>
               <tbody>
                 {transferRequests.map((tr, index) => {
@@ -151,12 +183,15 @@ const PaymentsTab = ({
                   const newClient = tr.newClient || tr.recipientName || tr.RecipientName || 'N/A';
                   const status = tr.status || tr.Status || 'Pending';
                   return (
-                    <tr key={tr.id || tr.ID || `transfer-${index}`}>
-                      <td>{index + 1}</td>
-                      <td>{tr.property || tr.Property || 'N/A'}</td>
-                      <td>{newClient}</td>
-                      <td>{requestDate ? new Date(requestDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'N/A'}</td>
-                      <td><span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>{status}</span></td>
+                    <tr key={tr.id || tr.ID || `transfer-${index}`}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = ''; }}
+                    >
+                      <td style={tdStyle}>{index + 1}</td>
+                      <td style={tdStyle}>{tr.property || tr.Property || 'N/A'}</td>
+                      <td style={tdStyle}>{newClient}</td>
+                      <td style={tdStyle}>{requestDate ? new Date(requestDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'N/A'}</td>
+                      <td style={tdStyle}><span style={statusPill(status)}>{status}</span></td>
                     </tr>
                   );
                 })}

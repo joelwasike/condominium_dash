@@ -59,7 +59,7 @@ const OverviewTab = ({ loading, overviewData, payments, maintenanceRequests }) =
   })();
 
   const metricCards = [
-    { label: 'Next Rent Due', sub: `Due: ${data.nextRentDue?.date || '2024-11-01'}`, value: data.nextRentDue?.amount ? `${data.nextRentDue.amount} XOF` : 'N/A', color: '#3b82f6', bg: 'linear-gradient(135deg,#3b82f6,#2563eb)', white: true },
+    { label: 'Next Rent Due', sub: `Due: ${data.nextRentDue?.date || 'N/A'}`, value: data.nextRentDue?.amount ? `${Number(data.nextRentDue.amount).toLocaleString()} XOF` : 'N/A', color: '#3b82f6', bg: 'linear-gradient(135deg,#3b82f6,#2563eb)', white: true },
     { label: 'Current Lease', sub: data.lease?.property || 'No property', value: data.lease?.property ? 'Active' : 'N/A', color: '#10b981', bg: 'linear-gradient(135deg,#10b981,#059669)', white: true },
     { label: 'Open Maintenance', sub: 'Pending requests', value: openMaintenanceCount, color: '#f59e0b' },
     { label: 'Total Payments', sub: 'All time', value: payments.length, color: '#8b5cf6' },
