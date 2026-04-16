@@ -1121,6 +1121,7 @@ const SuperAdminDashboard = () => {
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedAdminId) return;
+    if (String(selectedAdminId).startsWith('group:')) return;
     const storedUser = localStorage.getItem('user');
     let currentUserId = null;
     if (storedUser) {

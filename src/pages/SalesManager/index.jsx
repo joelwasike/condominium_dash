@@ -636,11 +636,12 @@ const SalesManagerDashboard = () => {
   // Load chat for a specific user
   const loadChatForUser = useCallback(async (userId) => {
     if (!userId) return;
-    
+
     try {
       setSelectedUserId(userId);
+      if (String(userId).startsWith('group:')) return;
       const messages = await messagingService.getConversation(userId);
-      
+
       // Normalize messages array
       const normalizedMessages = Array.isArray(messages) ? messages : [];
       setChatMessages(normalizedMessages);
@@ -2294,6 +2295,7 @@ const SalesManagerDashboard = () => {
   // Handle send message
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
+    if (String(selectedUserId).startsWith('group:')) return;
     const storedUser = localStorage.getItem('user');
     let currentUserId = null;
     if (storedUser) {

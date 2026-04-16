@@ -277,6 +277,8 @@ const AgencyDirectorDashboard = () => {
     async (userId) => {
       try {
         setSelectedUserId(userId);
+        // Group chats are handled internally by MessagingPanel — skip direct message API
+        if (String(userId).startsWith('group:')) return;
         const messages = await agencyDirectorService.getConversationWithUser(userId);
         setChatMessages(Array.isArray(messages) ? messages : []);
       } catch (error) {
@@ -392,7 +394,9 @@ const AgencyDirectorDashboard = () => {
   // Handle sending message
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
-    
+    // Group messages handled by MessagingPanel internally
+    if (String(selectedUserId).startsWith('group:')) return;
+
     // Get current user ID from localStorage
     const storedUser = localStorage.getItem('user');
     let currentUserId = null;

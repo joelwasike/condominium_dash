@@ -706,9 +706,10 @@ const TechnicianDashboard = () => {
   // Load chat for a specific user
   const loadChatForUser = useCallback(async (userId) => {
     if (!userId) return;
-    
+
     try {
       setSelectedUserId(userId);
+      if (String(userId).startsWith('group:')) return;
       console.log('Loading chat for user:', userId);
       const messages = await messagingService.getConversation(userId);
       console.log('Loaded messages:', messages);
@@ -930,7 +931,8 @@ const TechnicianDashboard = () => {
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
-    
+    if (String(selectedUserId).startsWith('group:')) return;
+
     const content = chatInput.trim();
     const tempMessageId = `temp-${Date.now()}`;
     

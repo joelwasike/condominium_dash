@@ -598,6 +598,7 @@ const AccountingDashboard = () => {
     if (!userId) return;
     try {
       setSelectedUserId(userId);
+      if (String(userId).startsWith('group:')) return;
       const messages = await messagingService.getConversation(userId);
       const normalizedMessages = Array.isArray(messages) ? messages : [];
       setChatMessages(normalizedMessages);
@@ -1023,6 +1024,7 @@ const AccountingDashboard = () => {
   // Handle send message
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
+    if (String(selectedUserId).startsWith('group:')) return;
     const storedUser = localStorage.getItem('user');
     let currentUserId = null;
     if (storedUser) { try { const user = JSON.parse(storedUser); currentUserId = user.id || user.ID; } catch (error) { console.error('Error parsing stored user:', error); } }
