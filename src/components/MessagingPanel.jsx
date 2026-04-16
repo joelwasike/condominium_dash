@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { MessageCircle, Send, Search, User, Mail, Building2, ChevronLeft, Circle } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { MessageCircle, Send, Search, User, Mail, Building2, ChevronLeft, Circle, Users, Briefcase } from 'lucide-react';
+import { buildApiUrl, apiRequest } from '../config/api';
 
 /* ─── helpers ─── */
 function getInitials(name) {
@@ -78,9 +79,64 @@ export default function MessagingPanel({
 }) {
   const [search, setSearch] = useState('');
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
+  const [groups, setGroups] = useState([]);
+  const [groupMessages, setGroupMessages] = useState([]);
   const currentUserId = useMemo(() => getCurrentUserId(), []);
 
-  const selectedUser = chatUsers.find(u => u.userId === selectedUserId);
+  const isGroupSelected = selectedUserId && String(selectedUserId).startsWith('group:');
+  const selectedGroupId = isGroupSelected ? String(selectedUserId).replace('group:', '') : null;
+  const selectedGroup = groups.find(g => g.groupId === selectedGroupId);
+
+  const selectedUser = isGroupSelected ? null : chatUsers.find(u => u.userId === selectedUserId);
+
+  // Load groups on mount
+  useEffect(() => {
+    const loadGroups = async () => {
+      try {
+        const url = buildApiUrl('/api/messaging/groups');
+        const data = await apiRequest(url);
+        setGroups(Array.isArray(data) ? data : []);
+      } catch {}
+    };
+    loadGroups();
+  }, []);
+
+  // Load group messages when a group is selected
+  useEffect(() => {
+    if (!isGroupSelected || !selectedGroupId) return;
+    const loadGroupMessages = async () => {
+      try {
+        const url = buildApiUrl(`/api/messaging/groups/${selectedGroupId}/messages`);
+        const data = await apiRequest(url);
+        setGroupMessages(Array.isArray(data) ? data : []);
+      } catch {}
+    };
+    loadGroupMessages();
+  }, [isGroupSelected, selectedGroupId]);
+
+  const handleSelectGroup = (groupId) => {
+    loadChatForUser('group:' + groupId);
+    setMobileView('chat');
+  };
+
+  const handleSendGroupMessage = async () => {
+    if (!chatInput.trim() || !selectedGroupId) return;
+    try {
+      const url = buildApiUrl(`/api/messaging/groups/${selectedGroupId}/messages`);
+      await apiRequest(url, { method: 'POST', body: JSON.stringify({ content: chatInput.trim() }) });
+      setChatInput('');
+      const data = await apiRequest(buildApiUrl(`/api/messaging/groups/${selectedGroupId}/messages`));
+      setGroupMessages(Array.isArray(data) ? data : []);
+    } catch {}
+  };
+
+  const handleSendAny = () => {
+    if (isGroupSelected) {
+      handleSendGroupMessage();
+    } else {
+      handleSendMessage();
+    }
+  };
 
   const filteredUsers = useMemo(() => {
     if (!search.trim()) return chatUsers;
@@ -117,8 +173,24 @@ export default function MessagingPanel({
     return groups;
   }, [chatMessages]);
 
+  // Group messages by date for group chats
+  const groupedGroupMessages = useMemo(() => {
+    const groups = [];
+    let lastDate = '';
+    groupMessages.forEach((msg) => {
+      const ts = msg.createdAt || '';
+      const dateStr = ts ? new Date(ts).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '';
+      if (dateStr !== lastDate) {
+        groups.push({ type: 'date', label: dateStr });
+        lastDate = dateStr;
+      }
+      groups.push({ type: 'message', msg });
+    });
+    return groups;
+  }, [groupMessages]);
+
   return (
-    <div style={{ ...s.root, gridTemplateColumns: selectedUser ? '320px 1fr 280px' : '320px 1fr' }}>
+    <div style={{ ...s.root, gridTemplateColumns: (selectedUser || selectedGroup) ? '320px 1fr 280px' : '320px 1fr' }}>
       {/* ─── Sidebar: User list ─── */}
       <div style={{ ...s.sidebar, ...(mobileView === 'chat' ? s.sidebarHiddenMobile : {}) }}>
         {/* Search header */}
@@ -139,6 +211,69 @@ export default function MessagingPanel({
 
         {/* User list */}
         <div style={s.userList}>
+          {/* Pinned group chats */}
+          {groups.map(group => {
+            const active = selectedUserId === 'group:' + group.groupId;
+            const isCompany = group.groupId === 'company';
+            const borderColor = isCompany ? '#3b82f6' : '#10b981';
+            const iconBg = isCompany ? '#dbeafe' : '#d1fae5';
+            const iconColor = isCompany ? '#3b82f6' : '#10b981';
+            return (
+              <div
+                key={`g-${group.groupId}`}
+                onClick={() => handleSelectGroup(group.groupId)}
+                style={{
+                  ...s.userItem,
+                  ...(active ? s.userItemActive : {}),
+                  borderLeft: `3px solid ${active ? 'transparent' : borderColor}`,
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#f8fafc'; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <div style={{
+                  ...s.avatar,
+                  backgroundColor: active ? '#fff' : iconBg,
+                  borderRadius: '50%',
+                }}>
+                  {isCompany
+                    ? <Users size={20} style={{ color: active ? '#3b82f6' : iconColor }} />
+                    : <Briefcase size={20} style={{ color: active ? '#10b981' : iconColor }} />
+                  }
+                </div>
+                <div style={s.userInfo}>
+                  <div style={s.userNameRow}>
+                    <span style={{ ...s.userName, ...(active ? { color: '#fff' } : {}) }}>
+                      {group.name}
+                    </span>
+                    {group.lastMessageTime && (
+                      <span style={{ ...s.timeLabel, ...(active ? { color: 'rgba(255,255,255,0.7)' } : {}) }}>
+                        {formatTime(group.lastMessageTime)}
+                      </span>
+                    )}
+                  </div>
+                  <div style={s.userMeta}>
+                    <span style={{
+                      fontSize: '0.6rem',
+                      fontWeight: 700,
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      backgroundColor: active ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
+                      color: active ? '#fff' : '#64748b',
+                      letterSpacing: '0.05em',
+                    }}>GROUP</span>
+                    <span style={{
+                      fontSize: '0.7rem',
+                      color: active ? 'rgba(255,255,255,0.7)' : '#94a3b8',
+                      marginLeft: '4px',
+                    }}>{group.memberCount} members</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {groups.length > 0 && filteredUsers.length > 0 && (
+            <div style={{ height: '1px', background: '#e2e8f0', margin: '8px 12px' }} />
+          )}
           {filteredUsers.map(user => {
             const active = user.userId === selectedUserId;
             const badge = getRoleBadge(user.role);
@@ -194,74 +329,166 @@ export default function MessagingPanel({
 
       {/* ─── Main: Conversation ─── */}
       <div style={{ ...s.main, ...(mobileView === 'list' ? s.mainHiddenMobile : {}) }}>
-        {selectedUser ? (
+        {(selectedUser || selectedGroup) ? (
           <>
             {/* Chat header */}
             <div style={s.chatHeader}>
               <button type="button" onClick={handleBack} style={s.backBtn}>
                 <ChevronLeft size={20} />
               </button>
-              <div style={{ ...s.avatar, ...s.avatarSm, backgroundColor: getAvatarColor(selectedUser.name) }}>
-                <span style={{ ...s.avatarText, fontSize: '0.7rem' }}>{getInitials(selectedUser.name)}</span>
-              </div>
-              <div style={s.chatHeaderInfo}>
-                <span style={s.chatHeaderName}>{selectedUser.name || 'User'}</span>
-                <span style={s.chatHeaderSub}>
-                  {selectedUser.email}
-                  {selectedUser.company ? ` \u00b7 ${selectedUser.company}` : ''}
-                </span>
-              </div>
-              <span style={{ ...s.rolePill, ...s.rolePillHeader, backgroundColor: getRoleBadge(selectedUser.role).bg, color: getRoleBadge(selectedUser.role).color }}>
-                {getRoleBadge(selectedUser.role).label}
-              </span>
+              {selectedGroup ? (
+                <>
+                  <div style={{
+                    ...s.avatar, ...s.avatarSm,
+                    backgroundColor: selectedGroup.groupId === 'company' ? '#dbeafe' : '#d1fae5',
+                    borderRadius: '50%',
+                  }}>
+                    {selectedGroup.groupId === 'company'
+                      ? <Users size={18} style={{ color: '#3b82f6' }} />
+                      : <Briefcase size={18} style={{ color: '#10b981' }} />
+                    }
+                  </div>
+                  <div style={s.chatHeaderInfo}>
+                    <span style={s.chatHeaderName}>{selectedGroup.name}</span>
+                    <span style={s.chatHeaderSub}>
+                      {selectedGroup.memberCount} members {selectedGroup.description ? ` \u00b7 ${selectedGroup.description}` : ''}
+                    </span>
+                  </div>
+                  <span style={{
+                    ...s.rolePill, ...s.rolePillHeader,
+                    backgroundColor: selectedGroup.groupId === 'company' ? '#dbeafe' : '#d1fae5',
+                    color: selectedGroup.groupId === 'company' ? '#3b82f6' : '#10b981',
+                  }}>
+                    Group
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div style={{ ...s.avatar, ...s.avatarSm, backgroundColor: getAvatarColor(selectedUser.name) }}>
+                    <span style={{ ...s.avatarText, fontSize: '0.7rem' }}>{getInitials(selectedUser.name)}</span>
+                  </div>
+                  <div style={s.chatHeaderInfo}>
+                    <span style={s.chatHeaderName}>{selectedUser.name || 'User'}</span>
+                    <span style={s.chatHeaderSub}>
+                      {selectedUser.email}
+                      {selectedUser.company ? ` \u00b7 ${selectedUser.company}` : ''}
+                    </span>
+                  </div>
+                  <span style={{ ...s.rolePill, ...s.rolePillHeader, backgroundColor: getRoleBadge(selectedUser.role).bg, color: getRoleBadge(selectedUser.role).color }}>
+                    {getRoleBadge(selectedUser.role).label}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Messages */}
             <div style={s.messages}>
-              {groupedMessages.map((item, i) => {
-                if (item.type === 'date') {
-                  return (
-                    <div key={`date-${i}`} style={s.dateDivider}>
-                      <span style={s.dateLine} />
-                      <span style={s.dateLabel}>{item.label}</span>
-                      <span style={s.dateLine} />
-                    </div>
-                  );
-                }
-                const msg = item.msg;
-                const content = msg.content || msg.Content || '';
-                const ts = msg.createdAt || msg.CreatedAt || '';
-                const fromId = msg.fromUserId || msg.FromUserId;
-                const isOutgoing = String(fromId) === String(currentUserId);
-                const id = msg.id || msg.ID || i;
+              {selectedGroup ? (
+                <>
+                  {groupedGroupMessages.map((item, i) => {
+                    if (item.type === 'date') {
+                      return (
+                        <div key={`gdate-${i}`} style={s.dateDivider}>
+                          <span style={s.dateLine} />
+                          <span style={s.dateLabel}>{item.label}</span>
+                          <span style={s.dateLine} />
+                        </div>
+                      );
+                    }
+                    const msg = item.msg;
+                    const content = msg.content || '';
+                    const ts = msg.createdAt || '';
+                    const fromId = msg.fromUserId;
+                    const fromName = msg.fromName || 'Unknown';
+                    const isOutgoing = String(fromId) === String(currentUserId);
+                    const id = msg.id || i;
 
-                return (
-                  <div key={`m-${id}`} style={{ ...s.bubbleRow, justifyContent: isOutgoing ? 'flex-end' : 'flex-start' }}>
-                    {!isOutgoing && (
-                      <div style={{ ...s.avatarTiny, backgroundColor: getAvatarColor(selectedUser.name) }}>
-                        <span style={{ ...s.avatarText, fontSize: '0.55rem' }}>{getInitials(selectedUser.name)}</span>
+                    return (
+                      <div key={`gm-${id}`} style={{ ...s.bubbleRow, justifyContent: isOutgoing ? 'flex-end' : 'flex-start' }}>
+                        {!isOutgoing && (
+                          <div style={{ ...s.avatarTiny, backgroundColor: getAvatarColor(fromName) }}>
+                            <span style={{ ...s.avatarText, fontSize: '0.55rem' }}>{getInitials(fromName)}</span>
+                          </div>
+                        )}
+                        <div style={{
+                          ...s.bubble,
+                          ...(isOutgoing ? s.bubbleOut : s.bubbleIn),
+                        }}>
+                          {!isOutgoing && (
+                            <span style={{
+                              display: 'block',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              color: getAvatarColor(fromName),
+                              marginBottom: '2px',
+                            }}>{fromName}</span>
+                          )}
+                          <p style={s.bubbleText}>{content}</p>
+                          <span style={{ ...s.bubbleMeta, ...(isOutgoing ? s.bubbleMetaOut : {}) }}>
+                            {formatFullTime(ts)}
+                          </span>
+                        </div>
                       </div>
-                    )}
-                    <div style={{
-                      ...s.bubble,
-                      ...(isOutgoing ? s.bubbleOut : s.bubbleIn),
-                    }}>
-                      <p style={s.bubbleText}>{content}</p>
-                      <span style={{ ...s.bubbleMeta, ...(isOutgoing ? s.bubbleMetaOut : {}) }}>
-                        {formatFullTime(ts)}
-                      </span>
+                    );
+                  })}
+                  {groupMessages.length === 0 && (
+                    <div style={s.emptyChat}>
+                      <div style={s.emptyChatIcon}>
+                        <Users size={40} style={{ color: '#cbd5e1' }} />
+                      </div>
+                      <p style={s.emptyChatTitle}>No group messages yet</p>
+                      <p style={s.emptyChatSub}>Send a message to start the group conversation</p>
                     </div>
-                  </div>
-                );
-              })}
-              {chatMessages.length === 0 && (
-                <div style={s.emptyChat}>
-                  <div style={s.emptyChatIcon}>
-                    <MessageCircle size={40} style={{ color: '#cbd5e1' }} />
-                  </div>
-                  <p style={s.emptyChatTitle}>No messages yet</p>
-                  <p style={s.emptyChatSub}>Send a message to start the conversation</p>
-                </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {groupedMessages.map((item, i) => {
+                    if (item.type === 'date') {
+                      return (
+                        <div key={`date-${i}`} style={s.dateDivider}>
+                          <span style={s.dateLine} />
+                          <span style={s.dateLabel}>{item.label}</span>
+                          <span style={s.dateLine} />
+                        </div>
+                      );
+                    }
+                    const msg = item.msg;
+                    const content = msg.content || msg.Content || '';
+                    const ts = msg.createdAt || msg.CreatedAt || '';
+                    const fromId = msg.fromUserId || msg.FromUserId;
+                    const isOutgoing = String(fromId) === String(currentUserId);
+                    const id = msg.id || msg.ID || i;
+
+                    return (
+                      <div key={`m-${id}`} style={{ ...s.bubbleRow, justifyContent: isOutgoing ? 'flex-end' : 'flex-start' }}>
+                        {!isOutgoing && (
+                          <div style={{ ...s.avatarTiny, backgroundColor: getAvatarColor(selectedUser.name) }}>
+                            <span style={{ ...s.avatarText, fontSize: '0.55rem' }}>{getInitials(selectedUser.name)}</span>
+                          </div>
+                        )}
+                        <div style={{
+                          ...s.bubble,
+                          ...(isOutgoing ? s.bubbleOut : s.bubbleIn),
+                        }}>
+                          <p style={s.bubbleText}>{content}</p>
+                          <span style={{ ...s.bubbleMeta, ...(isOutgoing ? s.bubbleMetaOut : {}) }}>
+                            {formatFullTime(ts)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {chatMessages.length === 0 && (
+                    <div style={s.emptyChat}>
+                      <div style={s.emptyChatIcon}>
+                        <MessageCircle size={40} style={{ color: '#cbd5e1' }} />
+                      </div>
+                      <p style={s.emptyChatTitle}>No messages yet</p>
+                      <p style={s.emptyChatSub}>Send a message to start the conversation</p>
+                    </div>
+                  )}
+                </>
               )}
               <div ref={messagesEndRef} />
             </div>
@@ -270,15 +497,15 @@ export default function MessagingPanel({
             <div style={s.inputBar}>
               <input
                 type="text"
-                placeholder="Type a message..."
+                placeholder={selectedGroup ? `Message ${selectedGroup.name}...` : 'Type a message...'}
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendAny(); } }}
                 style={s.input}
               />
               <button
                 type="button"
-                onClick={handleSendMessage}
+                onClick={handleSendAny}
                 disabled={!chatInput.trim()}
                 style={{
                   ...s.sendBtn,
@@ -296,13 +523,53 @@ export default function MessagingPanel({
                 <MessageCircle size={48} style={{ color: '#94a3b8' }} />
               </div>
               <h3 style={s.noSelectionTitle}>Select a conversation</h3>
-              <p style={s.noSelectionSub}>Choose a user from the left to start messaging</p>
+              <p style={s.noSelectionSub}>Choose a user or group from the left to start messaging</p>
             </div>
           </div>
         )}
       </div>
 
       {/* ─── Right: Contact details (desktop only) ─── */}
+      {selectedGroup && (
+        <div style={s.details}>
+          <div style={s.detailsAvatar}>
+            <div style={{
+              ...s.avatar, ...s.avatarLg,
+              backgroundColor: selectedGroup.groupId === 'company' ? '#dbeafe' : '#d1fae5',
+              borderRadius: '50%',
+            }}>
+              {selectedGroup.groupId === 'company'
+                ? <Users size={32} style={{ color: '#3b82f6' }} />
+                : <Briefcase size={32} style={{ color: '#10b981' }} />
+              }
+            </div>
+            <h4 style={s.detailsName}>{selectedGroup.name}</h4>
+            <span style={{
+              ...s.rolePill,
+              backgroundColor: selectedGroup.groupId === 'company' ? '#dbeafe' : '#d1fae5',
+              color: selectedGroup.groupId === 'company' ? '#3b82f6' : '#10b981',
+            }}>
+              Group Chat
+            </span>
+          </div>
+          <div style={s.detailsSection}>
+            <div style={s.detailRow}>
+              <Users size={15} style={s.detailIcon} />
+              <div>
+                <span style={s.detailLabel}>Members</span>
+                <span style={s.detailValue}>{selectedGroup.memberCount} members</span>
+              </div>
+            </div>
+            <div style={s.detailRow}>
+              <MessageCircle size={15} style={s.detailIcon} />
+              <div>
+                <span style={s.detailLabel}>Description</span>
+                <span style={s.detailValue}>{selectedGroup.description || 'Group chat'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {selectedUser && (
         <div style={s.details}>
           <div style={s.detailsAvatar}>
