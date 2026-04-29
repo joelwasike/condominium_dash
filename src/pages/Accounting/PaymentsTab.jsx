@@ -275,9 +275,29 @@ PaymentsTab.CollectionModal = (props) => {
               try {
                 setLoading(true);
                 const monthlyRent = parseFloat(collectionPaymentForm.monthlyRent || '0');
-                await accountingService.recordDepositPayment({ tenant: collectionPaymentForm.tenant, property: collectionPaymentForm.property, tenantType: collectionPaymentForm.tenantType, monthlyRent, amount: monthlyRent * 4.5, monthsMultiplier: 4.5, paymentMethod: collectionPaymentForm.paymentMethod });
+                  const selectedTenant = tenants.find(t => (t.tenantName || t.TenantName) === collectionPaymentForm.tenant);
+                  const applicationFees = !!(selectedTenant?.applicationFees ?? selectedTenant?.ApplicationFees);
+                  const depositTotal = monthlyRent * 4.5 + (applicationFees ? 37000 : 0);
+                  await accountingService.recordDepositPayment({
+                    tenant: collectionPaymentForm.tenant,
+                    property: collectionPaymentForm.property,
+                    tenantType: collectionPaymentForm.tenantType,
+                    monthlyRent,
+                    amount: depositTotal,
+                    monthsMultiplier: 4.5,
+                    applicationFees,
+                    paymentMethod: collectionPaymentForm.paymentMethod
+                  });
                 addNotification('Security deposit recorded successfully!', 'success');
-                try { await accountingService.recordCollection({ building: collectionPaymentForm.property, landlord: collectionPaymentForm.landlord || 'N/A', amount: monthlyRent * 4.5, chargeType: 'Deposit', status: 'Collected' }); } catch (collError) { console.error('Error creating collection record:', collError); }
+                  try {
+                    await accountingService.recordCollection({
+                      building: collectionPaymentForm.property,
+                      landlord: collectionPaymentForm.landlord || 'N/A',
+                      amount: depositTotal,
+                      chargeType: 'Deposit',
+                      status: 'Collected'
+                    });
+                  } catch (collError) { console.error('Error creating collection record:', collError); }
                 const [overview, collectionsData] = await Promise.all([accountingService.getOverview(), accountingService.getCollections()]);
                 setOverviewData(overview); setCollections(Array.isArray(collectionsData) ? collectionsData : []);
                 setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', paymentMethod: 'cash', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
@@ -287,7 +307,7 @@ PaymentsTab.CollectionModal = (props) => {
               <div className="form-group"><label>Tenant *</label><select value={collectionPaymentForm.tenant} onChange={(e) => { const val = e.target.value; const t = tenants.find(x => (x.tenantName || x.TenantName) === val); if (t) { setCollectionPaymentForm({...collectionPaymentForm, tenant: t.tenantName || t.TenantName || '', property: t.property || t.Property || '', monthlyRent: t.monthlyRent ?? t.MonthlyRent ?? '' }); } else { setCollectionPaymentForm({...collectionPaymentForm, tenant: val || ''}); } }} required><option value="">Select tenant</option>{tenants.filter(t => (t.property || t.Property)).map((t) => { const name = t.tenantName || t.TenantName || ''; return <option key={name} value={name}>{name} {t.property || t.Property ? ` (${t.property || t.Property})` : ''}</option>; })}</select></div>
               <div className="form-group"><label>Property *</label><input type="text" value={collectionPaymentForm.property} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})} readOnly={!!(collectionPaymentForm.tenant && collectionPaymentForm.property)} required placeholder="Select a tenant to auto-fill" style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}} /></div>
               <div className="form-group"><label>Tenant Type *</label><select value={collectionPaymentForm.tenantType} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, tenantType: e.target.value})} required><option value="individual">Individual</option><option value="company">Company</option></select><small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>Deposit: 4.5 months rent for all properties</small></div>
-              <div className="form-group"><label>Monthly Rent (XOF) *</label><input type="number" min="0" step="0.01" value={collectionPaymentForm.monthlyRent} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, monthlyRent: e.target.value})} required placeholder="Enter monthly rent amount" />{collectionPaymentForm.monthlyRent && <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>Deposit Amount: {(parseFloat(collectionPaymentForm.monthlyRent) * 4.5).toFixed(2)} XOF</small>}</div>
+              <div className="form-group"><label>Monthly Rent (XOF) *</label><input type="number" min="0" step="0.01" value={collectionPaymentForm.monthlyRent} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, monthlyRent: e.target.value})} required placeholder="Enter monthly rent amount" />{collectionPaymentForm.monthlyRent && <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>Deposit Amount: {(parseFloat(collectionPaymentForm.monthlyRent) * 4.5 + (((tenants.find(t => (t.tenantName || t.TenantName) === collectionPaymentForm.tenant) || {}).applicationFees ?? (tenants.find(t => (t.tenantName || t.TenantName) === collectionPaymentForm.tenant) || {}).ApplicationFees) ? 37000 : 0)).toFixed(2)} XOF</small>}</div>
               <div className="form-group"><label>Payment Method *</label><select value={collectionPaymentForm.paymentMethod} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, paymentMethod: e.target.value})} required><option value="cash">Cash</option><option value="mobile_money">Mobile Money</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option></select></div>
               <div className="modal-footer"><button type="button" className="action-button secondary" onClick={() => setCollectionPaymentType(null)} disabled={loading}>Back</button><button type="submit" className="action-button primary" disabled={loading}>{loading ? t('accounting.recording') : t('accounting.recordPayment')}</button></div>
             </form>

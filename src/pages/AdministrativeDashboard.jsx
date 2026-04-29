@@ -3572,6 +3572,12 @@ const AdministrativeDashboard = () => {
                 return;
               }
 
+              // Application fees are mandatory for onboarding
+              if (!clientDocForm.applicationFees) {
+                addNotification('Application fees are mandatory.', 'error');
+                return;
+              }
+
               const tenantName = client.name || client.Name || client.email || client.Email || 'Unknown Tenant';
 
               for (const doc of requiredDocs) {
@@ -3782,7 +3788,7 @@ const AdministrativeDashboard = () => {
               <input
                 type="checkbox"
                 checked={clientDocForm.applicationFees}
-                onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFees: e.target.checked })}
+                disabled
               />
               <span>Application fees (37,000 FCFA - obligation to pay)</span>
             </label>

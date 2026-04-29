@@ -142,6 +142,7 @@ const AccountingDashboard = () => {
     property: '',
     tenantType: 'individual',
     monthlyRent: '',
+    applicationFees: false,
     paymentMethod: 'mobile_money',
     reference: '',
     notes: ''
