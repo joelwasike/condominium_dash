@@ -599,7 +599,9 @@ const SalesManagerDashboard = () => {
       return;
     }
 
-    const propertyRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
+    // Avoid floating-point artifacts (e.g., 99999.90000000001) by rounding to an integer amount.
+    const rawRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
+    const propertyRent = Number.isFinite(rawRent) ? Math.round(rawRent) : 0;
     setMoveInFormPropertyRent(propertyRent);
 
     const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
@@ -3208,7 +3210,7 @@ const SalesManagerDashboard = () => {
                         value={
                           selectedApprovedClient
                             ? (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid') +
-                              (moveInFormPropertyRent > 0 ? ` - ${(moveInFormPropertyRent * 4.5).toLocaleString()} XOF` : '')
+                              (moveInFormPropertyRent > 0 ? ` - ${Math.round(moveInFormPropertyRent * 4.5).toLocaleString()} XOF` : '')
                             : ''
                         }
                         disabled

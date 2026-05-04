@@ -141,6 +141,8 @@ const SalesManagerDashboard = () => {
   const [approvedClientDocuments, setApprovedClientDocuments] = useState([]);
   const [approvedClientChecklist, setApprovedClientChecklist] = useState(null);
   const [loadingApprovedDocs, setLoadingApprovedDocs] = useState(false);
+  const [selectedMoveInPropertyId, setSelectedMoveInPropertyId] = useState('');
+  const [moveInPropertyLocked, setMoveInPropertyLocked] = useState(false);
 
   // Visits / Requests (schedule visit from Property Management uses properties)
   const [showScheduleVisitModal, setShowScheduleVisitModal] = useState(false);
@@ -5840,7 +5842,7 @@ const SalesManagerDashboard = () => {
                         value={
                           selectedApprovedClient
                             ? (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid') +
-                              (moveInFormPropertyRent > 0 ? ` - ${(moveInFormPropertyRent * 4.5).toLocaleString()} XOF` : '')
+                              (moveInFormPropertyRent > 0 ? ` - ${Math.round(moveInFormPropertyRent * 4.5).toLocaleString()} XOF` : '')
                             : ''
                         }
                         disabled
@@ -5870,7 +5872,8 @@ const SalesManagerDashboard = () => {
                         const val = e.target.value;
                         const selectedProperty = val ? properties.find(p => String(p.ID || p.id) === val) : null;
                         if (selectedProperty) {
-                          const propertyRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
+                          const rawRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
+                          const propertyRent = Number.isFinite(rawRent) ? Math.round(rawRent) : 0;
                           setMoveInFormPropertyRent(propertyRent);
                           const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
                           const unitSelect = document.getElementById('unitNumber');
