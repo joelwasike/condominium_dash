@@ -138,6 +138,8 @@ const SalesManagerDashboard = () => {
   const [approvedClientDocuments, setApprovedClientDocuments] = useState([]);
   const [approvedClientChecklist, setApprovedClientChecklist] = useState(null);
   const [loadingApprovedDocs, setLoadingApprovedDocs] = useState(false);
+  const [selectedMoveInPropertyId, setSelectedMoveInPropertyId] = useState('');
+  const [moveInPropertyLocked, setMoveInPropertyLocked] = useState(false);
 
   // Visits / Requests (schedule visit from Property Management uses properties)
   const [showScheduleVisitModal, setShowScheduleVisitModal] = useState(false);
@@ -559,8 +561,13 @@ const SalesManagerDashboard = () => {
       setApprovedClientDocuments([]);
       setApprovedClientChecklist(null);
       setMoveInFormPropertyRent(0);
+      setSelectedMoveInPropertyId('');
+      setMoveInPropertyLocked(false);
       return;
     }
+    // Reset move-in property selection when switching approved clients; it will be auto-filled after checklist loads.
+    setSelectedMoveInPropertyId('');
+    setMoveInPropertyLocked(false);
     const loadApprovedClientDocs = async () => {
       try {
         setLoadingApprovedDocs(true);
@@ -581,6 +588,60 @@ const SalesManagerDashboard = () => {
     };
     loadApprovedClientDocs();
   }, [selectedApprovedClientId, addNotification]);
+
+  const applyMoveInPropertySelection = useCallback((propertyIdValue) => {
+    const val = propertyIdValue || '';
+    setSelectedMoveInPropertyId(val);
+
+    const selectedProperty = val ? properties.find((p) => String(p.ID || p.id) === String(val)) : null;
+    if (!selectedProperty) {
+      setMoveInFormPropertyRent(0);
+      return;
+    }
+
+    const propertyRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
+    setMoveInFormPropertyRent(propertyRent);
+
+    const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
+    const unitSelect = document.getElementById('unitNumber');
+    if (unitSelect) {
+      unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
+      for (let i = 1; i <= numberOfUnits; i++) {
+        const option = document.createElement('option');
+        option.value = `Unit ${i}`;
+        option.textContent = `Unit ${i}`;
+        unitSelect.appendChild(option);
+      }
+    }
+
+    const rentInput = document.getElementsByName('rent')[0];
+    if (rentInput) {
+      rentInput.value = propertyRent;
+    }
+  }, [properties]);
+
+  // Prefill property from admin checklist (property is stored as address string on the checklist).
+  useEffect(() => {
+    if (!selectedApprovedClientId) return;
+
+    const checklistProperty = approvedClientChecklist?.Property || approvedClientChecklist?.property || '';
+    const checklistPropertyStr = String(checklistProperty || '').trim();
+    if (!checklistPropertyStr) {
+      setMoveInPropertyLocked(false);
+      return;
+    }
+
+    const match = properties.find((p) => {
+      const addr = String(p.Address || p.address || '').trim();
+      return addr.toLowerCase() === checklistPropertyStr.toLowerCase();
+    });
+    if (match) {
+      setMoveInPropertyLocked(true);
+      applyMoveInPropertySelection(String(match.ID || match.id || ''));
+    } else {
+      setMoveInPropertyLocked(false);
+    }
+  }, [approvedClientChecklist, selectedApprovedClientId, properties, applyMoveInPropertySelection]);
 
   // Fetch full tenant details when a tenant is selected for detail view
   useEffect(() => {
@@ -3173,31 +3234,14 @@ const SalesManagerDashboard = () => {
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="property">Property</label>
-                      <select name="property" id="property" required onChange={(e) => {
-                        const val = e.target.value;
-                        const selectedProperty = val ? properties.find(p => String(p.ID || p.id) === val) : null;
-                        if (selectedProperty) {
-                          const propertyRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
-                          setMoveInFormPropertyRent(propertyRent);
-                          const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
-                          const unitSelect = document.getElementById('unitNumber');
-                          if (unitSelect) {
-                            unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
-                            for (let i = 1; i <= numberOfUnits; i++) {
-                              const option = document.createElement('option');
-                              option.value = `Unit ${i}`;
-                              option.textContent = `Unit ${i}`;
-                              unitSelect.appendChild(option);
-                            }
-                          }
-                          const rentInput = document.getElementsByName('rent')[0];
-                          if (rentInput) {
-                            rentInput.value = propertyRent;
-                          }
-                        } else {
-                          setMoveInFormPropertyRent(0);
-                        }
-                      }}>
+                      <select
+                        name="property"
+                        id="property"
+                        required
+                        value={selectedMoveInPropertyId}
+                        onChange={(e) => applyMoveInPropertySelection(e.target.value)}
+                        disabled={moveInPropertyLocked}
+                      >
                         <option value="">Select Property</option>
                         {(() => {
                           const withEmptyUnits = properties.filter(property => {
@@ -3228,6 +3272,11 @@ const SalesManagerDashboard = () => {
                           );
                         })()}
                       </select>
+                      {moveInPropertyLocked && (
+                        <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                          Auto-filled from the approved client record.
+                        </small>
+                      )}
                     </div>
                     <div className="form-group">
                       <label htmlFor="unitNumber">Unit Number</label>

@@ -122,7 +122,7 @@ const SuperAdminDashboard = () => {
   // Company Modal
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
-  const [companyForm, setCompanyForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '', logoURL: '' });
+  const [companyForm, setCompanyForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '', logoURL: '', subscriptionFee: '', subscriptionCurrency: 'XOF' });
   const [logoUploading, setLogoUploading] = useState(false);
 
   const handleLogoUpload = async (file) => {
@@ -163,7 +163,7 @@ const SuperAdminDashboard = () => {
   // Agency Admin Modal
   const [showAgencyAdminModal, setShowAgencyAdminModal] = useState(false);
   const [editingAgencyAdmin, setEditingAgencyAdmin] = useState(null);
-  const [agencyAdminForm, setAgencyAdminForm] = useState({ name: '', email: '', company: '', role: 'agency_director', password: '' });
+  const [agencyAdminForm, setAgencyAdminForm] = useState({ name: '', email: '', company: '', role: 'agency_director', password: '', subscriptionFee: '', subscriptionCurrency: 'XOF' });
 
   // Notifications
   const [notifications, setNotifications] = useState([]);
@@ -408,7 +408,7 @@ const SuperAdminDashboard = () => {
 
   const handleOpenAddCompany = () => {
     setEditingCompany(null);
-    setCompanyForm({ name: '', email: '', phone: '', address: '', licenseNumber: '', logoURL: '' });
+    setCompanyForm({ name: '', email: '', phone: '', address: '', licenseNumber: '', logoURL: '', subscriptionFee: '', subscriptionCurrency: 'XOF' });
     setShowCompanyModal(true);
   };
 
@@ -421,6 +421,8 @@ const SuperAdminDashboard = () => {
       address: company.Address || company.address || '',
       licenseNumber: company.LicenseNumber || company.licenseNumber || '',
       logoURL: company.LogoURL || company.logoURL || '',
+      subscriptionFee: (company.subscriptionFee ?? company.SubscriptionFee ?? '')?.toString?.() || '',
+      subscriptionCurrency: company.subscriptionCurrency || company.SubscriptionCurrency || 'XOF',
     });
     setShowCompanyModal(true);
   };
@@ -428,11 +430,13 @@ const SuperAdminDashboard = () => {
   const handleSubmitCompany = async (e) => {
     e.preventDefault();
     try {
+      const payload = { ...companyForm };
+      if (payload.subscriptionFee !== '') payload.subscriptionFee = parseFloat(payload.subscriptionFee);
       if (editingCompany) {
-        await superAdminService.updateCompany(editingCompany.ID || editingCompany.id, companyForm);
+        await superAdminService.updateCompany(editingCompany.ID || editingCompany.id, payload);
         addNotification('Company updated successfully!', 'success');
       } else {
-        await superAdminService.addCompany(companyForm);
+        await superAdminService.addCompany(payload);
         addNotification('Company created successfully!', 'success');
       }
       setShowCompanyModal(false);
@@ -583,6 +587,19 @@ const SuperAdminDashboard = () => {
             <input style={inputStyle} type="text" value={companyForm.licenseNumber} onChange={(e) => setCompanyForm(prev => ({ ...prev, licenseNumber: e.target.value }))} placeholder="License / Registration number" />
           </div>
           <div style={formGroupStyle}>
+            <label style={labelStyle}>Monthly Subscription Fee</label>
+            <input style={inputStyle} type="number" min="0" step="1" value={companyForm.subscriptionFee} onChange={(e) => setCompanyForm(prev => ({ ...prev, subscriptionFee: e.target.value }))} placeholder="e.g., 30000" />
+          </div>
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>Subscription Currency</label>
+            <select style={inputStyle} value={companyForm.subscriptionCurrency} onChange={(e) => setCompanyForm(prev => ({ ...prev, subscriptionCurrency: e.target.value }))}>
+              <option value="XOF">XOF</option>
+              <option value="USD">USD</option>
+              <option value="KES">KES</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+          <div style={formGroupStyle}>
             <label style={labelStyle}>Agency Logo</label>
             {companyForm.logoURL ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
@@ -648,19 +665,22 @@ const SuperAdminDashboard = () => {
 
   const handleOpenAddDirector = () => {
     setEditingAgencyAdmin(null);
-    setAgencyAdminForm({ name: '', email: '', company: '', role: 'agency_director', password: '' });
+    setAgencyAdminForm({ name: '', email: '', company: '', role: 'agency_director', password: '', subscriptionFee: '', subscriptionCurrency: 'XOF' });
     setShowAgencyAdminModal(true);
   };
 
   const handleOpenEditDirector = (admin) => {
     setEditingAgencyAdmin(admin);
     const role = (admin.Role || admin.role || 'agency_director').replace('-', '_');
+    const companyDetails = admin.companyDetails || admin.CompanyDetails || {};
     setAgencyAdminForm({
       name: admin.Name || admin.name || '',
       email: admin.Email || admin.email || '',
       company: admin.Company || admin.company || '',
       role,
       password: '',
+      subscriptionFee: (companyDetails.subscriptionFee ?? companyDetails.SubscriptionFee ?? '')?.toString?.() || '',
+      subscriptionCurrency: companyDetails.subscriptionCurrency || companyDetails.SubscriptionCurrency || 'XOF',
     });
     setShowAgencyAdminModal(true);
   };
@@ -669,6 +689,10 @@ const SuperAdminDashboard = () => {
     e.preventDefault();
     try {
       const userData = { name: agencyAdminForm.name, email: agencyAdminForm.email, company: agencyAdminForm.company, role: agencyAdminForm.role };
+      if (agencyAdminForm.role === 'agency_director') {
+        if (agencyAdminForm.subscriptionFee !== '') userData.subscriptionFee = parseFloat(agencyAdminForm.subscriptionFee);
+        if (agencyAdminForm.subscriptionCurrency) userData.subscriptionCurrency = agencyAdminForm.subscriptionCurrency;
+      }
       if (editingAgencyAdmin) {
         if (agencyAdminForm.password) userData.password = agencyAdminForm.password;
         await superAdminService.updateUser(editingAgencyAdmin.ID || editingAgencyAdmin.id, userData);
@@ -797,6 +821,23 @@ const SuperAdminDashboard = () => {
               <option value="superadmin">Super Admin</option>
             </select>
           </div>
+          {agencyAdminForm.role === 'agency_director' && (
+            <>
+              <div style={formGroupStyle}>
+                <label style={labelStyle}>Monthly Subscription Fee</label>
+                <input style={inputStyle} type="number" min="0" step="1" value={agencyAdminForm.subscriptionFee} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, subscriptionFee: e.target.value }))} placeholder="e.g., 30000" />
+              </div>
+              <div style={formGroupStyle}>
+                <label style={labelStyle}>Subscription Currency</label>
+                <select style={inputStyle} value={agencyAdminForm.subscriptionCurrency} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, subscriptionCurrency: e.target.value }))}>
+                  <option value="XOF">XOF</option>
+                  <option value="USD">USD</option>
+                  <option value="KES">KES</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+            </>
+          )}
           <div style={formGroupStyle}>
             <label style={labelStyle}>Password {editingAgencyAdmin ? '(leave blank to keep current)' : '*'}</label>
             <input style={inputStyle} type="password" value={agencyAdminForm.password} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, password: e.target.value }))} required={!editingAgencyAdmin} placeholder={editingAgencyAdmin ? 'New password (optional)' : 'Enter password'} />

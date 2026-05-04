@@ -315,6 +315,35 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
+  // Mobile Money subscription payment (initiates USSD prompt on director's phone)
+  paySubscriptionViaMoMo: async ({ provider, phone, otp }) => {
+    const headers = getAuthHeaders(true);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/subscription/pay-momo`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ provider, phone, otp })
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to initiate subscription payment');
+    }
+    return parseJson(response);
+  },
+
+  payAnnualSubscriptionViaMoMo: async ({ provider, phone, otp }) => {
+    const headers = getAuthHeaders(true);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/subscription/pay-annual-momo`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ provider, phone, otp })
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to initiate annual subscription payment');
+    }
+    return parseJson(response);
+  },
+
   // Get current subscription status for the Agency Director's company
   getSubscriptionStatus: async () => {
     const headers = getAuthHeaders(false);
@@ -756,4 +785,3 @@ export const agencyDirectorService = {
     return Array.isArray(data) ? data : (data?.monthlyData ?? data?.data ?? []);
   },
 };
-

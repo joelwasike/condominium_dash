@@ -138,7 +138,7 @@ const AgencyDirectorDashboard = () => {
   
   // Subscription payment state
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [subscriptionForm, setSubscriptionForm] = useState({ amount: '', currency: 'USD', reference: '', status: 'completed' });
+  const [subscriptionForm, setSubscriptionForm] = useState({ provider: 'mtn', phone: '', otp: '' });
   const [subscriptionType, setSubscriptionType] = useState('monthly'); // 'monthly' or 'annual'
   const [subscriptionInfo, setSubscriptionInfo] = useState(null);
 
@@ -438,10 +438,10 @@ const AgencyDirectorDashboard = () => {
   const handlePaySubscription = async (e) => {
     e.preventDefault();
     try {
-      await agencyDirectorService.paySubscription(subscriptionForm);
-      addNotification('Subscription payment processed successfully!', 'success');
+      await agencyDirectorService.paySubscriptionViaMoMo(subscriptionForm);
+      addNotification('Subscription payment initiated. Please confirm the prompt on your phone.', 'success');
       setShowSubscriptionModal(false);
-      setSubscriptionForm({ amount: '', currency: 'USD', reference: '', status: 'completed' });
+      setSubscriptionForm({ provider: 'mtn', phone: '', otp: '' });
       await loadData();
     } catch (error) {
       console.error('Error processing subscription payment:', error);
@@ -546,10 +546,10 @@ const AgencyDirectorDashboard = () => {
   const handlePayAnnualSubscription = async (e) => {
     e.preventDefault();
     try {
-      await agencyDirectorService.payAnnualSubscription(subscriptionForm);
-      addNotification('Annual subscription payment processed successfully!', 'success');
+      await agencyDirectorService.payAnnualSubscriptionViaMoMo(subscriptionForm);
+      addNotification('Annual subscription payment initiated. Please confirm the prompt on your phone.', 'success');
       setShowSubscriptionModal(false);
-      setSubscriptionForm({ amount: '', currency: 'USD', reference: '', status: 'completed' });
+      setSubscriptionForm({ provider: 'mtn', phone: '', otp: '' });
       await loadData();
     } catch (error) {
       console.error('Error processing annual subscription payment:', error);
@@ -4248,38 +4248,52 @@ const AgencyDirectorDashboard = () => {
               </select>
             </div>
             <div className="sa-form-group">
-              <label>Amount *</label>
+              <label>Amount</label>
               <input
-                type="number"
-                step="0.01"
-                value={subscriptionForm.amount}
-                onChange={(e) => setSubscriptionForm({...subscriptionForm, amount: e.target.value})}
-                required
-                placeholder={subscriptionType === 'annual' ? "12000.00" : "299.99"}
+                type="text"
+                value={
+                  subscriptionInfo?.subscriptionFee
+                    ? `${Math.round(subscriptionType === 'annual' ? (subscriptionInfo.subscriptionFee * 12) : subscriptionInfo.subscriptionFee).toLocaleString()} ${subscriptionInfo.subscriptionCurrency || 'XOF'}`
+                    : 'Not set'
+                }
+                readOnly
               />
             </div>
             <div className="sa-form-group">
-              <label>Currency *</label>
+              <label>Mobile Money Provider *</label>
               <select
-                value={subscriptionForm.currency}
-                onChange={(e) => setSubscriptionForm({...subscriptionForm, currency: e.target.value})}
+                value={subscriptionForm.provider}
+                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, provider: e.target.value })}
                 required
               >
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="FCFA">FCFA</option>
+                <option value="mtn">MTN MoMo</option>
+                <option value="om">Orange Money</option>
+                <option value="moov">Moov</option>
+                <option value="wave">Wave</option>
+                <option value="djamo">Djamo</option>
               </select>
             </div>
             <div className="sa-form-group">
-              <label>Reference *</label>
+              <label>Phone Number *</label>
               <input
                 type="text"
-                value={subscriptionForm.reference}
-                onChange={(e) => setSubscriptionForm({...subscriptionForm, reference: e.target.value})}
+                value={subscriptionForm.phone}
+                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, phone: e.target.value })}
                 required
-                placeholder={subscriptionType === 'annual' ? "ANNUAL-2024-001" : "PAY-2024-001"}
+                placeholder="e.g., 2376XXXXXXX"
               />
             </div>
+            {subscriptionForm.provider === 'om' && (
+              <div className="sa-form-group">
+                <label>OTP Code (Orange Money)</label>
+                <input
+                  type="text"
+                  value={subscriptionForm.otp}
+                  onChange={(e) => setSubscriptionForm({ ...subscriptionForm, otp: e.target.value })}
+                  placeholder="Enter OTP if required"
+                />
+              </div>
+            )}
             <div className="sa-form-actions">
               <button type="button" className="sa-outline-button" onClick={() => setShowSubscriptionModal(false)}>Cancel</button>
               <button type="submit" className="sa-primary-cta">
@@ -4730,5 +4744,3 @@ const AgencyDirectorDashboard = () => {
 };
 
 export default AgencyDirectorDashboard;
-
-
