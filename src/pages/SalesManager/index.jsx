@@ -199,10 +199,17 @@ const SalesManagerDashboard = () => {
       selectedApprovedClient.DepositDate ||
       selectedApprovedClient.depositDate ||
       null;
-    const paidAt = paidAtRaw ? new Date(paidAtRaw) : null;
+    // Backend doesn't currently persist a dedicated deposit-paid date on ClientApplication.
+    // Use the admin checklist timestamp as a fallback so move-in validation can proceed.
+    const checklistCreatedAt =
+      approvedClientChecklist?.CreatedAt ||
+      approvedClientChecklist?.createdAt ||
+      null;
+    const paidAtCandidate = paidAtRaw || (paid ? checklistCreatedAt : null);
+    const paidAt = paidAtCandidate ? new Date(paidAtCandidate) : null;
     const maxMoveInDate = paidAt ? addMonths(paidAt, 1).toISOString().split('T')[0] : '';
     return { paid, paidAt, maxMoveInDate };
-  }, [selectedApprovedClient, addMonths]);
+  }, [selectedApprovedClient, approvedClientChecklist, addMonths]);
 
   // Auto-slide carousel for advertisements on overview page
   useEffect(() => {
@@ -1628,22 +1635,12 @@ const SalesManagerDashboard = () => {
       addNotification('Deposit must be marked as paid before creating a tenant account.', 'error');
       return;
     }
-    const depositPaidAtRaw =
-      approvedClient.SecurityDepositPaidAt ||
-      approvedClient.securityDepositPaidAt ||
-      approvedClient.SecurityDepositDate ||
-      approvedClient.securityDepositDate ||
-      approvedClient.DepositPaidAt ||
-      approvedClient.depositPaidAt ||
-      approvedClient.DepositDate ||
-      approvedClient.depositDate ||
-      null;
-    if (depositPaid && !depositPaidAtRaw) {
-      addNotification('Deposit paid date is missing. Please update it before setting move-in date.', 'error');
+    if (depositPaid && !approvedClientDepositInfo?.paidAt) {
+      addNotification('Deposit paid date is missing. Please save the admin checklist for this client first.', 'error');
       return;
     }
-    if (depositPaid && depositPaidAtRaw) {
-      const maxMoveIn = addMonths(new Date(depositPaidAtRaw), 1).toISOString().split('T')[0];
+    if (depositPaid && approvedClientDepositInfo?.paidAt) {
+      const maxMoveIn = addMonths(new Date(approvedClientDepositInfo.paidAt), 1).toISOString().split('T')[0];
       if (moveInDate > maxMoveIn) {
         addNotification('Move-in date must be within 1 month after the deposit was paid.', 'error');
         return;
