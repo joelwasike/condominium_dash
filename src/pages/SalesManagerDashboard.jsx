@@ -1541,7 +1541,9 @@ const SalesManagerDashboard = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const approvedClientId = formData.get('approvedClientId')?.trim();
-    const propertyIdOrAddress = formData.get('property')?.trim();
+    const propertyIdOrAddress =
+      formData.get('property')?.trim() ||
+      (selectedMoveInPropertyId ? String(selectedMoveInPropertyId).trim() : '');
     const rent = formData.get('rent');
     const moveInDate = formData.get('moveInDate');
     
@@ -1565,6 +1567,10 @@ const SalesManagerDashboard = () => {
       approvedClient.SecurityDepositPaid ||
       approvedClient.securityDepositPaid
     );
+    if (!depositPaid) {
+      addNotification('Deposit must be marked as paid before creating a tenant account.', 'error');
+      return;
+    }
     const depositPaidAtRaw =
       approvedClient.SecurityDepositPaidAt ||
       approvedClient.securityDepositPaidAt ||
