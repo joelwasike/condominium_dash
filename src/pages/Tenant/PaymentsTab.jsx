@@ -122,6 +122,8 @@ const PaymentsTab = ({
                   const amount = payment.Amount || payment.amount || 0;
                   const method = payment.Method || payment.method || 'N/A';
                   const status = payment.Status || payment.status || 'Pending';
+                  const statusLower = String(status || '').toLowerCase();
+                  const canDownloadReceipt = statusLower === 'approved' || statusLower === 'completed' || statusLower === 'paid';
                   return (
                     <tr key={paymentId || `payment-${index}`}
                       onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
@@ -140,11 +142,34 @@ const PaymentsTab = ({
                       <td style={tdStyle}><span style={statusPill(status)}>{status}</span></td>
                       <td style={{ ...tdStyle, width: '120px' }}>
                         <button
-                          onClick={() => downloadReceipt(paymentId)}
+                          onClick={() => {
+                            if (!canDownloadReceipt) return;
+                            downloadReceipt(paymentId);
+                          }}
+                          disabled={!canDownloadReceipt}
                           title="Download Receipt"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 14px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            background: canDownloadReceipt ? '#fff' : '#f8fafc',
+                            color: canDownloadReceipt ? '#3b82f6' : '#94a3b8',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            cursor: canDownloadReceipt ? 'pointer' : 'not-allowed',
+                            opacity: canDownloadReceipt ? 1 : 0.8
+                          }}
+                          onMouseEnter={e => {
+                            if (!canDownloadReceipt) return;
+                            e.currentTarget.style.background = '#eff6ff';
+                          }}
+                          onMouseLeave={e => {
+                            if (!canDownloadReceipt) return;
+                            e.currentTarget.style.background = '#fff';
+                          }}
                         >
                           <Download size={14} /> Download
                         </button>

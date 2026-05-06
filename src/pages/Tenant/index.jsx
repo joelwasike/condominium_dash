@@ -37,6 +37,7 @@ import RoleLayout from '../../components/RoleLayout';
 import SettingsPage from '../SettingsPage';
 import { t, getLanguage } from '../../utils/i18n';
 import { tenantService } from '../../services/tenantService';
+import { saveRentReceiptPdf } from '../../utils/rentReceiptPdf';
 import { messagingService } from '../../services/messagingService';
 import { API_CONFIG } from '../../config/api';
 import { isDemoMode, getTenantDemoData } from '../../utils/demoData';
@@ -1108,32 +1109,15 @@ const TenantDashboard = () => {
         return;
       }
 
-      await tenantService.generateReceipt(paymentId);
+      const status = (payment.Status || payment.status || '').toLowerCase();
+      const isApproved = status === 'approved' || status === 'completed' || status === 'paid';
+      if (!isApproved) {
+        addNotification('Receipt is available only after the payment is approved.', 'warning');
+        return;
+      }
 
-      const receiptText = `
-RENT PAYMENT RECEIPT
-===================
-Payment ID: ${payment.ID}
-Receipt Number: ${payment.ReceiptNumber}
-Date: ${new Date(payment.Date).toLocaleDateString()}
-Amount: ${payment.Amount} XOF
-Description: ${payment.ChargeType}
-Payment Method: ${payment.Method}
-Status: ${payment.Status}
-
-Thank you for your payment!
-      `.trim();
-
-      const blob = new Blob([receiptText], { type: 'text/plain' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `receipt_${payment.ReceiptNumber || paymentId}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
+      const fileName = `rent-receipt-${payment.ID || paymentId}.pdf`;
+      await saveRentReceiptPdf({ item: payment, isCollection: false, filename: fileName });
       addNotification('Receipt downloaded successfully!', 'success');
     } catch (error) {
       console.error('Error downloading receipt:', error);
@@ -1440,6 +1424,8 @@ Thank you for your payment!
                     const amount = payment.Amount || payment.amount || 0;
                     const method = payment.Method || payment.method || 'N/A';
                     const status = payment.Status || payment.status || 'Pending';
+                    const statusLower = String(status || '').toLowerCase();
+                    const canDownloadReceipt = statusLower === 'approved' || statusLower === 'completed' || statusLower === 'paid';
                     return (
                       <tr key={paymentId || `payment-${index}`}>
                         <td>{index + 1}</td>
@@ -1463,7 +1449,11 @@ Thank you for your payment!
                           <div className="table-actions">
                             <button
                               className="table-action-button view"
-                              onClick={() => downloadReceipt(paymentId)}
+                              onClick={() => {
+                                if (!canDownloadReceipt) return;
+                                downloadReceipt(paymentId);
+                              }}
+                              disabled={!canDownloadReceipt}
                               title="Download Receipt"
                             >
                               <Download size={14} />
