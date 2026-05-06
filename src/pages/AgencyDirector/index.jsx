@@ -438,8 +438,14 @@ const AgencyDirectorDashboard = () => {
   const handlePaySubscription = async (e) => {
     e.preventDefault();
     try {
-      await agencyDirectorService.paySubscriptionViaMoMo(subscriptionForm);
-      addNotification('Subscription payment initiated. Please confirm the prompt on your phone.', 'success');
+      const result = await agencyDirectorService.paySubscriptionViaMoMo(subscriptionForm);
+      const paymentUrl = result?.response?.payment_url;
+      if (subscriptionForm.provider === 'wave' && paymentUrl) {
+        window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        addNotification('Wave payment page opened. Complete payment, then come back to check status.', 'success');
+      } else {
+        addNotification('Subscription payment initiated. Please confirm the prompt on your phone.', 'success');
+      }
       setShowSubscriptionModal(false);
       setSubscriptionForm({ provider: 'wave', phone: '', otp: '' });
       await loadData();
@@ -546,8 +552,14 @@ const AgencyDirectorDashboard = () => {
   const handlePayAnnualSubscription = async (e) => {
     e.preventDefault();
     try {
-      await agencyDirectorService.payAnnualSubscriptionViaMoMo(subscriptionForm);
-      addNotification('Annual subscription payment initiated. Please confirm the prompt on your phone.', 'success');
+      const result = await agencyDirectorService.payAnnualSubscriptionViaMoMo(subscriptionForm);
+      const paymentUrl = result?.response?.payment_url;
+      if (subscriptionForm.provider === 'wave' && paymentUrl) {
+        window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        addNotification('Wave payment page opened. Complete payment, then come back to check status.', 'success');
+      } else {
+        addNotification('Annual subscription payment initiated. Please confirm the prompt on your phone.', 'success');
+      }
       setShowSubscriptionModal(false);
       setSubscriptionForm({ provider: 'wave', phone: '', otp: '' });
       await loadData();

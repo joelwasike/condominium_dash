@@ -927,15 +927,31 @@ const TenantDashboard = () => {
       await new Promise(r => setTimeout(r, 5000)); // wait 5 seconds between polls
       try {
         const result = await tenantService.checkMoMoStatus(txId);
-        const status = result?.response?.status || result?.status || '';
-        if (status.toUpperCase() === 'SUCCESSFUL' || status === 'success') {
+        const rawStatus = result?.response?.status ?? result?.status ?? '';
+        const detailMessage = result?.response?.detailMessage || result?.detailMessage || '';
+
+        // Providers may return numeric status codes (e.g. 200 success, 300+ error).
+        const numericStatus = typeof rawStatus === 'number' ? rawStatus : Number.NaN;
+        const statusStr = typeof rawStatus === 'string' ? rawStatus : '';
+
+        const isSuccess =
+          (Number.isFinite(numericStatus) && numericStatus === 200) ||
+          statusStr.toUpperCase() === 'SUCCESSFUL' ||
+          statusStr === 'success';
+
+        const isFailed =
+          (Number.isFinite(numericStatus) && numericStatus >= 300) ||
+          statusStr.toUpperCase() === 'FAILED' ||
+          statusStr === 'failed';
+
+        if (isSuccess) {
           setPaymentStatus('success');
           addNotification('Payment confirmed! Your rent has been paid.', 'success');
           await loadPayments();
           return;
-        } else if (status.toUpperCase() === 'FAILED' || status === 'failed') {
+        } else if (isFailed) {
           setPaymentStatus('failed');
-          addNotification('Payment failed. Please try again.', 'error');
+          addNotification(detailMessage || 'Payment failed. Please try again.', 'error');
           return;
         }
         // Still pending, continue polling
