@@ -995,7 +995,13 @@ const TenantDashboard = () => {
 
       const txId = result?.partner_transaction_id || result?.momo_transaction_id || '';
       setPaymentTxId(txId);
-      addNotification('Payment initiated! Please confirm on your phone.', 'info');
+      const paymentUrl = result?.response?.payment_url;
+      if (paymentForm.provider === 'wave' && paymentUrl) {
+        window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        addNotification('Wave payment page opened. Complete payment, then come back to check status.', 'info');
+      } else {
+        addNotification('Payment initiated! Please confirm on your phone.', 'info');
+      }
 
       // Start polling for status
       if (txId) {
@@ -1044,14 +1050,20 @@ const TenantDashboard = () => {
         property = overviewData.property;
       }
       const chargeType = billsForm.billType === 'water' ? 'Water' : 'Electricity';
-      await tenantService.payViaMoMo({
+      const result = await tenantService.payViaMoMo({
         provider: billsForm.provider,
         phone: billsForm.phone,
         amount: parseFloat(billsForm.amount),
         property,
         chargeType,
       });
-      addNotification(`${chargeType} bill payment initiated! Confirm on your phone.`, 'info');
+      const paymentUrl = result?.response?.payment_url;
+      if (billsForm.provider === 'wave' && paymentUrl) {
+        window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        addNotification(`${chargeType} bill payment page opened (Wave). Complete payment, then check status.`, 'info');
+      } else {
+        addNotification(`${chargeType} bill payment initiated! Confirm on your phone.`, 'info');
+      }
       setBillsForm({ billType: 'water', amount: '', provider: '', phone: '', otp: '' });
       setShowBillsModal(false);
       await loadPayments();
@@ -2302,13 +2314,10 @@ Thank you for your payment!
                 <form onSubmit={handlePaymentSubmit} className="modal-form">
                   <div className="form-group">
                     <label>Payment Provider</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '4px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '4px' }}>
                       {[
-                        { id: 'mtn', label: 'MTN MoMo', color: '#ffc107', textColor: '#000' },
                         { id: 'om', label: 'Orange Money', color: '#ff6600', textColor: '#fff' },
-                        { id: 'moov', label: 'MOOV Money', color: '#0066cc', textColor: '#fff' },
                         { id: 'wave', label: 'Wave', color: '#1dc3e2', textColor: '#fff' },
-                        { id: 'djamo', label: 'Djamo', color: '#6c5ce7', textColor: '#fff' },
                       ].map(p => (
                         <button
                           key={p.id}
@@ -2410,13 +2419,10 @@ Thank you for your payment!
                 </div>
                 <div className="form-group">
                   <label>Payment Provider</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '4px' }}>
                     {[
-                      { id: 'mtn', label: 'MTN MoMo', color: '#ffc107', textColor: '#000' },
                       { id: 'om', label: 'Orange Money', color: '#ff6600', textColor: '#fff' },
-                      { id: 'moov', label: 'MOOV Money', color: '#0066cc', textColor: '#fff' },
                       { id: 'wave', label: 'Wave', color: '#1dc3e2', textColor: '#fff' },
-                      { id: 'djamo', label: 'Djamo', color: '#6c5ce7', textColor: '#fff' },
                     ].map(p => (
                       <button
                         key={p.id}
@@ -2970,4 +2976,3 @@ Thank you for your payment!
 };
 
 export default TenantDashboard;
-

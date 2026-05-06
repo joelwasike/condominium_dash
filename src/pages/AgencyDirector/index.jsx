@@ -138,7 +138,7 @@ const AgencyDirectorDashboard = () => {
   
   // Subscription payment state
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [subscriptionForm, setSubscriptionForm] = useState({ provider: 'mtn', phone: '', otp: '' });
+  const [subscriptionForm, setSubscriptionForm] = useState({ provider: 'wave', phone: '', otp: '' });
   const [subscriptionType, setSubscriptionType] = useState('monthly'); // 'monthly' or 'annual'
   const [subscriptionInfo, setSubscriptionInfo] = useState(null);
 
@@ -441,7 +441,7 @@ const AgencyDirectorDashboard = () => {
       await agencyDirectorService.paySubscriptionViaMoMo(subscriptionForm);
       addNotification('Subscription payment initiated. Please confirm the prompt on your phone.', 'success');
       setShowSubscriptionModal(false);
-      setSubscriptionForm({ provider: 'mtn', phone: '', otp: '' });
+      setSubscriptionForm({ provider: 'wave', phone: '', otp: '' });
       await loadData();
     } catch (error) {
       console.error('Error processing subscription payment:', error);
@@ -549,7 +549,7 @@ const AgencyDirectorDashboard = () => {
       await agencyDirectorService.payAnnualSubscriptionViaMoMo(subscriptionForm);
       addNotification('Annual subscription payment initiated. Please confirm the prompt on your phone.', 'success');
       setShowSubscriptionModal(false);
-      setSubscriptionForm({ provider: 'mtn', phone: '', otp: '' });
+      setSubscriptionForm({ provider: 'wave', phone: '', otp: '' });
       await loadData();
     } catch (error) {
       console.error('Error processing annual subscription payment:', error);
@@ -4261,17 +4261,14 @@ const AgencyDirectorDashboard = () => {
             </div>
             <div className="sa-form-group">
               <label>Mobile Money Provider *</label>
-              <select
-                value={subscriptionForm.provider}
-                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, provider: e.target.value })}
-                required
-              >
-                <option value="mtn">MTN MoMo</option>
-                <option value="om">Orange Money</option>
-                <option value="moov">Moov</option>
+                <select
+                  value={subscriptionForm.provider}
+                  onChange={(e) => setSubscriptionForm({ ...subscriptionForm, provider: e.target.value })}
+                  required
+                >
                 <option value="wave">Wave</option>
-                <option value="djamo">Djamo</option>
-              </select>
+                <option value="om">Orange Money</option>
+                </select>
             </div>
             <div className="sa-form-group">
               <label>Phone Number *</label>
