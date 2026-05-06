@@ -1006,15 +1006,20 @@ const TenantDashboard = () => {
         phone: paymentForm.phone,
         amount: parseFloat(paymentForm.amount),
         property,
-        chargeType: 'Rent'
+        chargeType: 'Rent',
+        otp: paymentForm.otp
       });
 
       const txId = result?.partner_transaction_id || result?.momo_transaction_id || '';
       setPaymentTxId(txId);
       const paymentUrl = result?.response?.payment_url;
       if (paymentForm.provider === 'wave' && paymentUrl) {
-        window.open(paymentUrl, '_blank', 'noopener,noreferrer');
-        addNotification('Wave payment page opened. Complete payment, then come back to check status.', 'info');
+        // Some browsers block popups after an awaited network call; fallback to same-tab redirect.
+        const popup = window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        if (!popup) {
+          window.location.assign(paymentUrl);
+        }
+        addNotification('Redirecting to Wave payment page…', 'info');
       } else {
         addNotification('Payment initiated! Please confirm on your phone.', 'info');
       }
@@ -1072,11 +1077,15 @@ const TenantDashboard = () => {
         amount: parseFloat(billsForm.amount),
         property,
         chargeType,
+        otp: billsForm.otp
       });
       const paymentUrl = result?.response?.payment_url;
       if (billsForm.provider === 'wave' && paymentUrl) {
-        window.open(paymentUrl, '_blank', 'noopener,noreferrer');
-        addNotification(`${chargeType} bill payment page opened (Wave). Complete payment, then check status.`, 'info');
+        const popup = window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        if (!popup) {
+          window.location.assign(paymentUrl);
+        }
+        addNotification(`Redirecting to Wave payment page for ${chargeType}…`, 'info');
       } else {
         addNotification(`${chargeType} bill payment initiated! Confirm on your phone.`, 'info');
       }

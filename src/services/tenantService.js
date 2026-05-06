@@ -26,11 +26,18 @@ export const tenantService = {
   },
 
   // Live MoMo payment — initiates a USSD prompt on the user's phone
-  payViaMoMo: async ({ provider, phone, amount, property, chargeType }) => {
+  payViaMoMo: async ({ provider, phone, amount, property, chargeType, otp }) => {
     const url = buildApiUrl('/api/payments/rent');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify({ provider, phone, amount: Math.round(amount), property, chargeType: chargeType || 'Rent' })
+      body: JSON.stringify({
+        provider,
+        phone,
+        amount: Math.round(amount),
+        property,
+        chargeType: chargeType || 'Rent',
+        otp: otp || ''
+      })
     });
   },
 
