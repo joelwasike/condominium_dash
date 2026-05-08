@@ -80,6 +80,7 @@ export const superAdminService = {
 
   // Companies
   getCompanies: () => apiGet('/companies'),
+  getCompanyDetails: (id) => apiGet(`/companies/${id}/details`),
   addCompany: (data) => apiPost('/companies', data),
   updateCompany: (id, data) => apiPut(`/companies/${id}`, data),
   deleteCompany: (id) => apiDelete(`/companies/${id}`),

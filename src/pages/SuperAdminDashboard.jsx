@@ -18,7 +18,8 @@ import {
   CheckCircle,
   RefreshCw,
   Upload,
-  Image
+  Image,
+  Eye
 } from 'lucide-react';
 import { CLOUDINARY_CONFIG } from '../config/cloudinary';
 import {
@@ -124,6 +125,36 @@ const SuperAdminDashboard = () => {
   const [editingCompany, setEditingCompany] = useState(null);
   const [companyForm, setCompanyForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '', logoURL: '', subscriptionFee: '', subscriptionCurrency: 'XOF' });
   const [logoUploading, setLogoUploading] = useState(false);
+
+  // Company Details (deep view)
+  const [showCompanyDetails, setShowCompanyDetails] = useState(false);
+  const [companyDetailsLoading, setCompanyDetailsLoading] = useState(false);
+  const [companyDetails, setCompanyDetails] = useState(null);
+  const [companyDetailsTab, setCompanyDetailsTab] = useState('overview'); // overview | users | payments | expenses | deposits | subscription
+
+  const openCompanyDetails = async (company) => {
+    const companyId = company?.ID || company?.id;
+    if (!companyId) return;
+    setShowCompanyDetails(true);
+    setCompanyDetailsTab('overview');
+    setCompanyDetailsLoading(true);
+    setCompanyDetails(null);
+    try {
+      if (isDemoMode()) {
+        // Demo: best-effort from existing data
+        setCompanyDetails({ company, users: [], stats: {}, recent: { tenantPayments: [], expenses: [], deposits: [] }, subscriptionPayments: [] });
+      } else {
+        const details = await superAdminService.getCompanyDetails(companyId);
+        setCompanyDetails(details);
+      }
+    } catch (err) {
+      console.error('Load company details failed:', err);
+      addNotification(err?.message || 'Failed to load company details', 'error');
+      setShowCompanyDetails(false);
+    } finally {
+      setCompanyDetailsLoading(false);
+    }
+  };
 
   const handleLogoUpload = async (file) => {
     if (!file) return;
@@ -545,6 +576,7 @@ const SuperAdminDashboard = () => {
                     <td style={tdStyle}>{company.CreatedAt ? new Date(company.CreatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                        <button style={{ ...btnSmall, background: '#f1f5f9', color: '#0f172a' }} onClick={() => openCompanyDetails(company)} title="View details"><Eye size={14} /></button>
                         <button style={{ ...btnSmall, background: '#eff6ff', color: '#3b82f6' }} onClick={() => handleOpenEditCompany(company)} title="Edit"><Edit2 size={14} /></button>
                         <button style={{ ...btnSmall, background: isActive ? '#fef3c7' : '#dcfce7', color: isActive ? '#92400e' : '#166534' }} onClick={() => handleToggleCompanyStatus(company)} title={isActive ? 'Deactivate' : 'Reactivate'}>
                           {isActive ? <XCircle size={14} /> : <CheckCircle size={14} />}
@@ -645,6 +677,312 @@ const SuperAdminDashboard = () => {
             <button type="submit" style={btnPrimary}>{editingCompany ? 'Update' : 'Create'} Agency</button>
           </div>
         </form>
+      </Modal>
+
+      {/* Company Details Modal */}
+      <Modal
+        isOpen={showCompanyDetails}
+        onClose={() => { setShowCompanyDetails(false); setCompanyDetails(null); }}
+        title={`Company Details${companyDetails?.company?.Name ? ` — ${companyDetails.company.Name}` : ''}`}
+        size="xl"
+      >
+        {companyDetailsLoading ? (
+          <div style={{ padding: '16px', color: '#64748b' }}>Loading company details…</div>
+        ) : !companyDetails ? (
+          <div style={{ padding: '16px', color: '#64748b' }}>No data.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Summary */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              <div style={{ ...cardBase, padding: '14px' }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Users</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>{(companyDetails.users || []).length}</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Across all roles</div>
+              </div>
+              <div style={{ ...cardBase, padding: '14px' }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Tenants</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>{companyDetails.stats?.tenants ?? 0}</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Tenant accounts</div>
+              </div>
+              <div style={{ ...cardBase, padding: '14px' }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Properties</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
+                  {(companyDetails.stats?.salesProperties ?? 0) + (companyDetails.stats?.systemProperties ?? 0)}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Sales + System</div>
+              </div>
+              <div style={{ ...cardBase, padding: '14px' }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Tenant Payments</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
+                  {Number(companyDetails.stats?.tenantPaymentsApprovedTotal ?? 0).toLocaleString()} XOF
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  Approved: {companyDetails.stats?.tenantPaymentsApproved ?? 0} / {companyDetails.stats?.tenantPayments ?? 0}
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                { key: 'overview', label: 'Overview' },
+                { key: 'users', label: 'Users' },
+                { key: 'payments', label: 'Payments' },
+                { key: 'expenses', label: 'Expenses' },
+                { key: 'deposits', label: 'Deposits' },
+                { key: 'subscription', label: 'Subscription' },
+              ].map(ti => (
+                <button
+                  key={ti.key}
+                  type="button"
+                  onClick={() => setCompanyDetailsTab(ti.key)}
+                  style={{
+                    ...btnSmall,
+                    padding: '8px 12px',
+                    background: companyDetailsTab === ti.key ? '#eff6ff' : '#f8fafc',
+                    color: companyDetailsTab === ti.key ? '#1d4ed8' : '#334155',
+                    border: companyDetailsTab === ti.key ? '1px solid #bfdbfe' : '1px solid #e2e8f0'
+                  }}
+                >
+                  {ti.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Content */}
+            {companyDetailsTab === 'overview' && (
+              <div style={{ ...cardBase, padding: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Name</div>
+                    <div style={{ fontWeight: 700 }}>{companyDetails.company?.Name || '-'}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Email</div>
+                    <div style={{ fontWeight: 600 }}>{companyDetails.company?.Email || '-'}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Phone</div>
+                    <div style={{ fontWeight: 600 }}>{companyDetails.company?.Phone || '-'}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Status</div>
+                    <div><span style={statusPill(companyDetails.company?.Status || companyDetails.company?.status || 'Unknown')}>{companyDetails.company?.Status || companyDetails.company?.status || 'Unknown'}</span></div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Subscription</div>
+                    <div><span style={statusPill(companyDetails.company?.SubscriptionStatus || '-')}>{companyDetails.company?.SubscriptionStatus || '-'}</span></div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Monthly Fee</div>
+                    <div style={{ fontWeight: 700 }}>
+                      {Number(companyDetails.company?.SubscriptionFee ?? 0).toLocaleString()} {companyDetails.company?.SubscriptionCurrency || 'XOF'}
+                    </div>
+                  </div>
+                </div>
+                {Array.isArray(companyDetails.stats?.usersByRole) && companyDetails.stats.usersByRole.length > 0 && (
+                  <div style={{ marginTop: '14px' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px', color: '#0f172a' }}>Users by role</div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {companyDetails.stats.usersByRole.map((rc, idx) => (
+                        <div key={`${rc.role || rc.Role}-${idx}`} style={{ padding: '6px 10px', borderRadius: '999px', background: '#f1f5f9', border: '1px solid #e2e8f0', fontSize: '0.8rem', color: '#334155' }}>
+                          <strong>{rc.role || rc.Role}</strong>: {rc.count ?? rc.Count ?? 0}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {companyDetailsTab === 'users' && (
+              <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc' }}>
+                        <th style={thStyle}>Name</th>
+                        <th style={thStyle}>Email</th>
+                        <th style={thStyle}>Role</th>
+                        <th style={thStyle}>Status</th>
+                        <th style={thStyle}>Last Login</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(companyDetails.users || []).map(u => (
+                        <tr key={`co-user-${u.id}`} style={trHover}>
+                          <td style={tdStyle}><span style={{ fontWeight: 700 }}>{u.name}</span></td>
+                          <td style={tdStyle}>{u.email}</td>
+                          <td style={tdStyle}><span style={statusPill(u.role)}>{u.role}</span></td>
+                          <td style={tdStyle}><span style={statusPill(u.status)}>{u.status}</span></td>
+                          <td style={tdStyle}>{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : '-'}</td>
+                        </tr>
+                      ))}
+                      {(companyDetails.users || []).length === 0 && (
+                        <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No users found for this company.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {companyDetailsTab === 'payments' && (
+              <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc' }}>
+                        <th style={thStyle}>Tenant</th>
+                        <th style={thStyle}>Property</th>
+                        <th style={thStyle}>Amount</th>
+                        <th style={thStyle}>Method</th>
+                        <th style={thStyle}>Status</th>
+                        <th style={thStyle}>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(companyDetails.recent?.tenantPayments || []).map(p => (
+                        <tr key={`co-pay-${p.ID || p.id}`} style={trHover}>
+                          <td style={tdStyle}>{p.Tenant || p.tenant || '-'}</td>
+                          <td style={tdStyle}>{p.Property || p.property || '-'}</td>
+                          <td style={tdStyle}>{Number(p.Amount || p.amount || 0).toLocaleString()} XOF</td>
+                          <td style={tdStyle}>{p.Method || p.method || '-'}</td>
+                          <td style={tdStyle}><span style={statusPill(p.Status || p.status || '-')}>{p.Status || p.status || '-'}</span></td>
+                          <td style={tdStyle}>{p.Date ? new Date(p.Date).toLocaleString() : '-'}</td>
+                        </tr>
+                      ))}
+                      {(companyDetails.recent?.tenantPayments || []).length === 0 && (
+                        <tr><td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No tenant payments.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {companyDetailsTab === 'expenses' && (
+              <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc' }}>
+                        <th style={thStyle}>Category</th>
+                        <th style={thStyle}>Building</th>
+                        <th style={thStyle}>Amount</th>
+                        <th style={thStyle}>Status</th>
+                        <th style={thStyle}>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(companyDetails.recent?.expenses || []).map(e => (
+                        <tr key={`co-exp-${e.ID || e.id}`} style={trHover}>
+                          <td style={tdStyle}>{e.Category || e.category || '-'}</td>
+                          <td style={tdStyle}>{e.Building || e.building || '-'}</td>
+                          <td style={tdStyle}>{Number(e.Amount || e.amount || 0).toLocaleString()} XOF</td>
+                          <td style={tdStyle}><span style={statusPill(e.Status || e.status || '-')}>{e.Status || e.status || '-'}</span></td>
+                          <td style={tdStyle}>{e.Date ? new Date(e.Date).toLocaleString() : '-'}</td>
+                        </tr>
+                      ))}
+                      {(companyDetails.recent?.expenses || []).length === 0 && (
+                        <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No expenses.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {companyDetailsTab === 'deposits' && (
+              <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc' }}>
+                        <th style={thStyle}>Tenant</th>
+                        <th style={thStyle}>Property</th>
+                        <th style={thStyle}>Amount</th>
+                        <th style={thStyle}>Type</th>
+                        <th style={thStyle}>Status</th>
+                        <th style={thStyle}>Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(companyDetails.recent?.deposits || []).map(d => (
+                        <tr key={`co-dep-${d.ID || d.id}`} style={trHover}>
+                          <td style={tdStyle}>{d.Tenant || d.tenant || '-'}</td>
+                          <td style={tdStyle}>{d.Property || d.property || '-'}</td>
+                          <td style={tdStyle}>{Number(d.Amount || d.amount || 0).toLocaleString()} XOF</td>
+                          <td style={tdStyle}>{d.Type || d.type || '-'}</td>
+                          <td style={tdStyle}><span style={statusPill(d.Status || d.status || '-')}>{d.Status || d.status || '-'}</span></td>
+                          <td style={tdStyle}>{d.CreatedAt ? new Date(d.CreatedAt).toLocaleString() : '-'}</td>
+                        </tr>
+                      ))}
+                      {(companyDetails.recent?.deposits || []).length === 0 && (
+                        <tr><td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No security deposits.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {companyDetailsTab === 'subscription' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                <div style={{ ...cardBase, padding: '14px' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>Subscription Summary</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Status</div>
+                      <div><span style={statusPill(companyDetails.company?.SubscriptionStatus || '-')}>{companyDetails.company?.SubscriptionStatus || '-'}</span></div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Fee</div>
+                      <div style={{ fontWeight: 700 }}>{Number(companyDetails.company?.SubscriptionFee ?? 0).toLocaleString()} {companyDetails.company?.SubscriptionCurrency || 'XOF'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Last Paid</div>
+                      <div style={{ fontWeight: 600 }}>{companyDetails.company?.SubscriptionLastPaidAt ? new Date(companyDetails.company.SubscriptionLastPaidAt).toLocaleDateString() : '-'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Next Due</div>
+                      <div style={{ fontWeight: 600 }}>{companyDetails.company?.SubscriptionNextDueAt ? new Date(companyDetails.company.SubscriptionNextDueAt).toLocaleDateString() : '-'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 14px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, color: '#0f172a' }}>Payment History</div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={tableStyle}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc' }}>
+                          <th style={thStyle}>Amount</th>
+                          <th style={thStyle}>Provider</th>
+                          <th style={thStyle}>Status</th>
+                          <th style={thStyle}>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(companyDetails.subscriptionPayments || []).map(p => (
+                          <tr key={`co-sub-${p.ID || p.id}`} style={trHover}>
+                            <td style={tdStyle}>{Number(p.Amount || p.amount || 0).toLocaleString()} {p.Currency || p.currency || 'XOF'}</td>
+                            <td style={tdStyle}>{p.Provider || p.provider || '-'}</td>
+                            <td style={tdStyle}><span style={statusPill(p.Status || p.status || '-')}>{p.Status || p.status || '-'}</span></td>
+                            <td style={tdStyle}>{p.PaymentDate ? new Date(p.PaymentDate).toLocaleString() : '-'}</td>
+                          </tr>
+                        ))}
+                        {(companyDetails.subscriptionPayments || []).length === 0 && (
+                          <tr><td colSpan={4} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '22px' }}>No subscription payments yet.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );
