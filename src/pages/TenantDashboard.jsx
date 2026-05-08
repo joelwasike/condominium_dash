@@ -1202,9 +1202,11 @@ const TenantDashboard = () => {
           <div className="sa-overview-metrics">
             <div className="sa-metric-card sa-metric-primary">
               <p className="sa-metric-label">Next Rent Due</p>
-              <p className="sa-metric-period">Due: {data.nextRentDue?.date || '2024-11-01'}</p>
+              <p className="sa-metric-period">Due: {data.nextRentDue?.date || 'N/A'}</p>
               <p className="sa-metric-value">
-                {data.nextRentDue?.amount ? `${data.nextRentDue.amount} XOF` : 'N/A'}
+                {data.nextRentDue?.amount !== null && data.nextRentDue?.amount !== undefined
+                  ? `${Number(data.nextRentDue.amount).toLocaleString()} XOF`
+                  : 'N/A'}
               </p>
             </div>
             <div className="sa-metric-card">

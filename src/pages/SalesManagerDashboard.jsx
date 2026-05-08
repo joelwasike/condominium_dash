@@ -1149,9 +1149,10 @@ const SalesManagerDashboard = () => {
       if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
       return s;
     };
+    // Use semicolon delimiter to match common exports (and the backend supports both ';' and ',').
     const csvContent = [
-      headers.join(','),
-      ...exampleRows.map(r => r.map(escapeCsv).join(','))
+      headers.join(';'),
+      ...exampleRows.map(r => r.map(escapeCsv).join(';'))
     ].join('\n') + '\n';
     downloadBlob(csvContent, 'tenants_import_example.csv');
   };
