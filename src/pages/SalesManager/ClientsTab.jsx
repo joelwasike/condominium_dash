@@ -98,6 +98,7 @@ const ClientsTab = ({
     const paymentsList = Array.isArray(tenantDetail?.payments) ? tenantDetail.payments : [];
     const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes : [];
     const depositPaidAmount = tenantDetail?.deposit?.paidAmount ?? tenantDetail?.depositPaidAmount ?? null;
+    const depositStatus = tenantDetail?.deposit?.status ?? null;
     const name = c.Name || c.name || 'N/A';
 
     const handleAddPrivateNote = async () => {
@@ -189,7 +190,7 @@ const ClientsTab = ({
 	              <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={{ ...ddStyle, fontWeight: 700, fontSize: '1.1rem' }}>{Number(amount).toLocaleString()} XOF</div></div>
 	              {depositPaidAmount != null && (
 	                <div style={dlItem}>
-	                  <div style={dtStyle}>Deposit paid amount</div>
+	                  <div style={dtStyle}>Deposit paid amount{depositStatus ? ` (${depositStatus})` : ''}</div>
 	                  <div style={ddStyle}>{Number(depositPaidAmount).toLocaleString()} XOF</div>
 	                </div>
 	              )}
