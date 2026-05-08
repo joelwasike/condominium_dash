@@ -289,7 +289,7 @@ const PropertyManagementTab = ({
             <Plus size={18} /> Add Property
           </button>
           <button type="button" style={{ ...btnOutline, display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => { setPropertyImportFile(null); setShowPropertyImportModal(true); }}>
-            <FileSpreadsheet size={18} /> Import from CSV
+            <FileSpreadsheet size={18} /> Bulk Import
           </button>
           <div style={{ position: 'relative' }}>
             <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />

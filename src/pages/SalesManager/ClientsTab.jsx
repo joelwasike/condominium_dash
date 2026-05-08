@@ -97,6 +97,7 @@ const ClientsTab = ({
     const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances : [];
     const paymentsList = Array.isArray(tenantDetail?.payments) ? tenantDetail.payments : [];
     const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes : [];
+    const depositPaidAmount = tenantDetail?.deposit?.paidAmount ?? tenantDetail?.depositPaidAmount ?? null;
     const name = c.Name || c.name || 'N/A';
 
     const handleAddPrivateNote = async () => {
@@ -180,15 +181,21 @@ const ClientsTab = ({
             <p style={subText}>No files uploaded yet. ID and other tenant documents can be added here for viewing.</p>
           </div>
 
-          <div style={card}>
-            <h3 style={sectionTitle}><DollarSign size={18} /> Rent & payment</h3>
-            <div style={{ marginTop: '16px' }}>
-              <div style={dlItem}><div style={dtStyle}>Property</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</div></div>
-              {unitNumber && unitNumber !== '—' && <div style={dlItem}><div style={dtStyle}>Unit</div><div style={ddStyle}>{unitNumber}</div></div>}
-              <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={{ ...ddStyle, fontWeight: 700, fontSize: '1.1rem' }}>{Number(amount).toLocaleString()} XOF</div></div>
-              <div style={dlItem}><div style={dtStyle}>Last payment</div><div style={ddStyle}>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</div></div>
-            </div>
-          </div>
+	          <div style={card}>
+	            <h3 style={sectionTitle}><DollarSign size={18} /> Rent & payment</h3>
+	            <div style={{ marginTop: '16px' }}>
+	              <div style={dlItem}><div style={dtStyle}>Property</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</div></div>
+	              {unitNumber && unitNumber !== '—' && <div style={dlItem}><div style={dtStyle}>Unit</div><div style={ddStyle}>{unitNumber}</div></div>}
+	              <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={{ ...ddStyle, fontWeight: 700, fontSize: '1.1rem' }}>{Number(amount).toLocaleString()} XOF</div></div>
+	              {depositPaidAmount != null && (
+	                <div style={dlItem}>
+	                  <div style={dtStyle}>Deposit paid amount</div>
+	                  <div style={ddStyle}>{Number(depositPaidAmount).toLocaleString()} XOF</div>
+	                </div>
+	              )}
+	              <div style={dlItem}><div style={dtStyle}>Last payment</div><div style={ddStyle}>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</div></div>
+	            </div>
+	          </div>
 
           {prop && (
             <div style={card}>
@@ -260,15 +267,15 @@ const ClientsTab = ({
             )}
           </div>
 
-          <div style={card}>
-            <h3 style={sectionTitle}><Receipt size={18} /> Recent payment history</h3>
-            {paymentsList.length > 0 ? (
-              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {paymentsList.slice(0, 10).map((p, idx) => (
-                  <li key={p.ID || p.id || idx} style={{ ...alertItem, borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
-                    <div style={alertTitle}>
-                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
-                    </div>
+	          <div style={card}>
+	            <h3 style={sectionTitle}><Receipt size={18} /> Recent payment history</h3>
+	            {paymentsList.length > 0 ? (
+	              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+	                {paymentsList.slice(0, 5).map((p, idx) => (
+	                  <li key={p.ID || p.id || idx} style={{ ...alertItem, borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+	                    <div style={alertTitle}>
+	                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
+	                    </div>
                     <div style={alertMeta}>
                       {p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}
                       {(p.Method || p.method) && ` · ${p.Method || p.method}`}

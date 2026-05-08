@@ -374,4 +374,34 @@ export const salesManagerService = {
       return response.json();
     });
   },
+
+  // Import properties from Excel or CSV
+  // Backend endpoint accepts .xlsx, .xls, and .csv files
+  importPropertiesFromFile: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const url = buildApiUrl('/api/salesmanager/properties/import-file');
+    const token = localStorage.getItem('token');
+
+    return await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': token || '',
+      },
+      body: formData
+    }).then(async (response) => {
+      if (!response.ok) {
+        const errorText = await response.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || `Failed to import properties: ${response.status}`);
+        } catch (e) {
+          if (e instanceof Error && e.message) throw e;
+          throw new Error(`Failed to import properties: ${response.status} ${response.statusText}. ${errorText}`);
+        }
+      }
+      return response.json();
+    });
+  },
 };

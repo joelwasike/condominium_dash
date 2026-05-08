@@ -1230,7 +1230,7 @@ const SalesManagerDashboard = () => {
     const headers = ['Address', 'Type', 'PropertyType', 'BuildingType', 'Status', 'NumberOfUnits', 'Rent', 'Bedrooms', 'Bathrooms', 'Urgency', 'LandlordId', 'UnitNumbers', 'UnitRents'];
     const exampleRows = [
       ['123 Main St', 'House', 'For Rent', '', 'Vacant', '1', '150000', '3', '2', 'normal', '', '', ''],
-      ['456 Oak Ave', 'Apartment', 'For Rent', 'T2', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']
+      ['456 Oak Ave', 'Apartment', 'For Rent', 'High-rise', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']
     ];
     const escapeCsv = (v) => {
       const s = String(v ?? '').trim();
@@ -1257,7 +1257,7 @@ const SalesManagerDashboard = () => {
     const propHeaders = ['Address', 'Type', 'PropertyType', 'BuildingType', 'Status', 'NumberOfUnits', 'Rent', 'Bedrooms', 'Bathrooms', 'Urgency', 'LandlordId', 'UnitNumbers', 'UnitRents'];
     const propRows = [
       ['123 Main St', 'House', 'For Rent', '', 'Vacant', '1', '150000', '3', '2', 'normal', '', '', ''],
-      ['456 Oak Ave', 'Apartment', 'For Rent', 'T2', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']
+      ['456 Oak Ave', 'Apartment', 'For Rent', 'High-rise', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']
     ];
     const tenantHeaders = ['Name', 'Property', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status', 'UnitNumber'];
     const tenantRows = [
@@ -1337,92 +1337,12 @@ const SalesManagerDashboard = () => {
   };
 
   const handleBulkImportProperties = async (file) => {
-    const text = await file.text();
-    let rows = [];
-    if (text.includes('[PROPERTIES]') && text.includes('[TENANTS]')) {
-      rows = parseCsvRows(text, 'properties');
-    } else if (text.includes('[PROPERTIES]')) {
-      rows = parseCsvRows(text, 'properties');
-    } else {
-      const parseCsvLine = (line) => {
-        const out = [];
-        let val = '';
-        let inQ = false;
-        for (let j = 0; j < line.length; j++) {
-          const c = line[j];
-          if (c === '"') {
-            if (inQ && line[j + 1] === '"') { val += '"'; j++; }
-            else inQ = !inQ;
-          } else if (c === ',' && !inQ) {
-            out.push(val.trim().replace(/^"|"$/g, ''));
-            val = '';
-          } else val += c;
-        }
-        out.push(val.trim().replace(/^"|"$/g, ''));
-        return out;
-      };
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const headerLine = lines[0];
-      if (!headerLine) { addNotification('CSV file is empty', 'error'); return { success: 0, failed: 0 }; }
-      const headers = parseCsvLine(headerLine).map(h => h.trim());
-      for (let i = 1; i < lines.length; i++) {
-        const cells = parseCsvLine(lines[i]);
-        const obj = {};
-        headers.forEach((h, idx) => { if (h) obj[h] = (cells[idx] ?? '').trim(); });
-        if (obj.Address) rows.push(obj);
-      }
-    }
-    if (rows.length === 0) { addNotification('No property rows found in file', 'error'); return { success: 0, failed: 0 }; }
-    let success = 0, failed = 0;
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      try {
-        const numUnits = Math.max(1, parseInt(r.NumberOfUnits, 10) || 1);
-        let units = [];
-        if (numUnits > 1 && (r.UnitNumbers || r.UnitRents)) {
-          const unitNums = (r.UnitNumbers || '').split('|').map(s => s.trim()).filter(Boolean);
-          const unitRents = (r.UnitRents || '').split('|').map(s => parseFloat(s) || 0);
-          for (let u = 0; u < numUnits; u++) {
-            units.push({
-              unitNumber: unitNums[u] || `Unit${u + 1}`,
-              rent: unitRents[u] ?? 0,
-              bedrooms: parseInt(r.Bedrooms, 10) || 0,
-              bathrooms: parseFloat(r.Bathrooms) || 1,
-              status: 'Vacant',
-              tenant: null
-            });
-          }
-        } else {
-          const rent = parseFloat(r.Rent) || 0;
-          units = [{ unitNumber: '1', rent, bedrooms: parseInt(r.Bedrooms, 10) || 0, bathrooms: parseFloat(r.Bathrooms) || 1, status: r.Status === 'Occupied' ? 'Occupied' : 'Vacant', tenant: null }];
-        }
-        const payload = {
-          address: (r.Address || '').trim(),
-          type: (r.Type || 'House').trim(),
-          propertyType: (r.PropertyType || 'For Rent').trim(),
-          buildingType: (r.BuildingType || '').trim() || null,
-          status: (r.Status || 'Vacant').trim() === 'Occupied' ? 'Occupied' : 'Vacant',
-          numberOfUnits: numUnits,
-          rent: numUnits === 1 ? (parseFloat(r.Rent) || 0) : 0,
-          bedrooms: parseInt(r.Bedrooms, 10) || undefined,
-          bathrooms: parseFloat(r.Bathrooms) || undefined,
-          urgency: (r.Urgency || 'normal').trim() || 'normal',
-          landlord_id: r.LandlordId ? parseInt(r.LandlordId, 10) : null,
-          units
-        };
-        if (!payload.address || !payload.type || !payload.propertyType) {
-          failed++;
-          continue;
-        }
-        if (payload.type === 'Apartment' && !payload.buildingType) payload.buildingType = 'T2';
-        await salesManagerService.createProperty(payload);
-        success++;
-      } catch (err) {
-        console.error('Property import row error:', err);
-        failed++;
-      }
-    }
-    return { success, failed };
+    const result = await salesManagerService.importPropertiesFromFile(file);
+    return {
+      success: result.success || result.created?.length || 0,
+      failed: result.failed || result.errors?.length || 0,
+      result
+    };
   };
 
   const handleBulkImportTenants = async (file) => {
@@ -1452,10 +1372,6 @@ const SalesManagerDashboard = () => {
       return;
     }
     const isCsv = bulkImportFile.name.toLowerCase().endsWith('.csv');
-    if (!isCsv && bulkImportTab === 'properties') {
-      addNotification('Property import supports CSV only. Please use a .csv file.', 'error');
-      return;
-    }
     setBulkImportLoading(true);
     try {
       let hasProps = false, hasTenants = false;
@@ -1472,9 +1388,9 @@ const SalesManagerDashboard = () => {
       let lastTenantResult = null;
 
       if (doProps) {
-        const { success, failed } = await handleBulkImportProperties(bulkImportFile);
-        totalSuccess += success;
-        totalFailed += failed;
+        const res = await handleBulkImportProperties(bulkImportFile);
+        totalSuccess += (res.success || 0);
+        totalFailed += (res.failed || 0);
       }
       if (doTenants) {
         const res = await handleBulkImportTenants(bulkImportFile);
@@ -2836,45 +2752,45 @@ const SalesManagerDashboard = () => {
 
       {/* Maintenance detail modal moved to ClientsTab */}
 
-      {/* Property Import Modal (Properties only - from Property Management) */}
-      {showPropertyImportModal && (
-        <div className="modal-overlay" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>
-          <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
-            <div className="modal-header">
-              <h3>Import Properties from CSV</h3>
-              <button className="modal-close" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>×</button>
-            </div>
-            <div className="modal-body">
-              <div style={{ marginBottom: '20px' }}>
-                <button type="button" className="action-button secondary" onClick={downloadPropertiesExampleCsv} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
-                  <Download size={16} style={{ marginRight: '6px' }} />
-                  Download Example CSV
-                </button>
-              </div>
-              <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
-                Upload a CSV with: Address, Type, PropertyType, BuildingType, Status, NumberOfUnits, Rent, Bedrooms, Bathrooms, Urgency, LandlordId. For multi-unit: UnitNumbers (F1|F2), UnitRents (100000|120000).
-              </p>
-              <div
-                className="file-upload-area"
-                style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: propertyImportLoading ? 'not-allowed' : 'pointer' }}
-                onClick={() => !propertyImportLoading && document.getElementById('property-import-file-input')?.click()}
-              >
-                <input
-                  type="file"
-                  id="property-import-file-input"
-                  accept=".csv,text/csv,application/csv"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) setPropertyImportFile(f); e.target.value = ''; }}
-                  style={{ display: 'none' }}
-                  disabled={propertyImportLoading}
-                />
-                <FileSpreadsheet size={48} color={propertyImportLoading ? '#9ca3af' : '#2563eb'} style={{ margin: '0 auto 12px' }} />
-                <div>
-                  <strong style={{ color: propertyImportLoading ? '#9ca3af' : '#1f2937' }}>
-                    {propertyImportLoading ? 'Importing...' : (propertyImportFile ? propertyImportFile.name : 'Click to select CSV file')}
-                  </strong>
-                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>CSV only</p>
-                </div>
-              </div>
+	      {/* Property Import Modal (Properties only - from Property Management) */}
+	      {showPropertyImportModal && (
+	        <div className="modal-overlay" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>
+	          <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+	            <div className="modal-header">
+	              <h3>Bulk Import Properties</h3>
+	              <button className="modal-close" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>×</button>
+	            </div>
+	            <div className="modal-body">
+	              <div style={{ marginBottom: '20px' }}>
+	                <button type="button" className="action-button secondary" onClick={downloadPropertiesExampleCsv} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
+	                  <Download size={16} style={{ marginRight: '6px' }} />
+	                  Download Example CSV
+	                </button>
+	              </div>
+	              <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
+	                Upload an Excel or CSV with: Address, Type, PropertyType, BuildingType, Status, NumberOfUnits, Rent, Bedrooms, Bathrooms, Urgency, LandlordId. For multi-unit: UnitNumbers (F1|F2), UnitRents (100000|120000). If Type is Apartment and BuildingType is provided, use: High-rise, Low-rise, Duplex, Townhouse, Penthouse.
+	              </p>
+	              <div
+	                className="file-upload-area"
+	                style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: propertyImportLoading ? 'not-allowed' : 'pointer' }}
+	                onClick={() => !propertyImportLoading && document.getElementById('property-import-file-input')?.click()}
+	              >
+	                <input
+	                  type="file"
+	                  id="property-import-file-input"
+	                  accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+	                  onChange={(e) => { const f = e.target.files?.[0]; if (f) setPropertyImportFile(f); e.target.value = ''; }}
+	                  style={{ display: 'none' }}
+	                  disabled={propertyImportLoading}
+	                />
+	                <FileSpreadsheet size={48} color={propertyImportLoading ? '#9ca3af' : '#2563eb'} style={{ margin: '0 auto 12px' }} />
+	                <div>
+	                  <strong style={{ color: propertyImportLoading ? '#9ca3af' : '#1f2937' }}>
+	                    {propertyImportLoading ? 'Importing...' : (propertyImportFile ? propertyImportFile.name : 'Click to select file')}
+	                  </strong>
+	                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>CSV or Excel (.xlsx, .xls)</p>
+	                </div>
+	              </div>
               <div className="modal-footer" style={{ marginTop: '24px' }}>
                 <button type="button" className="action-button secondary" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>
                   Cancel
@@ -2959,11 +2875,11 @@ const SalesManagerDashboard = () => {
                 <h4 style={{ marginBottom: '8px' }}>
                   {bulkImportTab === 'properties' ? 'Import Properties' : 'Import Tenants'}
                 </h4>
-                <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
-                  {bulkImportTab === 'properties'
-                    ? 'Upload a CSV with: Address, Type, PropertyType, BuildingType, Status, NumberOfUnits, Rent, Bedrooms, Bathrooms, Urgency, LandlordId. For multi-unit: UnitNumbers (F1|F2), UnitRents (100000|120000).'
-                    : 'Upload a CSV or Excel file with: Name, Property, Email, Phone, Amount, MoveInDate, Status (optional), UnitNumber (optional). Or use the Full Example file to import both properties and tenants.'}
-                </p>
+	                <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
+	                  {bulkImportTab === 'properties'
+	                    ? 'Upload an Excel or CSV with: Address, Type, PropertyType, BuildingType, Status, NumberOfUnits, Rent, Bedrooms, Bathrooms, Urgency, LandlordId. For multi-unit: UnitNumbers (F1|F2), UnitRents (100000|120000). If Type is Apartment and BuildingType is provided, use: High-rise, Low-rise, Duplex, Townhouse, Penthouse.'
+	                    : 'Upload a CSV or Excel file with: Name, Property, Email, Phone, Amount, MoveInDate, Status (optional), UnitNumber (optional). Or use the Full Example file to import both properties and tenants.'}
+	                </p>
                 <div
                   className="file-upload-area"
                   style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: bulkImportLoading ? 'not-allowed' : 'pointer' }}
@@ -2983,7 +2899,7 @@ const SalesManagerDashboard = () => {
                       {bulkImportLoading ? 'Importing...' : (bulkImportFile ? bulkImportFile.name : 'Click to select file')}
                     </strong>
                     <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>
-                      {bulkImportTab === 'properties' ? 'CSV only' : 'CSV or Excel (.xlsx, .xls)'}
+                      {bulkImportTab === 'properties' ? 'CSV or Excel (.xlsx, .xls)' : 'CSV or Excel (.xlsx, .xls)'}
                     </p>
                   </div>
                 </div>
