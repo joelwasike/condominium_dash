@@ -264,6 +264,10 @@ const SalesManagerDashboard = () => {
   const [tenantAssignment, setTenantAssignment] = useState(null); // { propertyId, unitId, buildingName, unitNumber } | null
   const [loadingAssignment, setLoadingAssignment] = useState(false);
   const [removeFromUnitLoading, setRemoveFromUnitLoading] = useState(false);
+  const [editAssignPropertyId, setEditAssignPropertyId] = useState('');
+  const [editAssignUnitId, setEditAssignUnitId] = useState('');
+  const [editAssignUnits, setEditAssignUnits] = useState([]); // [{id, unitNumber, status, tenant}]
+  const [editAssignLoadingUnits, setEditAssignLoadingUnits] = useState(false);
   const [showUnpaidRentModal, setShowUnpaidRentModal] = useState(false);
   const [editingUnpaidRent, setEditingUnpaidRent] = useState(null);
   
@@ -363,6 +367,35 @@ const SalesManagerDashboard = () => {
     })().finally(() => { if (!cancelled) setLoadingAssignment(false); });
     return () => { cancelled = true; };
   }, [showEditClientModal, editingClient]);
+
+  // Load available units when choosing a property in Edit Tenant modal
+  useEffect(() => {
+    if (!showEditClientModal) return;
+    if (!editAssignPropertyId) {
+      setEditAssignUnits([]);
+      setEditAssignUnitId('');
+      setEditAssignLoadingUnits(false);
+      return;
+    }
+    let cancelled = false;
+    setEditAssignLoadingUnits(true);
+    (async () => {
+      try {
+        const detail = await salesManagerService.getPropertyBuildingDetail(editAssignPropertyId);
+        const units = Array.isArray(detail?.units) ? detail.units : [];
+        if (cancelled) return;
+        setEditAssignUnits(units);
+      } catch (e) {
+        if (!cancelled) {
+          setEditAssignUnits([]);
+          addNotification('Failed to load units for the selected property.', 'error');
+        }
+      } finally {
+        if (!cancelled) setEditAssignLoadingUnits(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [showEditClientModal, editAssignPropertyId]);
 
   const setCreatePropertyUnitsCount = useCallback((n) => {
     const num = Math.max(1, parseInt(n, 10) || 1);
@@ -1659,6 +1692,9 @@ const SalesManagerDashboard = () => {
 
   const handleEditClient = (client) => {
     setEditingClient(client);
+    setEditAssignPropertyId('');
+    setEditAssignUnitId('');
+    setEditAssignUnits([]);
     setShowEditClientModal(true);
   };
 
@@ -1667,18 +1703,57 @@ const SalesManagerDashboard = () => {
     if (!editingClient) return;
 
     const formData = new FormData(e.target);
+    const nextUnitNumber = (formData.get('unitNumber') || '').toString().trim();
     const updateData = {
       name: formData.get('name')?.trim() || editingClient.Name,
       email: formData.get('email')?.trim() || editingClient.Email,
       phone: formData.get('phone')?.trim() || editingClient.Phone,
       property: formData.get('property')?.trim() || editingClient.Property,
+      unitNumber: nextUnitNumber || null,
       amount: formData.get('amount') ? parseFloat(formData.get('amount')) : editingClient.Amount,
       status: formData.get('status') || editingClient.Status,
     };
 
     try {
       setLoading(true);
-      await salesManagerService.updateClient(editingClient.ID || editingClient.id, updateData);
+      const clientId = editingClient.ID || editingClient.id;
+      await salesManagerService.updateClient(clientId, updateData);
+
+      // Optional: assign/move tenant to a selected unit (if provided)
+      const desiredUnitId = (formData.get('assignUnitId') || '').toString().trim();
+      const desiredPropertyId = (formData.get('assignPropertyId') || '').toString().trim();
+      if (desiredPropertyId && desiredUnitId && updateData.name) {
+        // If currently assigned elsewhere, vacate that unit first.
+        if (tenantAssignment && (String(tenantAssignment.propertyId) !== String(desiredPropertyId) || String(tenantAssignment.unitId) !== String(desiredUnitId))) {
+          try {
+            await salesManagerService.updatePropertyUnit(tenantAssignment.propertyId, tenantAssignment.unitId, {
+              tenant: null,
+              status: 'Vacant',
+              enterDate: null,
+            });
+          } catch (vacErr) {
+            console.warn('Failed to vacate previous unit:', vacErr);
+          }
+        }
+        const enterDate = editingClient?.LastPayment || editingClient?.lastPayment || null;
+        await salesManagerService.updatePropertyUnit(desiredPropertyId, desiredUnitId, {
+          tenant: updateData.name,
+          status: 'Occupied',
+          rent: updateData.amount || 0,
+          enterDate: enterDate || null,
+        });
+
+        // Also sync client property address and unit number based on selected unit/property (best-effort).
+        const selectedProp = (properties || []).find((p) => String(p.id ?? p.ID) === String(desiredPropertyId));
+        const propAddr = ((selectedProp?.address ?? selectedProp?.Address ?? updateData.property) || '').toString().trim();
+        const selectedUnit = (editAssignUnits || []).find((u) => String(u.id ?? u.ID) === String(desiredUnitId));
+        const unitNum = ((selectedUnit?.unitNumber ?? selectedUnit?.UnitNumber ?? selectedUnit?.name) || '').toString().trim();
+        try {
+          await salesManagerService.updateClient(clientId, { property: propAddr, unitNumber: unitNum, status: 'Active' });
+        } catch (syncErr) {
+          console.warn('Unit assigned but could not sync tenant property/unit:', syncErr);
+        }
+      }
       addNotification('Client updated successfully!', 'success');
       setShowEditClientModal(false);
       setEditingClient(null);
@@ -3494,6 +3569,65 @@ const SalesManagerDashboard = () => {
                   ) : (
                     <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>This tenant is not assigned to any apartment unit.</p>
                   )}
+
+                  <div style={{ marginTop: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'end' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label htmlFor="edit-assign-property">Assign to property</label>
+                      <select
+                        id="edit-assign-property"
+                        name="assignPropertyId"
+                        value={editAssignPropertyId}
+                        onChange={(e) => { setEditAssignPropertyId(e.target.value); setEditAssignUnitId(''); }}
+                      >
+                        <option value="">— Select a property —</option>
+                        {(properties || [])
+                          .filter((p) => ['building', 'villa'].includes((p.type ?? p.Type ?? '').toString().toLowerCase()))
+                          .map((p) => {
+                            const pid = p.id ?? p.ID;
+                            const addr = p.address ?? p.Address ?? '';
+                            return <option key={pid} value={pid}>{addr || `Property #${pid}`}</option>;
+                          })}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label htmlFor="edit-assign-unit">Assign to unit</label>
+                      <select
+                        id="edit-assign-unit"
+                        name="assignUnitId"
+                        value={editAssignUnitId}
+                        onChange={(e) => setEditAssignUnitId(e.target.value)}
+                        disabled={!editAssignPropertyId || editAssignLoadingUnits}
+                      >
+                        <option value="">{editAssignLoadingUnits ? 'Loading units…' : '— Select a vacant unit —'}</option>
+                        {editAssignUnits
+                          .filter((u) => (u.status || u.Status || '').toString().toLowerCase() === 'vacant')
+                          .map((u) => {
+                            const uid = u.id ?? u.ID;
+                            const un = u.unitNumber ?? u.UnitNumber ?? u.name ?? u.UnitNumber ?? '';
+                            return <option key={uid} value={uid}>{un || `Unit #${uid}`}</option>;
+                          })}
+                      </select>
+                      <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '0.8rem' }}>
+                        Pick a property + vacant unit, then click “Update Client” to assign.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="form-row" style={{ marginTop: '12px' }}>
+                    <div className="form-group" style={{ width: '100%' }}>
+                      <label htmlFor="edit-unit-number">Unit number (manual)</label>
+                      <input
+                        type="text"
+                        name="unitNumber"
+                        id="edit-unit-number"
+                        placeholder="e.g. A1, Unit 3"
+                        defaultValue={editingClient.UnitNumber || editingClient.unitNumber || ''}
+                      />
+                      <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '0.8rem' }}>
+                        If you don’t have units created yet, you can still set a unit number manually.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="modal-footer">
