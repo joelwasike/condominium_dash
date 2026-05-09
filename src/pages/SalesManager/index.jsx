@@ -3655,7 +3655,13 @@ const SalesManagerDashboard = () => {
                       >
                         <option value="">— Select a property —</option>
                         {(editPropertyOptions || [])
-                          .filter((p) => ['building', 'villa'].includes((p.type ?? p.Type ?? '').toString().toLowerCase()))
+                          .filter((p) => {
+                            const t = (p.type ?? p.Type ?? '').toString().toLowerCase();
+                            const source = (p.source ?? p.Source ?? 'Sales Manager').toString().toLowerCase();
+                            // Only sales-manager properties have units endpoints in this dashboard.
+                            if (source !== 'sales manager') return false;
+                            return ['building', 'villa', 'apartment'].includes(t);
+                          })
                           .map((p) => {
                             const pid = p.id ?? p.ID;
                             const addr = p.address ?? p.Address ?? '';
