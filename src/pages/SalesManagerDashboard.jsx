@@ -339,15 +339,9 @@ const SalesManagerDashboard = () => {
     }
   }, [showCreatePropertyModal]);
 
-  // When Edit Tenant modal opens, find which unit this tenant is assigned to (by name)
+  // When Edit Tenant modal opens, load which unit this tenant is assigned to
   useEffect(() => {
-    if (!showEditClientModal || !editingClient || !owners?.length) {
-      setTenantAssignment(null);
-      setLoadingAssignment(false);
-      return;
-    }
-    const tenantName = (editingClient.Name || editingClient.name || '').trim().toLowerCase();
-    if (!tenantName) {
+    if (!showEditClientModal || !editingClient) {
       setTenantAssignment(null);
       setLoadingAssignment(false);
       return;
@@ -356,32 +350,27 @@ const SalesManagerDashboard = () => {
     setLoadingAssignment(true);
     setTenantAssignment(null);
     (async () => {
-      for (const owner of owners) {
+      try {
+        const clientId = editingClient.id ?? editingClient.ID;
+        if (!clientId) return;
+        const res = await salesManagerService.getClientUnitAssignment(clientId);
         if (cancelled) return;
-        try {
-          const data = await salesManagerService.getOwnerAssets(owner.id ?? owner.ID);
-          const list = Array.isArray(data) ? data : (data.assets || data.properties || []);
-          const buildings = list.filter((p) => ['building', 'villa'].includes((p.type ?? p.Type ?? '').toString().toLowerCase()));
-          for (const asset of buildings) {
-            if (cancelled) return;
-            const propId = asset.id ?? asset.ID;
-            if (!propId) continue;
-            const detail = await salesManagerService.getPropertyBuildingDetail(propId);
-            const units = detail.units || [];
-            const match = units.find((u) => (u.tenant || '').trim().toLowerCase() === tenantName);
-            if (match) {
-              if (!cancelled) setTenantAssignment({ propertyId: propId, unitId: match.id, buildingName: detail.buildingName || asset.name || asset.Address || 'Building', unitNumber: match.unitNumber || match.name || '—' });
-              return;
-            }
-          }
-        } catch (_) {
-          // continue next owner
+        if (res?.assigned) {
+          setTenantAssignment({
+            propertyId: res.propertyId,
+            unitId: res.unitId,
+            buildingName: res.buildingName || 'Building',
+            unitNumber: res.unitNumber || '—',
+          });
+          return;
         }
+        setTenantAssignment(null);
+      } catch (_) {
+        if (!cancelled) setTenantAssignment(null);
       }
-      if (!cancelled) setTenantAssignment(null);
     })().finally(() => { if (!cancelled) setLoadingAssignment(false); });
     return () => { cancelled = true; };
-  }, [showEditClientModal, editingClient, owners]);
+  }, [showEditClientModal, editingClient]);
 
   const setCreatePropertyUnitsCount = useCallback((n) => {
     const num = Math.max(1, parseInt(n, 10) || 1);

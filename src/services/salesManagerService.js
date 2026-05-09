@@ -55,6 +55,12 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Get where a tenant is assigned (building/unit), if any
+  getClientUnitAssignment: async (clientId) => {
+    const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}/unit-assignment`);
+    return await apiRequest(url);
+  },
+
   // Bulk delete tenants (password confirmation required)
   bulkDeleteClients: async ({ clientIds, password }) => {
     const url = buildApiUrl('/api/salesmanager/clients/bulk-delete');
