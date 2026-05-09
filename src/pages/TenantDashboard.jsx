@@ -363,32 +363,40 @@ const TenantDashboard = () => {
       
       console.log('Processed users array:', usersArray);
       
-      // Get current user ID to exclude from list
-      const storedUser = localStorage.getItem('user');
-      let currentUserId = null;
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          currentUserId = user.id || user.ID;
-          console.log('Current user ID:', currentUserId);
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-        }
-      }
+	      // Get current user ID to exclude from list
+	      const storedUser = localStorage.getItem('user');
+	      let currentUserId = null;
+	      let currentRole = '';
+	      if (storedUser) {
+	        try {
+	          const user = JSON.parse(storedUser);
+	          currentUserId = user.id || user.ID;
+	          currentRole = (user.role || user.Role || '').toString().toLowerCase();
+	          console.log('Current user ID:', currentUserId);
+	        } catch (error) {
+	          console.error('Error parsing stored user:', error);
+	        }
+	      }
       
+      // Tenant restriction: tenants can only chat with admin + technician
+      const tenantAllowedRoles = new Set(['admin', 'technician']);
+
       // Map users to chat format and exclude current user
-      const chatUsersList = usersArray
-        .filter(user => {
+	      const chatUsersList = usersArray
+	        .filter(user => {
           const userId = user.id || user.ID;
           // Convert both to strings for comparison to handle type mismatches
           const userIdStr = userId ? String(userId) : null;
           const currentUserIdStr = currentUserId ? String(currentUserId) : null;
           const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
-          if (!shouldInclude && userIdStr) {
-            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
-          }
-          return shouldInclude;
-        })
+	          if (!shouldInclude && userIdStr) {
+	            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+	          }
+	          if (!shouldInclude) return false;
+	          const role = (user.role || user.Role || '').toString().toLowerCase();
+	          if (currentRole === 'tenant' && !tenantAllowedRoles.has(role)) return false;
+	          return true;
+	        })
         .map(user => {
           const userId = user.id || user.ID;
           return {
@@ -420,7 +428,7 @@ const TenantDashboard = () => {
           });
           
           // Process conversations to update unread counts and add missing users
-          conversations.forEach(conv => {
+	          conversations.forEach(conv => {
             const convUserId = String(conv.userId || conv.userID);
             const existingUser = existingUsersMap.get(convUserId);
             
@@ -436,8 +444,11 @@ const TenantDashboard = () => {
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
               
               // Only add if it's not the current user
-              const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-              if (userId && String(userId) !== currentUserIdStr) {
+	              const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+	              const convRole = (convUser.role || convUser.Role || conv.role || '').toString().toLowerCase();
+	              if (currentRole === 'tenant' && !tenantAllowedRoles.has(convRole)) return;
+
+	              if (userId && String(userId) !== currentUserIdStr) {
                 const newUser = {
                   userId: userId,
                   name: convUser.name || convUser.Name || conv.name || 'User',
