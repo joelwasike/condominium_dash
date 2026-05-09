@@ -276,6 +276,10 @@ const SalesManagerDashboard = () => {
   const [editAssignUnitId, setEditAssignUnitId] = useState('');
   const [editAssignUnits, setEditAssignUnits] = useState([]); // [{id, unitNumber, status, tenant}]
   const [editAssignLoadingUnits, setEditAssignLoadingUnits] = useState(false);
+  const [editPropertyOptions, setEditPropertyOptions] = useState([]);
+  const [editPropertyLoading, setEditPropertyLoading] = useState(false);
+  const [editSelectedPropertyId, setEditSelectedPropertyId] = useState('');
+  const [editSelectedPropertyAddress, setEditSelectedPropertyAddress] = useState('');
   const [showUnpaidRentModal, setShowUnpaidRentModal] = useState(false);
   const [editingUnpaidRent, setEditingUnpaidRent] = useState(null);
   
@@ -404,6 +408,46 @@ const SalesManagerDashboard = () => {
     })();
     return () => { cancelled = true; };
   }, [showEditClientModal, editAssignPropertyId]);
+
+  // Load properties fresh from backend when Edit Tenant modal opens (so dropdown is always up-to-date)
+  useEffect(() => {
+    if (!showEditClientModal) return;
+    let cancelled = false;
+    setEditPropertyLoading(true);
+    (async () => {
+      try {
+        const list = await salesManagerService.getProperties();
+        const props = Array.isArray(list) ? list : (list?.items || list?.data || []);
+        if (cancelled) return;
+        setEditPropertyOptions(Array.isArray(props) ? props : []);
+
+        const currentAddr = (editingClient?.Property || editingClient?.property || '').toString().trim().toLowerCase();
+        if (currentAddr) {
+          const match = (Array.isArray(props) ? props : []).find((p) => (p.address ?? p.Address ?? '').toString().trim().toLowerCase() === currentAddr);
+          if (match) {
+            const pid = (match.id ?? match.ID ?? '').toString();
+            setEditSelectedPropertyId(pid);
+            setEditSelectedPropertyAddress((match.address ?? match.Address ?? '').toString());
+            setEditAssignPropertyId(pid);
+          } else {
+            setEditSelectedPropertyId('');
+            setEditSelectedPropertyAddress((editingClient?.Property || editingClient?.property || '').toString());
+          }
+        } else {
+          setEditSelectedPropertyId('');
+          setEditSelectedPropertyAddress('');
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setEditPropertyOptions([]);
+          addNotification('Failed to load properties for editing.', 'error');
+        }
+      } finally {
+        if (!cancelled) setEditPropertyLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [showEditClientModal]);
 
   const setCreatePropertyUnitsCount = useCallback((n) => {
     const num = Math.max(1, parseInt(n, 10) || 1);
@@ -1725,6 +1769,8 @@ const SalesManagerDashboard = () => {
     setEditAssignPropertyId('');
     setEditAssignUnitId('');
     setEditAssignUnits([]);
+    setEditSelectedPropertyId('');
+    setEditSelectedPropertyAddress((client?.Property || client?.property || '').toString());
     setShowEditClientModal(true);
   };
 
@@ -1733,16 +1779,19 @@ const SalesManagerDashboard = () => {
     if (!editingClient) return;
 
     const formData = new FormData(e.target);
-    const nextUnitNumber = (formData.get('unitNumber') || '').toString().trim();
     const updateData = {
       name: formData.get('name')?.trim() || editingClient.Name,
       email: formData.get('email')?.trim() || editingClient.Email,
       phone: formData.get('phone')?.trim() || editingClient.Phone,
       property: formData.get('property')?.trim() || editingClient.Property,
-      unitNumber: nextUnitNumber || null,
       amount: formData.get('amount') ? parseFloat(formData.get('amount')) : editingClient.Amount,
       status: formData.get('status') || editingClient.Status,
     };
+    const unitRaw = formData.get('unitNumber');
+    if (unitRaw != null) {
+      const nextUnitNumber = unitRaw.toString().trim();
+      updateData.unitNumber = nextUnitNumber || null;
+    }
 
     try {
       setLoading(true);
@@ -6424,12 +6473,33 @@ const SalesManagerDashboard = () => {
                   </div>
                   <div className="form-group">
                     <label htmlFor="edit-property">Property</label>
-                    <input 
-                      type="text" 
-                      name="property" 
+                    <select
+                      name="property"
                       id="edit-property"
-                      defaultValue={editingClient.Property || editingClient.property || ''}
-                    />
+                      value={editSelectedPropertyAddress}
+                      onChange={(e) => {
+                        const addr = e.target.value;
+                        setEditSelectedPropertyAddress(addr);
+                        const match = (editPropertyOptions || []).find((p) => (p.address ?? p.Address ?? '').toString() === addr);
+                        const pid = match ? (match.id ?? match.ID ?? '').toString() : '';
+                        setEditSelectedPropertyId(pid);
+                        setEditAssignPropertyId(pid);
+                        setEditAssignUnitId('');
+                      }}
+                      disabled={editPropertyLoading}
+                    >
+                      <option value="">{editPropertyLoading ? 'Loading properties…' : '— Not assigned —'}</option>
+                      {(editPropertyOptions || []).map((p) => {
+                        const addr = (p.address ?? p.Address ?? '').toString();
+                        const pid = p.id ?? p.ID;
+                        if (!addr) return null;
+                        return (
+                          <option key={pid ?? addr} value={addr}>
+                            {addr}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
                 </div>
 
@@ -6483,7 +6553,7 @@ const SalesManagerDashboard = () => {
                         onChange={(e) => { setEditAssignPropertyId(e.target.value); setEditAssignUnitId(''); }}
                       >
                         <option value="">— Select a property —</option>
-                        {(properties || [])
+                        {(editPropertyOptions || [])
                           .filter((p) => ['building', 'villa'].includes((p.type ?? p.Type ?? '').toString().toLowerCase()))
                           .map((p) => {
                             const pid = p.id ?? p.ID;
@@ -6503,7 +6573,11 @@ const SalesManagerDashboard = () => {
                       >
                         <option value="">{editAssignLoadingUnits ? 'Loading units…' : '— Select a vacant unit —'}</option>
                         {editAssignUnits
-                          .filter((u) => (u.status || u.Status || '').toString().toLowerCase() === 'vacant')
+                          .filter((u) => {
+                            const st = (u.status || u.Status || '').toString().toLowerCase();
+                            const tenant = (u.tenant || u.Tenant || '').toString().trim();
+                            return st !== 'occupied' && tenant === '';
+                          })
                           .map((u) => {
                             const uid = u.id ?? u.ID;
                             const un = u.unitNumber ?? u.UnitNumber ?? u.name ?? '';
@@ -6516,21 +6590,9 @@ const SalesManagerDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="form-row" style={{ marginTop: '12px' }}>
-                    <div className="form-group" style={{ width: '100%' }}>
-                      <label htmlFor="edit-unit-number">Unit number (manual)</label>
-                      <input
-                        type="text"
-                        name="unitNumber"
-                        id="edit-unit-number"
-                        placeholder="e.g. A1, Unit 3"
-                        defaultValue={editingClient.UnitNumber || editingClient.unitNumber || ''}
-                      />
-                      <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '0.8rem' }}>
-                        If you don’t have units created yet, you can still set a unit number manually.
-                      </p>
-                    </div>
-                  </div>
+                  <p style={{ margin: '12px 0 0', color: '#6b7280', fontSize: '0.8rem' }}>
+                    Unit number is loaded from the database. Only non-occupied units are shown.
+                  </p>
                 </div>
 
                 <div className="modal-footer">
