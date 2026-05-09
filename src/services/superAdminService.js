@@ -109,6 +109,9 @@ export const superAdminService = {
     const formData = new FormData();
     formData.append('title', adData.title);
     formData.append('text', adData.text);
+    if (adData.link) {
+      formData.append('link', adData.link);
+    }
     if (adData.image instanceof File) {
       formData.append('image', adData.image);
     } else {

@@ -117,7 +117,7 @@ const SuperAdminDashboard = () => {
   const [companiesSearch, setCompaniesSearch] = useState('');
   const [companiesStatusFilter, setCompaniesStatusFilter] = useState('all');
   const [directorsSearch, setDirectorsSearch] = useState('');
-  const [newAd, setNewAd] = useState({ title: '', text: '', image: null });
+  const [newAd, setNewAd] = useState({ title: '', text: '', link: '', image: null });
   const [chatInput, setChatInput] = useState('');
 
   // Company Modal
@@ -1345,19 +1345,19 @@ const SuperAdminDashboard = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleCreateAd = async (e) => {
-    e.preventDefault();
-    if (!newAd.title || !newAd.text) { addNotification('Please provide a title and description.', 'warning'); return; }
-    if (!newAd.image) { addNotification('Please upload an image.', 'warning'); return; }
-    setAdPublishing(true);
-    try {
-      await superAdminService.createAdvertisement(newAd);
-      addNotification('Advertisement published!', 'success');
-      setNewAd({ title: '', text: '', image: null });
-      setAdImagePreview(null);
-      if (adFileRef.current) adFileRef.current.value = '';
-      await loadData();
-    } catch (error) {
+	  const handleCreateAd = async (e) => {
+	    e.preventDefault();
+	    if (!newAd.title || !newAd.text) { addNotification('Please provide a title and description.', 'warning'); return; }
+	    if (!newAd.image) { addNotification('Please upload an image.', 'warning'); return; }
+	    setAdPublishing(true);
+	    try {
+	      await superAdminService.createAdvertisement(newAd);
+	      addNotification('Advertisement published!', 'success');
+	      setNewAd({ title: '', text: '', link: '', image: null });
+	      setAdImagePreview(null);
+	      if (adFileRef.current) adFileRef.current.value = '';
+	      await loadData();
+	    } catch (error) {
       console.error('Error creating ad:', error);
       addNotification(error.message || 'Failed to create advertisement', 'error');
     } finally {
@@ -1375,8 +1375,8 @@ const SuperAdminDashboard = () => {
         </p>
       </div>
 
-      {/* Create Ad card */}
-      <div style={{ ...cardBase, background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)', border: '1px solid #dbeafe' }}>
+	      {/* Create Ad card */}
+	      <div style={{ ...cardBase, background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)', border: '1px solid #dbeafe' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Megaphone size={20} style={{ color: '#fff' }} />
@@ -1388,11 +1388,11 @@ const SuperAdminDashboard = () => {
         </div>
 
         <form onSubmit={handleCreateAd} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            {/* Left: Text fields */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Title</label>
+	          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+	            {/* Left: Text fields */}
+	            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+	              <div>
+	                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Title</label>
                 <input
                   style={inputStyle}
                   type="text"
@@ -1401,16 +1401,26 @@ const SuperAdminDashboard = () => {
                   onChange={(e) => setNewAd(prev => ({ ...prev, title: e.target.value }))}
                 />
               </div>
-              <div>
-                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Description</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: '120px', resize: 'vertical' }}
-                  placeholder="Describe the advertisement..."
-                  value={newAd.text}
-                  onChange={(e) => setNewAd(prev => ({ ...prev, text: e.target.value }))}
-                />
-              </div>
-            </div>
+	              <div>
+	                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Description</label>
+	                <textarea
+	                  style={{ ...inputStyle, minHeight: '120px', resize: 'vertical' }}
+	                  placeholder="Describe the advertisement..."
+	                  value={newAd.text}
+	                  onChange={(e) => setNewAd(prev => ({ ...prev, text: e.target.value }))}
+	                />
+	              </div>
+	              <div>
+	                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Property Link (optional)</label>
+	                <input
+	                  style={inputStyle}
+	                  type="url"
+	                  placeholder="https://example.com/property/123"
+	                  value={newAd.link || ''}
+	                  onChange={(e) => setNewAd(prev => ({ ...prev, link: e.target.value }))}
+	                />
+	              </div>
+	            </div>
 
             {/* Right: Image upload */}
             <div>

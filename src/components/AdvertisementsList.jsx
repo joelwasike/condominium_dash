@@ -120,6 +120,22 @@ const styles = {
     marginTop: 'auto',
     paddingTop: '8px',
   },
+  linkButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '10px 12px',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg,#3b82f6,#2563eb)',
+    color: '#fff',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    border: 'none',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    marginTop: '10px',
+  },
   empty: {
     textAlign: 'center',
     padding: '60px 20px',
@@ -166,6 +182,7 @@ function AdCard({ ad }) {
   const title = ad.Title || ad.title || 'Untitled Advertisement';
   const text = ad.Text || ad.text || ad.description || ad.Description || '';
   const date = ad.CreatedAt || ad.createdAt;
+  const linkUrl = ad.LinkURL || ad.linkUrl || ad.linkURL || ad.link;
   const isLongText = text.length > 150;
 
   return (
@@ -206,6 +223,17 @@ function AdCard({ ad }) {
             <span style={styles.date}>
               Posted {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
             </span>
+          )}
+          {linkUrl && (
+            <a
+              href={linkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.linkButton}
+              onClick={(e) => e.stopPropagation()}
+            >
+              View Property
+            </a>
           )}
         </div>
       </div>
