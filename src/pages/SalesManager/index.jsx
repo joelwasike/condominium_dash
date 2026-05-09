@@ -1280,6 +1280,24 @@ const SalesManagerDashboard = () => {
     }
   };
 
+  const downloadPropertiesExampleFile = async () => {
+    try {
+      const res = await fetch('/properties_import_example.xlsx');
+      if (!res.ok) throw new Error('Failed to download example file');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Property Import example.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      addNotification(e?.message || 'Failed to download example file', 'error');
+    }
+  };
+
   const downloadBlob = (content, filename) => {
     const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
@@ -1293,21 +1311,7 @@ const SalesManagerDashboard = () => {
   };
 
   const downloadPropertiesExampleCsv = () => {
-    const headers = ['Address', 'Type', 'PropertyType', 'BuildingType', 'Status', 'NumberOfUnits', 'Rent', 'Bedrooms', 'Bathrooms', 'Urgency', 'LandlordId', 'UnitNumbers', 'UnitRents'];
-    const exampleRows = [
-      ['123 Main St', 'House', 'For Rent', '', 'Vacant', '1', '150000', '3', '2', 'normal', '', '', ''],
-      ['456 Oak Ave', 'Apartment', 'For Rent', 'High-rise', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']
-    ];
-    const escapeCsv = (v) => {
-      const s = String(v ?? '').trim();
-      if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
-      return s;
-    };
-    const csvContent = [
-      headers.join(','),
-      ...exampleRows.map(r => r.map(escapeCsv).join(','))
-    ].join('\n') + '\n';
-    downloadBlob(csvContent, 'properties_import_example.csv');
+    downloadPropertiesExampleFile();
   };
 
   const downloadTenantsExampleCsv = () => {
