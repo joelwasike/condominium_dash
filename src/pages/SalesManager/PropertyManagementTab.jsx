@@ -79,6 +79,64 @@ const PropertyManagementTab = ({
   const getPropertyOwnerId = (property) => property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
   const getOwnerId = (owner) => owner.id || owner.ID;
 
+  const toggleSelectMany = (ids) => {
+    setSelectedPropertyIds((prev) => {
+      const prevSet = new Set(prev);
+      const allSelected = ids.length > 0 && ids.every((id) => prevSet.has(id));
+      if (allSelected) {
+        ids.forEach((id) => prevSet.delete(id));
+        return Array.from(prevSet);
+      }
+      ids.forEach((id) => prevSet.add(id));
+      return Array.from(prevSet);
+    });
+  };
+
+  const toggleSelectOne = (id) => {
+    if (id == null) return;
+    setSelectedPropertyIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const openBulkDelete = () => {
+    if (selectedPropertyIds.length === 0) {
+      addNotification('Select at least one property to delete.', 'error');
+      return;
+    }
+    setBulkDeletePassword('');
+    setShowBulkDeleteModal(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    const password = (bulkDeletePassword || '').trim();
+    if (!password) {
+      addNotification('Please enter your password to confirm deletion.', 'error');
+      return;
+    }
+    setBulkDeleteSubmitting(true);
+    setPmLoading(true);
+    try {
+      const res = await salesManagerService.bulkDeleteProperties({ propertyIds: selectedPropertyIds, password });
+      const deletedCount = res?.deletedCount ?? (Array.isArray(res?.deleted) ? res.deleted.length : 0);
+      const failedCount = res?.failedCount ?? (Array.isArray(res?.failed) ? res.failed.length : 0);
+      if (deletedCount > 0) addNotification(`Deleted ${deletedCount} propert${deletedCount === 1 ? 'y' : 'ies'}.`, 'success');
+      if (failedCount > 0) addNotification(`${failedCount} deletion(s) failed.`, 'error');
+
+      // Refresh data depending on current view
+      if (pmView === 'owner-detail' && pmOwnerId) {
+        const data = await salesManagerService.getOwnerAssets(pmOwnerId);
+        setOwnerAssets(data);
+      }
+      await loadData();
+      setSelectedPropertyIds([]);
+      setShowBulkDeleteModal(false);
+    } catch (err) {
+      addNotification(err?.message || 'Bulk delete failed', 'error');
+    } finally {
+      setPmLoading(false);
+      setBulkDeleteSubmitting(false);
+    }
+  };
+
   // Filter owners by search (member name)
   const searchLower = (propertyManagementSearch || '').trim().toLowerCase();
   const filteredOwners = searchLower
@@ -225,60 +283,6 @@ const PropertyManagementTab = ({
     const assetIds = assets.map((a) => a.id ?? a.ID).filter((id) => id != null);
     const allSelected = assetIds.length > 0 && assetIds.every((id) => selectedPropertyIds.includes(id));
 
-    const toggleSelectAll = () => {
-      setSelectedPropertyIds((prev) => {
-        if (allSelected) {
-          const prevSet = new Set(prev);
-          assetIds.forEach((id) => prevSet.delete(id));
-          return Array.from(prevSet);
-        }
-        const prevSet = new Set(prev);
-        assetIds.forEach((id) => prevSet.add(id));
-        return Array.from(prevSet);
-      });
-    };
-
-    const toggleSelectOne = (id) => {
-      if (id == null) return;
-      setSelectedPropertyIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-    };
-
-    const openBulkDelete = () => {
-      if (selectedPropertyIds.length === 0) {
-        addNotification('Select at least one property to delete.', 'error');
-        return;
-      }
-      setBulkDeletePassword('');
-      setShowBulkDeleteModal(true);
-    };
-
-    const confirmBulkDelete = async () => {
-      const password = (bulkDeletePassword || '').trim();
-      if (!password) {
-        addNotification('Please enter your password to confirm deletion.', 'error');
-        return;
-      }
-      setBulkDeleteSubmitting(true);
-      setPmLoading(true);
-      try {
-        const res = await salesManagerService.bulkDeleteProperties({ propertyIds: selectedPropertyIds, password });
-        const deletedCount = res?.deletedCount ?? (Array.isArray(res?.deleted) ? res.deleted.length : 0);
-        const failedCount = res?.failedCount ?? (Array.isArray(res?.failed) ? res.failed.length : 0);
-        if (deletedCount > 0) addNotification(`Deleted ${deletedCount} propert${deletedCount === 1 ? 'y' : 'ies'}.`, 'success');
-        if (failedCount > 0) addNotification(`${failedCount} deletion(s) failed.`, 'error');
-        const data = await salesManagerService.getOwnerAssets(pmOwnerId);
-        setOwnerAssets(data);
-        setSelectedPropertyIds([]);
-        setShowBulkDeleteModal(false);
-        await loadData();
-      } catch (err) {
-        addNotification(err?.message || 'Bulk delete failed', 'error');
-      } finally {
-        setPmLoading(false);
-        setBulkDeleteSubmitting(false);
-      }
-    };
-
     const handleAssetClick = (asset) => {
       const type = (asset.type || '').toLowerCase();
       if (type === 'building') handleViewBuilding(asset);
@@ -312,7 +316,7 @@ const PropertyManagementTab = ({
               <thead>
                 <tr>
                   <th style={thStyle} onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" checked={allSelected} onChange={(e) => { e.stopPropagation(); toggleSelectAll(); }} aria-label="Select all properties" />
+                    <input type="checkbox" checked={allSelected} onChange={(e) => { e.stopPropagation(); toggleSelectMany(assetIds); }} aria-label="Select all properties" />
                   </th>
                   <th style={thStyle}>PROPERTY</th>
                   <th style={thStyle}>APPARTMENTS</th>
@@ -398,6 +402,8 @@ const PropertyManagementTab = ({
 
   // Property Management entry - owners list
   const unassignedProperties = properties.filter((p) => !getPropertyOwnerId(p));
+  const unassignedIds = unassignedProperties.map((p) => p.id ?? p.ID).filter((id) => id != null);
+  const allUnassignedSelected = unassignedIds.length > 0 && unassignedIds.every((id) => selectedPropertyIds.includes(id));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
@@ -446,15 +452,48 @@ const PropertyManagementTab = ({
       {unassignedProperties.length > 0 && (
         <div style={{ ...card, marginTop: '20px' }}>
           <div style={{ marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Properties Without Owner</h3>
-            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>{unassignedProperties.length} properties not yet assigned to an owner</p>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Properties Without Owner</h3>
+                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>{unassignedProperties.length} properties not yet assigned to an owner</p>
+              </div>
+              {selectedPropertyIds.length > 0 && (
+                <button type="button" style={{ ...btnOutline, borderColor: '#fecaca', color: '#b91c1c' }} onClick={openBulkDelete}>
+                  Delete selected ({selectedPropertyIds.length})
+                </button>
+              )}
+            </div>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={tableStyle}>
-              <thead><tr><th style={thStyle}>No</th><th style={thStyle}>Address</th><th style={thStyle}>Type</th><th style={thStyle}>Status</th><th style={thStyle}>Rent</th><th style={thStyle}>Bedrooms</th><th style={thStyle}>Bathrooms</th><th style={thStyle}></th></tr></thead>
+              <thead>
+                <tr>
+                  <th style={thStyle} onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={allUnassignedSelected} onChange={(e) => { e.stopPropagation(); toggleSelectMany(unassignedIds); }} aria-label="Select all unassigned properties" />
+                  </th>
+                  <th style={thStyle}>No</th>
+                  <th style={thStyle}>Address</th>
+                  <th style={thStyle}>Type</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Rent</th>
+                  <th style={thStyle}>Bedrooms</th>
+                  <th style={thStyle}>Bathrooms</th>
+                  <th style={thStyle}></th>
+                </tr>
+              </thead>
               <tbody>
-                {unassignedProperties.map((property, index) => (
-                  <tr key={`unassigned-${property.ID || property.id || index}`} style={{ cursor: 'pointer' }} onClick={() => setSelectedPropertyDetail(property)}>
+                {unassignedProperties.map((property, index) => {
+                  const pid = property.id ?? property.ID;
+                  return (
+                  <tr key={`unassigned-${pid || index}`} style={{ cursor: 'pointer' }} onClick={() => setSelectedPropertyDetail(property)}>
+                    <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={pid != null && selectedPropertyIds.includes(pid)}
+                        onChange={(e) => { e.stopPropagation(); toggleSelectOne(pid); }}
+                        aria-label={`Select property ${(property.Address || property.address || '').toString() || pid}`}
+                      />
+                    </td>
                     <td style={tdStyle}>{index + 1}</td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: '#1e293b' }}>{property.Address || property.address || 'N/A'}</td>
                     <td style={tdStyle}>{property.Type || property.type || 'N/A'}</td>
@@ -469,12 +508,40 @@ const PropertyManagementTab = ({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={showBulkDeleteModal}
+        onClose={() => { if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false); }}
+        title="Confirm bulk property deletion"
+        size="sm"
+      >
+        <p style={{ marginTop: 0, color: '#6b7280', fontSize: '0.9rem' }}>
+          You are about to permanently delete <strong>{selectedPropertyIds.length}</strong> propert{selectedPropertyIds.length === 1 ? 'y' : 'ies'}. Enter your password to continue.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <input
+            type="password"
+            value={bulkDeletePassword}
+            onChange={(e) => setBulkDeletePassword(e.target.value)}
+            placeholder="Your password"
+            style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+            disabled={bulkDeleteSubmitting}
+          />
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <button type="button" style={btnOutline} onClick={() => setShowBulkDeleteModal(false)} disabled={bulkDeleteSubmitting}>Cancel</button>
+            <button type="button" style={{ ...btnPrimary, background: '#dc2626' }} onClick={confirmBulkDelete} disabled={bulkDeleteSubmitting || !bulkDeletePassword.trim()}>
+              {bulkDeleteSubmitting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
