@@ -3762,6 +3762,14 @@ const SalesManagerDashboard = () => {
     const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances : [];
     const paymentsList = Array.isArray(tenantDetail?.payments) ? tenantDetail.payments : [];
     const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes : [];
+    const depositPaidAmount = tenantDetail?.deposit?.paidAmount ?? tenantDetail?.depositPaidAmount ?? null;
+    const depositStatus = tenantDetail?.deposit?.status ?? null;
+    const accounting = tenantDetail?.accounting || {};
+    const rentPaidInAdvance = accounting.rentPaidInAdvance ?? null;
+    const unpaidRentAmount = accounting.unpaidRentAmount ?? null;
+    const numberOfMonthsUnpaid = accounting.numberOfMonthsUnpaid ?? null;
+    const penaltyToPay = accounting.penaltyToPay ?? null;
+    const balanceToPayEstimate = accounting.balanceToPayEstimate ?? null;
     const name = c.Name || c.name || 'N/A';
 
     const handleAddPrivateNote = async () => {
@@ -3898,6 +3906,42 @@ const SalesManagerDashboard = () => {
                 <dt>Monthly rent</dt>
                 <dd className="sa-tenant-detail-value-bold">{Number(amount).toLocaleString()} XOF</dd>
               </div>
+              {depositPaidAmount != null && (
+                <div>
+                  <dt>Deposit paid amount{depositStatus ? ` (${depositStatus})` : ''}</dt>
+                  <dd>{Number(depositPaidAmount).toLocaleString()} XOF</dd>
+                </div>
+              )}
+              {rentPaidInAdvance != null && Number(rentPaidInAdvance) > 0 && (
+                <div>
+                  <dt>Rent paid in advance</dt>
+                  <dd>{Number(rentPaidInAdvance).toLocaleString()} XOF</dd>
+                </div>
+              )}
+              {unpaidRentAmount != null && Number(unpaidRentAmount) > 0 && (
+                <div>
+                  <dt>Unpaid rent</dt>
+                  <dd>{Number(unpaidRentAmount).toLocaleString()} XOF</dd>
+                </div>
+              )}
+              {numberOfMonthsUnpaid != null && Number(numberOfMonthsUnpaid) > 0 && (
+                <div>
+                  <dt>Months unpaid</dt>
+                  <dd>{Number(numberOfMonthsUnpaid)}</dd>
+                </div>
+              )}
+              {penaltyToPay != null && Number(penaltyToPay) > 0 && (
+                <div>
+                  <dt>Penalty to pay</dt>
+                  <dd>{Number(penaltyToPay).toLocaleString()} XOF</dd>
+                </div>
+              )}
+              {balanceToPayEstimate != null && Number(balanceToPayEstimate) > 0 && (
+                <div>
+                  <dt>Balance to pay</dt>
+                  <dd className="sa-tenant-detail-value-bold">{Number(balanceToPayEstimate).toLocaleString()} XOF</dd>
+                </div>
+              )}
               <div>
                 <dt>Last payment</dt>
                 <dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</dd>
@@ -4012,7 +4056,7 @@ const SalesManagerDashboard = () => {
             </h3>
             {paymentsList.length > 0 ? (
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {paymentsList.slice(0, 10).map((p, idx) => (
+                {paymentsList.slice(0, 5).map((p, idx) => (
                   <li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
                     <div className="sa-tenant-detail-alert-title">
                       {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}

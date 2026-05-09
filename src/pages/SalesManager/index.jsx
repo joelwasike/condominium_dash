@@ -1196,22 +1196,22 @@ const SalesManagerDashboard = () => {
     }
   };
 
-  const downloadCsvExample = () => {
-    const headers = ['Name', 'Property', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status', 'UnitNumber'];
-    const exampleRows = [
-      ['Jane Doe', '123 Main St', 'jane.doe@example.com', '+2250700000000', '150000', '2026-02-01', 'Active', ''],
-      ['John Smith', '456 Oak Ave', 'john.smith@example.com', '+2250700000001', '180000', '2026-02-15', 'Active', 'F1']
-    ];
-    const escapeCsv = (v) => {
-      const s = String(v ?? '').trim();
-      if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
-      return s;
-    };
-    const csvContent = [
-      headers.join(','),
-      ...exampleRows.map(r => r.map(escapeCsv).join(','))
-    ].join('\n') + '\n';
-    downloadBlob(csvContent, 'tenants_import_example.csv');
+  const downloadTenantExampleFile = async () => {
+    try {
+      const res = await fetch('/tenants_import_example.xlsx');
+      if (!res.ok) throw new Error('Failed to download example file');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'TENANT IMPORT UPDATE.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      addNotification(e?.message || 'Failed to download example file', 'error');
+    }
   };
 
   const downloadBlob = (content, filename) => {
@@ -1245,7 +1245,7 @@ const SalesManagerDashboard = () => {
   };
 
   const downloadTenantsExampleCsv = () => {
-    downloadCsvExample();
+    downloadTenantExampleFile();
   };
 
   const downloadFullImportExampleCsv = () => {
@@ -2983,15 +2983,15 @@ const SalesManagerDashboard = () => {
                         <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
                           Upload an Excel file (.xlsx, .xls) or CSV file (.csv) with tenant details. Required columns: Name, Property, Email, Phone, Amount, MoveInDate. Optional: Status (defaults to 'Active'). Date format: YYYY-MM-DD or DD/MM/YYYY
                         </p>
-                        <button
-                          type="button"
-                          className="action-button secondary"
-                          onClick={downloadCsvExample}
-                          style={{ padding: '8px 14px', fontSize: '0.85rem' }}
-                        >
-                          <Download size={16} />
-                          Download CSV Example
-                        </button>
+	                        <button
+	                          type="button"
+	                          className="action-button secondary"
+	                          onClick={downloadTenantExampleFile}
+	                          style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+	                        >
+	                          <Download size={16} />
+	                          Download Example Excel
+	                        </button>
                       </div>
                       
                       <div className="file-upload-area" style={{

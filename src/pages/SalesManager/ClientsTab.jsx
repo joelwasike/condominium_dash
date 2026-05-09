@@ -99,6 +99,12 @@ const ClientsTab = ({
     const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes : [];
     const depositPaidAmount = tenantDetail?.deposit?.paidAmount ?? tenantDetail?.depositPaidAmount ?? null;
     const depositStatus = tenantDetail?.deposit?.status ?? null;
+    const accounting = tenantDetail?.accounting || {};
+    const rentPaidInAdvance = accounting.rentPaidInAdvance ?? null;
+    const unpaidRentAmount = accounting.unpaidRentAmount ?? null;
+    const numberOfMonthsUnpaid = accounting.numberOfMonthsUnpaid ?? null;
+    const penaltyToPay = accounting.penaltyToPay ?? null;
+    const balanceToPayEstimate = accounting.balanceToPayEstimate ?? null;
     const name = c.Name || c.name || 'N/A';
 
     const handleAddPrivateNote = async () => {
@@ -192,6 +198,36 @@ const ClientsTab = ({
 	                <div style={dlItem}>
 	                  <div style={dtStyle}>Deposit paid amount{depositStatus ? ` (${depositStatus})` : ''}</div>
 	                  <div style={ddStyle}>{Number(depositPaidAmount).toLocaleString()} XOF</div>
+	                </div>
+	              )}
+	              {rentPaidInAdvance != null && Number(rentPaidInAdvance) > 0 && (
+	                <div style={dlItem}>
+	                  <div style={dtStyle}>Rent paid in advance</div>
+	                  <div style={ddStyle}>{Number(rentPaidInAdvance).toLocaleString()} XOF</div>
+	                </div>
+	              )}
+	              {unpaidRentAmount != null && Number(unpaidRentAmount) > 0 && (
+	                <div style={dlItem}>
+	                  <div style={dtStyle}>Unpaid rent</div>
+	                  <div style={ddStyle}>{Number(unpaidRentAmount).toLocaleString()} XOF</div>
+	                </div>
+	              )}
+	              {numberOfMonthsUnpaid != null && Number(numberOfMonthsUnpaid) > 0 && (
+	                <div style={dlItem}>
+	                  <div style={dtStyle}>Months unpaid</div>
+	                  <div style={ddStyle}>{Number(numberOfMonthsUnpaid)}</div>
+	                </div>
+	              )}
+	              {penaltyToPay != null && Number(penaltyToPay) > 0 && (
+	                <div style={dlItem}>
+	                  <div style={dtStyle}>Penalty to pay</div>
+	                  <div style={ddStyle}>{Number(penaltyToPay).toLocaleString()} XOF</div>
+	                </div>
+	              )}
+	              {balanceToPayEstimate != null && Number(balanceToPayEstimate) > 0 && (
+	                <div style={dlItem}>
+	                  <div style={dtStyle}>Balance to pay</div>
+	                  <div style={{ ...ddStyle, fontWeight: 700 }}>{Number(balanceToPayEstimate).toLocaleString()} XOF</div>
 	                </div>
 	              )}
 	              <div style={dlItem}><div style={dtStyle}>Last payment</div><div style={ddStyle}>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</div></div>
