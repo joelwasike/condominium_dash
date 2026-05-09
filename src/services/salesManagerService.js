@@ -55,6 +55,15 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Bulk delete tenants (password confirmation required)
+  bulkDeleteClients: async ({ clientIds, password }) => {
+    const url = buildApiUrl('/api/salesmanager/clients/bulk-delete');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ clientIds, password }),
+    });
+  },
+
   // Get full maintenance request by ID (for tenant detail view)
   getMaintenance: async (maintenanceId) => {
     const url = buildApiUrl(`/api/salesmanager/maintenances/${maintenanceId}`);

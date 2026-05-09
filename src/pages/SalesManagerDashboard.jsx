@@ -136,6 +136,10 @@ const SalesManagerDashboard = () => {
   const [importMode, setImportMode] = useState('manual'); // 'manual' or 'excel'
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState(null); // { type: 'single' | 'bulk', user: {...} | users: [...] }
+  const [selectedClientIds, setSelectedClientIds] = useState([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [bulkDeletePassword, setBulkDeletePassword] = useState('');
+  const [bulkDeleteSubmitting, setBulkDeleteSubmitting] = useState(false);
   const [selectedApprovedClientId, setSelectedApprovedClientId] = useState('');
   const [moveInFormPropertyRent, setMoveInFormPropertyRent] = useState(0);
   const [approvedClientDocuments, setApprovedClientDocuments] = useState([]);
@@ -3728,6 +3732,71 @@ const SalesManagerDashboard = () => {
     });
   }, [clients, clientStatusFilter, clientPropertyFilter, clientSearchText]);
 
+  const filteredClientIds = useMemo(
+    () => filteredClients.map((c) => (c.id ?? c.ID)).filter((id) => id != null),
+    [filteredClients]
+  );
+  const allFilteredSelected = filteredClientIds.length > 0 && filteredClientIds.every((id) => selectedClientIds.includes(id));
+
+  const toggleSelectClient = (clientId) => {
+    if (clientId == null) return;
+    setSelectedClientIds((prev) => (prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]));
+  };
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedClientIds((prev) => {
+      const prevSet = new Set(prev);
+      if (allFilteredSelected) {
+        // Unselect only currently filtered
+        filteredClientIds.forEach((id) => prevSet.delete(id));
+        return Array.from(prevSet);
+      }
+      // Select all filtered (keep any previously selected too)
+      filteredClientIds.forEach((id) => prevSet.add(id));
+      return Array.from(prevSet);
+    });
+  };
+
+  const openBulkDeleteModal = () => {
+    if (selectedClientIds.length === 0) {
+      addNotification('Select at least one tenant to delete.', 'error');
+      return;
+    }
+    setBulkDeletePassword('');
+    setShowBulkDeleteModal(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    const password = (bulkDeletePassword || '').trim();
+    if (!password) {
+      addNotification('Please enter your password to confirm deletion.', 'error');
+      return;
+    }
+    setBulkDeleteSubmitting(true);
+    try {
+      const result = await salesManagerService.bulkDeleteClients({ clientIds: selectedClientIds, password });
+      const deletedCount = result?.deletedCount ?? (Array.isArray(result?.deleted) ? result.deleted.length : 0);
+      const failedCount = result?.failedCount ?? (Array.isArray(result?.failed) ? result.failed.length : 0);
+
+      if (deletedCount > 0) {
+        addNotification(`Deleted ${deletedCount} tenant(s).`, 'success');
+      }
+      if (failedCount > 0) {
+        addNotification(`${failedCount} deletion(s) failed.`, 'error');
+      }
+
+      // Refresh tenant list
+      const clientsData = await salesManagerService.getClients();
+      setClients(Array.isArray(clientsData) ? clientsData : []);
+      setSelectedClientIds([]);
+      setShowBulkDeleteModal(false);
+    } catch (err) {
+      addNotification(err?.message || 'Bulk delete failed', 'error');
+    } finally {
+      setBulkDeleteSubmitting(false);
+    }
+  };
+
   const renderTenantDetail = () => {
     if (tenantDetailLoading) {
       return (
@@ -4179,6 +4248,17 @@ const SalesManagerDashboard = () => {
           <p>{filteredClients.length} results found</p>
         </div>
         <div className="sa-clients-header-right">
+          {selectedClientIds.length > 0 && (
+            <button
+              type="button"
+              className="sa-primary-cta secondary"
+              style={{ marginRight: '8px' }}
+              onClick={openBulkDeleteModal}
+              title="Delete selected tenants"
+            >
+              Delete selected ({selectedClientIds.length})
+            </button>
+          )}
           <button
             className="sa-primary-cta"
             onClick={() => {
@@ -4300,7 +4380,14 @@ const SalesManagerDashboard = () => {
           <table className="sa-table">
           <thead>
             <tr>
-                <th />
+                <th onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={(e) => { e.stopPropagation(); toggleSelectAllFiltered(); }}
+                    aria-label="Select all filtered tenants"
+                  />
+                </th>
                 <th>Client</th>
               <th>Property</th>
               <th>Status</th>
@@ -4314,6 +4401,7 @@ const SalesManagerDashboard = () => {
             {filteredClients.length > 0 ? (
               filteredClients.map(client => {
                 const clientId = client.id ?? client.ID;
+                const isSelected = clientId != null && selectedClientIds.includes(clientId);
                 return (
               <tr
                 key={clientId ?? client.Email ?? client.email}
@@ -4324,7 +4412,12 @@ const SalesManagerDashboard = () => {
                 style={{ cursor: clientId != null ? 'pointer' : 'default' }}
               >
                 <td onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" />
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => { e.stopPropagation(); toggleSelectClient(clientId); }}
+                        aria-label={`Select tenant ${client.Name || client.name || ''}`}
+                      />
                 </td>
                     <td>
                       <div className="sa-cell-main">
@@ -4461,6 +4554,47 @@ const SalesManagerDashboard = () => {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={showBulkDeleteModal}
+        onClose={() => { if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false); }}
+        title="Confirm bulk tenant deletion"
+        size="sm"
+      >
+        <p style={{ marginTop: 0, color: '#6b7280', fontSize: '0.9rem' }}>
+          You are about to permanently delete <strong>{selectedClientIds.length}</strong> tenant(s). Enter your password to continue.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <input
+            type="password"
+            value={bulkDeletePassword}
+            onChange={(e) => setBulkDeletePassword(e.target.value)}
+            placeholder="Your password"
+            className="sa-input"
+            style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+            disabled={bulkDeleteSubmitting}
+          />
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="sa-outline-button"
+              onClick={() => setShowBulkDeleteModal(false)}
+              disabled={bulkDeleteSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="sa-primary-cta"
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteSubmitting || !bulkDeletePassword.trim()}
+              style={{ background: '#dc2626' }}
+            >
+              {bulkDeleteSubmitting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 
