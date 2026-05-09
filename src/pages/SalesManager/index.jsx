@@ -322,6 +322,7 @@ const SalesManagerDashboard = () => {
   const [showPropertyImportModal, setShowPropertyImportModal] = useState(false);
   const [propertyImportFile, setPropertyImportFile] = useState(null);
   const [propertyImportLoading, setPropertyImportLoading] = useState(false);
+  const [propertyImportOwnerId, setPropertyImportOwnerId] = useState('');
 
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -1407,7 +1408,8 @@ const SalesManagerDashboard = () => {
   };
 
   const handleBulkImportProperties = async (file) => {
-    const result = await salesManagerService.importPropertiesFromFile(file);
+    const ownerId = (propertyImportOwnerId || '').trim();
+    const result = await salesManagerService.importPropertiesFromFile(file, { ownerId: ownerId || undefined });
     return {
       success: result.success || result.created?.length || 0,
       failed: result.failed || result.errors?.length || 0,
@@ -2874,18 +2876,39 @@ const SalesManagerDashboard = () => {
 
 	      {/* Property Import Modal (Properties only - from Property Management) */}
 	      {showPropertyImportModal && (
-	        <div className="modal-overlay" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>
+	        <div className="modal-overlay" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); setPropertyImportOwnerId(''); }}>
 	          <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
 	            <div className="modal-header">
 	              <h3>Bulk Import Properties</h3>
-	              <button className="modal-close" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>×</button>
+	              <button className="modal-close" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); setPropertyImportOwnerId(''); }}>×</button>
 	            </div>
 	            <div className="modal-body">
 	              <div style={{ marginBottom: '20px' }}>
 	                <button type="button" className="action-button secondary" onClick={downloadPropertiesExampleCsv} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
 	                  <Download size={16} style={{ marginRight: '6px' }} />
-	                  Download Example CSV
+	                  Download Example Excel
 	                </button>
+	              </div>
+	              <div style={{ marginBottom: '14px' }}>
+	                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
+	                  Owner for imported properties
+	                </label>
+	                <select
+	                  value={propertyImportOwnerId}
+	                  onChange={(e) => setPropertyImportOwnerId(e.target.value)}
+	                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e5e7eb' }}
+	                  disabled={propertyImportLoading}
+	                >
+	                  <option value="">— Select owner (optional) —</option>
+	                  {(owners || []).map((o) => {
+	                    const id = o.id ?? o.ID;
+	                    const name = o.name ?? o.Name ?? `Owner #${id}`;
+	                    return <option key={id} value={String(id)}>{name}</option>;
+	                  })}
+	                </select>
+	               <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '0.82rem' }}>
+	                  If selected, all imported properties will be attached to this owner.
+	                </p>
 	              </div>
 	              <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
 	                Upload an Excel or CSV with: Address, Type, PropertyType, BuildingType, Status, NumberOfUnits, Rent, Bedrooms, Bathrooms, Urgency, LandlordId. For multi-unit: UnitNumbers (F1|F2), UnitRents (100000|120000). If Type is Apartment and BuildingType is provided, use: High-rise, Low-rise, Duplex, Townhouse, Penthouse.
@@ -2912,7 +2935,7 @@ const SalesManagerDashboard = () => {
 	                </div>
 	              </div>
               <div className="modal-footer" style={{ marginTop: '24px' }}>
-                <button type="button" className="action-button secondary" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>
+                <button type="button" className="action-button secondary" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); setPropertyImportOwnerId(''); }}>
                   Cancel
                 </button>
                 <button
@@ -2926,6 +2949,7 @@ const SalesManagerDashboard = () => {
                       addNotification(`Properties: ${success} imported, ${failed} failed`, success > 0 ? 'success' : failed > 0 ? 'error' : 'info');
                       setShowPropertyImportModal(false);
                       setPropertyImportFile(null);
+                      setPropertyImportOwnerId('');
                       await loadData();
                     } catch (err) {
                       addNotification(err?.message || 'Import failed', 'error');

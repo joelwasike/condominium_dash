@@ -392,9 +392,10 @@ export const salesManagerService = {
 
   // Import properties from Excel or CSV
   // Backend endpoint accepts .xlsx, .xls, and .csv files
-  importPropertiesFromFile: async (file) => {
+  importPropertiesFromFile: async (file, { ownerId } = {}) => {
     const formData = new FormData();
     formData.append('file', file);
+    if (ownerId) formData.append('ownerId', ownerId);
 
     const url = buildApiUrl('/api/salesmanager/properties/import-file');
     const token = localStorage.getItem('token');
@@ -417,6 +418,15 @@ export const salesManagerService = {
         }
       }
       return response.json();
+    });
+  },
+
+  // Bulk delete properties (password confirmation required)
+  bulkDeleteProperties: async ({ propertyIds, password }) => {
+    const url = buildApiUrl('/api/salesmanager/properties/bulk-delete');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ propertyIds, password }),
     });
   },
 };

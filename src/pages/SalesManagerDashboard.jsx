@@ -330,6 +330,7 @@ const SalesManagerDashboard = () => {
   const [showPropertyImportModal, setShowPropertyImportModal] = useState(false);
   const [propertyImportFile, setPropertyImportFile] = useState(null);
   const [propertyImportLoading, setPropertyImportLoading] = useState(false);
+  const [propertyImportOwnerId, setPropertyImportOwnerId] = useState('');
 
   // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
@@ -1354,92 +1355,13 @@ const SalesManagerDashboard = () => {
   };
 
   const handleBulkImportProperties = async (file) => {
-    const text = await file.text();
-    let rows = [];
-    if (text.includes('[PROPERTIES]') && text.includes('[TENANTS]')) {
-      rows = parseCsvRows(text, 'properties');
-    } else if (text.includes('[PROPERTIES]')) {
-      rows = parseCsvRows(text, 'properties');
-    } else {
-      const parseCsvLine = (line) => {
-        const out = [];
-        let val = '';
-        let inQ = false;
-        for (let j = 0; j < line.length; j++) {
-          const c = line[j];
-          if (c === '"') {
-            if (inQ && line[j + 1] === '"') { val += '"'; j++; }
-            else inQ = !inQ;
-          } else if (c === ',' && !inQ) {
-            out.push(val.trim().replace(/^"|"$/g, ''));
-            val = '';
-          } else val += c;
-        }
-        out.push(val.trim().replace(/^"|"$/g, ''));
-        return out;
-      };
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const headerLine = lines[0];
-      if (!headerLine) { addNotification('CSV file is empty', 'error'); return { success: 0, failed: 0 }; }
-      const headers = parseCsvLine(headerLine).map(h => h.trim());
-      for (let i = 1; i < lines.length; i++) {
-        const cells = parseCsvLine(lines[i]);
-        const obj = {};
-        headers.forEach((h, idx) => { if (h) obj[h] = (cells[idx] ?? '').trim(); });
-        if (obj.Address) rows.push(obj);
-      }
-    }
-    if (rows.length === 0) { addNotification('No property rows found in file', 'error'); return { success: 0, failed: 0 }; }
-    let success = 0, failed = 0;
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      try {
-        const numUnits = Math.max(1, parseInt(r.NumberOfUnits, 10) || 1);
-        let units = [];
-        if (numUnits > 1 && (r.UnitNumbers || r.UnitRents)) {
-          const unitNums = (r.UnitNumbers || '').split('|').map(s => s.trim()).filter(Boolean);
-          const unitRents = (r.UnitRents || '').split('|').map(s => parseFloat(s) || 0);
-          for (let u = 0; u < numUnits; u++) {
-            units.push({
-              unitNumber: unitNums[u] || `Unit${u + 1}`,
-              rent: unitRents[u] ?? 0,
-              bedrooms: parseInt(r.Bedrooms, 10) || 0,
-              bathrooms: parseFloat(r.Bathrooms) || 1,
-              status: 'Vacant',
-              tenant: null
-            });
-          }
-        } else {
-          const rent = parseFloat(r.Rent) || 0;
-          units = [{ unitNumber: '1', rent, bedrooms: parseInt(r.Bedrooms, 10) || 0, bathrooms: parseFloat(r.Bathrooms) || 1, status: r.Status === 'Occupied' ? 'Occupied' : 'Vacant', tenant: null }];
-        }
-        const payload = {
-          address: (r.Address || '').trim(),
-          type: (r.Type || 'House').trim(),
-          propertyType: (r.PropertyType || 'For Rent').trim(),
-          buildingType: (r.BuildingType || '').trim() || null,
-          status: (r.Status || 'Vacant').trim() === 'Occupied' ? 'Occupied' : 'Vacant',
-          numberOfUnits: numUnits,
-          rent: numUnits === 1 ? (parseFloat(r.Rent) || 0) : 0,
-          bedrooms: parseInt(r.Bedrooms, 10) || undefined,
-          bathrooms: parseFloat(r.Bathrooms) || undefined,
-          urgency: (r.Urgency || 'normal').trim() || 'normal',
-          landlord_id: r.LandlordId ? parseInt(r.LandlordId, 10) : null,
-          units
-        };
-        if (!payload.address || !payload.type || !payload.propertyType) {
-          failed++;
-          continue;
-        }
-        if (payload.type === 'Apartment' && !payload.buildingType) payload.buildingType = 'T2';
-        await salesManagerService.createProperty(payload);
-        success++;
-      } catch (err) {
-        console.error('Property import row error:', err);
-        failed++;
-      }
-    }
-    return { success, failed };
+    const ownerId = (propertyImportOwnerId || '').trim();
+    const result = await salesManagerService.importPropertiesFromFile(file, { ownerId: ownerId || undefined });
+    return {
+      success: result.success || result.created?.length || 0,
+      failed: result.failed || result.errors?.length || 0,
+      result,
+    };
   };
 
   const handleBulkImportTenants = async (file) => {
@@ -5761,21 +5683,42 @@ const SalesManagerDashboard = () => {
 
       {/* Property Import Modal (Properties only - from Property Management) */}
       {showPropertyImportModal && (
-        <div className="modal-overlay" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>
+        <div className="modal-overlay" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); setPropertyImportOwnerId(''); }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="modal-header">
-              <h3>Import Properties from CSV</h3>
-              <button className="modal-close" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>×</button>
+              <h3>Bulk Import Properties</h3>
+              <button className="modal-close" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); setPropertyImportOwnerId(''); }}>×</button>
             </div>
             <div className="modal-body">
               <div style={{ marginBottom: '20px' }}>
                 <button type="button" className="action-button secondary" onClick={downloadPropertiesExampleCsv} style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
                   <Download size={16} style={{ marginRight: '6px' }} />
-                  Download Example CSV
+                  Download Example Excel
                 </button>
               </div>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
+                  Owner for imported properties
+                </label>
+                <select
+                  value={propertyImportOwnerId}
+                  onChange={(e) => setPropertyImportOwnerId(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e5e7eb' }}
+                  disabled={propertyImportLoading}
+                >
+                  <option value="">— Select owner (optional) —</option>
+                  {(owners || []).map((o) => {
+                    const id = o.id ?? o.ID;
+                    const name = o.name ?? o.Name ?? `Owner #${id}`;
+                    return <option key={id} value={String(id)}>{name}</option>;
+                  })}
+                </select>
+                <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '0.82rem' }}>
+                  If selected, all imported properties will be attached to this owner.
+                </p>
+              </div>
               <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
-                Upload a CSV with: Address, Type, PropertyType, BuildingType, Status, NumberOfUnits, Rent, Bedrooms, Bathrooms, Urgency, LandlordId. For multi-unit: UnitNumbers (F1|F2), UnitRents (100000|120000).
+                Upload an Excel or CSV file using the provided template. Missing fields can be edited later.
               </p>
               <div
                 className="file-upload-area"
@@ -5785,7 +5728,7 @@ const SalesManagerDashboard = () => {
                 <input
                   type="file"
                   id="property-import-file-input"
-                  accept=".csv,text/csv,application/csv"
+                  accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) setPropertyImportFile(f); e.target.value = ''; }}
                   style={{ display: 'none' }}
                   disabled={propertyImportLoading}
@@ -5793,13 +5736,13 @@ const SalesManagerDashboard = () => {
                 <FileSpreadsheet size={48} color={propertyImportLoading ? '#9ca3af' : '#2563eb'} style={{ margin: '0 auto 12px' }} />
                 <div>
                   <strong style={{ color: propertyImportLoading ? '#9ca3af' : '#1f2937' }}>
-                    {propertyImportLoading ? 'Importing...' : (propertyImportFile ? propertyImportFile.name : 'Click to select CSV file')}
+                    {propertyImportLoading ? 'Importing...' : (propertyImportFile ? propertyImportFile.name : 'Click to select file')}
                   </strong>
-                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>CSV only</p>
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>CSV or Excel (.xlsx, .xls)</p>
                 </div>
               </div>
               <div className="modal-footer" style={{ marginTop: '24px' }}>
-                <button type="button" className="action-button secondary" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); }}>
+                <button type="button" className="action-button secondary" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); setPropertyImportOwnerId(''); }}>
                   Cancel
                 </button>
                 <button
@@ -5813,6 +5756,7 @@ const SalesManagerDashboard = () => {
                       addNotification(`Properties: ${success} imported, ${failed} failed`, success > 0 ? 'success' : failed > 0 ? 'error' : 'info');
                       setShowPropertyImportModal(false);
                       setPropertyImportFile(null);
+                      setPropertyImportOwnerId('');
                       await loadData();
                     } catch (err) {
                       addNotification(err?.message || 'Import failed', 'error');
