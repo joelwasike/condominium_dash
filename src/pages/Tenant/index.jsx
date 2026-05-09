@@ -34,12 +34,12 @@ import {
   Zap
 } from 'lucide-react';
 import RoleLayout from '../../components/RoleLayout';
+import AdvertisementsList from '../../components/AdvertisementsList';
 import SettingsPage from '../SettingsPage';
 import { t, getLanguage } from '../../utils/i18n';
 import { tenantService } from '../../services/tenantService';
 import { saveRentReceiptPdf } from '../../utils/rentReceiptPdf';
 import { messagingService } from '../../services/messagingService';
-import { API_CONFIG } from '../../config/api';
 import { isDemoMode, getTenantDemoData } from '../../utils/demoData';
 import { cloudinaryService } from '../../services/cloudinaryService';
 import '../../components/RoleLayout.css';
@@ -369,35 +369,43 @@ const TenantDashboard = () => {
       
       console.log('Processed users array:', usersArray);
       
-      // Get current user ID to exclude from list
-      const storedUser = localStorage.getItem('user');
-      let currentUserId = null;
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          currentUserId = user.id || user.ID;
-          console.log('Current user ID:', currentUserId);
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-        }
-      }
-      
-      // Map users to chat format and exclude current user
-      const chatUsersList = usersArray
-        .filter(user => {
-          const userId = user.id || user.ID;
+	      // Get current user ID to exclude from list
+	      const storedUser = localStorage.getItem('user');
+	      let currentUserId = null;
+	      let currentRole = '';
+	      if (storedUser) {
+	        try {
+	          const user = JSON.parse(storedUser);
+	          currentUserId = user.id || user.ID;
+	          currentRole = (user.role || user.Role || '').toString().toLowerCase();
+	          console.log('Current user ID:', currentUserId);
+	        } catch (error) {
+	          console.error('Error parsing stored user:', error);
+	        }
+	      }
+
+	      // Tenant restriction: tenants can only chat with admin + technician
+	      const tenantAllowedRoles = new Set(['admin', 'technician']);
+
+	      // Map users to chat format and exclude current user
+	      const chatUsersList = usersArray
+	        .filter(user => {
+	          const userId = user.id || user.ID;
           // Convert both to strings for comparison to handle type mismatches
           const userIdStr = userId ? String(userId) : null;
           const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
-          if (!shouldInclude && userIdStr) {
-            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
-          }
-          return shouldInclude;
-        })
-        .map(user => {
-          const userId = user.id || user.ID;
-          return {
+	          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+	          if (!shouldInclude && userIdStr) {
+	            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+	          }
+	          if (!shouldInclude) return false;
+	          const role = (user.role || user.Role || '').toString().toLowerCase();
+	          if (currentRole === 'tenant' && !tenantAllowedRoles.has(role)) return false;
+	          return true;
+	        })
+	        .map(user => {
+	          const userId = user.id || user.ID;
+	          return {
             userId: userId,
             name: user.name || user.Name || 'User',
             email: user.email || user.Email || '',
@@ -426,7 +434,7 @@ const TenantDashboard = () => {
           });
           
           // Process conversations to update unread counts and add missing users
-          conversations.forEach(conv => {
+	          conversations.forEach(conv => {
             const convUserId = String(conv.userId || conv.userID);
             const existingUser = existingUsersMap.get(convUserId);
             
@@ -441,12 +449,14 @@ const TenantDashboard = () => {
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
               
-              // Only add if it's not the current user
-              const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-              if (userId && String(userId) !== currentUserIdStr) {
-                const newUser = {
-                  userId: userId,
-                  name: convUser.name || convUser.Name || conv.name || 'User',
+	              // Only add if it's not the current user
+	              const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+	              const convRole = (convUser.role || convUser.Role || conv.role || '').toString().toLowerCase();
+	              if (currentRole === 'tenant' && !tenantAllowedRoles.has(convRole)) return;
+	              if (userId && String(userId) !== currentUserIdStr) {
+	                const newUser = {
+	                  userId: userId,
+	                  name: convUser.name || convUser.Name || conv.name || 'User',
                   email: convUser.email || convUser.Email || conv.email || '',
                   role: convUser.role || convUser.Role || conv.role || '',
                   company: convUser.company || convUser.Company || conv.company || '',
@@ -1752,58 +1762,7 @@ const TenantDashboard = () => {
   );
 
   const renderAdvertisements = () => {
-    return (
-      <div className="sa-ads-page">
-        <div className="sa-ads-header">
-          <div>
-            <h2>Advertisements</h2>
-            <p>View active advertisements posted by Super Admin</p>
-          </div>
-        </div>
-
-        <div className="sa-ads-list">
-          {advertisements.length > 0 ? (
-            advertisements.map((ad, index) => {
-              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-              const fullImageUrl = imageUrl 
-                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                : null;
-
-              return (
-                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
-                  <div className="sa-ad-status-column">
-                    <span className="sa-ad-status published">Active</span>
-                  </div>
-                  <div className="sa-ad-main">
-                    {fullImageUrl && (
-                      <img 
-                        src={fullImageUrl} 
-                        alt={ad.Title || ad.title || 'Advertisement'} 
-                        className="sa-ad-image"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
-                    <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
-                    {ad.CreatedAt && (
-                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
-                        Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="sa-table-empty">
-              No active advertisements available at this time.
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return <AdvertisementsList advertisements={advertisements} />;
   };
 
   const copyToClipboard = async (text) => {
