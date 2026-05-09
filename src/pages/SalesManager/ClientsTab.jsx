@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Filter, FileSpreadsheet, ArrowLeft, Users, Mail, Phone, MapPin, DollarSign, Building, AlertTriangle, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle } from 'lucide-react';
 import { salesManagerService } from '../../services/salesManagerService';
+import Modal from '../../components/Modal';
 
 const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse' };
@@ -35,6 +36,7 @@ const subText = { margin: 0, fontSize: '0.85rem', color: '#94a3b8' };
 const ClientsTab = ({
   loading,
   clients,
+  setClients,
   filteredClients,
   waitingListClients,
   unpaidRents,
@@ -62,6 +64,75 @@ const ClientsTab = ({
   const [addingNote, setAddingNote] = useState(false);
   const [maintenanceDetail, setMaintenanceDetail] = useState(null);
   const [maintenanceDetailLoading, setMaintenanceDetailLoading] = useState(false);
+  const [selectedClientIds, setSelectedClientIds] = useState([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [bulkDeletePassword, setBulkDeletePassword] = useState('');
+  const [bulkDeleteSubmitting, setBulkDeleteSubmitting] = useState(false);
+
+  const filteredClientIds = (Array.isArray(filteredClients) ? filteredClients : [])
+    .map((c) => (c?.id ?? c?.ID))
+    .filter((id) => id != null);
+  const allFilteredSelected = filteredClientIds.length > 0 && filteredClientIds.every((id) => selectedClientIds.includes(id));
+
+  const toggleSelectClient = (clientId) => {
+    if (clientId == null) return;
+    setSelectedClientIds((prev) => (prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]));
+  };
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedClientIds((prev) => {
+      const prevSet = new Set(prev);
+      if (allFilteredSelected) {
+        filteredClientIds.forEach((id) => prevSet.delete(id));
+        return Array.from(prevSet);
+      }
+      filteredClientIds.forEach((id) => prevSet.add(id));
+      return Array.from(prevSet);
+    });
+  };
+
+  const openBulkDeleteModal = () => {
+    if (selectedClientIds.length === 0) {
+      addNotification('Select at least one tenant to delete.', 'error');
+      return;
+    }
+    setBulkDeletePassword('');
+    setShowBulkDeleteModal(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    const password = (bulkDeletePassword || '').trim();
+    if (!password) {
+      addNotification('Please enter your password to confirm deletion.', 'error');
+      return;
+    }
+    setBulkDeleteSubmitting(true);
+    try {
+      const result = await salesManagerService.bulkDeleteClients({ clientIds: selectedClientIds, password });
+      const deletedCount = result?.deletedCount ?? (Array.isArray(result?.deleted) ? result.deleted.length : 0);
+      const failedCount = result?.failedCount ?? (Array.isArray(result?.failed) ? result.failed.length : 0);
+
+      if (deletedCount > 0) addNotification(`Deleted ${deletedCount} tenant(s).`, 'success');
+      if (failedCount > 0) addNotification(`${failedCount} deletion(s) failed.`, 'error');
+
+      // Refresh list (best effort)
+      try {
+        const clientsData = await salesManagerService.getClients();
+        if (typeof setClients === 'function') {
+          setClients(Array.isArray(clientsData) ? clientsData : []);
+        }
+      } catch (_) {
+        // ignore
+      }
+
+      setSelectedClientIds([]);
+      setShowBulkDeleteModal(false);
+    } catch (err) {
+      addNotification(err?.message || 'Bulk delete failed', 'error');
+    } finally {
+      setBulkDeleteSubmitting(false);
+    }
+  };
 
   // Tenant Detail View
   if (selectedTenantId) {
@@ -454,6 +525,16 @@ const ClientsTab = ({
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>{filteredClients.length} results found</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {selectedClientIds.length > 0 && (
+            <button
+              type="button"
+              style={{ ...btnOutline, borderColor: '#fecaca', color: '#b91c1c' }}
+              onClick={openBulkDeleteModal}
+              title="Delete selected tenants"
+            >
+              Delete selected ({selectedClientIds.length})
+            </button>
+          )}
           <button
             style={btnPrimary}
             onClick={() => {
@@ -570,10 +651,17 @@ const ClientsTab = ({
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Manage all tenant profiles and track their status.</p>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={tableStyle}>
+            <table style={tableStyle}>
           <thead>
             <tr>
-                <th style={thStyle} />
+                <th style={thStyle} onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={(e) => { e.stopPropagation(); toggleSelectAllFiltered(); }}
+                    aria-label="Select all filtered tenants"
+                  />
+                </th>
                 <th style={thStyle}>Client</th>
               <th style={thStyle}>Property</th>
               <th style={thStyle}>Status</th>
@@ -587,6 +675,7 @@ const ClientsTab = ({
             {filteredClients.length > 0 ? (
               filteredClients.map(client => {
                 const clientId = client.id ?? client.ID;
+                const isSelected = clientId != null && selectedClientIds.includes(clientId);
                 return (
               <tr
                 key={clientId ?? client.Email ?? client.email}
@@ -597,7 +686,12 @@ const ClientsTab = ({
                 style={{ cursor: clientId != null ? 'pointer' : 'default' }}
               >
                 <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" />
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => { e.stopPropagation(); toggleSelectClient(clientId); }}
+                        aria-label={`Select tenant ${client.Name || client.name || ''}`}
+                      />
                 </td>
                     <td style={tdStyle}>
                       <div>
@@ -722,6 +816,45 @@ const ClientsTab = ({
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={showBulkDeleteModal}
+        onClose={() => { if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false); }}
+        title="Confirm bulk tenant deletion"
+        size="sm"
+      >
+        <p style={{ marginTop: 0, color: '#6b7280', fontSize: '0.9rem' }}>
+          You are about to permanently delete <strong>{selectedClientIds.length}</strong> tenant(s). Enter your password to continue.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <input
+            type="password"
+            value={bulkDeletePassword}
+            onChange={(e) => setBulkDeletePassword(e.target.value)}
+            placeholder="Your password"
+            style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+            disabled={bulkDeleteSubmitting}
+          />
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              style={btnOutline}
+              onClick={() => setShowBulkDeleteModal(false)}
+              disabled={bulkDeleteSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              style={{ ...btnPrimary, background: '#dc2626' }}
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteSubmitting || !bulkDeletePassword.trim()}
+            >
+              {bulkDeleteSubmitting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
