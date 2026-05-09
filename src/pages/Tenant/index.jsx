@@ -386,6 +386,12 @@ const TenantDashboard = () => {
 
 	      // Tenant restriction: tenants can only chat with admin + technician
 	      const tenantAllowedRoles = new Set(['admin', 'technician']);
+	      const tenantDisplayName = (company, role) => {
+	        const r = (role || '').toString().toLowerCase();
+	        const label = r === 'admin' ? 'Secretariet' : r === 'technician' ? 'Technician' : 'Agent';
+	        const c = (company || '').toString().trim();
+	        return c ? `${c} ${label}` : label;
+	      };
 
 	      // Map users to chat format and exclude current user
 	      const chatUsersList = usersArray
@@ -405,16 +411,18 @@ const TenantDashboard = () => {
 	        })
 	        .map(user => {
 	          const userId = user.id || user.ID;
+	          const role = (user.role || user.Role || '').toString();
+	          const company = user.company || user.Company || '';
 	          return {
-            userId: userId,
-            name: user.name || user.Name || 'User',
-            email: user.email || user.Email || '',
-            role: user.role || user.Role || '',
-            company: user.company || user.Company || '',
-            status: user.status || user.Status || 'Active',
-            unreadCount: 0 // Will be updated from conversations if needed
-          };
-        })
+	            userId: userId,
+	            name: currentRole === 'tenant' ? tenantDisplayName(company, role) : (user.name || user.Name || 'User'),
+	            email: currentRole === 'tenant' ? '' : (user.email || user.Email || ''),
+	            role,
+	            company,
+	            status: user.status || user.Status || 'Active',
+	            unreadCount: 0 // Will be updated from conversations if needed
+	          };
+	        })
         .sort((a, b) => {
           const nameA = (a.name || '').toLowerCase();
           const nameB = (b.name || '').toLowerCase();
@@ -447,22 +455,23 @@ const TenantDashboard = () => {
               // User has a conversation but isn't in the users list - add them
               // This handles cases where users from other companies or roles have messaged
               const convUser = conv.user || {};
-              const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
+	              const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
               
 	              // Only add if it's not the current user
 	              const currentUserIdStr = currentUserId ? String(currentUserId) : null;
 	              const convRole = (convUser.role || convUser.Role || conv.role || '').toString().toLowerCase();
 	              if (currentRole === 'tenant' && !tenantAllowedRoles.has(convRole)) return;
 	              if (userId && String(userId) !== currentUserIdStr) {
+	                const company = convUser.company || convUser.Company || conv.company || '';
 	                const newUser = {
 	                  userId: userId,
-	                  name: convUser.name || convUser.Name || conv.name || 'User',
-                  email: convUser.email || convUser.Email || conv.email || '',
-                  role: convUser.role || convUser.Role || conv.role || '',
-                  company: convUser.company || convUser.Company || conv.company || '',
-                  status: convUser.status || convUser.Status || conv.status || 'Active',
-                  unreadCount: conv.unreadCount || 0
-                };
+	                  name: currentRole === 'tenant' ? tenantDisplayName(company, convRole) : (convUser.name || convUser.Name || conv.name || 'User'),
+	                  email: currentRole === 'tenant' ? '' : (convUser.email || convUser.Email || conv.email || ''),
+	                  role: convUser.role || convUser.Role || conv.role || '',
+	                  company: company,
+	                  status: convUser.status || convUser.Status || conv.status || 'Active',
+	                  unreadCount: conv.unreadCount || 0
+	                };
                 chatUsersList.push(newUser);
                 existingUsersMap.set(String(userId), newUser);
                 console.log('Added user from conversation:', newUser);
