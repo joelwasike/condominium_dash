@@ -429,4 +429,13 @@ export const salesManagerService = {
       body: JSON.stringify({ propertyIds, password }),
     });
   },
+
+  // Link Fast - associate tenant to property/unit
+  linkFastAssociate: async ({ clientId, propertyId, unitId, forceMove = true }) => {
+    const url = buildApiUrl('/api/salesmanager/link-fast/associate');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ clientId, propertyId, unitId: unitId ?? null, forceMove }),
+    });
+  },
 };

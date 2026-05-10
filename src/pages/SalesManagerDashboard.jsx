@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, Calendar, ClipboardList, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download, ArrowLeft, Mail, Phone, MapPin, DollarSign, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, Calendar, ClipboardList, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download, ArrowLeft, Mail, Phone, MapPin, DollarSign, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle, Link2 } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -23,6 +23,7 @@ import { API_CONFIG } from '../config/api';
 import { isDemoMode, getSalesManagerDemoData, getCommercialDemoData } from '../utils/demoData';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
+import LinkFastTab from './SalesManager/LinkFastTab';
 import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 import './SalesManagerDashboard.css';
@@ -966,6 +967,7 @@ const SalesManagerDashboard = () => {
       { id: 'sales-tracking', label: 'Sales Tracking', icon: FileText },
       { id: 'clients', label: 'Tenant Management', icon: Users },
       { id: 'property-management', label: 'Property Management', icon: Building },
+      { id: 'link-fast', label: 'Link Fast', icon: Link2 },
       { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
       { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
       { id: 'chat', label: 'Messages', icon: MessageCircle },
@@ -5201,6 +5203,12 @@ const SalesManagerDashboard = () => {
         return renderClients();
       case 'property-management':
         return renderPropertyManagement();
+      case 'link-fast':
+        return (
+          <div className="sa-section-card" style={{ padding: '18px' }}>
+            <LinkFastTab clients={clients} properties={properties} addNotification={addNotification} loadData={loadData} />
+          </div>
+        );
       case 'alerts':
         return renderAlerts();
       case 'advertisements':
