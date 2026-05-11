@@ -1,223 +1,213 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Link2 } from 'lucide-react';
+import { ChevronRight, Link2, Plus, Save, Trash2 } from 'lucide-react';
 import { salesManagerService } from '../../services/salesManagerService';
 
-const card = { background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
-const title = { margin: 0, fontSize: '1rem', color: '#0f172a' };
+const card = { background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 12px rgba(15, 23, 42, 0.06)', border: '1px solid #f1f5f9' };
+const title = { margin: 0, fontSize: '1.05rem', color: '#0f172a' };
 const sub = { margin: '6px 0 0', color: '#64748b', fontSize: '0.85rem' };
-const input = { width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.9rem' };
-const list = { marginTop: '12px', maxHeight: '520px', overflow: 'auto', border: '1px solid #f1f5f9', borderRadius: '12px' };
-const row = (active) => ({
-  padding: '10px 12px',
-  borderBottom: '1px solid #f1f5f9',
-  cursor: 'pointer',
-  background: active ? '#eff6ff' : '#fff',
-});
-const btn = (disabled) => ({
+const select = { width: '100%', padding: '12px 14px', borderRadius: '12px', border: '2px solid #0f172a', fontSize: '0.95rem', background: '#fff' };
+const rowWrap = { display: 'grid', gridTemplateColumns: '1fr 40px 1fr 120px', gap: '14px', alignItems: 'center' };
+const linkBtn = (disabled) => ({
   display: 'inline-flex',
   alignItems: 'center',
   gap: '8px',
-  padding: '10px 14px',
-  borderRadius: '12px',
+  justifyContent: 'center',
+  padding: '12px 14px',
+  borderRadius: '999px',
   border: 'none',
-  background: disabled ? '#94a3b8' : 'linear-gradient(135deg,#3b82f6,#2563eb)',
+  background: disabled ? '#94a3b8' : '#0b1a7a',
   color: '#fff',
   fontWeight: 700,
   cursor: disabled ? 'not-allowed' : 'pointer',
 });
+const saveBtn = (disabled) => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '10px',
+  padding: '14px 22px',
+  borderRadius: '999px',
+  border: 'none',
+  background: disabled ? '#94a3b8' : '#0b1a7a',
+  color: '#fff',
+  fontWeight: 800,
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  minWidth: '160px',
+});
+const mini = { fontSize: '0.78rem', color: '#64748b', marginTop: '6px' };
 
 const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
-  const [tenantSearch, setTenantSearch] = useState('');
-  const [propertySearch, setPropertySearch] = useState('');
-  const [showUnlinkedOnly, setShowUnlinkedOnly] = useState(true);
+  const tenants = useMemo(() => (Array.isArray(clients) ? clients : []), [clients]);
+  const props = useMemo(() => (Array.isArray(properties) ? properties : []), [properties]);
 
-  const [selectedClientId, setSelectedClientId] = useState(null);
-  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
-  const [units, setUnits] = useState([]);
-  const [unitsLoading, setUnitsLoading] = useState(false);
-  const [selectedUnitId, setSelectedUnitId] = useState(null);
-  const [linking, setLinking] = useState(false);
+  const [rows, setRows] = useState(() => ([
+    { id: `${Date.now()}-0`, clientId: '', propertyId: '', unitId: null, unitLabel: '', status: 'idle', error: '' },
+  ]));
+  const [saving, setSaving] = useState(false);
 
-  const clientsFiltered = useMemo(() => {
-    const q = tenantSearch.trim().toLowerCase();
-    const base = Array.isArray(clients) ? clients : [];
-    const filtered = base.filter((c) => {
-      const name = (c.Name || c.name || '').toString().toLowerCase();
-      const email = (c.Email || c.email || '').toString().toLowerCase();
-      const phone = (c.Phone || c.phone || '').toString().toLowerCase();
-      const property = (c.Property || c.property || '').toString().toLowerCase();
-      const unit = (c.UnitNumber || c.unitNumber || '').toString().toLowerCase();
-      const linked = Boolean(property) && Boolean(unit);
-      if (showUnlinkedOnly && linked) return false;
-      if (!q) return true;
-      return name.includes(q) || email.includes(q) || phone.includes(q) || property.includes(q) || unit.includes(q);
-    });
-    return filtered;
-  }, [clients, tenantSearch, showUnlinkedOnly]);
+  const addRow = () => {
+    setRows((prev) => [...prev, { id: `${Date.now()}-${prev.length}`, clientId: '', propertyId: '', unitId: null, unitLabel: '', status: 'idle', error: '' }]);
+  };
 
-  const propertiesFiltered = useMemo(() => {
-    const q = propertySearch.trim().toLowerCase();
-    const base = Array.isArray(properties) ? properties : [];
-    return base.filter((p) => {
-      const addr = (p.address ?? p.Address ?? '').toString().toLowerCase();
-      const type = (p.type ?? p.Type ?? '').toString().toLowerCase();
-      if (!q) return true;
-      return addr.includes(q) || type.includes(q);
-    });
-  }, [properties, propertySearch]);
+  const removeRow = (id) => setRows((prev) => prev.filter((r) => r.id !== id));
 
-  useEffect(() => {
-    if (!selectedPropertyId) {
-      setUnits([]);
-      setSelectedUnitId(null);
+  const updateRow = (id, patch) => setRows((prev) => prev.map((r) => r.id === id ? { ...r, ...patch } : r));
+
+  const loadFirstVacantUnit = async (rowId, propertyId) => {
+    if (!propertyId) {
+      updateRow(rowId, { unitId: null, unitLabel: '' });
       return;
     }
-    let cancelled = false;
-    setUnitsLoading(true);
-    setUnits([]);
-    setSelectedUnitId(null);
-    (async () => {
-      try {
-        const detail = await salesManagerService.getPropertyBuildingDetail(selectedPropertyId);
-        const raw = Array.isArray(detail?.units) ? detail.units : [];
-        const available = raw.filter((u) => {
-          const st = (u.status || u.Status || '').toString().toLowerCase();
-          const tenant = (u.tenant || u.Tenant || '').toString().trim();
-          return st !== 'occupied' && tenant === '';
-        });
-        if (!cancelled) setUnits(available);
-      } catch (e) {
-        if (!cancelled) {
-          setUnits([]);
-          addNotification('Failed to load units for that property.', 'error');
-        }
-      } finally {
-        if (!cancelled) setUnitsLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [selectedPropertyId, addNotification]);
-
-  const doLink = async () => {
-    if (!selectedClientId || !selectedPropertyId) return;
-    // Units are optional only when property has no units; in our system most rentable units exist, so enforce selection when we loaded units.
-    if (unitsLoading) return;
-    if (units.length > 0 && !selectedUnitId) {
-      addNotification('Select a vacant unit to link this tenant.', 'error');
-      return;
-    }
-    setLinking(true);
+    updateRow(rowId, { status: 'loading', error: '' });
     try {
-      await salesManagerService.linkFastAssociate({
-        clientId: selectedClientId,
-        propertyId: selectedPropertyId,
-        unitId: selectedUnitId || null,
-        forceMove: true,
+      const detail = await salesManagerService.getPropertyBuildingDetail(propertyId);
+      const raw = Array.isArray(detail?.units) ? detail.units : [];
+      const available = raw.filter((u) => {
+        const st = (u.status || u.Status || '').toString().toLowerCase();
+        const tenantVal = (u.tenant || u.Tenant || '').toString().trim();
+        return st !== 'occupied' && tenantVal === '';
       });
-      addNotification('Linked successfully.', 'success');
-      setSelectedClientId(null);
-      setSelectedUnitId(null);
-      // Keep property selected to continue linking many tenants to same building
-      await loadData();
+      if (available.length === 0) {
+        updateRow(rowId, { unitId: null, unitLabel: '', status: 'idle', error: 'No vacant unit found (you can still save: tenant will be linked to property only).' });
+        return;
+      }
+      const u = available[0];
+      const unitId = u.id ?? u.ID;
+      const label = u.unitNumber ?? u.UnitNumber ?? u.name ?? `Unit ${unitId}`;
+      updateRow(rowId, { unitId, unitLabel: label, status: 'idle', error: '' });
     } catch (e) {
-      addNotification(e?.message || 'Failed to link', 'error');
+      updateRow(rowId, { unitId: null, unitLabel: '', status: 'idle', error: 'Failed to load units for this property.' });
+    }
+  };
+
+  const queueLink = async (rowId) => {
+    const r = rows.find((x) => x.id === rowId);
+    if (!r) return;
+    if (!r.clientId || !r.propertyId) {
+      addNotification('Select both tenant and property.', 'error');
+      return;
+    }
+    // Ensure we attempted to resolve a vacant unit (best-effort) before queuing
+    if (r.unitId === undefined) {
+      await loadFirstVacantUnit(rowId, r.propertyId);
+    }
+    updateRow(rowId, { status: 'queued', error: '' });
+    // Auto-add a new row for faster batch work
+    setTimeout(() => addRow(), 0);
+  };
+
+  const queuedRows = useMemo(() => rows.filter((r) => r.status === 'queued'), [rows]);
+  const canSave = queuedRows.length > 0 && !saving;
+
+  const saveAll = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      for (const r of queuedRows) {
+        updateRow(r.id, { status: 'saving', error: '' });
+        try {
+          await salesManagerService.linkFastAssociate({
+            clientId: Number(r.clientId),
+            propertyId: Number(r.propertyId),
+            unitId: r.unitId ? Number(r.unitId) : null,
+            forceMove: true,
+          });
+          updateRow(r.id, { status: 'linked', error: '' });
+        } catch (e) {
+          updateRow(r.id, { status: 'error', error: e?.message || 'Link failed' });
+        }
+      }
+      await loadData();
+      addNotification('Link Fast: saved.', 'success');
     } finally {
-      setLinking(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
-      <div style={card}>
-        <h3 style={title}>Imported tenants</h3>
-        <p style={sub}>Select a tenant to link. Toggle “Unlinked only” to focus on those missing property/unit.</p>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={16} style={{ position: 'absolute', left: 10, top: 12, color: '#94a3b8' }} />
-            <input style={{ ...input, paddingLeft: 34 }} value={tenantSearch} onChange={(e) => setTenantSearch(e.target.value)} placeholder="Search tenant…" />
-          </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-            <input type="checkbox" checked={showUnlinkedOnly} onChange={(e) => setShowUnlinkedOnly(e.target.checked)} />
-            Unlinked only
-          </label>
-        </div>
-        <div style={list}>
-          {clientsFiltered.length === 0 ? (
-            <div style={{ padding: '14px', color: '#64748b' }}>No tenants found.</div>
-          ) : (
-            clientsFiltered.map((c) => {
-              const id = c.id ?? c.ID;
-              const active = String(id) === String(selectedClientId);
-              const name = c.Name || c.name || '—';
-              const property = c.Property || c.property || '';
-              const unit = c.UnitNumber || c.unitNumber || '';
-              return (
-                <div key={id} style={row(active)} onClick={() => setSelectedClientId(id)}>
-                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{name}</div>
-                  <div style={{ color: '#64748b', fontSize: '0.82rem' }}>
-                    {(c.Email || c.email || '').toString()} {property ? ` · ${property}` : ''}{unit ? ` · ${unit}` : ''}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+    <div style={card}>
+      <div>
+        <h3 style={title}>Link Fast</h3>
+        <p style={sub}>Select a tenant and property, click Link to queue, then Save once.</p>
       </div>
 
-      <div style={card}>
-        <h3 style={title}>Available properties / units</h3>
-        <p style={sub}>Select a property, then choose a vacant unit (if applicable).</p>
-        <div style={{ position: 'relative', marginTop: '12px' }}>
-          <Search size={16} style={{ position: 'absolute', left: 10, top: 12, color: '#94a3b8' }} />
-          <input style={{ ...input, paddingLeft: 34 }} value={propertySearch} onChange={(e) => setPropertySearch(e.target.value)} placeholder="Search property…" />
+      <div style={{ display: 'flex', gap: '26px', alignItems: 'flex-start', marginTop: '18px', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 560px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {rows.map((r, idx) => (
+            <div key={r.id}>
+              <div style={rowWrap}>
+                <select
+                  style={select}
+                  value={r.clientId}
+                  onChange={(e) => updateRow(r.id, { clientId: e.target.value, error: '' })}
+                  disabled={r.status === 'saving' || r.status === 'linked'}
+                >
+                  <option value="">{'Tenant'}</option>
+                  {tenants.map((t) => {
+                    const id = t.id ?? t.ID;
+                    const name = t.Name || t.name || t.Email || t.email || `Tenant #${id}`;
+                    return <option key={id} value={String(id)}>{name}</option>;
+                  })}
+                </select>
+
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <ChevronRight size={22} color="#0f172a" />
+                </div>
+
+                <select
+                  style={select}
+                  value={r.propertyId}
+                  onChange={(e) => {
+                    const pid = e.target.value;
+                    updateRow(r.id, { propertyId: pid, unitId: null, unitLabel: '', error: '' });
+                    if (pid) loadFirstVacantUnit(r.id, pid);
+                  }}
+                  disabled={r.status === 'saving' || r.status === 'linked'}
+                >
+                  <option value="">{'property'}</option>
+                  {props.map((p) => {
+                    const id = p.id ?? p.ID;
+                    const addr = p.address ?? p.Address ?? `Property #${id}`;
+                    return <option key={id} value={String(id)}>{addr}</option>;
+                  })}
+                </select>
+
+                <button
+                  type="button"
+                  style={linkBtn(!(r.clientId && r.propertyId) || r.status === 'queued' || r.status === 'linked' || r.status === 'saving' || r.status === 'loading')}
+                  onClick={() => queueLink(r.id)}
+                  disabled={!(r.clientId && r.propertyId) || r.status === 'queued' || r.status === 'linked' || r.status === 'saving' || r.status === 'loading'}
+                >
+                  <Link2 size={18} />
+                  {r.status === 'queued' ? 'Queued' : r.status === 'linked' ? 'Linked' : r.status === 'saving' ? 'Saving…' : 'Link'}
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                <div style={mini}>
+                  {r.unitLabel ? `Vacant unit auto-selected: ${r.unitLabel}` : ''}
+                  {r.error ? ` ${r.error}` : ''}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {idx === rows.length - 1 && (
+                    <button type="button" onClick={addRow} style={{ background: 'transparent', border: 'none', color: '#2563eb', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Plus size={16} /> Add row
+                    </button>
+                  )}
+                  {rows.length > 1 && (
+                    <button type="button" onClick={() => removeRow(r.id)} style={{ background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Trash2 size={16} /> Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginTop: '12px' }}>
-          <select
-            style={input}
-            value={selectedPropertyId ?? ''}
-            onChange={(e) => setSelectedPropertyId(e.target.value || null)}
-          >
-            <option value="">— Select property —</option>
-            {propertiesFiltered.map((p) => {
-              const id = p.id ?? p.ID;
-              const addr = p.address ?? p.Address ?? '';
-              const type = p.type ?? p.Type ?? '';
-              return (
-                <option key={id} value={id}>
-                  {addr} {type ? `(${type})` : ''}
-                </option>
-              );
-            })}
-          </select>
 
-          <select
-            style={input}
-            value={selectedUnitId ?? ''}
-            onChange={(e) => setSelectedUnitId(e.target.value || null)}
-            disabled={!selectedPropertyId || unitsLoading || units.length === 0}
-          >
-            <option value="">
-              {!selectedPropertyId ? 'Select a property first' : unitsLoading ? 'Loading units…' : units.length === 0 ? 'No units (or none vacant)' : '— Select vacant unit —'}
-            </option>
-            {units.map((u) => {
-              const uid = u.id ?? u.ID;
-              const label = u.unitNumber ?? u.UnitNumber ?? u.name ?? `Unit ${uid}`;
-              return (
-                <option key={uid} value={uid}>
-                  {label}
-                </option>
-              );
-            })}
-          </select>
-
-          <button
-            type="button"
-            onClick={doLink}
-            disabled={!selectedClientId || !selectedPropertyId || linking || (units.length > 0 && !selectedUnitId)}
-            style={btn(!selectedClientId || !selectedPropertyId || linking || (units.length > 0 && !selectedUnitId))}
-          >
-            <Link2 size={18} />
-            {linking ? 'Linking…' : 'Associate / Link'}
+        <div style={{ flex: '0 0 220px', display: 'flex', justifyContent: 'center', paddingTop: '30px' }}>
+          <button type="button" style={saveBtn(!canSave)} onClick={saveAll} disabled={!canSave}>
+            <Save size={18} /> {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
       </div>
@@ -226,4 +216,3 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
 };
 
 export default LinkFastTab;
-
