@@ -858,6 +858,7 @@ const SalesManagerDashboard = () => {
         .filter(user => {
           const userId = user.id || user.ID;
           const userCompany = user.company || user.Company;
+          const userRole = (user.role || user.Role || '').toString().toLowerCase();
           
           // Convert both to strings for comparison to handle type mismatches
           const userIdStr = userId ? String(userId) : null;
@@ -865,15 +866,20 @@ const SalesManagerDashboard = () => {
           
           // Check if user is not the current user
           const isNotCurrentUser = userIdStr && userIdStr !== currentUserIdStr;
+
+          // Sales manager should not be able to chat with tenants
+          const isNotTenant = userRole !== 'tenant';
           
           // Check if user is from the same company (if company info is available)
           const isSameCompany = !currentUserCompany || !userCompany || currentUserCompany === userCompany;
           
-          const shouldInclude = isNotCurrentUser && isSameCompany;
+          const shouldInclude = isNotCurrentUser && isNotTenant && isSameCompany;
           
           if (!shouldInclude && userIdStr) {
             if (!isNotCurrentUser) {
               console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+            } else if (!isNotTenant) {
+              console.log(`Excluding user ${userIdStr} (tenant role)`);
             } else if (!isSameCompany) {
               console.log(`Excluding user ${userIdStr} (different company: ${userCompany} vs ${currentUserCompany})`);
             }
@@ -926,12 +932,13 @@ const SalesManagerDashboard = () => {
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
               const userCompany = convUser.company || convUser.Company || conv.company || '';
+              const userRole = (convUser.role || convUser.Role || conv.role || '').toString().toLowerCase();
               
               // Only add if it's not the current user AND from the same company
               const currentUserIdStr = currentUserId ? String(currentUserId) : null;
               const isSameCompany = !currentUserCompany || !userCompany || currentUserCompany === userCompany;
               
-              if (userId && String(userId) !== currentUserIdStr && isSameCompany) {
+              if (userId && String(userId) !== currentUserIdStr && isSameCompany && userRole !== 'tenant') {
                 const newUser = {
                   userId: userId,
                   name: convUser.name || convUser.Name || conv.name || 'User',
@@ -944,6 +951,8 @@ const SalesManagerDashboard = () => {
                 chatUsersList.push(newUser);
                 existingUsersMap.set(String(userId), newUser);
                 console.log('Added user from conversation (same company):', newUser);
+              } else if (userId && String(userId) !== currentUserIdStr && isSameCompany && userRole === 'tenant') {
+                console.log('Skipping tenant user from conversations:', { userId });
               } else if (userId && String(userId) !== currentUserIdStr && !isSameCompany) {
                 console.log('Skipping user from different company:', {
                   userId,
