@@ -3,6 +3,20 @@ import { buildApiUrl, apiRequest } from '../config/api';
 
 const LANDLORD_BASE_URL = `${API_CONFIG.BASE_URL}/api/landlord`;
 
+const unwrapList = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+  if (Array.isArray(data?.payments)) return data.payments;
+  if (Array.isArray(data?.workOrders)) return data.workOrders;
+  if (Array.isArray(data?.claims)) return data.claims;
+  if (Array.isArray(data?.inventories)) return data.inventories;
+  if (Array.isArray(data?.properties)) return data.properties;
+  if (Array.isArray(data?.tenants)) return data.tenants;
+  return [];
+};
+
 export const landlordService = {
   // Overview
   getOverview: async () => {
@@ -11,7 +25,8 @@ export const landlordService = {
 
   // Properties
   getProperties: async () => {
-    return await apiRequest(buildApiUrl('/api/landlord/properties'));
+    const data = await apiRequest(buildApiUrl('/api/landlord/properties'));
+    return unwrapList(data);
   },
 
   // Get building/villa detail with units and images (shared property data - try landlord endpoint first, fallback to sales manager)
@@ -32,7 +47,8 @@ export const landlordService = {
 
   // Tenants
   getTenants: async () => {
-    return await apiRequest(buildApiUrl('/api/landlord/tenants'));
+    const data = await apiRequest(buildApiUrl('/api/landlord/tenants'));
+    return unwrapList(data);
   },
 
   // Get full tenant details by ID (same structure as Sales Manager getClient)
@@ -47,7 +63,8 @@ export const landlordService = {
 
   // Payments
   getPayments: async () => {
-    return await apiRequest(buildApiUrl('/api/landlord/payments'));
+    const data = await apiRequest(buildApiUrl('/api/landlord/payments'));
+    return unwrapList(data);
   },
 
   getNetPayments: async (filters = {}) => {
@@ -152,7 +169,8 @@ export const landlordService = {
 
   // Maintenances (from technician) - visible in Works & Claims
   getMaintenances: async () => {
-    return await apiRequest(buildApiUrl('/api/landlord/maintenances'));
+    const data = await apiRequest(buildApiUrl('/api/landlord/maintenances'));
+    return unwrapList(data);
   },
 
   approveMaintenance: async (id) => {
@@ -198,7 +216,8 @@ export const landlordService = {
 
   // Work Orders
   getWorkOrders: async () => {
-    return await apiRequest(buildApiUrl('/api/landlord/works'));
+    const data = await apiRequest(buildApiUrl('/api/landlord/works'));
+    return unwrapList(data);
   },
 
   createWorkOrder: async (workOrderData) => {
@@ -210,7 +229,8 @@ export const landlordService = {
 
   // Claims
   getClaims: async () => {
-    return await apiRequest(buildApiUrl('/api/landlord/claims'));
+    const data = await apiRequest(buildApiUrl('/api/landlord/claims'));
+    return unwrapList(data);
   },
 
   createClaim: async (claimData) => {
@@ -222,7 +242,8 @@ export const landlordService = {
 
   // Inventory
   getInventory: async () => {
-    return await apiRequest(buildApiUrl('/api/landlord/inventory'));
+    const data = await apiRequest(buildApiUrl('/api/landlord/inventory'));
+    return unwrapList(data);
   },
 
   addInventory: async (inventoryData) => {
