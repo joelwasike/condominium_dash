@@ -663,7 +663,7 @@ const ClientsTab = ({
                   />
                 </th>
                 <th style={thStyle}>Client</th>
-              <th style={thStyle}>Property</th>
+              <th style={thStyle}>Appartment</th>
               <th style={thStyle}>Status</th>
               <th style={thStyle}>Last Payment</th>
               <th style={thStyle}>Amount</th>
