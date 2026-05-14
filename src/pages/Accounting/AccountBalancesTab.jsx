@@ -4,11 +4,12 @@ import { accountingService } from '../../services/accountingService';
 import { t } from '../../utils/i18n';
 
 const AccountBalancesTab = (props) => {
-  const { loading, cashierAccounts, cashierTransactions, agencyBalance, ownerBalancesOwners, ownerBalancesLoading, selectedOwnerForBalance, setSelectedOwnerForBalance, collections, landlordPayments, expenses, setShowCashierAccountModal, setCashierAccountForm, setShowCashierTransactionModal, setCashierTransactionForm } = props;
+  const { loading, overviewData, cashierAccounts, cashierTransactions, agencyBalance, ownerBalancesOwners, ownerBalancesLoading, selectedOwnerForBalance, setSelectedOwnerForBalance, collections, landlordPayments, expenses, setShowCashierAccountModal, setCashierAccountForm, setShowCashierTransactionModal, setCashierTransactionForm } = props;
 
   const totalBalance = cashierAccounts.filter(acc => acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
   const cashBalance = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register' && acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
   const bankBalance = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank' && acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
+  const globalBalance = overviewData?.globalBalance ?? overviewData?.totalAvailableBalance ?? overviewData?.TotalAvailableBalance ?? 0;
   const cashAccountIds = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register').map(acc => acc.ID || acc.id);
   const bankAccountIds = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank').map(acc => acc.ID || acc.id);
   const cashTransactions = cashierTransactions.filter(t2 => cashAccountIds.includes(t2.AccountID || t2.accountId));
@@ -45,7 +46,14 @@ const AccountBalancesTab = (props) => {
         </div>
 
         <div style={{ padding: '16px 20px', marginBottom: '20px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Total Available Balance</p><p style={{ margin: '6px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#166534' }}>{totalBalance.toFixed(2)} XOF</p></div><Wallet size={36} style={{ color: '#22c55e' }} /></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Global Balance (from payments)</p>
+              <p style={{ margin: '6px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#166534' }}>{Number(globalBalance || 0).toFixed(2)} XOF</p>
+              <p style={{ margin: '6px 0 0 0', color: '#6b7280', fontSize: '0.8rem' }}>Cashier accounts total: {totalBalance.toFixed(2)} XOF</p>
+            </div>
+            <Wallet size={36} style={{ color: '#22c55e' }} />
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>

@@ -1,5 +1,22 @@
 import { buildApiUrl, apiRequest } from '../config/api';
 
+const unwrapList = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.results)) return data.results;
+  if (Array.isArray(data?.payments)) return data.payments;
+  if (Array.isArray(data?.tenantPayments)) return data.tenantPayments;
+  if (Array.isArray(data?.landlordPayments)) return data.landlordPayments;
+  if (Array.isArray(data?.collections)) return data.collections;
+  if (Array.isArray(data?.expenses)) return data.expenses;
+  if (Array.isArray(data?.landlords)) return data.landlords;
+  if (Array.isArray(data?.owners)) return data.owners;
+  if (Array.isArray(data?.accounts)) return data.accounts;
+  if (Array.isArray(data?.transactions)) return data.transactions;
+  return [];
+};
+
 export const accountingService = {
   // Overview APIs
   getOverview: async () => {
@@ -10,12 +27,14 @@ export const accountingService = {
   // Cashier APIs
   getCashierAccounts: async () => {
     const url = buildApiUrl('/api/accounting/cashier/accounts');
-    return await apiRequest(url);
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   getCashierTransactions: async () => {
     const url = buildApiUrl('/api/accounting/cashier/transactions');
-    return await apiRequest(url);
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   createCashierAccount: async (accountData) => {
@@ -54,8 +73,9 @@ export const accountingService = {
     if (queryParams.toString()) {
       url += `?${queryParams.toString()}`;
     }
-    
-    return await apiRequest(url);
+
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   recordTenantPayment: async (paymentData) => {
@@ -123,8 +143,9 @@ export const accountingService = {
     if (queryParams.toString()) {
       url += `?${queryParams.toString()}`;
     }
-    
-    return await apiRequest(url);
+
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   recordLandlordPayment: async (paymentData) => {
@@ -152,7 +173,8 @@ export const accountingService = {
   // Get list of landlords (same source as sales manager owners - for Owner Balances, tenant management, etc.)
   getLandlords: async () => {
     const url = buildApiUrl('/api/accounting/landlords');
-    return await apiRequest(url);
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   // Get owners - same backend table as sales manager (/api/salesmanager/owners). Backend should implement /api/accounting/owners to return same data.
@@ -160,11 +182,11 @@ export const accountingService = {
     try {
       const url = buildApiUrl('/api/accounting/owners');
       const data = await apiRequest(url);
-      return Array.isArray(data) ? data : (data?.owners ?? data?.landlords ?? data?.data ?? []);
+      return unwrapList(data);
     } catch (err) {
       // Fallback to landlords if /api/accounting/owners not implemented
       const landlords = await apiRequest(buildApiUrl('/api/accounting/landlords'));
-      return Array.isArray(landlords) ? landlords : (landlords?.landlords ?? landlords?.data ?? []);
+      return unwrapList(landlords);
     }
   },
 
@@ -177,7 +199,8 @@ export const accountingService = {
   // Get all properties for the company (for property sale dropdown)
   getProperties: async () => {
     const url = buildApiUrl('/api/accounting/properties');
-    return await apiRequest(url);
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   // Get units (apartments) for a property by address
@@ -208,8 +231,9 @@ export const accountingService = {
     if (queryParams.toString()) {
       url += `?${queryParams.toString()}`;
     }
-    
-    return await apiRequest(url);
+
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   getCollectionsPerBuilding: async () => {
@@ -239,8 +263,9 @@ export const accountingService = {
     if (queryParams.toString()) {
       url += `?${queryParams.toString()}`;
     }
-    
-    return await apiRequest(url);
+
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   getExpensesSummary: async (filters = {}) => {
@@ -407,13 +432,15 @@ export const accountingService = {
   // Get tenants with payment status
   getTenantsWithPaymentStatus: async () => {
     const url = buildApiUrl('/api/accounting/tenants');
-    return await apiRequest(url);
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   // Security Deposits
   getDepositRefundsPending: async () => {
     const url = buildApiUrl('/api/accounting/deposit-refunds/pending');
-    return await apiRequest(url);
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   getSecurityDeposits: async (filters = {}) => {
@@ -426,8 +453,9 @@ export const accountingService = {
     if (queryParams.toString()) {
       url += `?${queryParams.toString()}`;
     }
-    
-    return await apiRequest(url);
+
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   recordDepositPayment: async (paymentData) => {
@@ -454,7 +482,8 @@ export const accountingService = {
   getEmployees: async () => {
     try {
       const url = buildApiUrl('/api/accounting/employees');
-      return await apiRequest(url);
+      const data = await apiRequest(url);
+      return unwrapList(data);
     } catch {
       const stored = localStorage.getItem('accounting_employees');
       return stored ? JSON.parse(stored) : [];
@@ -491,7 +520,8 @@ export const accountingService = {
   getEmployeePayments: async () => {
     try {
       const url = buildApiUrl('/api/accounting/employees/payments');
-      return await apiRequest(url);
+      const data = await apiRequest(url);
+      return unwrapList(data);
     } catch {
       return JSON.parse(localStorage.getItem('accounting_employee_payments') || '[]');
     }
