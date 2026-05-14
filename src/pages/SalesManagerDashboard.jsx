@@ -6122,21 +6122,54 @@ const SalesManagerDashboard = () => {
                           const rawRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
                           const propertyRent = Number.isFinite(rawRent) ? Math.round(rawRent) : 0;
                           setMoveInFormPropertyRent(propertyRent);
-                          const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
                           const unitSelect = document.getElementById('unitNumber');
                           if (unitSelect) {
-                            unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
-                            for (let i = 1; i <= numberOfUnits; i++) {
-                              const option = document.createElement('option');
-                              option.value = `Unit ${i}`;
-                              option.textContent = `Unit ${i}`;
-                              unitSelect.appendChild(option);
-                            }
+                            unitSelect.innerHTML = '<option value="">Loading units…</option>';
                           }
                           const rentInput = document.getElementsByName('rent')[0];
                           if (rentInput) {
                             rentInput.value = propertyRent;
                           }
+
+                          // Populate unit dropdown using real unit occupancy (only show vacant units)
+                          (async () => {
+                            try {
+                              const detail = await salesManagerService.getPropertyBuildingDetail(val);
+                              const units = Array.isArray(detail?.units) ? detail.units : [];
+                              const vacant = units.filter((u) => {
+                                const st = (u.status || u.Status || u.statut || '').toString().toLowerCase();
+                                const tenant = (u.tenant || u.Tenant || '').toString().trim();
+                                return st !== 'occupied' && tenant === '';
+                              });
+                              if (unitSelect) {
+                                unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
+                                if (vacant.length === 0) {
+                                  unitSelect.innerHTML = '<option value="" disabled>No vacant units</option>';
+                                  return;
+                                }
+                                for (const u of vacant) {
+                                  const uid = u.id ?? u.ID;
+                                  const label = u.unitNumber ?? u.UnitNumber ?? u.name ?? u.Name ?? `Unit #${uid ?? ''}`;
+                                  const option = document.createElement('option');
+                                  option.value = label || `Unit #${uid ?? ''}`;
+                                  option.textContent = label || `Unit #${uid ?? ''}`;
+                                  unitSelect.appendChild(option);
+                                }
+                              }
+                            } catch (_) {
+                              // Fallback to numeric unit list if unit-detail endpoint fails
+                              const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
+                              if (unitSelect) {
+                                unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
+                                for (let i = 1; i <= numberOfUnits; i++) {
+                                  const option = document.createElement('option');
+                                  option.value = `Unit ${i}`;
+                                  option.textContent = `Unit ${i}`;
+                                  unitSelect.appendChild(option);
+                                }
+                              }
+                            }
+                          })();
                         } else {
                           setMoveInFormPropertyRent(0);
                         }

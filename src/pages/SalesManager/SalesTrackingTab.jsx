@@ -101,9 +101,12 @@ const SalesTrackingTab = ({
             </thead>
             <tbody>
               {filteredSales.map((property, index) => {
-                const price = property.price || property.Price;
-                const formattedPrice = price ? `${Number(price).toLocaleString()} XOF` : 'N/A';
-                const status = property.status || property.Status || 'N/A';
+                const priceRaw = property.price ?? property.Price ?? property.rent ?? property.Rent ?? property.rentPrice ?? property.RentPrice ?? property.salePrice ?? property.SalePrice;
+                const priceNum = priceRaw == null ? NaN : Number(String(priceRaw).replace(/[^0-9.-]/g, ''));
+                const formattedPrice = Number.isFinite(priceNum) ? `${priceNum.toLocaleString()} XOF` : (priceRaw ? `${priceRaw} XOF` : 'N/A');
+
+                const isManagedForSale = (property.PropertyType || property.propertyType || '').toString().toLowerCase() === 'for sale';
+                const status = isManagedForSale ? 'For Sale' : (property.status || property.Status || property.statut || property.Statut || 'N/A');
                 return (
                   <tr key={property.id || index} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                     <td style={{ ...tdStyle, fontWeight: 600, color: '#1e293b' }}>{property.address || property.Address || 'N/A'}</td>
