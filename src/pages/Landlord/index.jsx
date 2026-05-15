@@ -442,10 +442,13 @@ const LandlordDashboard = () => {
       const chatUsersList = usersArray
         .filter(user => {
           const userId = user.id || user.ID;
+          const userRole = (user.role || user.Role || '').toString().toLowerCase();
           // Convert both to strings for comparison to handle type mismatches
           const userIdStr = userId ? String(userId) : null;
           const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+          const isNotCurrentUser = userIdStr && userIdStr !== currentUserIdStr;
+          const isNotTenant = userRole !== 'tenant';
+          const shouldInclude = isNotCurrentUser && isNotTenant;
           if (!shouldInclude && userIdStr) {
             console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
           }
@@ -496,10 +499,11 @@ const LandlordDashboard = () => {
               // This handles cases where users from other companies or roles have messaged
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
+              const userRole = (convUser.role || convUser.Role || conv.role || '').toString().toLowerCase();
               
               // Only add if it's not the current user
               const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-              if (userId && String(userId) !== currentUserIdStr) {
+              if (userId && String(userId) !== currentUserIdStr && userRole !== 'tenant') {
                 const newUser = {
                   userId: userId,
                   name: convUser.name || convUser.Name || conv.name || 'User',

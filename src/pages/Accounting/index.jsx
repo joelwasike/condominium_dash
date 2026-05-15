@@ -645,9 +645,12 @@ const AccountingDashboard = () => {
       const chatUsersList = usersArray
         .filter(user => {
           const userId = user.id || user.ID;
+          const userRole = (user.role || user.Role || '').toString().toLowerCase();
           const userIdStr = userId ? String(userId) : null;
           const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-          return userIdStr && userIdStr !== currentUserIdStr;
+          const isNotCurrentUser = userIdStr && userIdStr !== currentUserIdStr;
+          const isNotTenant = userRole !== 'tenant';
+          return isNotCurrentUser && isNotTenant;
         })
         .map(user => {
           const userId = user.id || user.ID;
@@ -677,8 +680,9 @@ const AccountingDashboard = () => {
             } else {
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
+              const userRole = (convUser.role || convUser.Role || conv.role || '').toString().toLowerCase();
               const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-              if (userId && String(userId) !== currentUserIdStr) {
+              if (userId && String(userId) !== currentUserIdStr && userRole !== 'tenant') {
                 const newUser = {
                   userId,
                   name: convUser.name || convUser.Name || conv.name || 'User',

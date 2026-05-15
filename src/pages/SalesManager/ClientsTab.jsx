@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Filter, FileSpreadsheet, ArrowLeft, Users, Mail, Phone, MapPin, DollarSign, Building, AlertTriangle, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle } from 'lucide-react';
 import { salesManagerService } from '../../services/salesManagerService';
 import Modal from '../../components/Modal';
@@ -68,6 +68,110 @@ const ClientsTab = ({
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [bulkDeletePassword, setBulkDeletePassword] = useState('');
   const [bulkDeleteSubmitting, setBulkDeleteSubmitting] = useState(false);
+
+  // Resolved/accurate property details for the tenant detail view
+  const [resolvedProperty, setResolvedProperty] = useState(null); // property row from /api/salesmanager/properties
+  const [resolvedUnit, setResolvedUnit] = useState(null); // unit row from building-detail
+  const [resolvedOccupancy, setResolvedOccupancy] = useState(null); // { occupied, total }
+  const [resolvingProperty, setResolvingProperty] = useState(false);
+
+  useEffect(() => {
+    const tenant = tenantDetail?.client;
+    const propertyAddr = (tenant?.Property || tenant?.property || '').toString().trim();
+    const unitNumber = (tenant?.UnitNumber ?? tenant?.unitNumber ?? '').toString().trim();
+
+    if (!selectedTenantId || !propertyAddr) {
+      setResolvedProperty(null);
+      setResolvedUnit(null);
+      setResolvedOccupancy(null);
+      return;
+    }
+
+    const normalizeAddress = (value) => {
+      return value
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/[.,#]/g, ' ')
+        .replace(/\s+/g, ' ');
+    };
+
+    let cancelled = false;
+    setResolvingProperty(true);
+    (async () => {
+      try {
+        const list = await salesManagerService.getProperties();
+        const props = Array.isArray(list) ? list : (list?.items || list?.data || []);
+        const wanted = normalizeAddress(propertyAddr);
+        const propRows = Array.isArray(props) ? props : [];
+        const matchExact = propRows.find((p) => {
+          const addr = normalizeAddress(p.address ?? p.Address ?? '');
+          return addr && addr === wanted;
+        });
+        const matchLoose = matchExact
+          ? null
+          : propRows.find((p) => {
+            const addr = normalizeAddress(p.address ?? p.Address ?? '');
+            return addr && (addr.includes(wanted) || wanted.includes(addr));
+          });
+        const match = matchExact || matchLoose;
+
+        if (cancelled) return;
+
+        if (!match) {
+          setResolvedProperty(null);
+          setResolvedUnit(null);
+          setResolvedOccupancy(null);
+          return;
+        }
+
+        const propertyId = match.id ?? match.ID;
+        setResolvedProperty(match);
+
+        if (!propertyId) {
+          setResolvedUnit(null);
+          setResolvedOccupancy(null);
+          return;
+        }
+
+        const detail = await salesManagerService.getPropertyBuildingDetail(propertyId);
+        if (cancelled) return;
+
+        const units = Array.isArray(detail?.units) ? detail.units : [];
+        const occupied = units.filter((u) => {
+          const st = (u.status || u.Status || u.statut || '').toString().toLowerCase();
+          const t = (u.tenant || u.Tenant || '').toString().trim();
+          return st === 'occupied' || t !== '';
+        }).length;
+        setResolvedOccupancy({ occupied, total: units.length });
+
+        const unitNorm = unitNumber.toLowerCase();
+        const unitComparable = (v) => v.toString().trim().toLowerCase().replace(/^unit\s+/i, '').replace(/\s+/g, '');
+        const foundUnitByNumber = unitNorm
+          ? units.find((u) => {
+            const un = (u.unitNumber ?? u.UnitNumber ?? u.name ?? u.Name ?? '').toString().trim();
+            return un && unitComparable(un) === unitComparable(unitNorm);
+          })
+          : null;
+        const tenantName = (tenant?.Name || tenant?.name || '').toString().trim().toLowerCase();
+        const foundUnitByTenant = !foundUnitByNumber && tenantName
+          ? units.find((u) => (u.tenant || u.Tenant || '').toString().trim().toLowerCase() === tenantName)
+          : null;
+        const foundUnit = foundUnitByNumber || foundUnitByTenant;
+        setResolvedUnit(foundUnit || null);
+      } catch (_) {
+        if (!cancelled) {
+          setResolvedProperty(null);
+          setResolvedUnit(null);
+          setResolvedOccupancy(null);
+        }
+      } finally {
+        if (!cancelled) setResolvingProperty(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [selectedTenantId, tenantDetail]);
 
   const filteredClientIds = (Array.isArray(filteredClients) ? filteredClients : [])
     .map((c) => (c?.id ?? c?.ID))
@@ -164,6 +268,7 @@ const ClientsTab = ({
       );
     }
     const prop = tenantDetail?.property;
+    const displayProp = resolvedProperty || prop;
     const alertList = Array.isArray(tenantDetail?.alerts) ? tenantDetail.alerts : [];
     const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances : [];
     const paymentsList = Array.isArray(tenantDetail?.payments) ? tenantDetail.payments : [];
@@ -305,14 +410,51 @@ const ClientsTab = ({
 	            </div>
 	          </div>
 
-          {prop && (
+          {displayProp && (
             <div style={card}>
               <h3 style={sectionTitle}><Building size={18} /> Property details</h3>
               <div style={{ marginTop: '16px' }}>
-                <div style={dlItem}><div style={dtStyle}>Type</div><div style={ddStyle}>{prop.type || prop.Type || '—'}</div></div>
-                {(prop.bedrooms ?? prop.Bedrooms) != null && <div style={dlItem}><div style={dtStyle}>Bedrooms</div><div style={ddStyle}>{prop.bedrooms ?? prop.Bedrooms}</div></div>}
-                {(prop.bathrooms ?? prop.Bathrooms) != null && <div style={dlItem}><div style={dtStyle}>Bathrooms</div><div style={ddStyle}>{prop.bathrooms ?? prop.Bathrooms}</div></div>}
-                <div style={dlItem}><div style={dtStyle}>Property status</div><div style={ddStyle}><span style={statusPill((prop.status || prop.Status || '').toLowerCase())}>{prop.status || prop.Status || '—'}</span></div></div>
+                <div style={dlItem}><div style={dtStyle}>Type</div><div style={ddStyle}>{displayProp.type || displayProp.Type || '—'}</div></div>
+                {resolvedOccupancy && (
+                  <div style={dlItem}>
+                    <div style={dtStyle}>Occupancy</div>
+                    <div style={ddStyle}>{resolvedOccupancy.occupied}/{resolvedOccupancy.total}</div>
+                  </div>
+                )}
+
+                {resolvedUnit && (
+                  <div style={dlItem}>
+                    <div style={dtStyle}>Unit status</div>
+                    <div style={ddStyle}><span style={statusPill((resolvedUnit.status || resolvedUnit.Status || '').toLowerCase())}>{resolvedUnit.status || resolvedUnit.Status || '—'}</span></div>
+                  </div>
+                )}
+
+                {(() => {
+                  const bedrooms = resolvedUnit?.bedrooms ?? resolvedUnit?.Bedrooms ?? displayProp.bedrooms ?? displayProp.Bedrooms;
+                  const bathrooms = resolvedUnit?.bathrooms ?? resolvedUnit?.Bathrooms ?? displayProp.bathrooms ?? displayProp.Bathrooms;
+                  const occupancyStatus = resolvedOccupancy
+                    ? (resolvedOccupancy.total > 0 && resolvedOccupancy.occupied >= resolvedOccupancy.total ? 'Occupied'
+                      : resolvedOccupancy.occupied === 0 ? 'Vacant'
+                        : 'Partially occupied')
+                    : (displayProp.status || displayProp.Status || '');
+                  return (
+                    <>
+                      {bedrooms != null && (
+                        <div style={dlItem}><div style={dtStyle}>Bedrooms</div><div style={ddStyle}>{bedrooms}</div></div>
+                      )}
+                      {bathrooms != null && (
+                        <div style={dlItem}><div style={dtStyle}>Bathrooms</div><div style={ddStyle}>{bathrooms}</div></div>
+                      )}
+                      <div style={dlItem}>
+                        <div style={dtStyle}>Property status</div>
+                        <div style={ddStyle}><span style={statusPill((occupancyStatus || '').toLowerCase())}>{occupancyStatus || '—'}</span></div>
+                      </div>
+                      {resolvingProperty && (
+                        <div style={{ ...subText, marginTop: '6px' }}>Refreshing property details…</div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}

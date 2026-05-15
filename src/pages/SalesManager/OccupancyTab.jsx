@@ -50,7 +50,14 @@ const OccupancyTab = ({
   handleOpenOccupancyDetail,
   openEditPropertyModal,
 }) => {
-  const totalProperties = properties.length;
+  // Occupancy is only for rental/managed properties. Exclude "For Sale" listings.
+  const isForSale = (p) => {
+    const propertyType = (p.PropertyType || p.propertyType || '').toString().trim().toLowerCase();
+    const status = (p.Status || p.status || '').toString().trim().toLowerCase();
+    return propertyType === 'for sale' || status === 'for sale';
+  };
+  const rentableProperties = (Array.isArray(properties) ? properties : []).filter((p) => !isForSale(p));
+  const totalProperties = rentableProperties.length;
 
   // Helper: filled units per property (from API or derived from status)
   const getFilledUnits = (property) => {
@@ -64,7 +71,7 @@ const OccupancyTab = ({
 
   // Villas: filter by Type, then use units to determine occupied vs vacant
   const isVilla = (p) => (p.Type || p.type || '').toString().trim().toLowerCase() === 'villa';
-  const villas = properties.filter(isVilla);
+  const villas = rentableProperties.filter(isVilla);
   const totalVillas = villas.length;
   const occupiedVillas = villas.filter(v => {
     const total = v.NumberOfUnits ?? v.numberOfUnits ?? 1;
@@ -78,12 +85,12 @@ const OccupancyTab = ({
   }).length;
 
   // All properties (for overall metrics)
-  const occupiedProperties = properties.filter(p => {
+  const occupiedProperties = rentableProperties.filter(p => {
     const total = p.NumberOfUnits ?? p.numberOfUnits ?? 1;
     const filled = getFilledUnits(p);
     return total > 0 && filled >= total;
   }).length;
-  const vacantProperties = properties.filter(p => {
+  const vacantProperties = rentableProperties.filter(p => {
     const total = p.NumberOfUnits ?? p.numberOfUnits ?? 1;
     const filled = getFilledUnits(p);
     return total === 0 || filled < total;
@@ -348,8 +355,8 @@ const OccupancyTab = ({
             </tr>
           </thead>
           <tbody>
-            {properties.length > 0 ? (
-                properties.map(property => {
+            {rentableProperties.length > 0 ? (
+                rentableProperties.map(property => {
                   const propertyId = property.ID || property.id;
                   const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
                   const filledUnits = getFilledUnits(property);
