@@ -226,9 +226,11 @@ const ClientsTab = ({
       const result = await salesManagerService.bulkDeleteClients({ clientIds: selectedClientIds, password });
       const deletedCount = result?.deletedCount ?? (Array.isArray(result?.deleted) ? result.deleted.length : 0);
       const failedCount = result?.failedCount ?? (Array.isArray(result?.failed) ? result.failed.length : 0);
+      const missingIds = Array.isArray(result?.missingClientIds) ? result.missingClientIds : [];
 
       if (deletedCount > 0) addNotification(`Deleted ${deletedCount} tenant(s).`, 'success');
       if (failedCount > 0) addNotification(`${failedCount} deletion(s) failed.`, 'error');
+      if (missingIds.length > 0) addNotification(`Some tenants were already missing (${missingIds.join(', ')}).`, 'warning');
 
       // Refresh list (best effort)
       try {
