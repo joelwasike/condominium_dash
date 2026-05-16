@@ -138,12 +138,23 @@ const ClientsTab = ({
         if (cancelled) return;
 
         const units = Array.isArray(detail?.units) ? detail.units : [];
-        const occupied = units.filter((u) => {
+        const occupiedFromUnits = units.filter((u) => {
           const st = (u.status || u.Status || u.statut || '').toString().toLowerCase();
           const t = (u.tenant || u.Tenant || '').toString().trim();
           return st === 'occupied' || t !== '';
         }).length;
-        setResolvedOccupancy({ occupied, total: units.length });
+
+        // Villas / single-unit properties often have no unit rows; derive occupancy from property/client assignment.
+        if (units.length === 0) {
+          const total = Number(match.NumberOfUnits ?? match.numberOfUnits ?? match.totalUnits ?? 1) || 1;
+          const status = (match.status ?? match.Status ?? '').toString().trim().toLowerCase();
+          const propTenant = (match.tenant ?? match.Tenant ?? '').toString().trim().toLowerCase();
+          const tenantName = (tenant?.Name || tenant?.name || '').toString().trim().toLowerCase();
+          const occupied = status === 'occupied' || propTenant !== '' || tenantName !== '' ? 1 : 0;
+          setResolvedOccupancy({ occupied, total });
+        } else {
+          setResolvedOccupancy({ occupied: occupiedFromUnits, total: units.length });
+        }
 
         const unitNorm = unitNumber.toLowerCase();
         const unitComparable = (v) => v.toString().trim().toLowerCase().replace(/^unit\s+/i, '').replace(/\s+/g, '');
@@ -841,7 +852,15 @@ const ClientsTab = ({
                         <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{client.Email || client.email || 'N/A'}</span>
                       </div>
                 </td>
-                    <td style={tdStyle}>{client.Property || client.property || 'N/A'}</td>
+                    <td style={tdStyle}>
+                      {(() => {
+                        const prop = (client.Property || client.property || '').toString().trim();
+                        const unit = (client.UnitNumber ?? client.unitNumber ?? client.Unit ?? client.unit ?? '').toString().trim();
+                        if (!prop && !unit) return 'N/A';
+                        if (prop && unit) return `${prop}, ${unit}`;
+                        return prop || unit;
+                      })()}
+                    </td>
                     <td style={tdStyle}>
                       <span style={statusPill((client.Status || client.status || 'unknown').toLowerCase())}>
                         {client.Status || client.status || 'Unknown'}
