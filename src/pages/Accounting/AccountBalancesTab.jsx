@@ -12,8 +12,6 @@ const AccountBalancesTab = (props) => {
   const globalBalance = overviewData?.globalBalance ?? overviewData?.totalAvailableBalance ?? overviewData?.TotalAvailableBalance ?? 0;
   const cashAccountIds = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register').map(acc => acc.ID || acc.id);
   const bankAccountIds = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank').map(acc => acc.ID || acc.id);
-  const cashTransactions = cashierTransactions.filter(t2 => cashAccountIds.includes(t2.AccountID || t2.accountId));
-  const bankTransactions = cashierTransactions.filter(t2 => bankAccountIds.includes(t2.AccountID || t2.accountId));
   const accountsByType = { mobile_money: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'mobile_money'), cash_register: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register'), bank: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank'), other: cashierAccounts.filter(acc => !['mobile_money', 'cash_register', 'bank'].includes(acc.Type || acc.type)) };
 
   const renderAccountGroup = (accounts, icon, title, iconColor) => accounts.length > 0 && (
@@ -23,22 +21,11 @@ const AccountBalancesTab = (props) => {
     </div>
   );
 
-  const renderJournal = (transactions, icon, title, subtitle) => (
-    <div className="sa-section-card" style={{ marginTop: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>{icon}<div><h3 style={{ margin: 0 }}>{title}</h3><p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>{subtitle}</p></div></div>
-      {transactions.length === 0 ? <div className="no-data">No transactions found</div> : (
-        <div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Date</th><th>Account</th><th>Type</th><th>Amount</th><th>Reference</th><th>Description</th></tr></thead><tbody>
-          {transactions.slice(0, 15).map((transaction, index) => { const account = cashierAccounts.find(acc => (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId)); const accountName = account ? (account.Name || account.name) : 'Unknown'; const type = transaction.Type || transaction.type || 'N/A'; const amount = transaction.Amount || transaction.amount || 0; const isNegative = type === 'withdrawal' || type === 'transfer'; return (<tr key={transaction.ID || transaction.id || index}><td>{transaction.CreatedAt || transaction.createdAt ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString() : 'N/A'}</td><td><span className="sa-cell-title">{accountName}</span></td><td><span className={`sa-status-pill ${type.toLowerCase()}`}>{type}</span></td><td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>{isNegative ? '-' : '+'}{amount.toFixed(2)} XOF</td><td>{transaction.Reference || transaction.reference || 'N/A'}</td><td>{transaction.Description || transaction.description || 'N/A'}</td></tr>); })}
-        </tbody></table></div>
-      )}
-    </div>
-  );
-
   return (
     <div>
       <div className="sa-section-card">
         <div className="sa-section-header">
-          <div><h2>Account Balances</h2><p>View physical cash balance, bank balance, inflows/outflows, and journals</p></div>
+          <div><h2>Account Balances</h2><p>View physical cash balance, bank balance, inflows/outflows, and owner transfers</p></div>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button className="sa-outline-button" onClick={() => { setCashierTransactionForm({ accountId: '', type: 'deposit', amount: '', reference: '', description: '', toAccountId: '' }); setShowCashierTransactionModal(true); }} disabled={loading || cashierAccounts.length === 0}><Plus size={18} /> Add Transaction</button>
             <button className="sa-primary-cta" onClick={() => { setCashierAccountForm({ name: '', type: 'cash_register', balance: 0, currency: 'XOF', description: '' }); setShowCashierAccountModal(true); }} disabled={loading}><Plus size={18} /> Add Account</button>
@@ -66,9 +53,6 @@ const AccountBalancesTab = (props) => {
           <div className="sa-section-card" style={{ padding: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}><Building2 size={20} style={{ color: '#8b5cf6' }} /><h3 style={{ margin: 0, fontSize: '1rem' }}>Bank Balance</h3></div><div style={{ padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '6px', border: '1px solid #93c5fd' }}><p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Bank Accounts Total</p><p style={{ margin: '6px 0 0 0', fontSize: '1.25rem', fontWeight: 600, color: '#0284c7' }}>{bankBalance.toFixed(2)} XOF</p></div></div>
           {cashierAccounts.length === 0 && <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#9ca3af' }}>{t('accounting.noCashierAccounts')}</div>}
         </div>
-
-        {renderJournal(cashTransactions, <Banknote size={24} style={{ color: '#10b981' }} />, 'Cash Journal', 'Transactions for cash register accounts')}
-        {renderJournal(bankTransactions, <Building2 size={24} style={{ color: '#8b5cf6' }} />, 'Bank Journal', 'Transactions for bank accounts')}
 
         {/* Owner Balances */}
         <div className="sa-section-card" style={{ marginTop: '24px' }}>
@@ -102,12 +86,36 @@ const AccountBalancesTab = (props) => {
 
         {/* Recent Transactions */}
         <div className="sa-section-card" style={{ marginTop: '24px' }}>
-          <div className="sa-section-header"><div><h3>{t('accounting.recentTransactions')}</h3><p>View recent cashier transactions</p></div></div>
-          {loading ? <div className="loading">Loading transactions...</div> : cashierTransactions.length === 0 ? <div className="no-data">No transactions found</div> : (
-            <div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Date</th><th>Account</th><th>Type</th><th>Amount</th><th>Reference</th><th>Description</th></tr></thead><tbody>
-              {cashierTransactions.slice(0, 20).map((transaction, index) => { const account = cashierAccounts.find(acc => (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId)); const accountName = account ? (account.Name || account.name) : 'Unknown'; const type = transaction.Type || transaction.type || 'N/A'; const amount = transaction.Amount || transaction.amount || 0; const isNegative = type === 'withdrawal' || type === 'transfer'; return (<tr key={transaction.ID || transaction.id || index}><td>{transaction.CreatedAt || transaction.createdAt ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString() : 'N/A'}</td><td><span className="sa-cell-title">{accountName}</span></td><td><span className={`sa-status-pill ${type.toLowerCase()}`}>{type}</span></td><td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>{isNegative ? '-' : '+'}{amount.toFixed(2)} XOF</td><td>{transaction.Reference || transaction.reference || 'N/A'}</td><td>{transaction.Description || transaction.description || 'N/A'}</td></tr>); })}
-            </tbody></table></div>
-          )}
+          <div className="sa-section-header"><div><h3>{t('accounting.recentTransactions')}</h3><p>Transfers made to owners</p></div></div>
+          {(() => {
+            const transfers = landlordPayments
+              .filter(p => (p.Status || p.status || '').toString().trim().toLowerCase() === 'paid')
+              .map(p => ({ ...p, _date: p.Date || p.date || p.CreatedAt || p.createdAt }))
+              .sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0))
+              .slice(0, 20);
+            if (loading) return <div className="loading">Loading transfers...</div>;
+            if (transfers.length === 0) return <div className="no-data">No owner transfers yet</div>;
+            return (
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr><th>Date</th><th>Owner</th><th>Building</th><th>Amount</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {transfers.map((p, idx) => (
+                      <tr key={p.ID || p.id || idx}>
+                        <td>{p._date ? new Date(p._date).toLocaleDateString() : 'N/A'}</td>
+                        <td><span className="sa-cell-title">{p.Landlord || p.landlord || '—'}</span></td>
+                        <td>{p.Building || p.building || '—'}</td>
+                        <td style={{ color: '#dc2626', fontWeight: 700 }}>-{Number(p.NetAmount || p.netAmount || 0).toFixed(2)} XOF</td>
+                        <td><span className="sa-status-pill info">{p.Status || p.status || 'Paid'}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

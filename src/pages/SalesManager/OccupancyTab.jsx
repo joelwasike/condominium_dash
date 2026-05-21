@@ -36,10 +36,6 @@ const OccupancyTab = ({
   clients,
   propertyStatusFilter,
   setPropertyStatusFilter,
-  propertyTypeFilter,
-  setPropertyTypeFilter,
-  propertyUrgencyFilter,
-  setPropertyUrgencyFilter,
   occupancyDetailView,
   setOccupancyDetailView,
   occupancySelectedProperty,
@@ -311,27 +307,6 @@ const OccupancyTab = ({
           <option value="Vacant">Vacant</option>
           <option value="Occupied">Occupied</option>
         </select>
-        <select
-          style={selectStyle}
-          value={propertyTypeFilter}
-          onChange={(e) => setPropertyTypeFilter(e.target.value)}
-        >
-          <option value="">All Types</option>
-          <option value="Apartment">Apartment</option>
-          <option value="House">House</option>
-          <option value="Condo">Condo</option>
-          <option value="Studio">Studio</option>
-        </select>
-        <select
-          style={selectStyle}
-          value={propertyUrgencyFilter}
-          onChange={(e) => setPropertyUrgencyFilter(e.target.value)}
-        >
-          <option value="">All Urgency</option>
-          <option value="urgent">Urgent</option>
-          <option value="high">High</option>
-          <option value="normal">Normal</option>
-        </select>
       </div>
 
       <div style={card}>
@@ -348,9 +323,7 @@ const OccupancyTab = ({
               <th style={thStyle}>Type</th>
               <th style={thStyle}>Status</th>
               <th style={thStyle}>Units (filled / total)</th>
-              <th style={thStyle}>Property Type</th>
               <th style={thStyle}>Rent</th>
-              <th style={thStyle}>Urgency</th>
               <th style={thStyle}>Actions</th>
             </tr>
           </thead>
@@ -403,19 +376,9 @@ const OccupancyTab = ({
                         </div>
                       </td>
                       <td style={tdStyle}>
-                        <div>
-                          <span style={{ fontWeight: 600, color: '#1e293b' }}>{property.PropertyType || property.propertyType || 'N/A'}</span>
-                        </div>
-                      </td>
-                      <td style={tdStyle}>{property.Rent || property.rent ? `${property.Rent || property.rent} XOF/month` : 'N/A'}</td>
-                      <td style={tdStyle}>
-                        {property.Urgency || property.urgency ? (
-                          <span style={statusPill((property.Urgency || property.urgency).toLowerCase())}>
-                            {property.Urgency || property.urgency}
-                          </span>
-                        ) : (
-                          'N/A'
-                        )}
+                        {property.Rent || property.rent
+                          ? `${Number(property.Rent || property.rent).toLocaleString()} XOF`
+                          : 'N/A'}
                       </td>
                       <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                         <button
@@ -431,7 +394,7 @@ const OccupancyTab = ({
                 })
             ) : (
               <tr>
-                <td colSpan={9} style={emptyRow}>No properties found. Create your first property to get started.</td>
+                <td colSpan={7} style={emptyRow}>No properties found. Create your first property to get started.</td>
               </tr>
             )}
           </tbody>

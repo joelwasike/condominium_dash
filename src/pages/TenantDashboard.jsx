@@ -1019,6 +1019,11 @@ const TenantDashboard = () => {
       } else if (overviewData?.property) {
         property = overviewData.property;
       }
+      if (!property || !property.trim()) {
+        addNotification('Missing property on your lease. Please contact support.', 'error');
+        setLoading(false);
+        return;
+      }
       const chargeType = billsForm.billType === 'water' ? 'Water' : 'Electricity';
       const paymentData = {
         tenant: tenantName,
@@ -1210,7 +1215,7 @@ const TenantDashboard = () => {
             </div>
           </div>
 
-          <div className="sa-overview-metrics">
+            <div className="sa-overview-metrics">
             <div className="sa-metric-card sa-metric-primary">
               <p className="sa-metric-label">Next Rent Due</p>
               <p className="sa-metric-period">Due: {data.nextRentDue?.date || 'N/A'}</p>
@@ -1219,11 +1224,14 @@ const TenantDashboard = () => {
                   ? `${Number(data.nextRentDue.amount).toLocaleString()} XOF`
                   : 'N/A'}
               </p>
+              {data.nextRentDue?.status === 'ahead' && Number(data.nextRentDue?.aheadAmount || 0) > 0 && (
+                <p className="sa-metric-period">Ahead by: {Number(data.nextRentDue.aheadAmount).toLocaleString()} XOF</p>
+              )}
             </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Current Lease</p>
               <p className="sa-metric-number">
-                {data.lease?.property ? 'Active' : 'N/A'}
+                {data.lease?.status || (data.lease?.property ? 'Active' : 'N/A')}
               </p>
             </div>
             <div className="sa-metric-card">

@@ -242,7 +242,6 @@ const SalesManagerDashboard = () => {
   const [clientSearchText, setClientSearchText] = useState('');
   const [propertyStatusFilter, setPropertyStatusFilter] = useState('');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
-  const [propertyUrgencyFilter, setPropertyUrgencyFilter] = useState('');
   const [alertTypeFilter, setAlertTypeFilter] = useState('');
   const [salesTypeFilter, setSalesTypeFilter] = useState(''); // Filter for sales properties by type
 
@@ -539,7 +538,6 @@ const SalesManagerDashboard = () => {
         salesManagerService.getProperties({
           status: propertyStatusFilter || undefined,
           type: propertyTypeFilter || undefined,
-          urgency: propertyUrgencyFilter || undefined,
         }),
         salesManagerService.getClients(),
         salesManagerService.getApprovedClients().catch(() => []),
@@ -641,7 +639,7 @@ const SalesManagerDashboard = () => {
   // Reload data when filters change
   useEffect(() => {
     loadData();
-  }, [propertyStatusFilter, propertyTypeFilter, propertyUrgencyFilter, alertTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [propertyStatusFilter, propertyTypeFilter, alertTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selectedApprovedClientId) {
@@ -2505,7 +2503,7 @@ const SalesManagerDashboard = () => {
       case 'overview':
         return <OverviewTab loading={loading} overviewData={overviewData} properties={properties} clients={clients} unpaidRents={unpaidRents} alerts={alerts} advertisements={advertisements} currentAdIndex={currentAdIndex} setCurrentAdIndex={setCurrentAdIndex} carouselIntervalRef={carouselIntervalRef} />;
       case 'occupancy':
-        return <OccupancyTab properties={properties} clients={clients} propertyStatusFilter={propertyStatusFilter} setPropertyStatusFilter={setPropertyStatusFilter} propertyTypeFilter={propertyTypeFilter} setPropertyTypeFilter={setPropertyTypeFilter} propertyUrgencyFilter={propertyUrgencyFilter} setPropertyUrgencyFilter={setPropertyUrgencyFilter} occupancyDetailView={occupancyDetailView} setOccupancyDetailView={setOccupancyDetailView} occupancySelectedProperty={occupancySelectedProperty} setOccupancySelectedProperty={setOccupancySelectedProperty} occupancyDetailData={occupancyDetailData} setOccupancyDetailData={setOccupancyDetailData} occupancyDetailLoading={occupancyDetailLoading} handleOpenOccupancyDetail={handleOpenOccupancyDetail} openEditPropertyModal={openEditPropertyModal} />;
+        return <OccupancyTab properties={properties} clients={clients} propertyStatusFilter={propertyStatusFilter} setPropertyStatusFilter={setPropertyStatusFilter} occupancyDetailView={occupancyDetailView} setOccupancyDetailView={setOccupancyDetailView} occupancySelectedProperty={occupancySelectedProperty} setOccupancySelectedProperty={setOccupancySelectedProperty} occupancyDetailData={occupancyDetailData} setOccupancyDetailData={setOccupancyDetailData} occupancyDetailLoading={occupancyDetailLoading} handleOpenOccupancyDetail={handleOpenOccupancyDetail} openEditPropertyModal={openEditPropertyModal} />;
       case 'sales-tracking':
         return <SalesTrackingTab salesProperties={salesProperties} salesTypeFilter={salesTypeFilter} setSalesTypeFilter={setSalesTypeFilter} />;
       case 'visits':

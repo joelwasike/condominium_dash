@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Download } from 'lucide-react';
 import { Receipt } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
@@ -67,6 +67,34 @@ const PaymentsTab = (props) => {
   const expected = rentSummary?.expectedRentThisMonth ?? 0;
   const paid = rentSummary?.paidRents ?? 0;
   const unpaid = rentSummary?.unpaidRents ?? 0;
+  const depositValue = rentSummary?.depositValueThisMonth ?? 0;
+  const totalUnpaidAllPeriods = rentSummary?.totalUnpaidAllPeriods ?? 0;
+
+  const [ownersSummary, setOwnersSummary] = useState([]);
+  const [ownersSummaryLoading, setOwnersSummaryLoading] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setOwnersSummaryLoading(true);
+        const data = await accountingService.getOwnersSummary();
+        setOwnersSummary(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setOwnersSummary([]);
+      } finally {
+        setOwnersSummaryLoading(false);
+      }
+    })();
+  }, []);
+
+  const ownersRows = useMemo(() => {
+    return (ownersSummary || []).map((s, idx) => {
+      const ownerName = s.ownerName || s.OwnerName || s.landlord || s.Landlord || '—';
+      const expectedRents = s.expectedRents ?? s.ExpectedRents ?? 0;
+      const collectedRents = s.collectedRents ?? s.CollectedRents ?? 0;
+      return { key: s.ownerId || s.OwnerID || idx, ownerName, expectedRents, collectedRents };
+    });
+  }, [ownersSummary]);
 
   return (
     <div>
@@ -87,6 +115,54 @@ const PaymentsTab = (props) => {
           <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Unpaid Rents</p>
           <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#dc2626' }}>{unpaid.toFixed(2)} XOF</p>
         </div>
+        <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Value of the deposit</p>
+          <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#7c3aed' }}>{Number(depositValue || 0).toFixed(2)} XOF</p>
+        </div>
+        <div style={{ padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>Total unpaid (all periods)</p>
+          <p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: 600, color: '#b91c1c' }}>{Number(totalUnpaidAllPeriods || 0).toFixed(2)} XOF</p>
+        </div>
+      </div>
+
+      <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+        <div className="sa-section-header">
+          <div>
+            <h2>Expected rents per owner vs. rents received</h2>
+            <p>This month</p>
+          </div>
+        </div>
+        {ownersSummaryLoading ? (
+          <div className="loading">Loading owners summary...</div>
+        ) : ownersRows.length === 0 ? (
+          <div className="no-data">No owners found.</div>
+        ) : (
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Owner</th>
+                  <th>Expected rents</th>
+                  <th>Rents received</th>
+                  <th>Unpaid</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ownersRows.map((r) => {
+                  const unpaidOwner = Math.max(0, Number(r.expectedRents || 0) - Number(r.collectedRents || 0));
+                  return (
+                    <tr key={r.key}>
+                      <td><span className="sa-cell-title">{r.ownerName}</span></td>
+                      <td>{Number(r.expectedRents || 0).toFixed(2)} XOF</td>
+                      <td style={{ color: '#059669', fontWeight: 700 }}>{Number(r.collectedRents || 0).toFixed(2)} XOF</td>
+                      <td style={{ color: '#dc2626', fontWeight: 700 }}>{unpaidOwner.toFixed(2)} XOF</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="sa-section-card">

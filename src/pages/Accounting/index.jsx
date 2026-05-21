@@ -21,7 +21,6 @@ import TenantManagementTab from './TenantManagementTab';
 import AccountBalancesTab from './AccountBalancesTab';
 import OwnerPaymentsTab from './OwnerPaymentsTab';
 import TransactionHistoryTab from './TransactionHistoryTab';
-import EmployeesTab from './EmployeesTab';
 import StatesTaxesTab from './StatesTaxesTab';
 import ReportsTab from './ReportsTab';
 import AdvertisementsTab from './AdvertisementsTab';
@@ -124,12 +123,6 @@ const AccountingDashboard = () => {
   // Deposits state
   const [deposits, setDeposits] = useState([]);
   const [depositFilter, setDepositFilter] = useState('all');
-  // Employees state
-  const [employees, setEmployees] = useState([]);
-  const [employeePayments, setEmployeePayments] = useState([]);
-  const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
-  const [showPayEmployeeModal, setShowPayEmployeeModal] = useState(false);
-  const [selectedEmployeeForPay, setSelectedEmployeeForPay] = useState(null);
   const [depositStartDateFilter, setDepositStartDateFilter] = useState('');
   const [depositEndDateFilter, setDepositEndDateFilter] = useState('');
   const [historyStartDateFilter, setHistoryStartDateFilter] = useState('');
@@ -260,8 +253,7 @@ const AccountingDashboard = () => {
       { id: 'account-balances', label: 'Account Balances', icon: Wallet },
       { id: 'owner-payments', label: 'Owner Payments', icon: Building },
       { id: 'transaction-history', label: 'Transaction History', icon: History },
-      { id: 'employees', label: 'Employees', icon: Users },
-      { id: 'states-taxes', label: 'States & Taxes', icon: Scale },
+      { id: 'states-taxes', label: 'Daily Report', icon: Scale },
       { id: 'reports', label: t('nav.reports'), icon: Receipt },
       { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
       { id: 'messages', label: t('nav.messages'), icon: MessageCircle },
@@ -735,18 +727,6 @@ const AccountingDashboard = () => {
 
   // Load all transaction data when transaction-history tab is active
   useEffect(() => {
-    if (activeTab === 'employees') {
-      (async () => {
-        try {
-          const [empData, payData] = await Promise.all([accountingService.getEmployees(), accountingService.getEmployeePayments()]);
-          setEmployees(Array.isArray(empData) ? empData : (empData?.employees ?? empData?.data ?? []));
-          setEmployeePayments(Array.isArray(payData) ? payData : (payData?.payments ?? payData?.data ?? []));
-        } catch (e) {
-          setEmployees([]);
-          setEmployeePayments([]);
-        }
-      })();
-    }
     if (activeTab === 'transaction-history') {
       loadData();
       loadCashierData();
@@ -1175,7 +1155,6 @@ const AccountingDashboard = () => {
     collections, setCollections, expenses, setExpenses, monthlySummary, advertisements, landlords,
     currentAdIndex, setCurrentAdIndex, carouselIntervalRef,
     tenants, setTenants, deposits, setDeposits, pendingRefunds, setPendingRefunds,
-    employees, setEmployees, employeePayments, setEmployeePayments,
     cashierAccounts, setCashierAccounts, cashierTransactions, setCashierTransactions, agencyBalance,
     ownerBalancesOwners, ownerBalancesLoading, selectedOwnerForBalance, setSelectedOwnerForBalance,
     selectedOwnerForPaymentsHistory, setSelectedOwnerForPaymentsHistory,
@@ -1207,8 +1186,6 @@ const AccountingDashboard = () => {
     expenseProperties, expenseFormScope, setExpenseFormScope, expenseFormBuilding, setExpenseFormBuilding, expenseFormUnits, setExpenseFormUnits,
     showCashierAccountModal, setShowCashierAccountModal, showCashierTransactionModal, setShowCashierTransactionModal,
     cashierAccountForm, setCashierAccountForm, cashierTransactionForm, setCashierTransactionForm,
-    showAddEmployeeModal, setShowAddEmployeeModal, showPayEmployeeModal, setShowPayEmployeeModal,
-    selectedEmployeeForPay, setSelectedEmployeeForPay,
     showApprovalModal, setShowApprovalModal, selectedPayment, setSelectedPayment,
     showPaymentViewModal, setShowPaymentViewModal, selectedItemForView, setSelectedItemForView,
     historyStartDateFilter, setHistoryStartDateFilter, historyEndDateFilter, setHistoryEndDateFilter,
@@ -1236,7 +1213,6 @@ const AccountingDashboard = () => {
       case 'account-balances': return <AccountBalancesTab {...sharedProps} />;
       case 'owner-payments': return <OwnerPaymentsTab {...sharedProps} />;
       case 'transaction-history': return <TransactionHistoryTab {...sharedProps} />;
-      case 'employees': return <EmployeesTab {...sharedProps} />;
       case 'states-taxes': return <StatesTaxesTab {...sharedProps} />;
       case 'reports': return <ReportsTab {...sharedProps} />;
       case 'advertisements': return <AdvertisementsTab {...sharedProps} />;
@@ -1293,12 +1269,6 @@ const AccountingDashboard = () => {
 
       {/* Deposit modals */}
       <DepositRefundsTab.Modals {...sharedProps} />
-
-      {/* Add Employee Modal */}
-      {showAddEmployeeModal && <EmployeesTab.AddModal {...sharedProps} />}
-
-      {/* Pay Employee Modal */}
-      {showPayEmployeeModal && selectedEmployeeForPay && <EmployeesTab.PayModal {...sharedProps} />}
 
       {/* Payment Approval Modal */}
       {showApprovalModal && selectedPayment && (

@@ -59,6 +59,15 @@ export const accountingService = {
     return await apiRequest(url);
   },
 
+  // Daily report (balance sheet style)
+  getDailyReport: async (month) => {
+    let url = buildApiUrl('/api/accounting/daily-report');
+    if (month) {
+      url += `?month=${encodeURIComponent(month)}`;
+    }
+    return await apiRequest(url);
+  },
+
   // Tenant Payments APIs
   getTenantPayments: async (filters = {}) => {
     let url = buildApiUrl('/api/accounting/tenant-payments');
@@ -188,6 +197,13 @@ export const accountingService = {
       const landlords = await apiRequest(buildApiUrl('/api/accounting/landlords'));
       return unwrapList(landlords);
     }
+  },
+
+  // Owners summary for Owner Payments list (expected/collected/expenses/to-repay)
+  getOwnersSummary: async () => {
+    const url = buildApiUrl('/api/accounting/owners/summary');
+    const data = await apiRequest(url);
+    return unwrapList(data);
   },
 
   // Get landlord properties with income calculations

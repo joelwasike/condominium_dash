@@ -123,12 +123,6 @@ const AccountingDashboard = () => {
   // Deposits state
   const [deposits, setDeposits] = useState([]);
   const [depositFilter, setDepositFilter] = useState('all'); // 'all', 'payment', 'refund'
-  // Employees state (caretakers, etc.)
-  const [employees, setEmployees] = useState([]);
-  const [employeePayments, setEmployeePayments] = useState([]);
-  const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
-  const [showPayEmployeeModal, setShowPayEmployeeModal] = useState(false);
-  const [selectedEmployeeForPay, setSelectedEmployeeForPay] = useState(null);
   const [depositStartDateFilter, setDepositStartDateFilter] = useState('');
   const [depositEndDateFilter, setDepositEndDateFilter] = useState('');
   const [historyStartDateFilter, setHistoryStartDateFilter] = useState('');
@@ -261,8 +255,7 @@ const AccountingDashboard = () => {
       { id: 'account-balances', label: 'Account Balances', icon: Wallet },
       { id: 'owner-payments', label: 'Owner Payments', icon: Building },
       { id: 'transaction-history', label: 'Transaction History', icon: History },
-      { id: 'employees', label: 'Employees', icon: Users },
-      { id: 'states-taxes', label: 'States & Taxes', icon: Scale },
+      { id: 'states-taxes', label: 'Daily Report', icon: Scale },
       { id: 'reports', label: t('nav.reports'), icon: Receipt },
       { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
       { id: 'messages', label: t('nav.messages'), icon: MessageCircle },
@@ -787,18 +780,6 @@ const AccountingDashboard = () => {
 
   // Load all transaction data when transaction-history tab is active
   useEffect(() => {
-    if (activeTab === 'employees') {
-      (async () => {
-        try {
-          const [empData, payData] = await Promise.all([accountingService.getEmployees(), accountingService.getEmployeePayments()]);
-          setEmployees(Array.isArray(empData) ? empData : (empData?.employees ?? empData?.data ?? []));
-          setEmployeePayments(Array.isArray(payData) ? payData : (payData?.payments ?? payData?.data ?? []));
-        } catch (e) {
-          setEmployees([]);
-          setEmployeePayments([]);
-        }
-      })();
-    }
     if (activeTab === 'transaction-history') {
       // Reload all data to ensure transaction history is up to date
       loadData();
@@ -3808,15 +3789,15 @@ const AccountingDashboard = () => {
     );
   };
 
-  // States & Taxes - Monthly accounting and tax obligations
+  // Daily Report - accounting overview
   const renderStatesTaxes = () => {
     return (
       <div>
         <div className="sa-section-card">
           <div className="sa-section-header">
             <div>
-              <h2>States & Taxes</h2>
-              <p>Monthly accounting and tax obligations</p>
+              <h2>Daily Report</h2>
+              <p>Daily accounting overview</p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <input
@@ -5710,102 +5691,6 @@ const AccountingDashboard = () => {
             )}
           </div>
 
-          {/* Cash Journal - grid card */}
-          <div className="sa-section-card" style={{ marginTop: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <Banknote size={24} style={{ color: '#10b981' }} />
-              <div>
-                <h3 style={{ margin: 0 }}>Cash Journal</h3>
-                <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Transactions for cash register accounts</p>
-              </div>
-            </div>
-            {cashTransactions.length === 0 ? (
-              <div className="no-data">No cash transactions found</div>
-            ) : (
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Account</th>
-                      <th>Type</th>
-                      <th>Amount</th>
-                      <th>Reference</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cashTransactions.slice(0, 15).map((transaction, index) => {
-                      const account = cashierAccounts.find(acc => (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId));
-                      const accountName = account ? (account.Name || account.name) : 'Unknown';
-                      const type = transaction.Type || transaction.type || 'N/A';
-                      const amount = transaction.Amount || transaction.amount || 0;
-                      const isNegative = type === 'withdrawal' || type === 'transfer';
-                      return (
-                        <tr key={transaction.ID || transaction.id || index}>
-                          <td>{transaction.CreatedAt || transaction.createdAt ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString() : 'N/A'}</td>
-                          <td><span className="sa-cell-title">{accountName}</span></td>
-                          <td><span className={`sa-status-pill ${type.toLowerCase()}`}>{type}</span></td>
-                          <td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>{isNegative ? '-' : '+'}{amount.toFixed(2)} XOF</td>
-                          <td>{transaction.Reference || transaction.reference || 'N/A'}</td>
-                          <td>{transaction.Description || transaction.description || 'N/A'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Bank Journal - grid card */}
-          <div className="sa-section-card" style={{ marginTop: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <Building2 size={24} style={{ color: '#8b5cf6' }} />
-              <div>
-                <h3 style={{ margin: 0 }}>Bank Journal</h3>
-                <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Transactions for bank accounts</p>
-              </div>
-            </div>
-            {bankTransactions.length === 0 ? (
-              <div className="no-data">No bank transactions found</div>
-            ) : (
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Account</th>
-                      <th>Type</th>
-                      <th>Amount</th>
-                      <th>Reference</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bankTransactions.slice(0, 15).map((transaction, index) => {
-                      const account = cashierAccounts.find(acc => (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId));
-                      const accountName = account ? (account.Name || account.name) : 'Unknown';
-                      const type = transaction.Type || transaction.type || 'N/A';
-                      const amount = transaction.Amount || transaction.amount || 0;
-                      const isNegative = type === 'withdrawal' || type === 'transfer';
-                      return (
-                        <tr key={transaction.ID || transaction.id || index}>
-                          <td>{transaction.CreatedAt || transaction.createdAt ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString() : 'N/A'}</td>
-                          <td><span className="sa-cell-title">{accountName}</span></td>
-                          <td><span className={`sa-status-pill ${type.toLowerCase()}`}>{type}</span></td>
-                          <td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>{isNegative ? '-' : '+'}{amount.toFixed(2)} XOF</td>
-                          <td>{transaction.Reference || transaction.reference || 'N/A'}</td>
-                          <td>{transaction.Description || transaction.description || 'N/A'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
           {/* Owner Balances - grid card */}
           <div className="sa-section-card" style={{ marginTop: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -5940,62 +5825,47 @@ const AccountingDashboard = () => {
             <div className="sa-section-header">
               <div>
                 <h3>{t('accounting.recentTransactions')}</h3>
-                <p>View recent cashier transactions</p>
+                <p>Transfers made to owners</p>
               </div>
             </div>
 
-            {loading ? (
-              <div className="loading">Loading transactions...</div>
-            ) : cashierTransactions.length === 0 ? (
-              <div className="no-data">No transactions found</div>
-            ) : (
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Account</th>
-                      <th>Type</th>
-                      <th>Amount</th>
-                      <th>Reference</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cashierTransactions.slice(0, 20).map((transaction, index) => {
-                      const account = cashierAccounts.find(acc => 
-                        (acc.ID || acc.id) === (transaction.AccountID || transaction.accountId)
-                      );
-                      const accountName = account ? (account.Name || account.name) : 'Unknown';
-                      const type = transaction.Type || transaction.type || 'N/A';
-                      const amount = transaction.Amount || transaction.amount || 0;
-                      const isNegative = type === 'withdrawal' || type === 'transfer';
+            {(() => {
+              const transfers = landlordPayments
+                .filter(p => (p.Status || p.status || '').toString().trim().toLowerCase() === 'paid')
+                .map(p => ({ ...p, _date: p.Date || p.date || p.CreatedAt || p.createdAt }))
+                .sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0))
+                .slice(0, 20);
 
-                      return (
-                        <tr key={transaction.ID || transaction.id || index}>
-                          <td>
-                            {transaction.CreatedAt || transaction.createdAt 
-                              ? new Date(transaction.CreatedAt || transaction.createdAt).toLocaleDateString()
-                              : 'N/A'}
-                          </td>
-                          <td><span className="sa-cell-title">{accountName}</span></td>
-                          <td>
-                            <span className={`sa-status-pill ${type.toLowerCase()}`}>
-                              {type}
-                            </span>
-                          </td>
-                          <td style={{ color: isNegative ? '#dc2626' : '#059669', fontWeight: '600' }}>
-                            {isNegative ? '-' : '+'}{amount.toFixed(2)} XOF
-                          </td>
-                          <td>{transaction.Reference || transaction.reference || 'N/A'}</td>
-                          <td>{transaction.Description || transaction.description || 'N/A'}</td>
+              if (loading) return <div className="loading">Loading transfers...</div>;
+              if (transfers.length === 0) return <div className="no-data">No owner transfers yet</div>;
+
+              return (
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Owner</th>
+                        <th>Building</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transfers.map((p, idx) => (
+                        <tr key={p.ID || p.id || idx}>
+                          <td>{p._date ? new Date(p._date).toLocaleDateString() : 'N/A'}</td>
+                          <td><span className="sa-cell-title">{p.Landlord || p.landlord || '—'}</span></td>
+                          <td>{p.Building || p.building || '—'}</td>
+                          <td style={{ color: '#dc2626', fontWeight: 600 }}>-{Number(p.NetAmount || p.netAmount || 0).toFixed(2)} XOF</td>
+                          <td><span className="sa-status-pill info">{p.Status || p.status || 'Paid'}</span></td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -6527,104 +6397,6 @@ const AccountingDashboard = () => {
     );
   };
 
-  const renderEmployees = () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const role = (user.role || '').toLowerCase();
-    const canAddEmployee = ['admin', 'accounting', 'agency_director', 'administrative'].includes(role);
-    const canPayEmployee = ['accounting', 'agency_director'].includes(role);
-
-    return (
-      <div style={{ padding: '20px' }}>
-        <div className="sa-section-card">
-          <div className="sa-section-header">
-            <div>
-              <h2>Employees</h2>
-              <p>Caretakers and other property management employees. Add employees (admin/accountant) and pay them (accountant).</p>
-            </div>
-            {canAddEmployee && (
-              <button className="sa-primary-cta" onClick={() => setShowAddEmployeeModal(true)}>
-                <Plus size={18} />
-                Add Employee
-              </button>
-            )}
-          </div>
-          {loading ? (
-            <div className="loading">Loading employees...</div>
-          ) : employees.length === 0 ? (
-            <div className="no-data">No employees yet. Add caretakers and other staff above.</div>
-          ) : (
-            <div className="sa-table-wrapper">
-              <table className="sa-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Property / Building</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    {canPayEmployee && <th className="table-menu">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.map((emp, idx) => (
-                    <tr key={emp.ID || emp.id || idx}>
-                      <td><span className="sa-cell-title">{emp.Name || emp.name || 'N/A'}</span></td>
-                      <td>{emp.Role || emp.role || 'Caretaker'}</td>
-                      <td>{emp.Building || emp.building || emp.Property || emp.property || '—'}</td>
-                      <td>{emp.Phone || emp.phone || '—'}</td>
-                      <td>{emp.Email || emp.email || '—'}</td>
-                      {canPayEmployee && (
-                        <td className="table-menu">
-                          <button
-                            className="table-action-button edit"
-                            onClick={() => { setSelectedEmployeeForPay(emp); setShowPayEmployeeModal(true); }}
-                          >
-                            Pay
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {employeePayments.length > 0 && (
-            <div style={{ marginTop: '24px' }}>
-              <h3 style={{ marginBottom: '12px' }}>Payment History</h3>
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Employee</th>
-                      <th>Amount</th>
-                      <th>Method</th>
-                      <th>Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employeePayments.slice(0, 50).map((p, i) => {
-                      const emp = employees.find(e => (e.ID || e.id) === (p.employeeId || p.employeeID));
-                      return (
-                        <tr key={p.id || i}>
-                          <td>{p.date ? new Date(p.date).toLocaleDateString() : 'N/A'}</td>
-                          <td>{emp ? (emp.Name || emp.name) : (p.employeeName || '—')}</td>
-                          <td>{(p.amount || p.Amount || 0).toFixed(2)} XOF</td>
-                          <td>{p.method || p.Method || '—'}</td>
-                          <td>{p.notes || p.Notes || '—'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
@@ -6645,8 +6417,6 @@ const AccountingDashboard = () => {
         return renderPayments(); // Renamed from 'payments' (landlord payments)
       case 'transaction-history':
         return renderHistory(); // Renamed from 'history'
-      case 'employees':
-        return renderEmployees();
       case 'states-taxes':
         return renderStatesTaxes();
       case 'reports':
@@ -6724,120 +6494,6 @@ const AccountingDashboard = () => {
 
       {/* Deposit modals - Process deposit, Deposit payment, Deposit refund */}
       {depositModals}
-
-      {/* Add Employee Modal */}
-      {showAddEmployeeModal && (
-        <div className="modal-overlay" onClick={() => setShowAddEmployeeModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Add Employee</h3>
-              <button className="modal-close" onClick={() => setShowAddEmployeeModal(false)}>×</button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              try {
-                setLoading(true);
-                const fd = new FormData(e.target);
-                const data = { Name: fd.get('name'), name: fd.get('name'), Role: fd.get('role') || 'Caretaker', role: fd.get('role') || 'Caretaker', Building: fd.get('building'), building: fd.get('building'), Phone: fd.get('phone'), phone: fd.get('phone'), Email: fd.get('email'), email: fd.get('email') };
-                const emp = await accountingService.addEmployee(data);
-                setEmployees(prev => [...prev, emp]);
-                addNotification('Employee added successfully', 'success');
-                setShowAddEmployeeModal(false);
-                e.target.reset();
-              } catch (err) {
-                addNotification(err.message || 'Failed to add employee', 'error');
-              } finally {
-                setLoading(false);
-              }
-            }}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Name *</label>
-                  <input name="name" type="text" required placeholder="Employee name" />
-                </div>
-                <div className="form-group">
-                  <label>Role</label>
-                  <select name="role">
-                    <option value="Caretaker">Caretaker</option>
-                    <option value="Security">Security</option>
-                    <option value="Maintenance">Maintenance</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Property / Building</label>
-                  <input name="building" type="text" placeholder="Assigned building" />
-                </div>
-                <div className="form-group">
-                  <label>Phone</label>
-                  <input name="phone" type="tel" placeholder="Phone number" />
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input name="email" type="email" placeholder="Email" />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="action-button secondary" onClick={() => setShowAddEmployeeModal(false)}>Cancel</button>
-                <button type="submit" className="action-button primary">Add Employee</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Pay Employee Modal */}
-      {showPayEmployeeModal && selectedEmployeeForPay && (
-        <div className="modal-overlay" onClick={() => { setShowPayEmployeeModal(false); setSelectedEmployeeForPay(null); }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Pay Employee: {selectedEmployeeForPay.Name || selectedEmployeeForPay.name}</h3>
-              <button className="modal-close" onClick={() => { setShowPayEmployeeModal(false); setSelectedEmployeeForPay(null); }}>×</button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              try {
-                setLoading(true);
-                const fd = new FormData(e.target);
-                const payData = { amount: parseFloat(fd.get('amount')), method: fd.get('method') || 'Cash', notes: fd.get('notes') };
-                const pay = await accountingService.payEmployee(selectedEmployeeForPay.ID || selectedEmployeeForPay.id, payData);
-                setEmployeePayments(prev => [...prev, { ...pay, employeeName: selectedEmployeeForPay.Name || selectedEmployeeForPay.name }]);
-                addNotification('Payment recorded successfully', 'success');
-                setShowPayEmployeeModal(false);
-                setSelectedEmployeeForPay(null);
-                e.target.reset();
-              } catch (err) {
-                addNotification(err.message || 'Failed to record payment', 'error');
-              } finally {
-                setLoading(false);
-              }
-            }}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Amount (XOF) *</label>
-                  <input name="amount" type="number" step="0.01" min="0" required placeholder="Amount" />
-                </div>
-                <div className="form-group">
-                  <label>Method</label>
-                  <select name="method">
-                    <option value="Cash">Cash</option>
-                    <option value="Transfer">Transfer</option>
-                    <option value="Mobile Money">Mobile Money</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Notes</label>
-                  <input name="notes" type="text" placeholder="Payment notes" />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="action-button secondary" onClick={() => { setShowPayEmployeeModal(false); setSelectedEmployeeForPay(null); }}>Cancel</button>
-                <button type="submit" className="action-button primary">Record Payment</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Payment Approval Modal */}
       {showApprovalModal && selectedPayment && (

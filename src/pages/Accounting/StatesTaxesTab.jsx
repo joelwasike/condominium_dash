@@ -1,20 +1,162 @@
-import React from 'react';
-import { Plus, Download } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Download } from 'lucide-react';
+import { accountingService } from '../../services/accountingService';
 
 const StatesTaxesTab = (props) => {
-  const { overviewData, expenses, selectedMonth, setSelectedMonth, addNotification, setShowExpenseModal } = props;
+  const { loading, setLoading, selectedMonth, setSelectedMonth, addNotification } = props;
+  const [report, setReport] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await accountingService.getDailyReport(selectedMonth);
+        setReport(data || null);
+      } catch (e) {
+        console.error(e);
+        setReport(null);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [selectedMonth, setLoading]);
+
+  const general = report?.generalInformation || {};
+  const rows = useMemo(() => (Array.isArray(report?.statusOfTenantPayments) ? report.statusOfTenantPayments : []), [report]);
+  const summary = report?.summaryOfMonth || {};
+
+  const money = (v) => `${Number(v || 0).toLocaleString()} FCFA`;
+
+  const totals = useMemo(() => {
+    const t = {
+      numberOfTenants: 0,
+      numberOfTenantsWhoPaid: 0,
+      rentAwaited: 0,
+      rentCollected: 0,
+      remainingRent: 0,
+    };
+    rows.forEach((r) => {
+      t.numberOfTenants += Number(r.numberOfTenants || 0);
+      t.numberOfTenantsWhoPaid += Number(r.numberOfTenantsWhoPaid || r.numberOfTenantsWhoPaid || 0);
+      t.rentAwaited += Number(r.rentAwaited || 0);
+      t.rentCollected += Number(r.rentCollected || 0);
+      t.remainingRent += Number(r.remainingRent || 0);
+    });
+    return t;
+  }, [rows]);
+
   return (
-    <div><div className="sa-section-card">
-      <div className="sa-section-header"><div><h2>States & Taxes</h2><p>Monthly accounting and tax obligations</p></div><div style={{ display: 'flex', gap: '12px' }}><input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }} /><button className="sa-primary-cta" onClick={() => addNotification('Monthly statement generation coming soon', 'info')}><Download size={18} /> Generate Statement</button></div></div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-        <div style={{ padding: '20px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #93c5fd' }}><p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Declared Turnover</p><p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#0284c7' }}>{overviewData?.totalCollectedThisMonth?.toFixed(2) || '0.00'} XOF</p></div>
-        <div style={{ padding: '20px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fca5a5' }}><p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Deductible Expenses</p><p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#dc2626' }}>{overviewData?.totalExpensesThisMonth?.toFixed(2) || '0.00'} XOF</p></div>
-        <div style={{ padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}><p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Taxable Income</p><p style={{ margin: '8px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#059669' }}>{((overviewData?.totalCollectedThisMonth || 0) - (overviewData?.totalExpensesThisMonth || 0)).toFixed(2)} XOF</p></div>
+    <div>
+      <div className="sa-section-card">
+        <div className="sa-section-header">
+          <div>
+            <h2>Daily Report</h2>
+            <p>Daily balance sheet (monthly view)</p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="sa-input"
+              style={{ minWidth: '160px' }}
+            />
+            <button
+              className="sa-primary-cta"
+              onClick={() => addNotification('Export coming soon', 'info')}
+            >
+              <Download size={18} /> Export
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="loading">Loading daily report...</div>
+        ) : !report ? (
+          <div className="no-data">No data available</div>
+        ) : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>Reporting period</p>
+                <p style={{ margin: '6px 0 0', fontWeight: 800, color: '#111827' }}>{general.reportingPeriod || selectedMonth}</p>
+              </div>
+              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>Report manager</p>
+                <p style={{ margin: '6px 0 0', fontWeight: 800, color: '#111827' }}>{general.reportManager || '—'}</p>
+              </div>
+              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>Date</p>
+                <p style={{ margin: '6px 0 0', fontWeight: 800, color: '#111827' }}>{general.date || '—'}</p>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ margin: '0 0 10px 0' }}>Status of tenant payments</h3>
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Properties</th>
+                      <th>Number of tenants</th>
+                      <th>Tenants who paid</th>
+                      <th>Rent awaited</th>
+                      <th>Rent collected</th>
+                      <th>Remaining rent</th>
+                      <th>%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.length > 0 ? rows.map((r, idx) => (
+                      <tr key={r.propertyId || idx}>
+                        <td><span className="sa-cell-title">{r.property || '—'}</span></td>
+                        <td>{Number(r.numberOfTenants || 0)}</td>
+                        <td>{Number(r.numberOfTenantsWhoPaid || 0)}</td>
+                        <td>{money(r.rentAwaited)}</td>
+                        <td style={{ color: '#059669', fontWeight: 700 }}>{money(r.rentCollected)}</td>
+                        <td style={{ color: '#dc2626', fontWeight: 700 }}>{money(r.remainingRent)}</td>
+                        <td>{Number(r.collectionRatePercent || 0).toFixed(2)}%</td>
+                      </tr>
+                    )) : (
+                      <tr><td colSpan={7} className="no-data">No properties found</td></tr>
+                    )}
+                    <tr>
+                      <td style={{ fontWeight: 800 }}>TOTAL</td>
+                      <td style={{ fontWeight: 800 }}>{totals.numberOfTenants}</td>
+                      <td style={{ fontWeight: 800 }}>{totals.numberOfTenantsWhoPaid}</td>
+                      <td style={{ fontWeight: 800 }}>{money(totals.rentAwaited)}</td>
+                      <td style={{ fontWeight: 800 }}>{money(totals.rentCollected)}</td>
+                      <td style={{ fontWeight: 800 }}>{money(totals.remainingRent)}</td>
+                      <td style={{ fontWeight: 800 }}>
+                        {totals.rentAwaited > 0 ? ((totals.rentCollected / totals.rentAwaited) * 100).toFixed(2) : '0.00'}%
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h3 style={{ margin: '0 0 10px 0' }}>Summary of the month</h3>
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr><th>Indicator</th><th>Amount (FCFA)</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Total expected rent (all properties)</td><td>{money(summary.totalExpectedRentAllProperties)}</td></tr>
+                    <tr><td>Total expected monthly rents</td><td>{money(summary.totalExpectedMonthlyRents)}</td></tr>
+                    <tr><td>Total collected rent for the month</td><td style={{ color: '#059669', fontWeight: 800 }}>{money(summary.totalCollectedRentForTheMonth)}</td></tr>
+                    <tr><td>Total unpaid rent for the month</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(summary.totalUnpaidRentForTheMonth)}</td></tr>
+                    <tr><td>Total impayés</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(summary.totalImpayes)}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
-      <div style={{ marginBottom: '24px' }}><h3 style={{ marginBottom: '16px' }}>Monthly Financial Statement</h3><div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Category</th><th>Amount (XOF)</th><th>Notes</th></tr></thead><tbody><tr><td>Total Revenue</td><td>{overviewData?.totalCollectedThisMonth?.toFixed(2) || '0.00'}</td><td>All collected payments</td></tr><tr><td>Total Expenses</td><td>{overviewData?.totalExpensesThisMonth?.toFixed(2) || '0.00'}</td><td>All recorded expenses</td></tr><tr><td>Net Profit</td><td>{((overviewData?.totalCollectedThisMonth || 0) - (overviewData?.totalExpensesThisMonth || 0)).toFixed(2)}</td><td>Revenue minus expenses</td></tr></tbody></table></div></div>
-      <div style={{ marginBottom: '24px' }}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}><h3 style={{ margin: 0 }}>Tax Records</h3><button className="sa-primary-cta" onClick={() => setShowExpenseModal(true)}><Plus size={18} /> Add Tax Record</button></div>{expenses.filter(e => (e.Category || e.category) === 'Taxes').length === 0 ? <div className="no-data">No tax records found</div> : <div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Date</th><th>Property</th><th>Tax Type</th><th>Amount</th><th>Notes</th></tr></thead><tbody>{expenses.filter(e => (e.Category || e.category) === 'Taxes').map((tax, index) => (<tr key={tax.ID || tax.id || index}><td>{tax.Date ? new Date(tax.Date).toLocaleDateString() : (tax.date ? new Date(tax.date).toLocaleDateString() : 'N/A')}</td><td>{tax.Building || tax.building || 'Company-wide'}</td><td>{tax.Notes || tax.notes || 'Tax Payment'}</td><td>{(tax.Amount || tax.amount || 0).toFixed(2)} XOF</td><td>{tax.Notes || tax.notes || '-'}</td></tr>))}</tbody></table></div>}</div>
-      <div><h3 style={{ marginBottom: '16px' }}>Declaration History</h3><div className="no-data">No declaration history available</div></div>
-    </div></div>
+    </div>
   );
 };
 export default StatesTaxesTab;

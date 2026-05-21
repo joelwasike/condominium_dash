@@ -321,6 +321,21 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Recovery (unpaid invoices per building) summary
+  getRecoverySummary: async () => {
+    const url = buildApiUrl('/api/salesmanager/recovery');
+    return await apiRequest(url);
+  },
+
+  // Send recovery reminder (sms/email) to one or more units
+  sendRecoveryReminder: async (payload) => {
+    const url = buildApiUrl('/api/salesmanager/recovery/remind');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Add apartment/unit to a building (Property Management)
   addApartmentToBuilding: async (propertyId, payload) => {
     const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/units`);
