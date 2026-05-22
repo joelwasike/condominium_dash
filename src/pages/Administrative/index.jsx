@@ -3001,9 +3001,15 @@ const AdministrativeDashboard = () => {
                 }}
               >
                 <option value="">Select property</option>
-                {leaseForm.property && !properties.some(property => {
-                  const label = property.Address || property.address || property.name || property.Name || '';
-                  return label === leaseForm.property;
+                {leaseForm.property && !properties.filter(property => {
+                  const label = (property.Address || property.address || property.name || property.Name || '').toString().trim();
+                  const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+                  const occupiedFromLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;
+                  const occupiedFromClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === label).length;
+                  return Math.max(occupiedFromLeases, occupiedFromClients) < totalUnits;
+                }).some(property => {
+                  const label = (property.Address || property.address || property.name || property.Name || '').toString().trim().toLowerCase();
+                  return label === String(leaseForm.property || '').trim().toLowerCase();
                 }) && (
                   <option value={leaseForm.property}>{leaseForm.property}</option>
                 )}
