@@ -336,6 +336,27 @@ export const salesManagerService = {
     });
   },
 
+  // Alerts page: list properties for selecting tenants
+  getAlertProperties: async () => {
+    const url = buildApiUrl('/api/salesmanager/alerts/properties');
+    return await apiRequest(url);
+  },
+
+  // Alerts page: list tenants for a property
+  getAlertPropertyTenants: async (propertyId) => {
+    const url = buildApiUrl(`/api/salesmanager/alerts/properties/${propertyId}/tenants`);
+    return await apiRequest(url);
+  },
+
+  // Alerts page: send alert to a tenant (sms/email)
+  sendTenantAlert: async ({ clientId, channel, message, subject, urgency }) => {
+    const url = buildApiUrl('/api/salesmanager/alerts/send');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ clientId, channel, message, subject, urgency }),
+    });
+  },
+
   // Add apartment/unit to a building (Property Management)
   addApartmentToBuilding: async (propertyId, payload) => {
     const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/units`);

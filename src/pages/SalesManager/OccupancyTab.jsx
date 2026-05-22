@@ -323,7 +323,6 @@ const OccupancyTab = ({
               <th style={thStyle}>Type</th>
               <th style={thStyle}>Status</th>
               <th style={thStyle}>Units (filled / total)</th>
-              <th style={thStyle}>Rent</th>
               <th style={thStyle}>Actions</th>
             </tr>
           </thead>
@@ -375,11 +374,6 @@ const OccupancyTab = ({
                           )}
                         </div>
                       </td>
-                      <td style={tdStyle}>
-                        {property.Rent || property.rent
-                          ? `${Number(property.Rent || property.rent).toLocaleString()} XOF`
-                          : 'N/A'}
-                      </td>
                       <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                         <button
                           style={{ ...btnOutline, padding: '6px 12px' }}
@@ -394,7 +388,7 @@ const OccupancyTab = ({
                 })
             ) : (
               <tr>
-                <td colSpan={7} style={emptyRow}>No properties found. Create your first property to get started.</td>
+                <td colSpan={6} style={emptyRow}>No properties found. Create your first property to get started.</td>
               </tr>
             )}
           </tbody>
