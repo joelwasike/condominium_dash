@@ -1854,6 +1854,7 @@ const SalesManagerDashboard = () => {
     }));
     
     const propertyData = {
+      name: formData.get('name')?.trim(),
       address: formData.get('address')?.trim(),
       type: formData.get('type')?.trim(),
       propertyType: formData.get('propertyType')?.trim(),
@@ -1883,8 +1884,8 @@ const SalesManagerDashboard = () => {
       }
     }
 
-    if (!propertyData.address || !propertyData.type || !propertyData.propertyType || !propertyData.status || propertyData.numberOfUnits < 1) {
-      addNotification('Please fill in Address, Type, Property Type, Status, and Number of Units.', 'error');
+    if (!propertyData.name || !propertyData.address || !propertyData.type || !propertyData.propertyType || !propertyData.status || propertyData.numberOfUnits < 1) {
+      addNotification('Please fill in Property Name, Address, Type, Property Type, Status, and Number of Units.', 'error');
       return;
     }
     if (propertyData.type === 'Apartment' && !propertyData.buildingType) {
@@ -6716,6 +6717,19 @@ const SalesManagerDashboard = () => {
             </div>
             <div className="modal-body">
               <form onSubmit={handleCreateProperty}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="create-name">Property Name *</label>
+                    <input
+                      type="text"
+                      name="name"
+                      id="create-name"
+                      required
+                      placeholder="e.g. Abobo Residence"
+                    />
+                  </div>
+                  <div className="form-group" />
+                </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="create-address">Address *</label>
