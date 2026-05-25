@@ -425,7 +425,7 @@ const PropertyManagementTab = ({
       <div style={card}>
         <div style={{ overflowX: 'auto' }}>
           <table style={tableStyle}>
-            <thead><tr><th style={thStyle}>Name</th><th style={thStyle}>Email</th><th style={thStyle}>Total of assets</th><th style={thStyle}>Property for sell</th><th style={thStyle}>Property for manage</th><th style={thStyle}>Occupancy</th><th style={thStyle}>Expected income</th><th style={thStyle}>Income (this month)</th></tr></thead>
+            <thead><tr><th style={thStyle}>Name</th><th style={thStyle}>Email</th><th style={thStyle}>Total of assets</th><th style={thStyle}>Property for sell</th><th style={thStyle}>Property for manage</th><th style={thStyle}>Occupancy</th><th style={thStyle}>Expected income</th><th style={thStyle}>Expected rent (occupied)</th><th style={thStyle}>Income (this month)</th></tr></thead>
             <tbody>
               {filteredOwners.map((owner, index) => {
                 const ownerId = getOwnerId(owner);
@@ -438,12 +438,13 @@ const PropertyManagementTab = ({
                     <td style={tdStyle}>{owner.propertyForManage ?? 0}</td>
                     <td style={tdStyle}>{owner.occupancy ?? '0/0'}</td>
                     <td style={tdStyle}>{typeof (owner.expectedIncomeThisMonth ?? owner.expectedIncome ?? 0) === 'number' ? (owner.expectedIncomeThisMonth ?? owner.expectedIncome ?? 0).toLocaleString() : (owner.expectedIncomeThisMonth ?? owner.expectedIncome ?? 0)}</td>
+                    <td style={tdStyle}>{typeof (owner.expectedRentWithTenantsThisMonth ?? 0) === 'number' ? (owner.expectedRentWithTenantsThisMonth ?? 0).toLocaleString() : (owner.expectedRentWithTenantsThisMonth ?? 0)}</td>
                     <td style={tdStyle}>{typeof (owner.incomeThisMonth ?? owner.revenue ?? 0) === 'number' ? (owner.incomeThisMonth ?? owner.revenue ?? 0).toLocaleString() : (owner.incomeThisMonth ?? owner.revenue ?? 0)}</td>
                   </tr>
                 );
               })}
               {filteredOwners.length === 0 && (
-                <tr><td colSpan={8} style={emptyRow}>No owners found. Ask the Agency Director to add property owners.</td></tr>
+                <tr><td colSpan={9} style={emptyRow}>No owners found. Ask the Agency Director to add property owners.</td></tr>
               )}
             </tbody>
           </table>
