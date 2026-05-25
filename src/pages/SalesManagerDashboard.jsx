@@ -1212,10 +1212,10 @@ const SalesManagerDashboard = () => {
   };
 
   const downloadCsvExample = () => {
-    const headers = ['Name', 'Property', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status', 'UnitNumber'];
+    const headers = ['Name', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status'];
     const exampleRows = [
-      ['Jane Doe', '123 Main St', 'jane.doe@example.com', '+2250700000000', '150000', '2026-02-01', 'Active', ''],
-      ['John Smith', '456 Oak Ave', 'john.smith@example.com', '+2250700000001', '180000', '2026-02-15', 'Active', 'F1']
+      ['Jane Doe', 'jane.doe@example.com', '+2250700000000', '150000', '2026-02-01', 'Active'],
+      ['John Smith', 'john.smith@example.com', '+2250700000001', '180000', '2026-02-15', 'Active']
     ];
     const escapeCsv = (v) => {
       const s = String(v ?? '').trim();
@@ -1279,10 +1279,10 @@ const SalesManagerDashboard = () => {
       ['123 Main St', 'House', 'For Rent', '', 'Vacant', '1', '150000', '3', '2', 'normal', '', '', ''],
       ['456 Oak Ave', 'Apartment', 'For Rent', 'T2', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']
     ];
-    const tenantHeaders = ['Name', 'Property', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status', 'UnitNumber'];
+    const tenantHeaders = ['Name', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status'];
     const tenantRows = [
-      ['Jane Doe', '123 Main St', 'jane@example.com', '+2250700000000', '150000', '2026-02-01', 'Active', ''],
-      ['John Smith', '456 Oak Ave', 'john@example.com', '+2250700000001', '100000', '2026-02-15', 'Active', 'F1']
+      ['Jane Doe', 'jane@example.com', '+2250700000000', '150000', '2026-02-01', 'Active'],
+      ['John Smith', 'john@example.com', '+2250700000001', '100000', '2026-02-15', 'Active']
     ];
     const sections = [
       '[PROPERTIES]',
@@ -1373,7 +1373,7 @@ const SalesManagerDashboard = () => {
       if (text.includes('[PROPERTIES]') || text.includes('[TENANTS]')) {
         const { tenants } = parseCsvRows(text, null);
         if (tenants.length === 0) { addNotification('No tenant rows found in file', 'error'); return { success: 0, failed: 0 }; }
-        const headers = ['Name', 'Property', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status', 'UnitNumber'];
+        const headers = ['Name', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status'];
         const escapeCsv = (v) => {
           const s = String(v ?? '').trim();
           if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;

@@ -858,7 +858,7 @@ const ClientsTab = ({
                       {(() => {
                         const prop = (client.Property || client.property || '').toString().trim();
                         const unit = (client.UnitNumber ?? client.unitNumber ?? client.Unit ?? client.unit ?? '').toString().trim();
-                        if (!prop && !unit) return 'N/A';
+                        if (!prop && !unit) return 'Unassigned';
                         if (prop && unit) return `${prop}, ${unit}`;
                         return prop || unit;
                       })()}
@@ -965,7 +965,7 @@ const ClientsTab = ({
                         <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{unpaid.Email || unpaid.ClientEmail || 'N/A'}</span>
                       </div>
                     </td>
-                    <td style={tdStyle}>{unpaid.Property || 'N/A'}</td>
+                    <td style={tdStyle}>{(unpaid.Property || '').toString().trim() || 'Unassigned'}</td>
                     <td style={tdStyle}>{(unpaid.Amount || 0).toLocaleString()} XOF</td>
                     <td style={tdStyle}>{unpaid.DueDate ? new Date(unpaid.DueDate).toLocaleDateString() : 'N/A'}</td>
                     <td style={tdStyle}><span style={statusPill('inactive')}>{unpaid.Status || 'Overdue'}</span></td>
