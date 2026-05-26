@@ -18,6 +18,7 @@ const AlertsTab = () => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [tenants, setTenants] = useState([]);
   const [tenantsLoading, setTenantsLoading] = useState(false);
+  const [compose, setCompose] = useState(null); // { tenant, channel }
 
   const [message, setMessage] = useState('Hello,\nThis is a reminder from Saaf Immo.\nPlease take note of this message and contact the agency if needed.');
   const [subject, setSubject] = useState('Alert');
@@ -41,6 +42,7 @@ const AlertsTab = () => {
     setSelectedProperty(p);
     setView('detail');
     setSendError('');
+    setCompose(null);
     setTenants([]);
     try {
       setTenantsLoading(true);
@@ -78,6 +80,12 @@ const AlertsTab = () => {
         subject: channel === 'email' ? (subject || 'Alert') : undefined,
         urgency: 'Low',
       });
+      await loadProperties();
+      if (selectedProperty?.id || selectedProperty?.ID) {
+        const res = await salesManagerService.getAlertPropertyTenants(selectedProperty.id || selectedProperty.ID);
+        setTenants(Array.isArray(res) ? res : []);
+      }
+      setCompose(null);
     } catch (e) {
       console.error(e);
       setSendError(e?.message || 'Failed to send alert.');
@@ -97,30 +105,47 @@ const AlertsTab = () => {
           </button>
           <div>
             <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#111827' }}>{title}</h2>
-            <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#94a3b8' }}>Send an alert to tenants in this property</p>
+            <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#94a3b8' }}>Tenants with unpaid or incomplete rent</p>
           </div>
         </div>
 
         <div style={card}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '18px', alignItems: 'start', marginBottom: '18px' }}>
-            <div style={{ border: '2px solid #e5e7eb', borderRadius: '12px', padding: '14px', background: '#fff' }}>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                style={{ width: '100%', minHeight: '140px', border: 'none', outline: 'none', resize: 'vertical', color: '#374151', fontSize: '0.95rem' }}
-              />
+          {compose ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '18px', alignItems: 'start', marginBottom: '18px' }}>
+              <div style={{ border: '2px solid #e5e7eb', borderRadius: '12px', padding: '14px', background: '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 800, color: '#111827' }}>
+                    Send via {compose.channel === 'email' ? 'Email' : 'SMS'} to {compose.tenant?.name || compose.tenant?.Name || 'Tenant'}
+                  </div>
+                  <button type="button" style={btnOutline} onClick={() => { setCompose(null); setSendError(''); }} disabled={sendingId != null}>
+                    Cancel
+                  </button>
+                </div>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  style={{ width: '100%', minHeight: '140px', border: 'none', outline: 'none', resize: 'vertical', color: '#374151', fontSize: '0.95rem' }}
+                  placeholder="Type alert message..."
+                />
+              </div>
+              <div>
+                {compose.channel === 'email' ? (
+                  <>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email subject</label>
+                    <input
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="Alert subject"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+                    />
+                  </>
+                ) : (
+                  <div style={{ color: '#64748b', fontWeight: 700, paddingTop: 6 }}>SMS will be sent to the tenant phone number.</div>
+                )}
+                {sendError && <div style={{ color: '#b91c1c', fontWeight: 600, marginTop: 10 }}>{sendError}</div>}
+              </div>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email subject</label>
-              <input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Alert subject"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
-              />
-              {sendError && <div style={{ color: '#b91c1c', fontWeight: 600, marginTop: 10 }}>{sendError}</div>}
-            </div>
-          </div>
+          ) : null}
 
           {tenantsLoading ? (
             <div style={emptyState}>Loading tenants...</div>
@@ -131,6 +156,7 @@ const AlertsTab = () => {
                   <tr>
                     <th style={thStyle}>Tenant</th>
                     <th style={thStyle}>Unit</th>
+                    <th style={thStyle}>Arrears</th>
                     <th style={thStyle}>Phone</th>
                     <th style={thStyle}>Email</th>
                     <th style={thStyle}>Action</th>
@@ -140,10 +166,12 @@ const AlertsTab = () => {
                   {sortedTenants.length > 0 ? (
                     sortedTenants.map((t) => {
                       const id = t.id || t.ID;
+                      const arrears = t.arrears ?? t.Arrears;
                       return (
                         <tr key={id}>
                           <td style={tdStyle}><span style={{ fontWeight: 700, color: '#111827' }}>{t.name || t.Name || '—'}</span></td>
                           <td style={tdStyle}>{t.unitNumber || '—'}</td>
+                          <td style={tdStyle}>{typeof arrears === 'number' ? `${arrears.toLocaleString()} XOF` : '—'}</td>
                           <td style={tdStyle}>{t.phone || '—'}</td>
                           <td style={tdStyle}>{t.email || '—'}</td>
                           <td style={tdStyle}>
@@ -152,7 +180,7 @@ const AlertsTab = () => {
                                 type="button"
                                 style={{ ...btnPrimary, opacity: sendingId === id ? 0.6 : 1 }}
                                 disabled={sendingId === id}
-                                onClick={() => sendAlert({ clientId: id, channel: 'sms' })}
+                                onClick={() => { setCompose({ tenant: t, channel: 'sms' }); setSendError(''); }}
                               >
                                 SMS
                               </button>
@@ -160,10 +188,20 @@ const AlertsTab = () => {
                                 type="button"
                                 style={{ ...btnPrimary, opacity: sendingId === id ? 0.6 : 1 }}
                                 disabled={sendingId === id}
-                                onClick={() => sendAlert({ clientId: id, channel: 'email' })}
+                                onClick={() => { setCompose({ tenant: t, channel: 'email' }); setSendError(''); }}
                               >
                                 Email
                               </button>
+                              {compose?.tenant && (compose.tenant.id || compose.tenant.ID) === id ? (
+                                <button
+                                  type="button"
+                                  style={{ ...btnPrimary, background: '#2563eb', opacity: sendingId === id ? 0.6 : 1 }}
+                                  disabled={sendingId === id}
+                                  onClick={() => sendAlert({ clientId: id, channel: compose.channel })}
+                                >
+                                  {sendingId === id ? 'Sending...' : 'Send'}
+                                </button>
+                              ) : null}
                             </div>
                           </td>
                         </tr>
@@ -171,7 +209,7 @@ const AlertsTab = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={5} style={emptyState}>No tenants found for this property.</td>
+                      <td colSpan={6} style={emptyState}>No unpaid tenants for this property.</td>
                     </tr>
                   )}
                 </tbody>
@@ -199,25 +237,39 @@ const AlertsTab = () => {
               <thead>
                 <tr>
                   <th style={thStyle}>Property</th>
-                  <th style={thStyle}>Type</th>
-                  <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Occupancy</th>
+                  <th style={thStyle}>Unpaid</th>
                   <th style={thStyle}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {properties.length > 0 ? (
-                  properties.map((p) => (
-                    <tr key={p.id || p.ID}>
-                      <td style={tdStyle}><span style={{ fontWeight: 800, color: '#111827' }}>{p.address || p.Address || '—'}</span></td>
-                      <td style={tdStyle}>{p.propertyType || p.PropertyType || p.type || p.Type || '—'}</td>
-                      <td style={tdStyle}>{p.status || p.Status || '—'}</td>
-                      <td style={tdStyle}>
-                        <span style={pill} role="button" tabIndex={0} onClick={() => openProperty(p)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openProperty(p); }}>
-                          see
-                        </span>
-                      </td>
-                    </tr>
-                  ))
+                  properties.map((p) => {
+                    const total = p.numberOfUnits ?? p.NumberOfUnits ?? 1;
+                    const occupied = p.occupiedUnits ?? p.OccupiedUnits ?? 0;
+                    const unpaid = p.unpaidUnits ?? p.UnpaidUnits ?? 0;
+                    const label = (p.name || p.Name || p.address || p.Address || '—').toString().trim();
+                    const addr = (p.address || p.Address || '').toString().trim();
+                    return (
+                      <tr key={p.id || p.ID || label}>
+                        <td style={tdStyle}>
+                          <div>
+                            <div style={{ fontWeight: 800, color: '#111827' }}>{label}</div>
+                            {addr && addr !== label ? (
+                              <div style={{ color: '#94a3b8', fontSize: '0.82rem' }}>{addr}</div>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td style={tdStyle}>{`${occupied}/${total}`}</td>
+                        <td style={tdStyle}>{`${unpaid}/${total}`}</td>
+                        <td style={tdStyle}>
+                          <span style={pill} role="button" tabIndex={0} onClick={() => openProperty(p)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openProperty(p); }}>
+                            see
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan={4} style={emptyState}>No properties found.</td>
@@ -233,4 +285,3 @@ const AlertsTab = () => {
 };
 
 export default AlertsTab;
-
