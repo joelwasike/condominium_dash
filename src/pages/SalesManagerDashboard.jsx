@@ -170,6 +170,17 @@ const SalesManagerDashboard = () => {
   const [waitingListClients, setWaitingListClients] = useState([]);
   const [unpaidRents, setUnpaidRents] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [alertProperties, setAlertProperties] = useState([]);
+  const [alertPropertiesLoading, setAlertPropertiesLoading] = useState(false);
+  const [showAlertPropertyModal, setShowAlertPropertyModal] = useState(false);
+  const [selectedAlertProperty, setSelectedAlertProperty] = useState(null);
+  const [alertPropertyTenants, setAlertPropertyTenants] = useState([]);
+  const [alertTenantsLoading, setAlertTenantsLoading] = useState(false);
+  const [alertComposeClient, setAlertComposeClient] = useState(null);
+  const [alertComposeChannel, setAlertComposeChannel] = useState('sms');
+  const [alertComposeSubject, setAlertComposeSubject] = useState('');
+  const [alertComposeMessage, setAlertComposeMessage] = useState('');
+  const [alertSending, setAlertSending] = useState(false);
   const [advertisements, setAdvertisements] = useState([]);
   const [owners, setOwners] = useState([]); // Owners (landlords) for property assignment
   const [salesProperties, setSalesProperties] = useState([]); // Properties that are strictly for sale
@@ -542,7 +553,7 @@ const SalesManagerDashboard = () => {
         return;
       }
       
-      const [overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData] = await Promise.all([
+      const [overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData, alertPropsData] = await Promise.all([
         salesManagerService.getOverview(),
         salesManagerService.getProperties({
           status: propertyStatusFilter || undefined,
@@ -556,6 +567,7 @@ const SalesManagerDashboard = () => {
         salesManagerService.getAlerts(alertTypeFilter || null),
         salesManagerService.getOwners().catch(() => []),
         salesManagerService.getSalesProperties().catch(() => []),
+        salesManagerService.getAlertProperties().catch(() => []),
       ]);
 
       console.log('Loaded data:', { overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData });
@@ -581,6 +593,7 @@ const SalesManagerDashboard = () => {
       setAlerts(Array.isArray(alertsData) ? alertsData : []);
       setOwners(Array.isArray(ownersData) ? ownersData : []);
       setSalesProperties(combinedSalesProps);
+      setAlertProperties(Array.isArray(alertPropsData) ? alertPropsData : []);
     } catch (error) {
       console.error('Failed to load data:', error);
       if (!isDemoMode()) {
@@ -4643,83 +4656,244 @@ const SalesManagerDashboard = () => {
       <div className="sa-alerts-header">
         <div>
           <h2>Unpaid Rent Alerts</h2>
-        <p>Monitor and manage overdue payments</p>
+        <p>Monitor and manage overdue payments by property</p>
         </div>
-      </div>
-
-      <div className="sa-transactions-filters">
-        <button className="sa-filter-button">
-          <Filter size={16} />
-          Filter
-        </button>
-        <select 
-          className="sa-filter-button"
-          value={alertTypeFilter}
-          onChange={(e) => setAlertTypeFilter(e.target.value)}
-          style={{ padding: '8px 14px', cursor: 'pointer' }}
-        >
-          <option value="">All Alert Types</option>
-          <option value="Payment Overdue">Payment Overdue</option>
-          <option value="Vacant Property">Vacant Property</option>
-          <option value="Maintenance">Maintenance</option>
-        </select>
       </div>
 
       <div className="sa-section-card">
         <div className="sa-section-header">
-          <h3>Alerts</h3>
-          <p>Track all alerts and their current status.</p>
+          <h3>Properties</h3>
+          <p>Occupancy and unpaid ratios are computed from units + payments.</p>
         </div>
         <div className="sa-table-wrapper">
           <table className="sa-table">
           <thead>
             <tr>
-                <th />
-                <th>Alert</th>
               <th>Property</th>
-              <th>Urgency</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Amount</th>
+              <th>Occupancy</th>
+              <th>Unpaid</th>
+              <th />
             </tr>
           </thead>
           <tbody>
-            {alerts.length > 0 ? (
-              alerts.map(alert => (
-                <tr key={alert.ID}>
-                  <td>
-                      <input type="checkbox" />
-                    </td>
+            {alertProperties.length > 0 ? (
+              alertProperties.map((p) => {
+                const total = p.numberOfUnits ?? p.NumberOfUnits ?? 1;
+                const occ = p.occupiedUnits ?? p.OccupiedUnits ?? 0;
+                const unpaid = p.unpaidUnits ?? p.UnpaidUnits ?? 0;
+                const displayName = (p.name || p.Name || p.address || p.Address || '—').toString().trim();
+                const address = (p.address || p.Address || '').toString().trim();
+                return (
+                  <tr key={p.id ?? p.ID ?? displayName}>
                     <td>
                       <div className="sa-cell-main">
-                        <span className="sa-cell-title">{alert.Title || 'N/A'}</span>
-                        <span className="sa-cell-sub">{alert.Message || 'N/A'}</span>
+                        <span className="sa-cell-title">{displayName}</span>
+                        <span className="sa-cell-sub">{address || '—'}</span>
                       </div>
-                  </td>
-                  <td>{alert.Property || 'N/A'}</td>
-                  <td>
-                      <span className={`sa-status-pill ${(alert.Urgency || 'normal').toLowerCase()}`}>
-                      {alert.Urgency || 'Normal'}
-                    </span>
-                  </td>
-                  <td>
-                      <span className={`sa-status-pill ${(alert.Status || 'open').toLowerCase()}`}>
-                      {alert.Status || 'Open'}
-                    </span>
-                  </td>
-                  <td>{alert.CreatedAt ? new Date(alert.CreatedAt).toLocaleDateString() : 'N/A'}</td>
-                    <td>{alert.Amount ? `${alert.Amount.toLocaleString()} XOF` : '—'}</td>
-                </tr>
-              ))
+                    </td>
+                    <td>{`${occ}/${total}`}</td>
+                    <td>{`${unpaid}/${total}`}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="sa-outline-button"
+                        onClick={async () => {
+                          const pid = p.id ?? p.ID;
+                          if (!pid) return;
+                          setSelectedAlertProperty(p);
+                          setShowAlertPropertyModal(true);
+                          setAlertComposeClient(null);
+                          setAlertPropertyTenants([]);
+                          setAlertTenantsLoading(true);
+                          try {
+                            const tenants = await salesManagerService.getAlertPropertyTenants(pid);
+                            setAlertPropertyTenants(Array.isArray(tenants) ? tenants : []);
+                          } catch (e) {
+                            addNotification(e?.message || 'Failed to load unpaid tenants', 'error');
+                          } finally {
+                            setAlertTenantsLoading(false);
+                          }
+                        }}
+                      >
+                        See
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                  <td colSpan={7} className="sa-table-empty">No alerts found. Start the backend to see real data.</td>
+                  <td colSpan={4} className="sa-table-empty">No properties found. Start the backend to see real data.</td>
               </tr>
             )}
           </tbody>
         </table>
         </div>
       </div>
+
+      <Modal
+        isOpen={showAlertPropertyModal}
+        onClose={() => { if (!alertSending) { setShowAlertPropertyModal(false); setSelectedAlertProperty(null); setAlertComposeClient(null); } }}
+        title={alertComposeClient ? 'Send Alert' : 'Unpaid Tenants'}
+        size="lg"
+      >
+        {!alertComposeClient ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ color: '#64748b', fontSize: '0.9rem' }}>
+              {(() => {
+                const name = (selectedAlertProperty?.name || selectedAlertProperty?.Name || selectedAlertProperty?.address || selectedAlertProperty?.Address || '').toString().trim();
+                const addr = (selectedAlertProperty?.address || selectedAlertProperty?.Address || '').toString().trim();
+                return name ? `${name}${addr && addr !== name ? ` — ${addr}` : ''}` : addr;
+              })()}
+            </div>
+            <div className="sa-table-wrapper" style={{ maxHeight: 420, overflow: 'auto' }}>
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Tenant</th>
+                    <th>Unit</th>
+                    <th>Arrears</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {alertTenantsLoading ? (
+                    <tr><td colSpan={4} className="sa-table-empty">Loading…</td></tr>
+                  ) : alertPropertyTenants.length > 0 ? (
+                    alertPropertyTenants.map((t) => (
+                      <tr key={t.id ?? t.ID ?? t.email ?? t.phone ?? t.name}>
+                        <td>
+                          <div className="sa-cell-main">
+                            <span className="sa-cell-title">{t.name || t.Name || '—'}</span>
+                            <span className="sa-cell-sub">{t.email || t.Email || t.phone || t.Phone || '—'}</span>
+                          </div>
+                        </td>
+                        <td>{t.unitNumber || t.UnitNumber || '—'}</td>
+                        <td>{typeof (t.arrears ?? t.Arrears) === 'number' ? `${(t.arrears ?? t.Arrears).toLocaleString()} XOF` : '—'}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className="sa-outline-button"
+                              onClick={() => {
+                                setAlertComposeClient(t);
+                                setAlertComposeChannel('sms');
+                                setAlertComposeSubject('');
+                                setAlertComposeMessage('');
+                              }}
+                            >
+                              SMS
+                            </button>
+                            <button
+                              type="button"
+                              className="sa-outline-button"
+                              onClick={() => {
+                                setAlertComposeClient(t);
+                                setAlertComposeChannel('email');
+                                const propName = (selectedAlertProperty?.name || selectedAlertProperty?.Name || selectedAlertProperty?.address || selectedAlertProperty?.Address || 'Property').toString().trim();
+                                setAlertComposeSubject(`Unpaid rent reminder - ${propName}`);
+                                setAlertComposeMessage('');
+                              }}
+                            >
+                              Email
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan={4} className="sa-table-empty">No unpaid tenants for this property.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ color: '#334155' }}>
+                <div style={{ fontWeight: 700 }}>{alertComposeClient.name || alertComposeClient.Name || 'Tenant'}</div>
+                <div style={{ color: '#64748b', fontSize: '0.9rem' }}>{alertComposeChannel === 'sms' ? (alertComposeClient.phone || alertComposeClient.Phone || 'No phone') : (alertComposeClient.email || alertComposeClient.Email || 'No email')}</div>
+              </div>
+              <button type="button" className="sa-outline-button" onClick={() => setAlertComposeClient(null)} disabled={alertSending}>Back</button>
+            </div>
+
+            {alertComposeChannel === 'email' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Subject</label>
+                <input
+                  className="sa-input"
+                  value={alertComposeSubject}
+                  onChange={(e) => setAlertComposeSubject(e.target.value)}
+                  placeholder="Email subject"
+                  disabled={alertSending}
+                />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Message</label>
+              <textarea
+                className="sa-input"
+                rows={8}
+                value={alertComposeMessage}
+                onChange={(e) => setAlertComposeMessage(e.target.value)}
+                placeholder="Type the alert message to send…"
+                disabled={alertSending}
+                style={{ resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" className="sa-outline-button" onClick={() => setAlertComposeClient(null)} disabled={alertSending}>Cancel</button>
+              <button
+                type="button"
+                className="sa-primary-cta"
+                disabled={alertSending || !String(alertComposeMessage || '').trim()}
+                onClick={async () => {
+                  const clientId = alertComposeClient.id ?? alertComposeClient.ID;
+                  if (!clientId) return;
+                  setAlertSending(true);
+                  try {
+                    await salesManagerService.sendTenantAlert({
+                      clientId,
+                      channel: alertComposeChannel,
+                      message: alertComposeMessage.trim(),
+                      subject: alertComposeChannel === 'email' ? (alertComposeSubject || '').trim() : undefined,
+                      urgency: 'High',
+                    });
+                    addNotification('Alert sent successfully', 'success');
+                    setAlertComposeClient(null);
+                    // Refresh counts and list for correctness.
+                    setAlertPropertiesLoading(true);
+                    try {
+                      const props = await salesManagerService.getAlertProperties();
+                      setAlertProperties(Array.isArray(props) ? props : []);
+                    } finally {
+                      setAlertPropertiesLoading(false);
+                    }
+                    if (selectedAlertProperty?.id || selectedAlertProperty?.ID) {
+                      setAlertTenantsLoading(true);
+                      try {
+                        const tenants = await salesManagerService.getAlertPropertyTenants(selectedAlertProperty.id ?? selectedAlertProperty.ID);
+                        setAlertPropertyTenants(Array.isArray(tenants) ? tenants : []);
+                      } finally {
+                        setAlertTenantsLoading(false);
+                      }
+                    }
+                  } catch (e) {
+                    addNotification(e?.message || 'Failed to send alert', 'error');
+                  } finally {
+                    setAlertSending(false);
+                  }
+                }}
+              >
+                {alertSending ? 'Sending…' : 'Send'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 
@@ -6728,9 +6902,6 @@ const SalesManagerDashboard = () => {
                       placeholder="e.g. Abobo Residence"
                     />
                   </div>
-                  <div className="form-group" />
-                </div>
-                <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="create-address">Address *</label>
                     <input
