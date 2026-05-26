@@ -39,6 +39,16 @@ const OwnerPaymentsTab = (props) => {
 
   const [ownersSummary, setOwnersSummary] = useState([]);
   const [ownersSummaryLoading, setOwnersSummaryLoading] = useState(false);
+  const [showOwnerRentSummary, setShowOwnerRentSummary] = useState(false);
+
+  const ownersRows = useMemo(() => {
+    return (ownersSummary || []).map((s, idx) => {
+      const ownerName = s.ownerName || s.OwnerName || s.landlord || s.Landlord || '—';
+      const expectedRents = s.expectedRents ?? s.ExpectedRents ?? 0;
+      const collectedRents = s.collectedRents ?? s.CollectedRents ?? 0;
+      return { key: s.ownerId || s.OwnerID || idx, ownerName, expectedRents, collectedRents };
+    });
+  }, [ownersSummary]);
 
   useEffect(() => {
     if (ownerView !== 'owners') return;
@@ -187,6 +197,54 @@ const OwnerPaymentsTab = (props) => {
           </div>
         ) : ownerView === 'owners' ? (
           <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              <button type="button" className="sa-outline-button" onClick={() => setShowOwnerRentSummary((v) => !v)}>
+                Expected rents vs received
+              </button>
+            </div>
+
+            {showOwnerRentSummary && (
+              <div className="sa-section-card" style={{ marginBottom: '18px' }}>
+                <div className="sa-section-header">
+                  <div>
+                    <h3 style={{ margin: 0 }}>Expected rents per owner vs. rents received</h3>
+                    <p style={{ margin: '4px 0 0 0', color: '#6b7280' }}>This month</p>
+                  </div>
+                </div>
+                {ownersSummaryLoading ? (
+                  <div className="loading">Loading owners summary...</div>
+                ) : ownersRows.length === 0 ? (
+                  <div className="no-data">No owners found.</div>
+                ) : (
+                  <div className="sa-table-wrapper">
+                    <table className="sa-table">
+                      <thead>
+                        <tr>
+                          <th>Owner</th>
+                          <th>Expected rents</th>
+                          <th>Rents received</th>
+                          <th>Unpaid</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ownersRows.map((r) => {
+                          const unpaidOwner = Math.max(0, Number(r.expectedRents || 0) - Number(r.collectedRents || 0));
+                          return (
+                            <tr key={r.key}>
+                              <td><span className="sa-cell-title">{r.ownerName}</span></td>
+                              <td>{money(r.expectedRents)}</td>
+                              <td style={{ color: '#059669', fontWeight: 700 }}>{money(r.collectedRents)}</td>
+                              <td style={{ color: '#dc2626', fontWeight: 700 }}>{money(unpaidOwner)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
             {ownerBalancesLoading || ownersSummaryLoading ? (
               <div className="loading">Loading owners...</div>
             ) : ownerBalancesOwners.length === 0 ? (
@@ -421,4 +479,3 @@ OwnerPaymentsTab.LandlordModal = (props) => {
 };
 
 export default OwnerPaymentsTab;
-

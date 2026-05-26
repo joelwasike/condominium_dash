@@ -125,46 +125,6 @@ const PaymentsTab = (props) => {
         </div>
       </div>
 
-      <div className="sa-section-card" style={{ marginBottom: '24px' }}>
-        <div className="sa-section-header">
-          <div>
-            <h2>Expected rents per owner vs. rents received</h2>
-            <p>This month</p>
-          </div>
-        </div>
-        {ownersSummaryLoading ? (
-          <div className="loading">Loading owners summary...</div>
-        ) : ownersRows.length === 0 ? (
-          <div className="no-data">No owners found.</div>
-        ) : (
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>Owner</th>
-                  <th>Expected rents</th>
-                  <th>Rents received</th>
-                  <th>Unpaid</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ownersRows.map((r) => {
-                  const unpaidOwner = Math.max(0, Number(r.expectedRents || 0) - Number(r.collectedRents || 0));
-                  return (
-                    <tr key={r.key}>
-                      <td><span className="sa-cell-title">{r.ownerName}</span></td>
-                      <td>{Number(r.expectedRents || 0).toFixed(2)} XOF</td>
-                      <td style={{ color: '#059669', fontWeight: 700 }}>{Number(r.collectedRents || 0).toFixed(2)} XOF</td>
-                      <td style={{ color: '#dc2626', fontWeight: 700 }}>{unpaidOwner.toFixed(2)} XOF</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
       <div className="sa-section-card">
         <div className="sa-section-header">
           <div>
