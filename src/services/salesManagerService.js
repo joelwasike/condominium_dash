@@ -348,12 +348,33 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Alerts page: list all tenants for a property (including paid) for bulk selection
+  getAlertPropertyTenantsAll: async (propertyId) => {
+    const url = buildApiUrl(`/api/salesmanager/alerts/properties/${propertyId}/tenants?scope=all`);
+    return await apiRequest(url);
+  },
+
+  // Alerts page: list all unpaid tenants across properties
+  getAlertUnpaidTenants: async () => {
+    const url = buildApiUrl('/api/salesmanager/alerts/unpaid-tenants');
+    return await apiRequest(url);
+  },
+
   // Alerts page: send alert to a tenant (sms/email)
   sendTenantAlert: async ({ clientId, channel, message, subject, urgency }) => {
     const url = buildApiUrl('/api/salesmanager/alerts/send');
     return await apiRequest(url, {
       method: 'POST',
       body: JSON.stringify({ clientId, channel, message, subject, urgency }),
+    });
+  },
+
+  // Alerts page: send one alert to multiple tenants
+  sendTenantAlertBulk: async ({ clientIds, channel, message, subject, urgency }) => {
+    const url = buildApiUrl('/api/salesmanager/alerts/send-bulk');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({ clientIds, channel, message, subject, urgency }),
     });
   },
 
