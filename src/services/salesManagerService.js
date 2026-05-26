@@ -360,6 +360,12 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Alerts page: list all tenants across properties (including unassigned) for bulk sending
+  getAlertAllTenants: async () => {
+    const url = buildApiUrl('/api/salesmanager/alerts/all-tenants');
+    return await apiRequest(url);
+  },
+
   // Alerts page: send alert to a tenant (sms/email)
   sendTenantAlert: async ({ clientId, channel, message, subject, urgency }) => {
     const url = buildApiUrl('/api/salesmanager/alerts/send');

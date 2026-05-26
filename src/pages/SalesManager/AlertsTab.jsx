@@ -12,7 +12,7 @@ const btnOutline = { padding: '8px 14px', borderRadius: '12px', border: '1px sol
 const pill = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '4px 12px', borderRadius: '999px', border: '2px solid #86efac', color: '#16a34a', fontWeight: 700, fontSize: '0.82rem', background: '#f0fdf4', cursor: 'pointer' };
 
 const AlertsTab = () => {
-  const [view, setView] = useState('list'); // list | detail | bulk-select | bulk-unpaid
+  const [view, setView] = useState('list'); // list | detail | bulk-select | bulk-unpaid | bulk-all
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -26,6 +26,8 @@ const AlertsTab = () => {
   const [bulkSending, setBulkSending] = useState(false);
   const [bulkUnpaidGroups, setBulkUnpaidGroups] = useState([]);
   const [bulkUnpaidLoading, setBulkUnpaidLoading] = useState(false);
+  const [bulkAllGroups, setBulkAllGroups] = useState([]);
+  const [bulkAllLoading, setBulkAllLoading] = useState(false);
 
   const [message, setMessage] = useState('Hello,\nThis is a reminder from Saaf Immo.\nPlease take note of this message and contact the agency if needed.');
   const [subject, setSubject] = useState('Alert');
@@ -480,7 +482,21 @@ const AlertsTab = () => {
   }
 
   if (view === 'bulk-unpaid') {
-    const allTenantIds = bulkUnpaidGroups.flatMap((g) => (Array.isArray(g.tenants) ? g.tenants.map((t) => t.ID || t.id).filter(Boolean) : []));
+    const groupTenantIds = (g) => (Array.isArray(g.tenants) ? g.tenants.map((t) => t.ID || t.id).filter(Boolean) : []);
+    const allTenantIds = bulkUnpaidGroups.flatMap((g) => groupTenantIds(g));
+    const selectedSet = new Set(bulkSelectedIds);
+    const allSelected = allTenantIds.length > 0 && allTenantIds.every((id) => selectedSet.has(id));
+    const toggleAll = () => setBulkSelectedIds(allSelected ? [] : allTenantIds);
+    const toggleGroup = (g) => {
+      const ids = groupTenantIds(g);
+      if (ids.length === 0) return;
+      const groupAllSelected = ids.every((id) => selectedSet.has(id));
+      if (groupAllSelected) {
+        setBulkSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+      } else {
+        setBulkSelectedIds((prev) => Array.from(new Set([...prev, ...ids])));
+      }
+    };
     return (
       <div>
         <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -505,6 +521,9 @@ const AlertsTab = () => {
 
         <div style={card}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
+            <button type="button" style={btnOutline} onClick={toggleAll} disabled={bulkSending || allTenantIds.length === 0}>
+              {allSelected ? 'Unselect all' : 'Select all'}
+            </button>
             <button type="button" style={btnOutline} onClick={() => setBulkChannel('sms')} disabled={bulkSending} aria-pressed={bulkChannel === 'sms'}>
               SMS
             </button>
@@ -512,7 +531,7 @@ const AlertsTab = () => {
               Email
             </button>
             <div style={{ marginLeft: 'auto', color: '#64748b', fontWeight: 700 }}>
-              Recipients: {allTenantIds.length}
+              Selected: {bulkSelectedIds.length}
             </div>
           </div>
 
@@ -544,7 +563,7 @@ const AlertsTab = () => {
             <button
               type="button"
               style={{ ...btnPrimary, opacity: bulkSending ? 0.6 : 1 }}
-              disabled={bulkSending || allTenantIds.length === 0 || !message.trim()}
+              disabled={bulkSending || bulkSelectedIds.length === 0 || !message.trim()}
               onClick={async () => {
                 if (!message.trim()) {
                   setSendError('Message is required.');
@@ -554,7 +573,7 @@ const AlertsTab = () => {
                 setBulkSending(true);
                 try {
                   await salesManagerService.sendTenantAlertBulk({
-                    clientIds: allTenantIds,
+                    clientIds: bulkSelectedIds,
                     channel: bulkChannel,
                     message: message.trim(),
                     subject: bulkChannel === 'email' ? (subject || 'Alert') : undefined,
@@ -568,7 +587,7 @@ const AlertsTab = () => {
                 }
               }}
             >
-              {bulkSending ? 'Sending...' : 'Send to all unpaid'}
+              {bulkSending ? 'Sending...' : 'Send to selected'}
             </button>
           </div>
 
@@ -579,24 +598,37 @@ const AlertsTab = () => {
               {bulkUnpaidGroups.length > 0 ? (
                 bulkUnpaidGroups.map((g, idx) => (
                   <div key={g.propertyId || g.address || idx} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 }}>
-                    <div style={{ fontWeight: 800, color: '#111827', marginBottom: 8 }}>{g.name || g.address || 'Property'}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                      <div style={{ fontWeight: 800, color: '#111827' }}>{g.name || g.address || 'Property'}</div>
+                      <button type="button" style={btnOutline} onClick={() => toggleGroup(g)} disabled={bulkSending}>
+                        Select all in building
+                      </button>
+                    </div>
                     <div style={{ overflowX: 'auto' }}>
                       <table style={tableStyle}>
                         <thead>
                           <tr>
+                            <th style={thStyle} />
                             <th style={thStyle}>Tenant</th>
                             <th style={thStyle}>Unit</th>
                             <th style={thStyle}>Arrears</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {(g.tenants || []).map((t) => (
-                            <tr key={t.ID || t.id}>
-                              <td style={tdStyle}>{t.Name || t.name || '—'}</td>
-                              <td style={tdStyle}>{t.UnitNumber || t.unitNumber || '—'}</td>
-                              <td style={tdStyle}>{typeof t.Arrears === 'number' ? `${t.Arrears.toLocaleString()} XOF` : (typeof t.arrears === 'number' ? `${t.arrears.toLocaleString()} XOF` : '—')}</td>
-                            </tr>
-                          ))}
+                          {(g.tenants || []).map((t) => {
+                            const id = t.ID || t.id;
+                            const arrears = t.Arrears ?? t.arrears;
+                            return (
+                              <tr key={id}>
+                                <td style={tdStyle}>
+                                  <input type="checkbox" checked={selectedSet.has(id)} onChange={() => setBulkSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))} disabled={bulkSending} />
+                                </td>
+                                <td style={tdStyle}>{t.Name || t.name || '—'}</td>
+                                <td style={tdStyle}>{t.UnitNumber || t.unitNumber || '—'}</td>
+                                <td style={tdStyle}>{typeof arrears === 'number' ? `${arrears.toLocaleString()} XOF` : '—'}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -604,6 +636,171 @@ const AlertsTab = () => {
                 ))
               ) : (
                 <div style={emptyState}>No unpaid tenants found.</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'bulk-all') {
+    const groupTenantIds = (g) => (Array.isArray(g.tenants) ? g.tenants.map((t) => t.ID || t.id).filter(Boolean) : []);
+    const allTenantIds = bulkAllGroups.flatMap((g) => groupTenantIds(g));
+    const selectedSet = new Set(bulkSelectedIds);
+    const allSelected = allTenantIds.length > 0 && allTenantIds.every((id) => selectedSet.has(id));
+    const toggleAll = () => setBulkSelectedIds(allSelected ? [] : allTenantIds);
+    const toggleGroup = (g) => {
+      const ids = groupTenantIds(g);
+      if (ids.length === 0) return;
+      const groupAllSelected = ids.every((id) => selectedSet.has(id));
+      if (groupAllSelected) {
+        setBulkSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+      } else {
+        setBulkSelectedIds((prev) => Array.from(new Set([...prev, ...ids])));
+      }
+    };
+
+    return (
+      <div>
+        <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            type="button"
+            style={btnOutline}
+            onClick={() => {
+              setView('list');
+              setBulkAllGroups([]);
+              setBulkSelectedIds([]);
+              setSendError('');
+            }}
+            disabled={bulkSending}
+          >
+            <ArrowLeft size={16} style={{ marginRight: 6 }} />
+            Back
+          </button>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#111827' }}>All Tenants</h2>
+            <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#94a3b8' }}>Select tenants per building, or send to everyone in the agency</p>
+          </div>
+        </div>
+
+        <div style={card}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
+            <button type="button" style={btnOutline} onClick={toggleAll} disabled={bulkSending || allTenantIds.length === 0}>
+              {allSelected ? 'Unselect all' : 'Select all'}
+            </button>
+            <button type="button" style={btnOutline} onClick={() => setBulkChannel('sms')} disabled={bulkSending} aria-pressed={bulkChannel === 'sms'}>
+              SMS
+            </button>
+            <button type="button" style={btnOutline} onClick={() => setBulkChannel('email')} disabled={bulkSending} aria-pressed={bulkChannel === 'email'}>
+              Email
+            </button>
+            <div style={{ marginLeft: 'auto', color: '#64748b', fontWeight: 700 }}>
+              Selected: {bulkSelectedIds.length}
+            </div>
+          </div>
+
+          {bulkChannel === 'email' ? (
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email subject</label>
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Alert subject"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+                disabled={bulkSending}
+              />
+            </div>
+          ) : null}
+
+          <div style={{ marginBottom: 12 }}>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              style={{ width: '100%', minHeight: '140px', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, outline: 'none', resize: 'vertical', color: '#374151', fontSize: '0.95rem' }}
+              placeholder="Type alert message..."
+              disabled={bulkSending}
+            />
+            {sendError && <div style={{ color: '#b91c1c', fontWeight: 600, marginTop: 10 }}>{sendError}</div>}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+            <button
+              type="button"
+              style={{ ...btnPrimary, opacity: bulkSending ? 0.6 : 1 }}
+              disabled={bulkSending || bulkSelectedIds.length === 0 || !message.trim()}
+              onClick={async () => {
+                if (!message.trim()) {
+                  setSendError('Message is required.');
+                  return;
+                }
+                setSendError('');
+                setBulkSending(true);
+                try {
+                  await salesManagerService.sendTenantAlertBulk({
+                    clientIds: bulkSelectedIds,
+                    channel: bulkChannel,
+                    message: message.trim(),
+                    subject: bulkChannel === 'email' ? (subject || 'Alert') : undefined,
+                    urgency: 'Medium',
+                  });
+                  await loadProperties();
+                } catch (e) {
+                  setSendError(e?.message || 'Failed to send alert.');
+                } finally {
+                  setBulkSending(false);
+                }
+              }}
+            >
+              {bulkSending ? 'Sending...' : 'Send to selected'}
+            </button>
+          </div>
+
+          {bulkAllLoading ? (
+            <div style={emptyState}>Loading tenants...</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 12 }}>
+              {bulkAllGroups.length > 0 ? (
+                bulkAllGroups.map((g, idx) => (
+                  <div key={g.propertyId || g.address || idx} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                      <div style={{ fontWeight: 800, color: '#111827' }}>{g.name || g.address || 'Property'}</div>
+                      <button type="button" style={btnOutline} onClick={() => toggleGroup(g)} disabled={bulkSending}>
+                        Select all in building
+                      </button>
+                    </div>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={tableStyle}>
+                        <thead>
+                          <tr>
+                            <th style={thStyle} />
+                            <th style={thStyle}>Tenant</th>
+                            <th style={thStyle}>Unit</th>
+                            <th style={thStyle}>Arrears</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(g.tenants || []).map((t) => {
+                            const id = t.ID || t.id;
+                            const arrears = t.Arrears ?? t.arrears;
+                            return (
+                              <tr key={id}>
+                                <td style={tdStyle}>
+                                  <input type="checkbox" checked={selectedSet.has(id)} onChange={() => setBulkSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))} disabled={bulkSending} />
+                                </td>
+                                <td style={tdStyle}>{t.Name || t.name || '—'}</td>
+                                <td style={tdStyle}>{t.UnitNumber || t.unitNumber || '—'}</td>
+                                <td style={tdStyle}>{typeof arrears === 'number' && arrears > 0 ? `${arrears.toLocaleString()} XOF` : '—'}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={emptyState}>No tenants found.</div>
               )}
             </div>
           )}
@@ -634,6 +831,27 @@ const AlertsTab = () => {
             }}
           >
             Send alert (select tenants)
+          </button>
+          <button
+            type="button"
+            style={btnOutline}
+            onClick={async () => {
+              setSendError('');
+              setView('bulk-all');
+              setBulkSelectedIds([]);
+              setBulkAllGroups([]);
+              setBulkAllLoading(true);
+              try {
+                const res = await salesManagerService.getAlertAllTenants();
+                setBulkAllGroups(Array.isArray(res) ? res : []);
+              } catch (e) {
+                setBulkAllGroups([]);
+              } finally {
+                setBulkAllLoading(false);
+              }
+            }}
+          >
+            Send to all tenants (agency)
           </button>
           <button
             type="button"
