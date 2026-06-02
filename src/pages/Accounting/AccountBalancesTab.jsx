@@ -11,9 +11,8 @@ const AccountBalancesTab = (props) => {
   const cashBalance = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register' && acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
   const bankBalance = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank' && acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
   const globalBalance = overviewData?.globalBalance ?? overviewData?.totalAvailableBalance ?? overviewData?.TotalAvailableBalance ?? 0;
-  const cashAccountIds = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register').map(acc => acc.ID || acc.id);
   const bankAccountIds = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank').map(acc => acc.ID || acc.id);
-  const accountsByType = { mobile_money: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'mobile_money'), cash_register: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register'), bank: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank'), other: cashierAccounts.filter(acc => !['mobile_money', 'cash_register', 'bank'].includes(acc.Type || acc.type)) };
+  const accountsByType = { mobile_money: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'mobile_money'), bank: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank'), other: cashierAccounts.filter(acc => !['mobile_money', 'cash_register', 'bank'].includes(acc.Type || acc.type)) };
   const mobileMoneySummary = useMemo(() => {
     const groups = new Map();
     accountsByType.mobile_money.forEach((account) => {
@@ -37,7 +36,7 @@ const AccountBalancesTab = (props) => {
     <div>
       <div className="sa-section-card">
         <div className="sa-section-header">
-          <div><h2>Account Balances</h2><p>View physical cash balance, bank balance, inflows/outflows, and owner transfers</p></div>
+          <div><h2>Account Balances</h2><p>View account balances, inflows/outflows, and owner transfers</p></div>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button className="sa-outline-button" onClick={() => { setCashierTransactionForm({ accountId: '', type: 'deposit', amount: '', reference: '', description: '', toAccountId: '' }); setShowCashierTransactionModal(true); }} disabled={loading || cashierAccounts.length === 0}><Plus size={18} /> Add Transaction</button>
             <button className="sa-primary-cta" onClick={() => { setCashierAccountForm({ name: '', type: 'cash_register', balance: 0, currency: 'XOF', description: '' }); setShowCashierAccountModal(true); }} disabled={loading}><Plus size={18} /> Add Account</button>
@@ -56,7 +55,6 @@ const AccountBalancesTab = (props) => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          {renderAccountGroup(accountsByType.cash_register, <Banknote size={20} style={{ color: '#10b981' }} />, 'Cash Register')}
           {renderAccountGroup(accountsByType.bank, <Building2 size={20} style={{ color: '#8b5cf6' }} />, 'Bank Accounts')}
           {renderAccountGroup(accountsByType.other, <Wallet size={20} style={{ color: '#6b7280' }} />, 'Other Accounts')}
           <div

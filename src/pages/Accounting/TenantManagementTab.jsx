@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Search, Download, ArrowLeft, DollarSign, Users, MapPin, Mail, Phone, Receipt } from 'lucide-react';
 import { t } from '../../utils/i18n';
 
 const TenantManagementTab = (props) => {
   const { loading, addNotification, tenants, tenantPayments, selectedTenant, setSelectedTenant, tenantPaymentStatusFilter, setTenantPaymentStatusFilter, tenantNameFilter, setTenantNameFilter } = props;
+  const [showAllPayments, setShowAllPayments] = useState(false);
 
-  if (selectedTenant) return renderTenantDetail(props);
+  if (selectedTenant) return renderTenantDetail({ ...props, showAllPayments, setShowAllPayments });
 
   const filteredTenants = tenants.filter(tenant => {
     if (tenantPaymentStatusFilter === 'up-to-date' && (tenant.PaymentStatus || tenant.paymentStatus) !== 'up-to-date') return false;
@@ -72,7 +73,7 @@ const TenantManagementTab = (props) => {
 };
 
 function renderTenantDetail(props) {
-  const { selectedTenant: t2, setSelectedTenant, tenantPayments } = props;
+  const { selectedTenant: t2, setSelectedTenant, tenantPayments, showAllPayments, setShowAllPayments } = props;
   if (!t2) return (<div className="sa-clients-page"><button type="button" className="sa-outline-button sa-tenant-detail-back-btn" onClick={() => setSelectedTenant(null)} style={{ marginBottom: '16px' }}><ArrowLeft size={16} /> Back to list</button><div className="sa-section-card"><p className="sa-cell-sub" style={{ margin: 0 }}>Tenant not found.</p></div></div>);
   const name = t2.TenantName || t2.tenantName || 'N/A';
   const email = t2.Email || t2.email || '';
@@ -88,7 +89,14 @@ function renderTenantDetail(props) {
   let statusLabel = 'Paid';
   if (paymentStatus === '1-month') statusLabel = 'Due';
   else if (paymentStatus === '2-months' || paymentStatus === '3+months') statusLabel = 'Overdue';
-  const tenantPaymentsFiltered = tenantPayments.filter(p => { const pTenant = (p.Tenant || p.tenant || '').toLowerCase(); const pProperty = (p.Property || p.property || '').toLowerCase(); const tName = (name || '').toLowerCase(); const tProp = (propertyAddr || '').toLowerCase(); return pTenant.includes(tName) || tName.includes(pTenant) || pProperty.includes(tProp) || tProp.includes(pProperty); });
+  const tenantPaymentsFiltered = tenantPayments.filter(p => {
+    const pTenant = (p.Tenant || p.tenant || '').toLowerCase();
+    const pProperty = (p.Property || p.property || '').toLowerCase();
+    const tName = (name || '').toLowerCase();
+    const tProp = (propertyAddr || '').toLowerCase();
+    return pTenant.includes(tName) || tName.includes(pTenant) || pProperty.includes(tProp) || tProp.includes(pProperty);
+  });
+  const visiblePayments = showAllPayments ? tenantPaymentsFiltered : tenantPaymentsFiltered.slice(0, 5);
 
   return (
     <div className="sa-clients-page">
@@ -96,10 +104,17 @@ function renderTenantDetail(props) {
       <div className="sa-section-card" style={{ marginBottom: '24px' }}>
         <div className="sa-tenant-detail-hero"><div className="sa-tenant-detail-avatar">{(name || 'T').charAt(0).toUpperCase()}</div><div><h2>{name}</h2><span className={`sa-status-pill ${(statusLabel || '').toLowerCase()}`} style={{ marginRight: '8px' }}>{statusLabel}</span>{propertyAddr && propertyAddr !== '-' && <span className="sa-tenant-detail-meta"><MapPin size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />{propertyAddr}{building ? ` . ${building}` : ''}</span>}</div></div>
       </div>
-      <div className="sa-tenant-detail-grid">
-        <div className="sa-section-card sa-tenant-detail-card"><h3><Users size={18} /> Personal information</h3><dl className="sa-tenant-detail-dl"><div><dt>Name</dt><dd>{name}</dd></div>{email && <div><dt>Email</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {email}</dd></div>}{phone && <div><dt>Phone</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</dd></div>}<div><dt>Payment status</dt><dd><span className={`sa-status-pill ${(statusLabel || '').toLowerCase()}`}>{statusLabel}</span></dd></div><div><dt>Months in arrears</dt><dd>{arrears}</dd></div></dl></div>
-        <div className="sa-section-card sa-tenant-detail-card"><h3><DollarSign size={18} /> Rent & payment</h3><dl className="sa-tenant-detail-dl"><div><dt>Property</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</dd></div>{building && <div><dt>Building</dt><dd>{building}</dd></div>}<div><dt>Monthly rent</dt><dd className="sa-tenant-detail-value-bold">{Number(monthlyRent).toLocaleString()} XOF</dd></div><div><dt>Outstanding amount</dt><dd style={{ color: outstanding > 0 ? '#dc2626' : '#059669', fontWeight: '600' }}>{Number(outstanding).toLocaleString()} XOF</dd></div><div><dt>Last payment</dt><dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '-'}</dd></div>{nextDue && <div><dt>Next payment due</dt><dd>{new Date(nextDue).toLocaleDateString()}</dd></div>}</dl></div>
-        <div className="sa-section-card sa-tenant-detail-card" style={{ gridColumn: '1 / -1' }}><h3><Receipt size={18} /> Recent payment history</h3>{tenantPaymentsFiltered.length > 0 ? (<ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>{tenantPaymentsFiltered.slice(0, 10).map((p, idx) => (<li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}><div className="sa-tenant-detail-alert-title">{Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF . {(p.ChargeType || p.chargeType || '-')} . {(p.Status || p.status || '-')}</div><div className="sa-tenant-detail-alert-meta">{p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '-')}{(p.Method || p.method) && ` . ${p.Method || p.method}`}</div></li>))}</ul>) : <p className="sa-cell-sub">No payment history for this tenant.</p>}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(320px, 0.9fr)', gap: '24px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gap: '24px' }}>
+          <div className="sa-section-card sa-tenant-detail-card"><h3><Users size={18} /> Personal information</h3><dl className="sa-tenant-detail-dl"><div><dt>Name</dt><dd>{name}</dd></div>{email && <div><dt>Email</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {email}</dd></div>}{phone && <div><dt>Phone</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</dd></div>}<div><dt>Payment status</dt><dd><span className={`sa-status-pill ${(statusLabel || '').toLowerCase()}`}>{statusLabel}</span></dd></div><div><dt>Months in arrears</dt><dd>{arrears}</dd></div></dl></div>
+          <div className="sa-section-card sa-tenant-detail-card"><h3><DollarSign size={18} /> Rent & payment</h3><dl className="sa-tenant-detail-dl"><div><dt>Property</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</dd></div>{building && <div><dt>Building</dt><dd>{building}</dd></div>}<div><dt>Monthly rent</dt><dd className="sa-tenant-detail-value-bold">{Number(monthlyRent).toLocaleString()} XOF</dd></div><div><dt>Outstanding amount</dt><dd style={{ color: outstanding > 0 ? '#dc2626' : '#059669', fontWeight: '600' }}>{Number(outstanding).toLocaleString()} XOF</dd></div><div><dt>Last payment</dt><dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '-'}</dd></div>{nextDue && <div><dt>Next payment due</dt><dd>{new Date(nextDue).toLocaleDateString()}</dd></div>}</dl></div>
+        </div>
+        <div style={{ display: 'grid', gap: '24px' }}>
+          <div className="sa-section-card sa-tenant-detail-card">
+            <h3><Receipt size={18} /> Recent payment history</h3>
+            {tenantPaymentsFiltered.length > 0 ? (<><ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>{visiblePayments.map((p, idx) => (<li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}><div className="sa-tenant-detail-alert-title">{Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF . {(p.ChargeType || p.chargeType || '-')} . {(p.Status || p.status || '-')}</div><div className="sa-tenant-detail-alert-meta">{p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '-')}{(p.Method || p.method) && ` . ${p.Method || p.method}`}</div></li>))}</ul>{tenantPaymentsFiltered.length > 5 && <div style={{ marginTop: '12px' }}><button type="button" className="sa-outline-button" onClick={() => setShowAllPayments((value) => !value)}>{showAllPayments ? 'Show less' : 'See more'}</button></div>}</>) : <p className="sa-cell-sub">No payment history for this tenant.</p>}
+          </div>
+        </div>
       </div>
     </div>
   );
