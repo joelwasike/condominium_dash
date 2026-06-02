@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Plus, Wallet, Smartphone, Banknote, Building2, Users, ArrowLeft } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
 import { t } from '../../utils/i18n';
 
 const AccountBalancesTab = (props) => {
   const { loading, overviewData, cashierAccounts, cashierTransactions, agencyBalance, ownerBalancesOwners, ownerBalancesLoading, selectedOwnerForBalance, setSelectedOwnerForBalance, collections, landlordPayments, expenses, setShowCashierAccountModal, setCashierAccountForm, setShowCashierTransactionModal, setCashierTransactionForm } = props;
+  const [showMobileMoneyDetails, setShowMobileMoneyDetails] = useState(false);
 
   const totalBalance = cashierAccounts.filter(acc => acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
   const cashBalance = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register' && acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
@@ -13,6 +14,17 @@ const AccountBalancesTab = (props) => {
   const cashAccountIds = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register').map(acc => acc.ID || acc.id);
   const bankAccountIds = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank').map(acc => acc.ID || acc.id);
   const accountsByType = { mobile_money: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'mobile_money'), cash_register: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register'), bank: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank'), other: cashierAccounts.filter(acc => !['mobile_money', 'cash_register', 'bank'].includes(acc.Type || acc.type)) };
+  const mobileMoneySummary = useMemo(() => {
+    const groups = new Map();
+    accountsByType.mobile_money.forEach((account) => {
+      const label = (account.Name || account.name || account.Description || account.description || 'Unnamed').trim();
+      groups.set(label, (groups.get(label) || 0) + (account.Balance || account.balance || 0));
+    });
+    return Array.from(groups.entries())
+      .map(([name, balance]) => ({ name, balance }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [accountsByType.mobile_money]);
+  const mobileMoneyTotal = mobileMoneySummary.reduce((sum, item) => sum + item.balance, 0);
 
   const renderAccountGroup = (accounts, icon, title, iconColor) => accounts.length > 0 && (
     <div className="sa-section-card" style={{ padding: '16px' }}>
@@ -44,10 +56,43 @@ const AccountBalancesTab = (props) => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          {renderAccountGroup(accountsByType.mobile_money, <Smartphone size={20} style={{ color: '#3b82f6' }} />, 'Mobile Money')}
           {renderAccountGroup(accountsByType.cash_register, <Banknote size={20} style={{ color: '#10b981' }} />, 'Cash Register')}
           {renderAccountGroup(accountsByType.bank, <Building2 size={20} style={{ color: '#8b5cf6' }} />, 'Bank Accounts')}
           {renderAccountGroup(accountsByType.other, <Wallet size={20} style={{ color: '#6b7280' }} />, 'Other Accounts')}
+          <div
+            className="sa-section-card"
+            style={{ padding: '16px', cursor: 'pointer' }}
+            onClick={() => setShowMobileMoneyDetails((value) => !value)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowMobileMoneyDetails((value) => !value);
+              }
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <Smartphone size={20} style={{ color: '#3b82f6' }} />
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>Mobile Money</h3>
+            </div>
+            <div style={{ padding: '12px', backgroundColor: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Total mobile money collected</p>
+              <p style={{ margin: '6px 0 0 0', fontSize: '1.25rem', fontWeight: 600, color: '#1d4ed8' }}>{mobileMoneyTotal.toFixed(2)} XOF</p>
+            </div>
+            {showMobileMoneyDetails && (
+              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {mobileMoneySummary.length === 0 ? (
+                  <p style={{ margin: 0, color: '#6b7280' }}>No mobile money accounts found.</p>
+                ) : mobileMoneySummary.map((provider) => (
+                  <div key={provider.name} style={{ padding: '10px 12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#111827' }}>{provider.name}</p>
+                    <p style={{ margin: '4px 0 0 0', color: '#1d4ed8', fontWeight: 700 }}>{provider.balance.toFixed(2)} XOF</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="sa-section-card" style={{ padding: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}><Building2 size={20} style={{ color: '#f59e0b' }} /><h3 style={{ margin: 0, fontSize: '1rem' }}>Agency Balance</h3></div><div style={{ padding: '12px', backgroundColor: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}><p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Commission from tenant payments</p><p style={{ margin: '6px 0 0 0', fontSize: '1.25rem', fontWeight: '600', color: '#b45309' }}>{(agencyBalance ?? 0).toFixed(2)} XOF</p></div></div>
           <div className="sa-section-card" style={{ padding: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}><Banknote size={20} style={{ color: '#10b981' }} /><h3 style={{ margin: 0, fontSize: '1rem' }}>Cash Balance</h3></div><div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #86efac' }}><p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Physical Cash</p><p style={{ margin: '6px 0 0 0', fontSize: '1.25rem', fontWeight: 600, color: '#166534' }}>{cashBalance.toFixed(2)} XOF</p></div></div>
           <div className="sa-section-card" style={{ padding: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}><Building2 size={20} style={{ color: '#8b5cf6' }} /><h3 style={{ margin: 0, fontSize: '1rem' }}>Bank Balance</h3></div><div style={{ padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '6px', border: '1px solid #93c5fd' }}><p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Bank Accounts Total</p><p style={{ margin: '6px 0 0 0', fontSize: '1.25rem', fontWeight: 600, color: '#0284c7' }}>{bankBalance.toFixed(2)} XOF</p></div></div>

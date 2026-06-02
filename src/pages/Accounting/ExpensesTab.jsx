@@ -130,10 +130,18 @@ const ExpensesTab = (props) => {
 // Add Expense Modal
 ExpensesTab.AddModal = (props) => {
   const { loading, setLoading, addNotification, setShowExpenseModal, setExpenses, loadExpenses, setOverviewData, landlords, expenseProperties, expenseFormScope, setExpenseFormScope, expenseFormBuilding, setExpenseFormBuilding, expenseFormUnits, setExpenseFormUnits, cashierAccounts, setCashierAccounts, setCashierTransactions } = props;
+  const { expenseDate, setExpenseDate } = props;
+  const resetExpenseModal = () => {
+    setShowExpenseModal(false);
+    setExpenseFormScope('Building');
+    setExpenseFormBuilding('');
+    setExpenseFormUnits([]);
+    setExpenseDate(new Date().toISOString().split('T')[0]);
+  };
   return (
-    <div className="modal-overlay" onClick={() => { setShowExpenseModal(false); setExpenseFormScope(''); setExpenseFormBuilding(''); setExpenseFormUnits([]); }}>
+    <div className="modal-overlay" onClick={resetExpenseModal}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header"><h3>Add Expense</h3><button className="modal-close" onClick={() => { setShowExpenseModal(false); setExpenseFormScope(''); setExpenseFormBuilding(''); setExpenseFormUnits([]); }}>x</button></div>
+        <div className="modal-header"><h3>Add Expense</h3><button className="modal-close" onClick={resetExpenseModal}>x</button></div>
         <div className="modal-body">
           <form onSubmit={async (e) => {
             e.preventDefault();
@@ -141,36 +149,33 @@ ExpensesTab.AddModal = (props) => {
               setLoading(true);
               const formData = new FormData(e.target);
               const accountId = formData.get('accountId');
-              const scope = formData.get('scope');
-              const building = formData.get('building');
+              const scope = 'Building';
+              const property = formData.get('building');
               const unit = formData.get('unit');
               const owner = formData.get('owner');
-              const buildingValue = scope === 'SAAF IMMO' ? '-' : (unit ? `${building} - ${unit}` : building || '-');
+              const buildingValue = unit ? `${property} - ${unit}` : property || '-';
               const expenseData = { scope, building: buildingValue, owner: owner || undefined, category: formData.get('category'), requestedBy: formData.get('requestedBy') || '', amount: parseFloat(formData.get('amount')), date: formData.get('date'), notes: formData.get('notes'), accountId: accountId ? parseInt(accountId) : null, requiresOwnerApproval: scope === 'Building', deductFrom: scope === 'Building' ? 'owner_balance' : 'commission_account' };
               const newExpense = await accountingService.addExpense(expenseData);
               setExpenses(prev => [newExpense, ...prev]);
               if (accountId) { try { const [accounts, transactions] = await Promise.all([accountingService.getCashierAccounts().catch(() => []), accountingService.getCashierTransactions().catch(() => [])]); setCashierAccounts(Array.isArray(accounts) ? accounts : []); setCashierTransactions(Array.isArray(transactions) ? transactions : []); } catch (error) { console.error('Error reloading cashier data:', error); } }
               addNotification('Expense added successfully!', 'success');
-              setShowExpenseModal(false); setExpenseFormScope(''); setExpenseFormBuilding(''); setExpenseFormUnits([]);
+              resetExpenseModal();
               await loadExpenses();
               try { const overview = await accountingService.getOverview(); setOverviewData(overview); } catch (err) { console.error('Error refreshing overview:', err); }
               e.target.reset();
             } catch (error) { console.error('Error adding expense:', error); addNotification('Failed to add expense. Please try again.', 'error'); } finally { setLoading(false); }
           }}>
-            <div className="form-group"><label>Scope</label><select name="scope" required value={expenseFormScope} onChange={(e) => { setExpenseFormScope(e.target.value); if (e.target.value === 'SAAF IMMO') { setExpenseFormBuilding(''); setExpenseFormUnits([]); } }}><option value="">Select Scope</option><option value="Building">Building</option><option value="SAAF IMMO">SAAF IMMO</option></select><small style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '6px', display: 'block', lineHeight: 1.4 }}><strong>Approval:</strong> Building = owner approves. Agency = director approves.<br /><strong>Deduction:</strong> Building expense = reduces owner balance. Agency expense = reduces commission account.</small></div>
-            {expenseFormScope === 'Building' && (<>
-              <div className="form-group"><label>Owner</label><select name="owner"><option value="">Select Owner</option>{landlords.map((l) => { const name = l.Name || l.name || l.Landlord || l.landlord || l.Email || l.email || '-'; return <option key={l.ID || l.id} value={name}>{name}</option>; })}</select></div>
-              <div className="form-group"><label>Building</label><select name="building" required value={expenseFormBuilding} onChange={(e) => setExpenseFormBuilding(e.target.value)}><option value="">Select Building</option>{expenseProperties.map((p) => { const addr = p.address || p.Address || ''; return <option key={addr} value={addr}>{addr}</option>; })}</select></div>
-              {expenseFormBuilding && (<div className="form-group"><label>Apartment / Unit (optional)</label><select name="unit"><option value="">-- Entire building --</option>{expenseFormUnits.map((u) => { const unitNum = u.UnitNumber || u.unitNumber || ''; return <option key={u.ID || u.id || unitNum} value={unitNum}>{unitNum}</option>; })}</select>{expenseFormUnits.length === 0 && <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>No units found for this property</small>}</div>)}
-            </>)}
+            <div className="form-group"><label>Owner</label><select name="owner"><option value="">Select Owner</option>{landlords.map((l) => { const name = l.Name || l.name || l.Landlord || l.landlord || l.Email || l.email || '-'; return <option key={l.ID || l.id} value={name}>{name}</option>; })}</select></div>
+            <div className="form-group"><label>Property</label><select name="building" required value={expenseFormBuilding} onChange={(e) => setExpenseFormBuilding(e.target.value)}><option value="">Select Property</option>{expenseProperties.map((p) => { const addr = p.address || p.Address || ''; return <option key={addr} value={addr}>{addr}</option>; })}</select></div>
+            {expenseFormBuilding && (<div className="form-group"><label>Apartment / Unit (optional)</label><select name="unit"><option value="">-- Entire property --</option>{expenseFormUnits.map((u) => { const unitNum = u.UnitNumber || u.unitNumber || ''; return <option key={u.ID || u.id || unitNum} value={unitNum}>{unitNum}</option>; })}</select>{expenseFormUnits.length === 0 && <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>No units found for this property</small>}</div>)}
             <div className="form-group"><label>Category</label><select name="category" required><option value="">Select Category</option><option value="Maintenance">Maintenance</option><option value="Utilities">Utilities</option><option value="Taxes">Taxes</option><option value="Software">Software</option><option value="Other">Other</option></select></div>
-            {expenseFormScope !== 'Building' && <div className="form-group"><label>Requested by (name of person)</label><input type="text" name="requestedBy" placeholder="Enter name of person who requested the payment" /></div>}
+            <div className="form-group"><label>Requested by (name of person)</label><input type="text" name="requestedBy" placeholder="Enter name of person who requested the payment" /></div>
             <div className="form-group"><label>Amount</label><input type="number" name="amount" step="0.01" required /></div>
-            <div className="form-group"><label>Date</label><input type="date" name="date" required /></div>
+            <div className="form-group"><label>Date</label><input type="date" name="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} required /></div>
             <div className="form-group"><label>Cashier Account (to deduct from)</label><select name="accountId"><option value="">No deduction (manual entry)</option>{cashierAccounts.filter(acc => acc.IsActive !== false && acc.isActive !== false).map(account => (<option key={account.ID || account.id} value={account.ID || account.id}>{account.Name || account.name} - {(account.Balance || account.balance || 0).toFixed(2)} {account.Currency || account.currency || 'XOF'}</option>))}</select><small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>Select a cashier account to automatically deduct the expense amount from its balance.</small></div>
             <div className="form-group"><label>Notes</label><input type="text" name="notes" placeholder="Optional" /></div>
             <div className="form-group"><label>Document (optional)</label><input type="file" name="document" accept=".pdf,image/*" /><small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>Attach receipt or supporting document</small></div>
-            <div className="modal-footer"><button type="button" className="action-button secondary" onClick={() => setShowExpenseModal(false)}>{t('accounting.cancel')}</button><button type="submit" className="action-button primary" disabled={loading}>{loading ? t('accounting.adding') : t('accounting.addExpense')}</button></div>
+            <div className="modal-footer"><button type="button" className="action-button secondary" onClick={resetExpenseModal}>{t('accounting.cancel')}</button><button type="submit" className="action-button primary" disabled={loading}>{loading ? t('accounting.adding') : t('accounting.addExpense')}</button></div>
           </form>
         </div>
       </div>

@@ -46,7 +46,12 @@ const OwnerPaymentsTab = (props) => {
       const ownerName = s.ownerName || s.OwnerName || s.landlord || s.Landlord || '—';
       const expectedRents = s.expectedRents ?? s.ExpectedRents ?? 0;
       const collectedRents = s.collectedRents ?? s.CollectedRents ?? 0;
-      return { key: s.ownerId || s.OwnerID || idx, ownerName, expectedRents, collectedRents };
+      const expensesAmount = s.expensesAmount ?? s.ExpensesAmount ?? 0;
+      const agencyCommission = s.agencyCommission ?? s.AgencyCommission ?? 0;
+      const amountToBePaid = s.amountToBePaid ?? s.AmountToBePaid ?? s.amountToBeRepaid ?? s.AmountToBeRepaid ?? 0;
+      const commissionPercentage = s.commissionPercentage ?? s.CommissionPercentage ?? 0;
+      const period = s.period ?? s.Period ?? '';
+      return { key: s.ownerId || s.OwnerID || idx, ownerName, expectedRents, collectedRents, expensesAmount, agencyCommission, amountToBePaid, commissionPercentage, period };
     });
   }, [ownersSummary]);
 
@@ -249,49 +254,53 @@ const OwnerPaymentsTab = (props) => {
               <div className="loading">Loading owners...</div>
             ) : ownerBalancesOwners.length === 0 ? (
               <div className="no-data">No owners found.</div>
-            ) : (
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Owner Name</th>
-                      <th>Email</th>
-                      <th>Expected rents</th>
-                      <th>Collected rents</th>
-                      <th>Amount of expenses</th>
-                      <th>Amount to be repaid</th>
-                      <th className="table-menu"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ownerBalancesOwners.map((owner, index) => {
+                ) : (
+                  <div className="sa-table-wrapper">
+                    <table className="sa-table">
+                      <thead>
+                        <tr>
+                          <th>Owner Name</th>
+                          <th>Expected rents</th>
+                          <th>Collected rents</th>
+                          <th>Amount of expenses</th>
+                          <th>Agency commission</th>
+                          <th>Amount to be paid</th>
+                          <th>Period</th>
+                          <th className="table-menu"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ownerBalancesOwners.map((owner, index) => {
                       const ownerId = owner.ID || owner.id;
                       const name = owner.Name || owner.name || owner.Landlord || owner.landlord || 'N/A';
-                      const summary = (ownerId && summaryByOwnerId.get(String(ownerId))) || summaryByOwnerName.get(String(name).toLowerCase());
-                      const expected = summary?.expectedRents ?? summary?.ExpectedRents ?? 0;
-                      const collected = summary?.collectedRents ?? summary?.CollectedRents ?? 0;
-                      const exp = summary?.expensesAmount ?? summary?.ExpensesAmount ?? 0;
-                      const repay = summary?.amountToBeRepaid ?? summary?.AmountToBeRepaid ?? 0;
-                      return (
-                        <tr
-                          key={ownerId || index}
-                          onClick={() => setSelectedOwnerForPaymentsHistory(name)}
-                          style={{ cursor: 'pointer' }}
+                          const summary = (ownerId && summaryByOwnerId.get(String(ownerId))) || summaryByOwnerName.get(String(name).toLowerCase());
+                          const expected = summary?.expectedRents ?? summary?.ExpectedRents ?? 0;
+                          const collected = summary?.collectedRents ?? summary?.CollectedRents ?? 0;
+                          const exp = summary?.expensesAmount ?? summary?.ExpensesAmount ?? 0;
+                          const agencyCommission = summary?.agencyCommission ?? summary?.AgencyCommission ?? 0;
+                          const amountToBePaid = summary?.amountToBePaid ?? summary?.AmountToBePaid ?? summary?.amountToBeRepaid ?? summary?.AmountToBeRepaid ?? 0;
+                          const period = summary?.period ?? summary?.Period ?? 'This month';
+                          return (
+                            <tr
+                              key={ownerId || index}
+                              onClick={() => setSelectedOwnerForPaymentsHistory(name)}
+                              style={{ cursor: 'pointer' }}
                           role="button"
                           tabIndex={0}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForPaymentsHistory(name); } }}
-                        >
-                          <td><span className="sa-cell-title">{name}</span></td>
-                          <td>{owner.Email || owner.email || 'N/A'}</td>
-                          <td>{money(expected)}</td>
-                          <td>{money(collected)}</td>
-                          <td>{money(exp)}</td>
-                          <td style={{ fontWeight: 700 }}>{money(repay)}</td>
-                          <td className="table-menu" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              className="table-action-button edit"
-                              onClick={() => {
-                                setSelectedLandlord(owner);
+                            >
+                              <td><span className="sa-cell-title">{name}</span></td>
+                              <td>{money(expected)}</td>
+                              <td>{money(collected)}</td>
+                              <td>{money(exp)}</td>
+                              <td style={{ fontWeight: 700 }}>{money(agencyCommission)}</td>
+                              <td style={{ fontWeight: 700 }}>{money(amountToBePaid)}</td>
+                              <td>{period}</td>
+                              <td className="table-menu" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  className="table-action-button edit"
+                                  onClick={() => {
+                                    setSelectedLandlord(owner);
                                 setLandlordProperties(null);
                                 setShowLandlordPaymentModal(true);
                               }}

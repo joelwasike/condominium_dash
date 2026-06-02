@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Mail, Phone, MapPin, Users, DollarSign, Building, AlertTriangle, Wrench, Receipt, StickyNote, AlertCircle, FileCheck, MessageSquare } from 'lucide-react';
 
 const TenantsTab = ({
@@ -7,6 +7,11 @@ const TenantsTab = ({
   tenantNameFilter, setTenantNameFilter, tenantPropertyFilter, setTenantPropertyFilter,
   addNotification
 }) => {
+  const [showAllPayments, setShowAllPayments] = useState(false);
+  useEffect(() => {
+    setShowAllPayments(false);
+  }, [selectedTenantId]);
+
   if (selectedTenantId) {
     if (tenantDetailLoading) {
       return (<div className="sa-clients-page"><div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}><p className="sa-cell-sub" style={{ margin: 0 }}>Loading tenant details\u2026</p></div></div>);
@@ -30,66 +35,71 @@ const TenantsTab = ({
     const lastPayment = c.LastPayment ?? c.lastPayment;
     const createdAt = c.CreatedAt ?? c.createdAt;
     const updatedAt = c.UpdatedAt ?? c.updatedAt;
+    const visiblePayments = showAllPayments ? paymentsList : paymentsList.slice(0, 5);
 
     return (
       <div className="sa-clients-page">
         <div className="sa-clients-header" style={{ marginBottom: '20px' }}>
           <button type="button" className="sa-outline-button sa-tenant-detail-back-btn" onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}><ArrowLeft size={16} /> Back to list</button>
         </div>
-        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
-          <div className="sa-tenant-detail-hero">
-            <div className="sa-tenant-detail-avatar">{(name || 'T').charAt(0).toUpperCase()}</div>
-            <div>
-              <h2>{name}</h2>
-              <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`} style={{ marginRight: '8px' }}>{status}</span>
-              {propertyAddr && propertyAddr !== '\u2014' && (<span className="sa-tenant-detail-meta"><MapPin size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />{propertyAddr}{unitNumber && unitNumber !== '\u2014' ? ` \u00b7 ${unitNumber}` : ''}</span>)}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(320px, 0.9fr)', gap: '24px', alignItems: 'start' }}>
+          <div style={{ display: 'grid', gap: '24px' }}>
+            <div className="sa-section-card">
+              <div className="sa-tenant-detail-hero">
+                <div className="sa-tenant-detail-avatar">{(name || 'T').charAt(0).toUpperCase()}</div>
+                <div>
+                  <h2>{name}</h2>
+                  <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`} style={{ marginRight: '8px' }}>{status}</span>
+                  {propertyAddr && propertyAddr !== '\u2014' && (<span className="sa-tenant-detail-meta"><MapPin size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />{propertyAddr}{unitNumber && unitNumber !== '\u2014' ? ` \u00b7 ${unitNumber}` : ''}</span>)}
+                </div>
+              </div>
             </div>
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3><Users size={18} /> Personal information</h3>
+              <dl className="sa-tenant-detail-dl">
+                <div><dt>Name</dt><dd>{name}</dd></div>
+                {email && <div><dt>Email</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {email}</dd></div>}
+                {phone && <div><dt>Phone</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</dd></div>}
+                <div><dt>Status</dt><dd><span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`}>{status}</span></dd></div>
+                {createdAt && <div><dt>Member since</dt><dd>{new Date(createdAt).toLocaleDateString()}</dd></div>}
+              </dl>
+              <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}><FileCheck size={16} /> Files & documents</h4>
+              <p className="sa-cell-sub" style={{ margin: 0 }}>No files uploaded yet.</p>
+            </div>
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3><DollarSign size={18} /> Rent & payment</h3>
+              <dl className="sa-tenant-detail-dl">
+                <div><dt>Property</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</dd></div>
+                {unitNumber && unitNumber !== '\u2014' && <div><dt>Unit</dt><dd>{unitNumber}</dd></div>}
+                <div><dt>Monthly rent</dt><dd className="sa-tenant-detail-value-bold">{Number(amount).toLocaleString()} XOF</dd></div>
+                <div><dt>Last payment</dt><dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '\u2014'}</dd></div>
+              </dl>
+            </div>
+            {prop && (<div className="sa-section-card sa-tenant-detail-card"><h3><Building size={18} /> Property details</h3><dl className="sa-tenant-detail-dl"><div><dt>Type</dt><dd>{prop.type || prop.Type || '\u2014'}</dd></div>{(prop.bedrooms ?? prop.Bedrooms) != null && <div><dt>Bedrooms</dt><dd>{prop.bedrooms ?? prop.Bedrooms}</dd></div>}{(prop.bathrooms ?? prop.Bathrooms) != null && <div><dt>Bathrooms</dt><dd>{prop.bathrooms ?? prop.Bathrooms}</dd></div>}<div><dt>Property status</dt><dd><span className={`sa-status-pill ${(prop.status || prop.Status || '').toLowerCase()}`}>{prop.status || prop.Status || '\u2014'}</span></dd></div></dl></div>)}
           </div>
-        </div>
-        <div className="sa-tenant-detail-grid">
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><Users size={18} /> Personal information</h3>
-            <dl className="sa-tenant-detail-dl">
-              <div><dt>Name</dt><dd>{name}</dd></div>
-              {email && <div><dt>Email</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {email}</dd></div>}
-              {phone && <div><dt>Phone</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</dd></div>}
-              <div><dt>Status</dt><dd><span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`}>{status}</span></dd></div>
-              {createdAt && <div><dt>Member since</dt><dd>{new Date(createdAt).toLocaleDateString()}</dd></div>}
-            </dl>
-            <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}><FileCheck size={16} /> Files & documents</h4>
-            <p className="sa-cell-sub" style={{ margin: 0 }}>No files uploaded yet.</p>
-          </div>
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><DollarSign size={18} /> Rent & payment</h3>
-            <dl className="sa-tenant-detail-dl">
-              <div><dt>Property</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</dd></div>
-              {unitNumber && unitNumber !== '\u2014' && <div><dt>Unit</dt><dd>{unitNumber}</dd></div>}
-              <div><dt>Monthly rent</dt><dd className="sa-tenant-detail-value-bold">{Number(amount).toLocaleString()} XOF</dd></div>
-              <div><dt>Last payment</dt><dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '\u2014'}</dd></div>
-            </dl>
-          </div>
-          {prop && (<div className="sa-section-card sa-tenant-detail-card"><h3><Building size={18} /> Property details</h3><dl className="sa-tenant-detail-dl"><div><dt>Type</dt><dd>{prop.type || prop.Type || '\u2014'}</dd></div>{(prop.bedrooms ?? prop.Bedrooms) != null && <div><dt>Bedrooms</dt><dd>{prop.bedrooms ?? prop.Bedrooms}</dd></div>}{(prop.bathrooms ?? prop.Bathrooms) != null && <div><dt>Bathrooms</dt><dd>{prop.bathrooms ?? prop.Bathrooms}</dd></div>}<div><dt>Property status</dt><dd><span className={`sa-status-pill ${(prop.status || prop.Status || '').toLowerCase()}`}>{prop.status || prop.Status || '\u2014'}</span></dd></div></dl></div>)}
-          <div className="sa-section-card sa-tenant-detail-card" style={alertList.length ? undefined : { gridColumn: '1 / -1' }}>
-            <h3><AlertTriangle size={18} /> Alerts & activity</h3>
-            {alertList.length > 0 ? (<ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>{alertList.map((alert, idx) => (<li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item"><div className="sa-tenant-detail-alert-title">{alert.Title || alert.title || 'Alert'}</div>{alert.Message && <div className="sa-cell-sub" style={{ marginBottom: '4px' }}>{alert.Message}</div>}<div className="sa-tenant-detail-alert-meta">{(alert.Urgency || alert.urgency || '').toLowerCase()} \u00b7 {alert.Status || alert.status || 'Open'}{alert.Amount != null && ` \u00b7 ${Number(alert.Amount).toLocaleString()} XOF`}</div></li>))}</ul>) : (<p className="sa-cell-sub">No alerts for this tenant.</p>)}
-          </div>
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><Wrench size={18} /> Maintenances requested</h3>
-            {maintenancesList.length > 0 ? (<ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>{maintenancesList.map((m, idx) => (<li key={m.ID ?? m.id ?? idx} className="sa-tenant-detail-alert-item"><div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div><div className="sa-tenant-detail-alert-meta">{(m.Status || m.status || '\u2014')} \u00b7 {(m.Priority || m.priority || '\u2014')}{m.CreatedAt && ` \u00b7 ${new Date(m.CreatedAt).toLocaleDateString()}`}</div></li>))}</ul>) : (<p className="sa-cell-sub">No maintenance requests for this tenant.</p>)}
-          </div>
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><Receipt size={18} /> Recent payment history</h3>
-            {paymentsList.length > 0 ? (<ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>{paymentsList.slice(0, 10).map((p, idx) => (<li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}><div className="sa-tenant-detail-alert-title">{Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF \u00b7 {(p.Status || p.status || '\u2014')}</div><div className="sa-tenant-detail-alert-meta">{p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '\u2014')}{(p.Method || p.method) && ` \u00b7 ${p.Method || p.method}`}</div></li>))}</ul>) : (<p className="sa-cell-sub">No payment history for this tenant.</p>)}
-          </div>
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><StickyNote size={18} /> Private notes</h3>
-            {privateNotesList.length > 0 ? (<ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>{privateNotesList.map((n) => (<li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}><div className="sa-tenant-detail-alert-title">{n.note ?? n.Note}</div><div className="sa-tenant-detail-alert-meta">{n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}</div></li>))}</ul>) : (<p className="sa-cell-sub">No private notes yet.</p>)}
-          </div>
-          <div className="sa-section-card sa-tenant-detail-card">
-            <h3><AlertCircle size={18} /> Quick actions</h3>
-            <div className="sa-tenant-detail-quick-actions">
-              <button type="button" className="sa-outline-button" onClick={() => addNotification('Generate Receipt \u2013 feature coming soon', 'info')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Receipt size={16} /> Generate Receipt</button>
-              <button type="button" className="sa-outline-button" onClick={() => addNotification('Send Reminder SMS \u2013 feature coming soon', 'info')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={16} /> Send Reminder SMS</button>
+          <div style={{ display: 'grid', gap: '24px' }}>
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3><Receipt size={18} /> Recent payment history</h3>
+              {paymentsList.length > 0 ? (<><ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>{visiblePayments.map((p, idx) => (<li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}><div className="sa-tenant-detail-alert-title">{Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF \u00b7 {(p.Status || p.status || '\u2014')}</div><div className="sa-tenant-detail-alert-meta">{p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '\u2014')}{(p.Method || p.method) && ` \u00b7 ${p.Method || p.method}`}</div></li>))}</ul>{paymentsList.length > 5 && <div style={{ marginTop: '12px' }}><button type="button" className="sa-outline-button" onClick={() => setShowAllPayments((value) => !value)}>{showAllPayments ? 'Show less' : 'See more'}</button></div>}</>) : (<p className="sa-cell-sub">No payment history for this tenant.</p>)}
+            </div>
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3><AlertTriangle size={18} /> Alerts & activity</h3>
+              {alertList.length > 0 ? (<ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>{alertList.map((alert, idx) => (<li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item"><div className="sa-tenant-detail-alert-title">{alert.Title || alert.title || 'Alert'}</div>{alert.Message && <div className="sa-cell-sub" style={{ marginBottom: '4px' }}>{alert.Message}</div>}<div className="sa-tenant-detail-alert-meta">{(alert.Urgency || alert.urgency || '').toLowerCase()} \u00b7 {alert.Status || alert.status || 'Open'}{alert.Amount != null && ` \u00b7 ${Number(alert.Amount).toLocaleString()} XOF`}</div></li>))}</ul>) : (<p className="sa-cell-sub">No alerts for this tenant.</p>)}
+            </div>
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3><Wrench size={18} /> Maintenances requested</h3>
+              {maintenancesList.length > 0 ? (<ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>{maintenancesList.map((m, idx) => (<li key={m.ID ?? m.id ?? idx} className="sa-tenant-detail-alert-item"><div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div><div className="sa-tenant-detail-alert-meta">{(m.Status || m.status || '\u2014')} \u00b7 {(m.Priority || m.priority || '\u2014')}{m.CreatedAt && ` \u00b7 ${new Date(m.CreatedAt).toLocaleDateString()}`}</div></li>))}</ul>) : (<p className="sa-cell-sub">No maintenance requests for this tenant.</p>)}
+            </div>
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3><StickyNote size={18} /> Private notes</h3>
+              {privateNotesList.length > 0 ? (<ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>{privateNotesList.map((n) => (<li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}><div className="sa-tenant-detail-alert-title">{n.note ?? n.Note}</div><div className="sa-tenant-detail-alert-meta">{n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}</div></li>))}</ul>) : (<p className="sa-cell-sub">No private notes yet.</p>)}
+            </div>
+            <div className="sa-section-card sa-tenant-detail-card">
+              <h3><AlertCircle size={18} /> Quick actions</h3>
+              <div className="sa-tenant-detail-quick-actions">
+                <button type="button" className="sa-outline-button" onClick={() => addNotification('Generate Receipt – feature coming soon', 'info')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Receipt size={16} /> Generate Receipt</button>
+                <button type="button" className="sa-outline-button" onClick={() => addNotification('Send Reminder SMS – feature coming soon', 'info')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={16} /> Send Reminder SMS</button>
+              </div>
             </div>
           </div>
         </div>

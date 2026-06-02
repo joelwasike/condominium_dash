@@ -91,6 +91,7 @@ const AccountingDashboard = () => {
   const [expensesSummary, setExpensesSummary] = useState(null);
   const [expensesPerOwner, setExpensesPerOwner] = useState([]);
   const [rentSummary, setRentSummary] = useState(null);
+  const [expenseDate, setExpenseDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Cashier state
   const [cashierAccounts, setCashierAccounts] = useState([]);
@@ -116,6 +117,7 @@ const AccountingDashboard = () => {
 
   // Tenants state
   const [tenants, setTenants] = useState([]);
+  const [depositEligibleTenants, setDepositEligibleTenants] = useState([]);
   const [tenantPaymentStatusFilter, setTenantPaymentStatusFilter] = useState('all');
   const [tenantNameFilter, setTenantNameFilter] = useState('');
   const [selectedTenant, setSelectedTenant] = useState(null);
@@ -128,6 +130,7 @@ const AccountingDashboard = () => {
   const [historyStartDateFilter, setHistoryStartDateFilter] = useState('');
   const [historyEndDateFilter, setHistoryEndDateFilter] = useState('');
   const [historyTypeFilter, setHistoryTypeFilter] = useState('all');
+  const [historyNameFilter, setHistoryNameFilter] = useState('');
   const [showDepositPaymentModal, setShowDepositPaymentModal] = useState(false);
   const [showDepositRefundModal, setShowDepositRefundModal] = useState(false);
   const [depositPaymentForm, setDepositPaymentForm] = useState({
@@ -137,6 +140,7 @@ const AccountingDashboard = () => {
     monthlyRent: '',
     applicationFees: false,
     paymentMethod: 'mobile_money',
+    paymentProvider: '',
     reference: '',
     notes: ''
   });
@@ -161,7 +165,7 @@ const AccountingDashboard = () => {
   const [collectionPaymentType, setCollectionPaymentType] = useState(null);
   const [propertiesForSale, setPropertiesForSale] = useState([]);
   const [expenseProperties, setExpenseProperties] = useState([]);
-  const [expenseFormScope, setExpenseFormScope] = useState('');
+  const [expenseFormScope, setExpenseFormScope] = useState('Building');
   const [expenseFormBuilding, setExpenseFormBuilding] = useState('');
   const [expenseFormUnits, setExpenseFormUnits] = useState([]);
   const [paymentView, setPaymentView] = useState('all');
@@ -189,7 +193,9 @@ const AccountingDashboard = () => {
     reference: '',
     tenantType: 'individual',
     monthlyRent: '',
+    applicationFees: false,
     paymentMethod: 'cash',
+    paymentProvider: '',
     notes: '',
     buyer: '',
     saleAmount: '',
@@ -370,7 +376,7 @@ const AccountingDashboard = () => {
         return;
       }
 
-      const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary, landlordsData, tenantsData, adsData] = await Promise.all([
+      const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary, landlordsData, tenantsData, eligibleDepositTenantsData, adsData] = await Promise.all([
         accountingService.getOverview(),
         accountingService.getTenantPayments(),
         accountingService.getLandlordPayments(),
@@ -379,6 +385,7 @@ const AccountingDashboard = () => {
         accountingService.getMonthlySummary(),
         accountingService.getOwners().catch(() => []),
         accountingService.getTenantsWithPaymentStatus().catch(() => []),
+        accountingService.getDepositEligibleTenants().catch(() => []),
         accountingService.getAdvertisements().catch(() => [])
       ]);
 
@@ -390,6 +397,7 @@ const AccountingDashboard = () => {
       setMonthlySummary(summary);
       setLandlords(Array.isArray(landlordsData) ? landlordsData : (landlordsData?.landlords ?? landlordsData?.data ?? []));
       setTenants(Array.isArray(tenantsData) ? tenantsData : (tenantsData?.tenants ?? tenantsData?.data ?? []));
+      setDepositEligibleTenants(Array.isArray(eligibleDepositTenantsData) ? eligibleDepositTenantsData : []);
       setAdvertisements(Array.isArray(adsData) ? adsData : (adsData?.advertisements ?? adsData?.data ?? []));
 
       console.log('Accounting data loaded successfully:', { overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary });
@@ -478,10 +486,13 @@ const AccountingDashboard = () => {
     try {
       const data = await accountingService.getTenantsWithPaymentStatus();
       setTenants(Array.isArray(data) ? data : []);
+      const eligible = await accountingService.getDepositEligibleTenants().catch(() => []);
+      setDepositEligibleTenants(Array.isArray(eligible) ? eligible : []);
     } catch (error) {
       console.error('Error loading tenants:', error);
       addNotification('Failed to load tenants', 'error');
       setTenants([]);
+      setDepositEligibleTenants([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -557,6 +568,8 @@ const AccountingDashboard = () => {
   // Load properties when opening Add Expense modal
   useEffect(() => {
     if (showExpenseModal) {
+      setExpenseDate(new Date().toISOString().split('T')[0]);
+      setExpenseFormScope('Building');
       accountingService.getProperties().then(data => {
         setExpenseProperties(Array.isArray(data) ? data : []);
       }).catch(() => setExpenseProperties([]));
@@ -565,7 +578,7 @@ const AccountingDashboard = () => {
 
   // Load units when building is selected in Add Expense form
   useEffect(() => {
-    if (showExpenseModal && expenseFormScope === 'Building' && expenseFormBuilding) {
+    if (showExpenseModal && expenseFormBuilding) {
       const addr = typeof expenseFormBuilding === 'string' ? expenseFormBuilding : (expenseFormBuilding?.address || expenseFormBuilding?.Address || '');
       accountingService.getPropertyUnits(addr).then(data => {
         setExpenseFormUnits(Array.isArray(data) ? data : []);
@@ -573,7 +586,7 @@ const AccountingDashboard = () => {
     } else {
       setExpenseFormUnits([]);
     }
-  }, [showExpenseModal, expenseFormScope, expenseFormBuilding]);
+  }, [showExpenseModal, expenseFormBuilding]);
 
   // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
@@ -1165,6 +1178,7 @@ const AccountingDashboard = () => {
     showLandlordPaymentModal, setShowLandlordPaymentModal,
     selectedTenant, setSelectedTenant, tenantPaymentStatusFilter, setTenantPaymentStatusFilter,
     tenantNameFilter, setTenantNameFilter,
+    depositEligibleTenants, setDepositEligibleTenants,
     depositFilter, setDepositFilter, depositStartDateFilter, setDepositStartDateFilter,
     depositEndDateFilter, setDepositEndDateFilter,
     showDepositPaymentModal, setShowDepositPaymentModal, showDepositRefundModal, setShowDepositRefundModal,
@@ -1183,13 +1197,13 @@ const AccountingDashboard = () => {
     expenseStartDateFilter, setExpenseStartDateFilter, expenseEndDateFilter, setExpenseEndDateFilter,
     expenseSearchText, setExpenseSearchText, expenseViewCard, setExpenseViewCard,
     expensesSummary, expensesPerOwner,
-    expenseProperties, expenseFormScope, setExpenseFormScope, expenseFormBuilding, setExpenseFormBuilding, expenseFormUnits, setExpenseFormUnits,
+    expenseProperties, expenseFormScope, setExpenseFormScope, expenseFormBuilding, setExpenseFormBuilding, expenseFormUnits, setExpenseFormUnits, expenseDate, setExpenseDate,
     showCashierAccountModal, setShowCashierAccountModal, showCashierTransactionModal, setShowCashierTransactionModal,
     cashierAccountForm, setCashierAccountForm, cashierTransactionForm, setCashierTransactionForm,
     showApprovalModal, setShowApprovalModal, selectedPayment, setSelectedPayment,
     showPaymentViewModal, setShowPaymentViewModal, selectedItemForView, setSelectedItemForView,
     historyStartDateFilter, setHistoryStartDateFilter, historyEndDateFilter, setHistoryEndDateFilter,
-    historyTypeFilter, setHistoryTypeFilter,
+    historyTypeFilter, setHistoryTypeFilter, historyNameFilter, setHistoryNameFilter,
     selectedMonth, setSelectedMonth, rentSummary,
     selectedReportType, setSelectedReportType, reportStartDate, setReportStartDate,
     reportEndDate, setReportEndDate, reportPeriod, setReportPeriod, reportData, setReportData,

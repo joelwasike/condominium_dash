@@ -1,4 +1,4 @@
-import { buildApiUrl, apiRequest } from '../config/api';
+import { buildApiUrl, apiRequest, apiRequestPaginated } from '../config/api';
 
 const unwrapList = (data) => {
   if (Array.isArray(data)) return data;
@@ -85,6 +85,20 @@ export const accountingService = {
 
     const data = await apiRequest(url);
     return unwrapList(data);
+  },
+
+  getTenantPaymentsPage: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/tenant-payments');
+    const queryParams = new URLSearchParams();
+    if (filters.property) queryParams.append('property', filters.property);
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.chargeType) queryParams.append('chargeType', filters.chargeType);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.page) queryParams.append('page', String(filters.page));
+    if (filters.pageSize) queryParams.append('pageSize', String(filters.pageSize));
+    if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    return await apiRequestPaginated(url);
   },
 
   recordTenantPayment: async (paymentData) => {
@@ -250,6 +264,20 @@ export const accountingService = {
 
     const data = await apiRequest(url);
     return unwrapList(data);
+  },
+
+  getCollectionsPage: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/collections');
+    const queryParams = new URLSearchParams();
+    if (filters.building) queryParams.append('building', filters.building);
+    if (filters.landlord) queryParams.append('landlord', filters.landlord);
+    if (filters.chargeType) queryParams.append('chargeType', filters.chargeType);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.page) queryParams.append('page', String(filters.page));
+    if (filters.pageSize) queryParams.append('pageSize', String(filters.pageSize));
+    if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    return await apiRequestPaginated(url);
   },
 
   getCollectionsPerBuilding: async () => {
@@ -470,6 +498,27 @@ export const accountingService = {
       url += `?${queryParams.toString()}`;
     }
 
+    const data = await apiRequest(url);
+    return unwrapList(data);
+  },
+
+  getSecurityDepositsPage: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/deposits');
+    const queryParams = new URLSearchParams();
+    if (filters.type) queryParams.append('type', filters.type);
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.page) queryParams.append('page', String(filters.page));
+    if (filters.pageSize) queryParams.append('pageSize', String(filters.pageSize));
+    if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    return await apiRequestPaginated(url);
+  },
+
+  getDepositEligibleTenants: async (filters = {}) => {
+    let url = buildApiUrl('/api/accounting/deposits/eligible-tenants');
+    const queryParams = new URLSearchParams();
+    if (filters.page) queryParams.append('page', String(filters.page));
+    if (filters.pageSize) queryParams.append('pageSize', String(filters.pageSize));
+    if (queryParams.toString()) url += `?${queryParams.toString()}`;
     const data = await apiRequest(url);
     return unwrapList(data);
   },

@@ -1,7 +1,7 @@
 import React from 'react';
 
 const TransactionHistoryTab = (props) => {
-  const { loading, tenantPayments, collections, expenses, landlordPayments, cashierTransactions, cashierAccounts, deposits, historyStartDateFilter, setHistoryStartDateFilter, historyEndDateFilter, setHistoryEndDateFilter, historyTypeFilter, setHistoryTypeFilter } = props;
+  const { loading, tenantPayments, collections, expenses, landlordPayments, cashierTransactions, cashierAccounts, deposits, historyStartDateFilter, setHistoryStartDateFilter, historyEndDateFilter, setHistoryEndDateFilter, historyTypeFilter, setHistoryTypeFilter, historyNameFilter, setHistoryNameFilter } = props;
 
   const allTransactions = [];
   tenantPayments.forEach(p => { allTransactions.push({ type: 'Tenant Payment', date: p.Date || p.date, tenant: p.Tenant || p.tenant, property: p.Property || p.property, amount: p.Amount || p.amount || 0, status: p.Status || p.status, method: p.Method || p.method, id: p.ID || p.id }); });
@@ -14,6 +14,11 @@ const TransactionHistoryTab = (props) => {
 
   const filteredHistory = allTransactions.filter(t => {
     if (historyTypeFilter !== 'all' && t.type !== historyTypeFilter) return false;
+    if (historyNameFilter) {
+      const search = historyNameFilter.trim().toLowerCase();
+      const haystack = [t.tenant, t.property, t.method, t.notes, t.type].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
     const d = t.date; if (!d) return true; const date = new Date(d);
     if (historyStartDateFilter && date < new Date(historyStartDateFilter)) return false;
     if (historyEndDateFilter && date > new Date(historyEndDateFilter + 'T23:59:59')) return false;
@@ -25,6 +30,7 @@ const TransactionHistoryTab = (props) => {
       <div className="sa-section-card">
         <div className="sa-section-header"><div><h2>Transaction History</h2><p>Complete history of all financial transactions</p></div></div>
         <div className="sa-filters-section" style={{ marginBottom: '20px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input className="sa-filter-select" type="text" placeholder="Search by name..." value={historyNameFilter} onChange={(e) => setHistoryNameFilter(e.target.value)} />
           <select className="sa-filter-select" value={historyTypeFilter} onChange={(e) => setHistoryTypeFilter(e.target.value)}><option value="all">All Types</option><option value="Tenant Payment">Tenant Payment</option><option value="Expense">Expense</option><option value="Owner Payment">Owner Payment</option><option value="Deposit Refund">Deposit Refund</option><option value="Cashier Transaction">Cashier Transaction</option></select>
           <input type="date" className="sa-filter-select" value={historyStartDateFilter} onChange={(e) => setHistoryStartDateFilter(e.target.value)} placeholder="Start Date" />
           <input type="date" className="sa-filter-select" value={historyEndDateFilter} onChange={(e) => setHistoryEndDateFilter(e.target.value)} placeholder="End Date" />
