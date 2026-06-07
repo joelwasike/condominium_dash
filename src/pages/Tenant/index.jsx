@@ -103,11 +103,13 @@ const TenantDashboard = () => {
   const [showBillsModal, setShowBillsModal] = useState(false);
   const [billsForm, setBillsForm] = useState({
     billType: 'water',
+    contractRef: '',
     amount: '',
-    provider: '',
     phone: '',
-    otp: ''
   });
+  const [billsConsultation, setBillsConsultation] = useState(null);
+  const [billsConsultationLoading, setBillsConsultationLoading] = useState(false);
+  const [selectedBillInvoice, setSelectedBillInvoice] = useState(null);
   const [showTerminateLeaseModal, setShowTerminateLeaseModal] = useState(false);
   const [terminateLeaseForm, setTerminateLeaseForm] = useState({
     reason: '',
@@ -1066,51 +1068,77 @@ const TenantDashboard = () => {
     setPaymentStatus(null);
   };
 
-  const handleBillsSubmit = async (e) => {
-    e.preventDefault();
-    if (!billsForm.amount || !billsForm.provider || !billsForm.phone) {
-      addNotification('Please fill in all required fields', 'error');
+  const resetBillsModal = () => {
+    setShowBillsModal(false);
+    setBillsForm({ billType: 'water', contractRef: '', amount: '', phone: '' });
+    setBillsConsultation(null);
+    setSelectedBillInvoice(null);
+    setBillsConsultationLoading(false);
+  };
+
+  const handleConsultUtilityBills = async () => {
+    const contractRef = String(billsForm.contractRef || '').trim();
+    if (!contractRef) {
+      addNotification('Please enter the contract reference first', 'error');
       return;
     }
-    if (billsForm.provider === 'om' && !billsForm.otp) {
-      addNotification('OTP is required for Orange Money payments', 'error');
+
+    try {
+      setBillsConsultationLoading(true);
+      const response = await tenantService.consultUtilityBills({
+        billType: billsForm.billType,
+        refContrat: contractRef,
+      });
+      const payload = response?.result || response || {};
+      const invoices = Array.isArray(payload.factures) ? payload.factures : [];
+      setBillsConsultation(payload);
+
+      if (invoices.length === 1) {
+        const invoice = invoices[0];
+        setSelectedBillInvoice(invoice);
+        const amountValue = Number(invoice.SOLDE_FACTURE || invoice.MONTANT_TOTAL || invoice.amount || 0) || 0;
+        setBillsForm(prev => ({
+          ...prev,
+          amount: amountValue > 0 ? String(amountValue) : prev.amount,
+        }));
+      } else {
+        setSelectedBillInvoice(null);
+      }
+
+      addNotification(`${billsForm.billType === 'water' ? 'Water' : 'Electricity'} bills loaded successfully`, 'success');
+    } catch (error) {
+      console.error('Error consulting utility bills:', error);
+      setBillsConsultation(null);
+      setSelectedBillInvoice(null);
+      addNotification(error.message || 'Failed to load utility bills', 'error');
+    } finally {
+      setBillsConsultationLoading(false);
+    }
+  };
+
+  const handleBillsSubmit = async (e) => {
+    e.preventDefault();
+    const contractRef = String(billsForm.contractRef || '').trim();
+    const phone = String(billsForm.phone || '').trim();
+    const invoiceNumber = String(selectedBillInvoice?.NUM_FAC || selectedBillInvoice?.num_facture || selectedBillInvoice?.numFacture || '').trim();
+    const amountValue = Number(String(billsForm.amount || '').replace(/[^0-9.-]/g, '')) || Number(selectedBillInvoice?.SOLDE_FACTURE || selectedBillInvoice?.MONTANT_TOTAL || 0) || 0;
+
+    if (!contractRef || !phone || !amountValue) {
+      addNotification('Please fill in all required fields', 'error');
       return;
     }
     try {
       setLoading(true);
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const tenantName = user.name || user.Name || user.tenant || 'Tenant';
-      let property = '';
-      if (isDemoMode()) {
-        property = 'Demo Property';
-      } else if (leaseInfo?.property) {
-        property = leaseInfo.property;
-      } else if (overviewData?.lease?.property) {
-        property = overviewData.lease.property;
-      } else if (overviewData?.property) {
-        property = overviewData.property;
-      }
       const chargeType = billsForm.billType === 'water' ? 'Water' : 'Electricity';
-      const result = await tenantService.payViaMoMo({
-        provider: billsForm.provider,
-        phone: billsForm.phone,
-        amount: parseFloat(billsForm.amount),
-        property,
-        chargeType,
-        otp: billsForm.otp
+      const result = await tenantService.payUtilityBill({
+        billType: billsForm.billType,
+        phoneNumber: phone,
+        amount: amountValue,
+        refContrat: contractRef,
+        numFacture: invoiceNumber,
       });
-      const paymentUrl = result?.response?.payment_url;
-      if (billsForm.provider === 'wave' && paymentUrl) {
-        const popup = window.open(paymentUrl, '_blank', 'noopener,noreferrer');
-        if (!popup) {
-          window.location.assign(paymentUrl);
-        }
-        addNotification(`Redirecting to Wave payment page for ${chargeType}…`, 'info');
-      } else {
-        addNotification(`${chargeType} bill payment initiated! Confirm on your phone.`, 'info');
-      }
-      setBillsForm({ billType: 'water', amount: '', provider: '', phone: '', otp: '' });
-      setShowBillsModal(false);
+      addNotification(`${chargeType} bill payment sent successfully.`, 'success');
+      resetBillsModal();
       await loadPayments();
     } catch (error) {
       console.error('Error submitting bill payment:', error);
@@ -2383,11 +2411,11 @@ const TenantDashboard = () => {
 
       {/* Pay Bills Modal - Water & Electricity */}
       {showBillsModal && (
-        <div className="modal-overlay" onClick={() => setShowBillsModal(false)}>
+        <div className="modal-overlay" onClick={resetBillsModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Pay Bills</h3>
-              <button className="modal-close" onClick={() => setShowBillsModal(false)}>×</button>
+              <button className="modal-close" onClick={resetBillsModal}>×</button>
             </div>
             <div className="modal-body">
               <form onSubmit={handleBillsSubmit} className="modal-form">
@@ -2403,33 +2431,29 @@ const TenantDashboard = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Payment Provider</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '4px' }}>
-                    {[
-                      { id: 'om', label: 'Orange Money', color: '#ff6600', textColor: '#fff' },
-                      { id: 'wave', label: 'Wave', color: '#1dc3e2', textColor: '#fff' },
-                    ].map(p => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setBillsForm(prev => ({ ...prev, provider: p.id }))}
-                        style={{
-                          padding: '12px 8px',
-                          borderRadius: '10px',
-                          border: billsForm.provider === p.id ? '2px solid ' + p.color : '2px solid #e2e8f0',
-                          background: billsForm.provider === p.id ? p.color : '#fff',
-                          color: billsForm.provider === p.id ? p.textColor : '#374151',
-                          fontWeight: 600,
-                          fontSize: '0.8rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          textAlign: 'center'
-                        }}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                  <label htmlFor="contractRef">Contract Reference</label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      id="contractRef"
+                      value={billsForm.contractRef}
+                      onChange={(e) => setBillsForm(prev => ({ ...prev, contractRef: e.target.value }))}
+                      placeholder="Enter the full CIE / SODECI contract reference"
+                      required
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="action-button secondary"
+                      onClick={handleConsultUtilityBills}
+                      disabled={billsConsultationLoading}
+                    >
+                      {billsConsultationLoading ? 'Searching...' : 'Search Bills'}
+                    </button>
                   </div>
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                    Use `CIE` for electricity and `SODECI` for water. The contract reference is required before payment.
+                  </small>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
@@ -2450,28 +2474,78 @@ const TenantDashboard = () => {
                       id="billsAmount"
                       value={billsForm.amount}
                       onChange={(e) => setBillsForm(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="Enter amount"
+                      placeholder="Amount from selected invoice"
                       required
                       min="1"
                     />
                   </div>
                 </div>
-                {billsForm.provider === 'om' && (
+
+                {billsConsultation && Array.isArray(billsConsultation.factures) && billsConsultation.factures.length > 0 && (
                   <div className="form-group">
-                    <label htmlFor="billsOTP">OTP Code (Orange Money)</label>
-                    <input
-                      type="text"
-                      id="billsOTP"
-                      value={billsForm.otp}
-                      onChange={(e) => setBillsForm(prev => ({ ...prev, otp: e.target.value }))}
-                      placeholder="Enter OTP received on your phone"
-                      required
-                    />
-                    <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>Dial #144*82# to get your OTP code</small>
+                    <label>Available Invoices</label>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden' }}>
+                      <div style={{ maxHeight: '240px', overflow: 'auto' }}>
+                        <table className="sa-table" style={{ margin: 0 }}>
+                          <thead>
+                            <tr>
+                              <th />
+                              <th>Period</th>
+                              <th>Invoice No.</th>
+                              <th>Total</th>
+                              <th>Balance</th>
+                              <th>Penalty</th>
+                              <th>Due Date</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {billsConsultation.factures.map((invoice, idx) => {
+                              const invoiceNumber = invoice.NUM_FAC || invoice.num_facture || invoice.numFacture || '';
+                              const amountTotal = invoice.MONTANT_TOTAL || invoice.SOLDE_FACTURE || invoice.amount || '0';
+                              const isSelected = selectedBillInvoice && String(selectedBillInvoice.NUM_FAC || selectedBillInvoice.num_facture || selectedBillInvoice.numFacture || '') === String(invoiceNumber);
+                              return (
+                                <tr
+                                  key={`${invoiceNumber || idx}`}
+                                  style={{ cursor: 'pointer', background: isSelected ? '#eff6ff' : 'transparent' }}
+                                  onClick={() => {
+                                    setSelectedBillInvoice(invoice);
+                                    const amountValue = Number(invoice.SOLDE_FACTURE || invoice.MONTANT_TOTAL || invoice.amount || 0) || 0;
+                                    setBillsForm(prev => ({ ...prev, amount: amountValue > 0 ? String(amountValue) : prev.amount }));
+                                  }}
+                                >
+                                  <td>
+                                    <input
+                                      type="radio"
+                                      name="selectedBillInvoice"
+                                      checked={isSelected}
+                                      onChange={() => {
+                                        setSelectedBillInvoice(invoice);
+                                        const amountValue = Number(invoice.SOLDE_FACTURE || invoice.MONTANT_TOTAL || invoice.amount || 0) || 0;
+                                        setBillsForm(prev => ({ ...prev, amount: amountValue > 0 ? String(amountValue) : prev.amount }));
+                                      }}
+                                    />
+                                  </td>
+                                  <td>{invoice.PER_FAC || invoice.per_fac || 'N/A'}</td>
+                                  <td>{invoiceNumber || 'N/A'}</td>
+                                  <td>{Number(amountTotal || 0).toLocaleString()} XOF</td>
+                                  <td>{Number(invoice.SOLDE_FACTURE || 0).toLocaleString()} XOF</td>
+                                  <td>{Number(invoice.MONTANT_PENALITE || 0).toLocaleString()} XOF</td>
+                                  <td>{invoice.DATE_LIMIT || invoice.date_limit || 'N/A'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', display: 'block', marginTop: '6px' }}>
+                      Click an invoice to prefill the payment amount. You can still adjust the amount if partial payment is allowed.
+                    </small>
                   </div>
                 )}
+
                 <div className="modal-footer">
-                  <button type="button" className="action-button secondary" onClick={() => setShowBillsModal(false)}>
+                  <button type="button" className="action-button secondary" onClick={resetBillsModal}>
                     Cancel
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>

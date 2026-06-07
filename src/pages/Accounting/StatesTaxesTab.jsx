@@ -22,7 +22,27 @@ const StatesTaxesTab = (props) => {
   }, [selectedMonth, setLoading]);
 
   const general = report?.generalInformation || {};
-  const rows = useMemo(() => (Array.isArray(report?.statusOfTenantPayments) ? report.statusOfTenantPayments : []), [report]);
+  const rows = useMemo(() => {
+    const sourceRows = Array.isArray(report?.statusOfTenantPayments) ? report.statusOfTenantPayments : [];
+    const uniqueRows = [];
+    const seen = new Set();
+
+    sourceRows.forEach((row, index) => {
+      const key = String(
+        row.propertyId ??
+        row.propertyID ??
+        row.property ??
+        row.Property ??
+        `row-${index}`
+      ).trim().toLowerCase();
+
+      if (seen.has(key)) return;
+      seen.add(key);
+      uniqueRows.push(row);
+    });
+
+    return uniqueRows;
+  }, [report]);
   const summary = report?.summaryOfMonth || {};
 
   const money = (v) => `${Number(v || 0).toLocaleString()} FCFA`;
@@ -44,6 +64,14 @@ const StatesTaxesTab = (props) => {
     });
     return t;
   }, [rows]);
+
+  const synchronizedSummary = useMemo(() => ({
+    totalExpectedRentAllProperties: totals.rentAwaited,
+    totalExpectedMonthlyRents: totals.rentAwaited,
+    totalCollectedRentForTheMonth: totals.rentCollected,
+    totalUnpaidRentForTheMonth: totals.remainingRent,
+    totalImpayes: totals.remainingRent,
+  }), [totals]);
 
   return (
     <div>
@@ -108,8 +136,8 @@ const StatesTaxesTab = (props) => {
                   </thead>
                   <tbody>
                     {rows.length > 0 ? rows.map((r, idx) => (
-                      <tr key={r.propertyId || idx}>
-                        <td><span className="sa-cell-title">{r.property || '—'}</span></td>
+                      <tr key={r.propertyId || r.propertyID || r.property || idx}>
+                        <td><span className="sa-cell-title">{r.property || r.Property || '—'}</span></td>
                         <td>{Number(r.numberOfTenants || 0)}</td>
                         <td>{Number(r.numberOfTenantsWhoPaid || 0)}</td>
                         <td>{money(r.rentAwaited)}</td>
@@ -144,11 +172,11 @@ const StatesTaxesTab = (props) => {
                     <tr><th>Indicator</th><th>Amount (FCFA)</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td>Total expected rent (all properties)</td><td>{money(summary.totalExpectedRentAllProperties)}</td></tr>
-                    <tr><td>Total expected monthly rents</td><td>{money(summary.totalExpectedMonthlyRents)}</td></tr>
-                    <tr><td>Total collected rent for the month</td><td style={{ color: '#059669', fontWeight: 800 }}>{money(summary.totalCollectedRentForTheMonth)}</td></tr>
-                    <tr><td>Total unpaid rent for the month</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(summary.totalUnpaidRentForTheMonth)}</td></tr>
-                    <tr><td>Total impayés</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(summary.totalImpayes)}</td></tr>
+                    <tr><td>Total expected rent (all properties)</td><td>{money(synchronizedSummary.totalExpectedRentAllProperties || summary.totalExpectedRentAllProperties)}</td></tr>
+                    <tr><td>Total expected monthly rents</td><td>{money(synchronizedSummary.totalExpectedMonthlyRents || summary.totalExpectedMonthlyRents)}</td></tr>
+                    <tr><td>Total collected rent for the month</td><td style={{ color: '#059669', fontWeight: 800 }}>{money(synchronizedSummary.totalCollectedRentForTheMonth || summary.totalCollectedRentForTheMonth)}</td></tr>
+                    <tr><td>Total unpaid rent for the month</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(synchronizedSummary.totalUnpaidRentForTheMonth || summary.totalUnpaidRentForTheMonth)}</td></tr>
+                    <tr><td>Total impayés</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(synchronizedSummary.totalImpayes || summary.totalImpayes)}</td></tr>
                   </tbody>
                 </table>
               </div>

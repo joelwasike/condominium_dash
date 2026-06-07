@@ -7,8 +7,10 @@ const PAYMENT_METHODS = ['Link', 'Transfer', 'Check', 'OM', 'Wave', 'Cash'];
 
 const RentReceiptTemplate = ({ data, isCollection = false }) => {
   const amount = data?.Amount ?? data?.amount ?? 0;
-  const tenant = data?.Tenant ?? data?.tenant ?? (isCollection ? (data?.Landlord ?? data?.landlord) : null);
-  const building = data?.Property ?? data?.property ?? data?.Building ?? data?.building ?? '—';
+  const owner = data?.Owner ?? data?.owner ?? data?.OwnerName ?? data?.ownerName ?? data?.Landlord ?? data?.landlord;
+  const tenant = data?.Tenant ?? data?.tenant ?? (isCollection ? owner : null);
+  const property = data?.Property ?? data?.property ?? '—';
+  const building = data?.Building ?? data?.building ?? '';
   const locative = data?.Unit ?? data?.unit ?? data?.Locative ?? data?.locative ?? '—';
   const method = data?.Method ?? data?.method ?? '—';
   const dateVal = data?.Date ?? data?.date;
@@ -54,7 +56,7 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
       <div className="info-section">
         <div className="tenant-details">
           <div>Tenant: {tenant || '................................................................'}</div>
-          <div>Building: {building || '.............................................................'}</div>
+          <div>Property / Building: {property !== '—' ? property : '.............................................................'}{building ? ` / ${building}` : ''}</div>
           <div>Locative: {locative || '.............................................................'}</div>
         </div>
         <div className="ref-date-details">

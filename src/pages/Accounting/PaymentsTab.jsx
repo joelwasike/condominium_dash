@@ -4,6 +4,14 @@ import { Receipt } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
 import RentReceiptTemplate from '../../components/RentReceiptTemplate';
 import { t } from '../../utils/i18n';
+import {
+  dedupeBySignature,
+  formatOwnerName,
+  formatPropertyBuilding,
+  formatTenantName,
+  getTransactionSignature,
+  normalizeText,
+} from '../../utils/accountingDisplay';
 
 const PAYMENT_PAGE_SIZE = 10;
 const MOBILE_MONEY_PROVIDERS = [
@@ -59,7 +67,7 @@ const PaymentsTab = (props) => {
     if (paymentView === 'deposit' && col.ChargeType !== 'Deposit') return false;
     if (paymentView === 'sale' && col.ChargeType !== 'Sale') return false;
     if (!matchesStatus(col.Status)) return false;
-    if (!matchesName(col.Tenant, col.Buyer, col.Building, col.Landlord)) return false;
+    if (!matchesName(col.Tenant, col.Buyer, formatPropertyBuilding(col, ''), formatOwnerName(col, ''))) return false;
     if (!matchesDate(col.Date)) return false;
     return true;
   });
@@ -67,30 +75,46 @@ const PaymentsTab = (props) => {
   const filteredTenantPayments = (paymentView === 'all' || paymentView === 'tenant')
     ? tenantPayments.filter(p => {
         if (!matchesStatus(p.Status)) return false;
-        if (!matchesName(p.Tenant, null, p.Property, null)) return false;
+        if (!matchesName(formatTenantName(p, ''), null, formatPropertyBuilding(p, ''), formatOwnerName(p, ''))) return false;
         if (!matchesDate(p.Date)) return false;
         return true;
       })
     : [];
 
   const paymentRows = useMemo(() => {
-    const collectionRows = filteredCollections.map((collection, index) => ({
-      rowType: 'collection',
-      key: `collection-${collection.ID || index}`,
-      dateValue: collection.Date || collection.CreatedAt || collection.createdAt || '',
-      data: collection,
-    }));
     const tenantRows = filteredTenantPayments.map((payment, index) => ({
       rowType: 'payment',
-      key: `tenant-payment-${payment.ID || index}`,
+      key: `tenant-payment-${payment.ID || payment.id || getTransactionSignature(payment) || index}`,
+      signature: getTransactionSignature(payment),
+      priority: 2,
       dateValue: payment.Date || payment.CreatedAt || payment.createdAt || '',
       data: payment,
     }));
-    return [...collectionRows, ...tenantRows].sort((left, right) => {
-      const leftDate = new Date(left.dateValue || 0).getTime();
-      const rightDate = new Date(right.dateValue || 0).getTime();
-      return rightDate - leftDate;
-    });
+
+    const tenantSignatures = new Set(tenantRows.map((row) => row.signature));
+    const collectionRows = filteredCollections
+      .filter((collection) => {
+        const chargeType = normalizeText(collection.ChargeType || collection.chargeType);
+        if (!tenantSignatures.size) return true;
+        if (!['rent', 'deposit', 'late fee', 'late rent', 'collection'].includes(chargeType)) return true;
+        return !tenantSignatures.has(getTransactionSignature(collection));
+      })
+      .map((collection, index) => ({
+        rowType: 'collection',
+        key: `collection-${collection.ID || collection.id || getTransactionSignature(collection) || index}`,
+        signature: getTransactionSignature(collection),
+        priority: 1,
+        dateValue: collection.Date || collection.CreatedAt || collection.createdAt || '',
+        data: collection,
+      }));
+
+    return dedupeBySignature([...tenantRows, ...collectionRows], (row) => row.priority)
+      .sort((left, right) => {
+        const leftDate = new Date(left.dateValue || 0).getTime();
+        const rightDate = new Date(right.dateValue || 0).getTime();
+        if (rightDate !== leftDate) return rightDate - leftDate;
+        return (right.priority || 0) - (left.priority || 0);
+      });
   }, [filteredCollections, filteredTenantPayments]);
 
   useEffect(() => {
@@ -239,14 +263,18 @@ const PaymentsTab = (props) => {
                 {paginatedPaymentRows.map((row) => {
                   if (row.rowType === 'collection') {
                     const collection = row.data;
+                    const ownerName = formatOwnerName(collection, 'N/A');
+                    const propertyBuilding = formatPropertyBuilding(collection, 'N/A');
                     return (
                       <tr key={row.key}>
                         <td><span className="sa-status-pill" style={{ backgroundColor: '#dbeafe', color: '#1e40af' }}>{collection.ChargeType || 'Collection'}</span></td>
-                        <td>{collection.Buyer || '-'}</td>
-                        <td><span className="sa-cell-title">{collection.Building || 'N/A'}</span></td>
-                        <td>{collection.Landlord || 'N/A'}</td>
+                        <td>{collection.Buyer || collection.Tenant || collection.tenant || '-'}</td>
+                        <td>
+                          <span className="sa-cell-title">{propertyBuilding}</span>
+                        </td>
+                        <td>{ownerName}</td>
                         <td>{collection.Amount?.toFixed(2) || '0.00'} XOF</td>
-                        <td>{collection.PaymentMethod || 'Cash'}</td>
+                        <td>{collection.PaymentMethod || collection.Method || 'Cash'}</td>
                         <td><span className={`sa-status-pill ${(collection.Status || 'unknown').toLowerCase()}`}>{collection.Status || 'Unknown'}</span></td>
                         <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
                         <td className="table-menu">
@@ -260,14 +288,16 @@ const PaymentsTab = (props) => {
                   }
 
                   const payment = row.data;
+                  const ownerName = formatOwnerName(payment, 'N/A');
+                  const propertyBuilding = formatPropertyBuilding(payment, 'N/A');
                   return (
                     <tr key={row.key}>
                       <td><span className="sa-status-pill" style={{ backgroundColor: '#dcfce7', color: '#166534' }}>Tenant Payment</span></td>
-                      <td><span className="sa-cell-title">{payment.Tenant || 'N/A'}</span></td>
-                      <td>{payment.Property || 'N/A'}</td>
-                      <td>-</td>
+                      <td><span className="sa-cell-title">{formatTenantName(payment, 'N/A')}</span></td>
+                      <td>{propertyBuilding}</td>
+                      <td>{ownerName}</td>
                       <td>{payment.Amount?.toFixed(2) || '0.00'} XOF</td>
-                      <td>{payment.Method || 'N/A'}</td>
+                      <td>{payment.Method || payment.PaymentMethod || 'N/A'}</td>
                       <td><span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>{payment.Status || 'Unknown'}</span></td>
                       <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
                       <td className="table-menu">

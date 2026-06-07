@@ -41,6 +41,32 @@ export const tenantService = {
     });
   },
 
+  // Utility bill payment flow (CIE / SODECI) via Intouch biller API
+  consultUtilityBills: async ({ billType, refContrat }) => {
+    const url = buildApiUrl('/api/tenant/bills/consultation');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        billType,
+        refContrat,
+      }),
+    });
+  },
+
+  payUtilityBill: async ({ billType, phoneNumber, amount, refContrat, numFacture }) => {
+    const url = buildApiUrl('/api/tenant/bills/payment');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        billType,
+        phoneNumber,
+        amount,
+        refContrat,
+        numFacture,
+      }),
+    });
+  },
+
   // Poll MoMo transaction status
   checkMoMoStatus: async (transactionId) => {
     const url = buildApiUrl('/api/payments/status');

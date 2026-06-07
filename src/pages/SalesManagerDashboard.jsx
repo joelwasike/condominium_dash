@@ -3454,6 +3454,70 @@ const SalesManagerDashboard = () => {
       );
     }
 
+    const normalizeAssetText = (value) => (value ?? '').toString().trim().toLowerCase();
+    const readNumber = (...values) => {
+      for (const value of values) {
+        if (value === null || value === undefined || value === '') continue;
+        const parsed = Number(String(value).replace(/[^0-9.-]/g, ''));
+        if (!Number.isNaN(parsed)) return parsed;
+      }
+      return 0;
+    };
+    const getPropertyUnits = (property) => {
+      const units = property?.units || property?.Units || property?.apartments || property?.Apartments || [];
+      return Array.isArray(units) ? units : [];
+    };
+    const isUnitOccupied = (unit) => {
+      const status = normalizeAssetText(unit?.occupancyStatus || unit?.status || unit?.Status || unit?.statut);
+      const tenant = (unit?.tenant || unit?.Tenant || unit?.clientName || unit?.ClientName || '').toString().trim();
+      return status === 'occupied' || status === 'leased' || status === 'tenanted' || Boolean(tenant);
+    };
+    const getPropertyOccupancySummary = (property) => {
+      const units = getPropertyUnits(property);
+      if (units.length > 0) {
+        const totalUnits = units.length;
+        const occupiedUnits = units.filter(isUnitOccupied).length;
+        return {
+          totalUnits,
+          occupiedUnits,
+          vacantUnits: Math.max(0, totalUnits - occupiedUnits),
+          occupancyLabel: `${occupiedUnits}/${totalUnits}`,
+        };
+      }
+      const status = normalizeAssetText(property?.Status || property?.status || property?.statut);
+      const occupied = status === 'occupied' || Boolean((property?.tenant || property?.Tenant || '').toString().trim());
+      return {
+        totalUnits: 1,
+        occupiedUnits: occupied ? 1 : 0,
+        vacantUnits: occupied ? 0 : 1,
+        occupancyLabel: `${occupied ? 1 : 0}/1`,
+      };
+    };
+    const getPropertyMonthlyIncome = (property) => {
+      const units = getPropertyUnits(property);
+      if (units.length > 0) {
+        return units.reduce((sum, unit) => {
+          if (!isUnitOccupied(unit)) return sum;
+          return sum + readNumber(unit?.rentPrice, unit?.rent, unit?.Rent, unit?.amount, unit?.Amount);
+        }, 0);
+      }
+      if (!getPropertyOccupancySummary(property).occupiedUnits) return 0;
+      return readNumber(property?.income, property?.Income, property?.rentPrice, property?.Rent, property?.rent);
+    };
+    const isForSaleAsset = (property) => {
+      const propertyType = normalizeAssetText(property?.PropertyType || property?.propertyType);
+      const type = normalizeAssetText(property?.Type || property?.type);
+      return propertyType === 'for sale' || propertyType === 'sale' || type === 'for sale' || type === 'sale';
+    };
+    const dedupedAssets = [];
+    const dedupeSet = new Set();
+    [...properties, ...salesProperties].forEach((asset) => {
+      const assetId = asset?.id ?? asset?.ID ?? asset?.Id ?? `${asset?.address || asset?.Address || ''}-${asset?.type || asset?.Type || ''}-${asset?.name || asset?.Name || ''}`;
+      if (dedupeSet.has(String(assetId))) return;
+      dedupeSet.add(String(assetId));
+      dedupedAssets.push(asset);
+    });
+
     // Property Management entry – columns: Name, Total of assets, Property for sell, Property for manage, Occupancy, Income (this month)
     const unassignedProperties = properties.filter((p) => !getPropertyOwnerId(p));
     return (
@@ -3513,11 +3577,20 @@ const SalesManagerDashboard = () => {
               <tbody>
                 {filteredOwners.map((owner, index) => {
                   const ownerId = getOwnerId(owner);
-                  const totalOfAssets = owner.totalOfAssets ?? owner.numberOfAssetsManaged ?? 0;
-                  const propertyForSell = owner.propertyForSell ?? 0;
-                  const propertyForManage = owner.propertyForManage ?? 0;
-                  const occupancy = owner.occupancy ?? '0/0';
-                  const incomeThisMonth = owner.incomeThisMonth ?? owner.revenue ?? 0;
+                  const ownerAssets = dedupedAssets.filter((asset) => String(getPropertyOwnerId(asset) ?? '') === String(ownerId ?? ''));
+                  const propertyForSell = ownerAssets.filter(isForSaleAsset).length;
+                  const propertyForManage = Math.max(0, ownerAssets.length - propertyForSell);
+                  const occupancySummary = ownerAssets.reduce((acc, asset) => {
+                    const summary = getPropertyOccupancySummary(asset);
+                    acc.occupied += summary.occupiedUnits;
+                    acc.total += summary.totalUnits;
+                    return acc;
+                  }, { occupied: 0, total: 0 });
+                  const occupancy = occupancySummary.totalUnits > 0
+                    ? `${occupancySummary.occupied}/${occupancySummary.totalUnits}`
+                    : '0/0';
+                  const incomeThisMonth = ownerAssets.reduce((sum, asset) => sum + getPropertyMonthlyIncome(asset), 0);
+                  const totalOfAssets = ownerAssets.length;
                   return (
                     <tr
                       key={ownerId || index}
@@ -3527,13 +3600,13 @@ const SalesManagerDashboard = () => {
                     >
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{owner.name || owner.Name || 'N/A'}</span>
-                          </td>
+                      </td>
                       <td>{owner.email || owner.Email || '—'}</td>
                       <td>{totalOfAssets}</td>
                       <td>{propertyForSell}</td>
                       <td>{propertyForManage}</td>
                       <td>{occupancy}</td>
-                      <td>{typeof incomeThisMonth === 'number' ? incomeThisMonth.toLocaleString() : incomeThisMonth}</td>
+                      <td>{incomeThisMonth.toLocaleString()} XOF</td>
                         </tr>
                   );
                 })}

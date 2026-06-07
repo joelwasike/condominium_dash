@@ -523,6 +523,16 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
+  getQuoteHistory: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/history`, {
+      method: 'GET',
+      headers: headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch quote history');
+    return parseJson(response);
+  },
+
   rejectQuote: async (quoteId) => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/${quoteId}/reject`, {

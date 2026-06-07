@@ -149,10 +149,8 @@ const AgencyDirectorDashboard = () => {
   const [owners, setOwners] = useState([]);
   
   // Management state - Pending approvals
-  const [pendingPayments, setPendingPayments] = useState([]);
   const [pendingExpenses, setPendingExpenses] = useState([]);
   const [pendingQuotes, setPendingQuotes] = useState([]);
-  const [paymentsToApproveSubTab, setPaymentsToApproveSubTab] = useState('payments'); // 'payments' | 'expenses'
 
   // Reports/Analytics state
   const [transferHistory, setTransferHistory] = useState([]);
@@ -179,6 +177,8 @@ const AgencyDirectorDashboard = () => {
   const [yearlyComparison, setYearlyComparison] = useState(null);
   const [monthlyComparison, setMonthlyComparison] = useState([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [accountingDateFilterMode, setAccountingDateFilterMode] = useState('day');
+  const [accountingDateFilterValue, setAccountingDateFilterValue] = useState(() => new Date().toISOString().slice(0, 10));
 
   // Tenants state
   const [tenants, setTenants] = useState([]);
@@ -194,6 +194,170 @@ const AgencyDirectorDashboard = () => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 3000);
   }, []);
+
+  const normalizeText = (value) => String(value ?? '').trim().toLowerCase();
+
+  const getValue = (...values) => values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+
+  const getNumericValue = (...values) => {
+    for (const value of values) {
+      if (value === undefined || value === null) continue;
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'string') {
+        const parsed = Number(value.replace(/,/g, ''));
+        if (Number.isFinite(parsed)) return parsed;
+      }
+      if (typeof value === 'object') {
+        const candidate = value.total ?? value.Total ?? value.amount ?? value.Amount ?? value.value ?? value.Value ?? value.sum ?? value.Sum;
+        if (candidate !== undefined && candidate !== null) {
+          const parsed = Number(candidate);
+          if (Number.isFinite(parsed)) return parsed;
+        }
+      }
+    }
+    return 0;
+  };
+
+  const getRecordId = (record) => record?.id ?? record?.ID ?? record?.Id ?? null;
+
+  const normalizeRole = (role) => normalizeText(role);
+
+  const isTenantRole = (role) => {
+    const normalized = normalizeRole(role);
+    return normalized === 'tenant' || normalized === 'client' || normalized === 'resident' || normalized === 'occupant';
+  };
+
+  const getPropertyUnits = (property) => {
+    const units = property?.units ?? property?.Units ?? [];
+    return Array.isArray(units) ? units : [];
+  };
+
+  const getPropertyLabel = (property) =>
+    getValue(property?.name, property?.Name, property?.building, property?.Building, property?.Address, property?.address) || 'N/A';
+
+  const getPropertyOwnerId = (property) =>
+    property?.LandlordID ?? property?.landlordId ?? property?.landlordID ?? property?.landlord_id ?? property?.LandlordId ??
+    property?.OwnerID ?? property?.ownerId ?? property?.ownerID ?? property?.owner_id ??
+    property?.owner?.id ?? property?.owner?.ID ?? property?.landlord?.id ?? property?.landlord?.ID;
+
+  const getPropertyOwnerName = (property) =>
+    property?.Landlord ?? property?.landlord ?? property?.Owner ?? property?.owner ?? property?.landlordName ?? property?.ownerName;
+
+  const getPropertyOccupancyStats = (property) => {
+    const units = getPropertyUnits(property);
+    const totalUnits = units.length > 0 ? units.length : 1;
+    const occupiedUnits = units.length > 0
+      ? units.reduce((count, unit) => {
+          const unitStatus = normalizeText(unit?.status ?? unit?.Status);
+          const hasTenant = Boolean(getValue(unit?.tenant, unit?.Tenant));
+          return count + (unitStatus === 'occupied' || hasTenant ? 1 : 0);
+        }, 0)
+      : (normalizeText(getPropertyStatus(property)) === 'occupied' || Boolean(getValue(property?.tenant, property?.Tenant)) ? 1 : 0);
+    const safeOccupiedUnits = Math.min(occupiedUnits, totalUnits);
+    const vacantUnits = Math.max(0, totalUnits - safeOccupiedUnits);
+    return {
+      totalUnits,
+      occupiedUnits: safeOccupiedUnits,
+      vacantUnits,
+      occupancyRate: totalUnits > 0 ? (safeOccupiedUnits / totalUnits) * 100 : 0,
+      occupancyLabel: `${safeOccupiedUnits}/${totalUnits}`,
+    };
+  };
+
+  const getPropertyStatus = (property) => getValue(property?.Status, property?.status, property?.statut) || 'Vacant';
+
+  const getOwnerIdentity = (owner) => ({
+    id: getRecordId(owner),
+    name: getValue(owner?.name, owner?.Name) || 'Owner',
+    email: getValue(owner?.email, owner?.Email) || '',
+  });
+
+  const ownerMatchesProperty = (owner, property) => {
+    if (!owner || !property) return false;
+    const { id, name, email } = getOwnerIdentity(owner);
+    const propertyOwnerId = getPropertyOwnerId(property);
+    if (propertyOwnerId != null && id != null && String(propertyOwnerId) === String(id)) return true;
+    const propOwnerName = normalizeText(getPropertyOwnerName(property));
+    if (name && propOwnerName && normalizeText(name) === propOwnerName) return true;
+    const propOwnerText = normalizeText(getValue(property?.owner, property?.Owner, property?.landlord, property?.Landlord));
+    if (name && propOwnerText && normalizeText(name) === propOwnerText) return true;
+    const propOwnerEmail = normalizeText(getValue(property?.ownerEmail, property?.OwnerEmail, property?.landlordEmail, property?.LandlordEmail));
+    if (email && propOwnerEmail && normalizeText(email) === propOwnerEmail) return true;
+    return false;
+  };
+
+  const getOwnerPropertyStats = (owner, propsSource = properties) => {
+    const ownerProps = (propsSource || []).filter(property => ownerMatchesProperty(owner, property));
+    const totalUnits = ownerProps.reduce((sum, property) => sum + getPropertyOccupancyStats(property).totalUnits, 0);
+    const occupiedUnits = ownerProps.reduce((sum, property) => sum + getPropertyOccupancyStats(property).occupiedUnits, 0);
+    const vacantUnits = Math.max(0, totalUnits - occupiedUnits);
+    const activeContracts = occupiedUnits;
+    const totalAssets = ownerProps.length;
+    const sellAssets = ownerProps.filter(property => {
+      const status = normalizeText(getPropertyStatus(property));
+      const type = normalizeText(property?.Type ?? property?.type);
+      return status.includes('sell') || status.includes('sale') || status.includes('available') || type === 'land';
+    }).length;
+    const manageAssets = Math.max(0, totalAssets - sellAssets);
+    const incomeThisMonth = ownerProps.reduce((sum, property) => {
+      const occupancy = getPropertyOccupancyStats(property);
+      const rentValue = Number(getValue(property?.rent, property?.Rent, property?.rentPrice, property?.RentPrice, 0) || 0);
+      const units = getPropertyUnits(property);
+      if (units.length > 0) {
+        return sum + units.reduce((unitSum, unit) => {
+          const unitStatus = normalizeText(unit?.status ?? unit?.Status);
+          const unitRent = Number(getValue(unit?.rent, unit?.rentPrice, unit?.Rent, 0) || 0);
+          return unitSum + ((unitStatus === 'occupied' || unit?.tenant || unit?.Tenant) ? unitRent : 0);
+        }, 0);
+      }
+      return sum + (occupancy.occupiedUnits > 0 ? rentValue : 0);
+    }, 0);
+
+    return {
+      ownerProps,
+      totalAssets,
+      sellAssets,
+      manageAssets,
+      totalUnits,
+      occupiedUnits,
+      vacantUnits,
+      occupancyLabel: `${occupiedUnits}/${totalUnits || 0}`,
+      incomeThisMonth,
+      activeContracts,
+      propertiesCount: totalAssets,
+      contractsCount: activeContracts
+    };
+  };
+
+  const getTransactionDate = (record) => {
+    const rawDate = getValue(record?.date, record?.Date, record?.createdAt, record?.CreatedAt, record?.updatedAt, record?.UpdatedAt);
+    if (!rawDate) return null;
+    const date = new Date(rawDate);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const getTransactionSignature = (record) => {
+    if (!record) return '';
+    const id = getRecordId(record);
+    if (id != null) return `id:${id}`;
+    const tenant = normalizeText(getValue(record?.tenant, record?.Tenant, record?.source, record?.Source));
+    const property = normalizeText(getValue(record?.property, record?.Property, record?.building, record?.Building));
+    const amount = Number(getValue(record?.amount, record?.Amount, 0) || 0);
+    const type = normalizeText(getValue(record?.chargeType, record?.ChargeType, record?.method, record?.Method, record?.category, record?.Category));
+    const date = getTransactionDate(record);
+    const dateKey = date ? date.toISOString().slice(0, 10) : normalizeText(getValue(record?.date, record?.Date));
+    return [tenant, property, amount, type, dateKey].join('|');
+  };
+
+  const dedupeRecords = (records) => {
+    const seen = new Set();
+    return (Array.isArray(records) ? records : []).filter(record => {
+      const signature = getTransactionSignature(record);
+      if (!signature || seen.has(signature)) return false;
+      seen.add(signature);
+      return true;
+    });
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -272,6 +436,22 @@ const AgencyDirectorDashboard = () => {
     }
   }, [addNotification]);
 
+  const refreshSubscriptionInfo = useCallback(async () => {
+    try {
+      if (isDemoMode()) {
+        const demoData = getAgencyDirectorDemoData();
+        setSubscriptionInfo(demoData.subscriptionInfo);
+        return;
+      }
+      const status = await agencyDirectorService.getSubscriptionStatus().catch(() => null);
+      if (status) {
+        setSubscriptionInfo(status);
+      }
+    } catch (error) {
+      console.error('Error refreshing subscription info:', error);
+    }
+  }, []);
+
   // Load chat for a specific user
   const loadChatForUser = useCallback(
     async (userId) => {
@@ -308,6 +488,8 @@ const AgencyDirectorDashboard = () => {
     if (users && Array.isArray(users)) {
       users.forEach(user => {
         const userId = user.ID || user.id;
+        const role = normalizeRole(user.Role || user.role);
+        if (isTenantRole(role)) return;
         // Don't include current user in the list
         if (userId && String(userId) !== String(currentUserId) && !addedUserIds.has(String(userId))) {
           allUsers.push({
@@ -355,7 +537,7 @@ const AgencyDirectorDashboard = () => {
         
         // Skip if it's a superadmin (already handled above)
         const role = (conv.role || conv.user?.role || '').toLowerCase();
-        if (role === 'superadmin') {
+        if (role === 'superadmin' || isTenantRole(role)) {
           return;
         }
         
@@ -576,6 +758,7 @@ const AgencyDirectorDashboard = () => {
         const demoData = getAgencyDirectorDemoData();
         setLeasesAwaitingSignature([]);
         setOwners(demoData.owners);
+        setQuoteRequests([]);
         return;
       }
       
@@ -604,14 +787,14 @@ const AgencyDirectorDashboard = () => {
   // Load pending approvals data
   const loadPendingApprovals = useCallback(async () => {
     try {
-      const [payments, expenses, quotes] = await Promise.all([
-        agencyDirectorService.getPendingPayments().catch(() => []),
+      const [expenses, quotes, quoteHistory] = await Promise.all([
         agencyDirectorService.getPendingExpenses().catch(() => []),
-        agencyDirectorService.getPendingQuotes().catch(() => [])
+        agencyDirectorService.getPendingQuotes().catch(() => []),
+        agencyDirectorService.getQuoteHistory().catch(() => [])
       ]);
-      setPendingPayments(Array.isArray(payments) ? payments : []);
       setPendingExpenses(Array.isArray(expenses) ? expenses : []);
       setPendingQuotes(Array.isArray(quotes) ? quotes : []);
+      setQuoteRequests(Array.isArray(quoteHistory) ? quoteHistory : []);
     } catch (error) {
       console.error('Error loading pending approvals:', error);
       addNotification('Failed to load pending approvals', 'error');
@@ -739,7 +922,7 @@ const AgencyDirectorDashboard = () => {
   }, [activeTab, loadTenantsData]);
 
   useEffect(() => {
-    if (activeTab === 'management' && (managementSubTab === 'payments-to-approve' || managementSubTab === 'quotes-to-validate')) {
+    if (activeTab === 'management' && (managementSubTab === 'expenses-to-approve' || managementSubTab === 'quotes-to-validate')) {
       loadPendingApprovals();
     }
   }, [activeTab, managementSubTab, loadPendingApprovals]);
@@ -840,6 +1023,29 @@ const AgencyDirectorDashboard = () => {
     }
   }, [activeTab, loadAnalyticsData, loadNewAnalyticsData]);
 
+  useEffect(() => {
+    if (activeTab === 'subscription') {
+      refreshSubscriptionInfo();
+    }
+  }, [activeTab, refreshSubscriptionInfo]);
+
+  useEffect(() => {
+    if (showSubscriptionModal) {
+      refreshSubscriptionInfo();
+    }
+  }, [showSubscriptionModal, refreshSubscriptionInfo]);
+
+  useEffect(() => {
+    const now = new Date();
+    if (accountingDateFilterMode === 'day' && (!accountingDateFilterValue || accountingDateFilterValue.length !== 10)) {
+      setAccountingDateFilterValue(now.toISOString().slice(0, 10));
+    } else if (accountingDateFilterMode === 'month' && (!accountingDateFilterValue || accountingDateFilterValue.length < 7)) {
+      setAccountingDateFilterValue(now.toISOString().slice(0, 7));
+    } else if (accountingDateFilterMode === 'year' && (!accountingDateFilterValue || accountingDateFilterValue.length < 4)) {
+      setAccountingDateFilterValue(String(now.getFullYear()));
+    }
+  }, [accountingDateFilterMode]); // keep the value aligned with the selected period
+
   // Load advertisements when advertisements tab is active or overview is active
   useEffect(() => {
     if (activeTab === 'advertisements' || activeTab === 'overview') {
@@ -875,10 +1081,15 @@ const AgencyDirectorDashboard = () => {
     [tabs, activeTab]
   );
 
+  const agencyUsers = useMemo(() => {
+    if (!Array.isArray(users)) return [];
+    return users.filter(user => !isTenantRole(user.Role || user.role));
+  }, [users]);
+
   // Filtered users
   const filteredUsers = useMemo(() => {
-    if (!users || !Array.isArray(users)) return [];
-    return users.filter(user => {
+    if (!agencyUsers || !Array.isArray(agencyUsers)) return [];
+    return agencyUsers.filter(user => {
       if (userCompanyFilter && (user.Company || user.company) !== userCompanyFilter) return false;
       if (userRoleFilter && (user.Role || user.role) !== userRoleFilter) return false;
       if (userSearchText) {
@@ -889,7 +1100,7 @@ const AgencyDirectorDashboard = () => {
       }
       return true;
     });
-  }, [users, userCompanyFilter, userRoleFilter, userSearchText]);
+  }, [agencyUsers, userCompanyFilter, userRoleFilter, userSearchText]);
 
   // Filtered properties
   const filteredProperties = useMemo(() => {
@@ -904,22 +1115,22 @@ const AgencyDirectorDashboard = () => {
   // Unique companies and roles
   const uniqueCompanies = useMemo(() => {
     const companies = new Set();
-    users.forEach(user => {
+    agencyUsers.forEach(user => {
       if (user.Company || user.company) companies.add(user.Company || user.company);
     });
     properties.forEach(prop => {
       if (prop.Company || prop.company) companies.add(prop.Company || prop.company);
     });
     return Array.from(companies).sort();
-  }, [users, properties]);
+  }, [agencyUsers, properties]);
 
   const uniqueRoles = useMemo(() => {
     const roles = new Set();
-    users.forEach(user => {
+    agencyUsers.forEach(user => {
       if (user.Role || user.role) roles.add(user.Role || user.role);
     });
     return Array.from(roles).sort();
-  }, [users]);
+  }, [agencyUsers]);
 
   // User management
   const handleOpenAddUser = () => {
@@ -1385,38 +1596,22 @@ const AgencyDirectorDashboard = () => {
 
   // Property Management: owners → buildings → units (same flow as Sales Manager)
   const getOwnerId = (owner) => owner.id || owner.ID;
-  const getPropertyOwnerId = (property) =>
-    property.LandlordID ?? property.landlordId ?? property.landlordID ?? property.landlord_id ?? property.LandlordId ??
-    property.OwnerID ?? property.ownerId ?? property.ownerID ?? property.owner_id ??
-    property.owner?.id ?? property.owner?.ID ?? property.landlord?.id ?? property.landlord?.ID;
 
-  const getPropertyOwnerName = (property) =>
-    property.Landlord ?? property.landlord ?? property.Owner ?? property.owner ?? property.landlordName ?? property.ownerName;
-
-  const deriveOwnerAssetsFromProperties = (ownerId, owner, propsSource) => {
+  const deriveOwnerAssetsFromProperties = (owner, propsSource) => {
     const props = propsSource || properties || [];
-    const ownerName = (owner.name || owner.Name || '').trim().toLowerCase();
-    const ownerProps = props.filter((p) => {
-      const propOwnerId = getPropertyOwnerId(p);
-      if (propOwnerId != null && String(propOwnerId) === String(ownerId)) return true;
-      if (ownerName && getPropertyOwnerName(p)) {
-        const propOwnerName = String(getPropertyOwnerName(p) || '').trim().toLowerCase();
-        if (propOwnerName === ownerName) return true;
-      }
-      return false;
-    });
+    const ownerProps = props.filter((property) => ownerMatchesProperty(owner, property));
     return {
       ownerName: owner.name || owner.Name || 'Owner',
       assets: ownerProps.map((p) => ({
         id: p.id || p.ID,
-        name: p.Address || p.address,
-        building: p.Address || p.address,
+        name: getPropertyLabel(p),
+        building: getPropertyLabel(p),
         type: (p.Type || p.type || 'building').toLowerCase(),
-        apartmentsDisplay: p.units?.length || p.Units?.length || 1,
+        apartmentsDisplay: getPropertyOccupancyStats(p).totalUnits,
         rentPrice: p.Rent || p.rent,
-        location: p.Address || p.address,
-        occupancy: p.Status || p.status || '—',
-        statut: p.Status || p.status || '—'
+        location: getPropertyLabel(p),
+        occupancy: getPropertyOccupancyStats(p).occupancyLabel,
+        statut: getPropertyStatus(p)
       }))
     };
   };
@@ -1428,7 +1623,7 @@ const AgencyDirectorDashboard = () => {
     try {
       let data;
       if (isDemoMode()) {
-        data = deriveOwnerAssetsFromProperties(ownerId, owner, pmProperties.length ? pmProperties : properties);
+        data = deriveOwnerAssetsFromProperties(owner, pmProperties.length ? pmProperties : properties);
       } else {
         try {
           // Use agency director API (sales manager returns 401 for agency director token)
@@ -1436,11 +1631,11 @@ const AgencyDirectorDashboard = () => {
           const apiAssets = data?.assets || data?.properties || [];
           const propsSource = pmProperties.length ? pmProperties : properties;
           if (apiAssets.length === 0 && propsSource.length > 0) {
-            data = deriveOwnerAssetsFromProperties(ownerId, owner, propsSource);
+            data = deriveOwnerAssetsFromProperties(owner, propsSource);
           }
         } catch (apiErr) {
           // API failed (404/401) – derive from properties (requires landlordId/LandlordID in each property)
-          data = deriveOwnerAssetsFromProperties(ownerId, owner, pmProperties.length ? pmProperties : properties);
+          data = deriveOwnerAssetsFromProperties(owner, pmProperties.length ? pmProperties : properties);
         }
       }
       setOwnerAssets(data);
@@ -1563,13 +1758,29 @@ const AgencyDirectorDashboard = () => {
     if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Loading overview data...</div>;
 
     const stats = overviewData || {};
-    const totalProperties = properties.length || stats.totalProperties || 0;
-    const vacantApartments = properties.filter(p => (p.Status || p.status || '').toLowerCase() === 'vacant').length;
-    const occupiedApartments = properties.filter(p => (p.Status || p.status || '').toLowerCase() === 'occupied').length;
-    const totalRentCollected = stats.totalRentCollected || 0;
-    const overallOccupancyRate = stats.overallOccupancyRate || (totalProperties > 0 ? (occupiedApartments / totalProperties * 100).toFixed(1) : 0);
-    const activeTenants = stats.numberOfActiveTenants || stats.activeTenants || 0;
-    const totalUnpaidRent = stats.totalUnpaidRent || 0;
+    const propertyStats = (properties || []).reduce((acc, property) => {
+      const occupancy = getPropertyOccupancyStats(property);
+      acc.totalUnits += occupancy.totalUnits;
+      acc.occupiedUnits += occupancy.occupiedUnits;
+      acc.vacantUnits += occupancy.vacantUnits;
+      const units = getPropertyUnits(property);
+      if (units.length > 0) {
+        units.forEach(unit => {
+          const tenantName = getValue(unit?.tenant, unit?.Tenant);
+          const unitStatus = normalizeText(unit?.status ?? unit?.Status);
+          if (tenantName && (unitStatus === 'occupied' || tenantName)) acc.activeTenants.add(String(tenantName).trim());
+        });
+      } else if (getValue(property?.tenant, property?.Tenant)) {
+        acc.activeTenants.add(String(getValue(property?.tenant, property?.Tenant)).trim());
+      }
+      return acc;
+    }, { totalUnits: 0, occupiedUnits: 0, vacantUnits: 0, activeTenants: new Set() });
+    const totalProperties = (properties?.length || stats.totalProperties || 0);
+    const totalRentCollected = getNumericValue(accountingData?.collections, stats.totalRentCollected, financialData?.totalRevenue, 0);
+    const overallOccupancyRate = stats.overallOccupancyRate || (propertyStats.totalUnits > 0 ? (propertyStats.occupiedUnits / propertyStats.totalUnits * 100).toFixed(1) : 0);
+    const activeTenants = propertyStats.activeTenants.size || stats.numberOfActiveTenants || stats.activeTenants || 0;
+    const totalUnpaidRent = Number(getValue(stats.totalUnpaidRent, 0) || 0);
+    const teamMembers = agencyUsers.length || stats.totalUsers || 0;
 
     // Build chart data from last 6 months
     const chartData = (() => {
@@ -1640,11 +1851,11 @@ const AgencyDirectorDashboard = () => {
             </div>
             <div style={cardStyle}>
               <p style={metricLabel}>Vacant</p>
-              <p style={{ ...metricValue, color: '#f59e0b' }}>{vacantApartments}</p>
+              <p style={{ ...metricValue, color: '#f59e0b' }}>{propertyStats.vacantUnits}</p>
             </div>
             <div style={cardStyle}>
               <p style={metricLabel}>Occupied</p>
-              <p style={{ ...metricValue, color: '#10b981' }}>{occupiedApartments}</p>
+              <p style={{ ...metricValue, color: '#10b981' }}>{propertyStats.occupiedUnits}</p>
             </div>
             <div style={cardStyle}>
               <p style={metricLabel}>Unpaid Rent</p>
@@ -1652,7 +1863,7 @@ const AgencyDirectorDashboard = () => {
             </div>
             <div style={cardStyle}>
               <p style={metricLabel}>Team Members</p>
-              <p style={metricValue}>{users.length || 0}</p>
+              <p style={metricValue}>{teamMembers}</p>
             </div>
           </div>
         </div>
@@ -1680,7 +1891,14 @@ const AgencyDirectorDashboard = () => {
                     <tr key={p.id || p.ID || i} style={{ borderBottom: '1px solid #f8fafc' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={{ padding: '12px 14px', fontSize: '0.88rem', fontWeight: 600, color: '#1e293b' }}>{p.address || p.Address || 'N/A'}</td>
+                      <td style={{ padding: '12px 14px', fontSize: '0.88rem', fontWeight: 600, color: '#1e293b' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span>{getPropertyLabel(p)}</span>
+                          {getValue(p.building, p.Building) && normalizeText(getValue(p.building, p.Building)) !== normalizeText(getPropertyLabel(p)) && (
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>{getValue(p.building, p.Building)}</span>
+                          )}
+                        </div>
+                      </td>
                       <td style={{ padding: '12px 14px', fontSize: '0.85rem', color: '#64748b' }}>{p.type || p.Type || 'N/A'}</td>
                       <td style={{ padding: '12px 14px' }}><span style={statusBadge(p.Status || p.status)}>{p.Status || p.status || 'Vacant'}</span></td>
                       <td style={{ padding: '12px 14px', fontSize: '0.85rem', color: '#1e293b', fontWeight: 500 }}>{(p.rent || p.Rent) ? `${(p.rent || p.Rent).toLocaleString()} XOF` : '—'}</td>
@@ -1975,7 +2193,7 @@ const AgencyDirectorDashboard = () => {
       ? ownersList.filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower))
       : ownersList;
 
-    const unassignedProperties = propsList.filter((p) => !getPropertyOwnerId(p));
+    const unassignedProperties = propsList.filter((p) => !getPropertyOwnerId(p) && !getPropertyOwnerName(p));
 
     const editPropertyModal = (
       <Modal isOpen={showPropertyModal && editingProperty} onClose={() => setShowPropertyModal(false)} title="Edit Property">
@@ -2346,11 +2564,12 @@ const AgencyDirectorDashboard = () => {
             <tbody>
               {filteredOwners.map((owner, index) => {
                 const ownerId = getOwnerId(owner);
-                const totalOfAssets = owner.totalOfAssets ?? owner.numberOfAssetsManaged ?? 0;
-                const propertyForSell = owner.propertyForSell ?? 0;
-                const propertyForManage = owner.propertyForManage ?? 0;
-                const occupancy = owner.occupancy ?? '0/0';
-                const incomeThisMonth = owner.incomeThisMonth ?? owner.revenue ?? 0;
+                const ownerStats = getOwnerPropertyStats(owner, propsList);
+                const totalOfAssets = ownerStats.totalAssets || owner.totalOfAssets || owner.numberOfAssetsManaged || 0;
+                const propertyForSell = ownerStats.sellAssets ?? owner.propertyForSell ?? 0;
+                const propertyForManage = ownerStats.manageAssets ?? owner.propertyForManage ?? 0;
+                const occupancy = ownerStats.occupancyLabel || owner.occupancy || '0/0';
+                const incomeThisMonth = ownerStats.incomeThisMonth ?? owner.incomeThisMonth ?? owner.revenue ?? 0;
                 return (
                   <tr
                     key={ownerId || index}
@@ -2444,12 +2663,83 @@ const AgencyDirectorDashboard = () => {
   );
   };
 
-  const renderAccounting = () => (
+  const renderAccounting = () => {
+    const matchesAccountingDate = (item) => {
+      const date = getTransactionDate(item);
+      if (!date) return true;
+      if (!accountingDateFilterValue) return true;
+      if (accountingDateFilterMode === 'day') {
+        return date.toISOString().slice(0, 10) === accountingDateFilterValue;
+      }
+      if (accountingDateFilterMode === 'month') {
+        return date.toISOString().slice(0, 7) === accountingDateFilterValue.slice(0, 7);
+      }
+      if (accountingDateFilterMode === 'year') {
+        return String(date.getFullYear()) === String(accountingDateFilterValue).slice(0, 4);
+      }
+      return true;
+    };
+
+    const filteredAllExpenses = dedupeRecords(allExpenses).filter(matchesAccountingDate);
+    const filteredRevenueData = dedupeRecords(revenueData).filter(matchesAccountingDate);
+    const filteredLandlordPayments = dedupeRecords(landlordPayments).filter(matchesAccountingDate);
+
+    return (
     <div className="sa-overview-page">
       <div className="sa-section-card">
         <div className="sa-section-header">
           <h3>Financial Overview</h3>
           <p>Revenue, expenses, and profit metrics</p>
+        </div>
+        <div className="sa-filters-section" style={{ margin: '0 0 20px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <select
+            className="sa-filter-select"
+            value={accountingDateFilterMode}
+            onChange={(e) => setAccountingDateFilterMode(e.target.value)}
+          >
+            <option value="day">Filter by day</option>
+            <option value="month">Filter by month</option>
+            <option value="year">Filter by year</option>
+          </select>
+          {accountingDateFilterMode === 'day' && (
+            <input
+              type="date"
+              className="sa-filter-select"
+              value={accountingDateFilterValue}
+              onChange={(e) => setAccountingDateFilterValue(e.target.value)}
+            />
+          )}
+          {accountingDateFilterMode === 'month' && (
+            <input
+              type="month"
+              className="sa-filter-select"
+              value={accountingDateFilterValue.slice(0, 7)}
+              onChange={(e) => setAccountingDateFilterValue(e.target.value)}
+            />
+          )}
+          {accountingDateFilterMode === 'year' && (
+            <input
+              type="number"
+              min="2000"
+              max="2100"
+              className="sa-filter-select"
+              value={String(accountingDateFilterValue).slice(0, 4)}
+              onChange={(e) => setAccountingDateFilterValue(e.target.value)}
+            />
+          )}
+          <button
+            type="button"
+            className="sa-outline-button"
+            onClick={() => setAccountingDateFilterValue(
+              accountingDateFilterMode === 'month'
+                ? new Date().toISOString().slice(0, 7)
+                : accountingDateFilterMode === 'year'
+                  ? String(new Date().getFullYear())
+                  : new Date().toISOString().slice(0, 10)
+            )}
+          >
+            Reset
+          </button>
         </div>
         <div className="sa-overview-metrics" style={{ width: '100%' }}>
           <div 
@@ -2593,7 +2883,7 @@ const AgencyDirectorDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {allExpenses.length > 0 ? allExpenses.map((expense, index) => (
+                {filteredAllExpenses.length > 0 ? filteredAllExpenses.map((expense, index) => (
                   <tr key={`expense-${index}`}>
                     <td>{index + 1}</td>
                     <td>{expense.description || expense.Description || expense.reason || expense.Reason || 'N/A'}</td>
@@ -2627,7 +2917,7 @@ const AgencyDirectorDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {Array.isArray(revenueData) && revenueData.length > 0 ? revenueData.map((item, index) => (
+                {Array.isArray(filteredRevenueData) && filteredRevenueData.length > 0 ? filteredRevenueData.map((item, index) => (
                   <tr key={`revenue-${index}`}>
                     <td>{index + 1}</td>
                     <td>{item.source || item.Source || item.tenant || item.Tenant || 'N/A'}</td>
@@ -2666,7 +2956,7 @@ const AgencyDirectorDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {landlordPayments.map((payment, index) => (
+              {filteredLandlordPayments.map((payment, index) => (
                 <tr key={`landlord-payment-${payment.id || payment.ID || index}`}>
                   <td>{index + 1}</td>
                   <td className="sa-cell-main">
@@ -2709,7 +2999,7 @@ const AgencyDirectorDashboard = () => {
                   </td>
                 </tr>
               ))}
-              {landlordPayments.length === 0 && (
+              {filteredLandlordPayments.length === 0 && (
                 <tr>
                   <td colSpan={8} className="sa-table-empty">No landlord payments found</td>
                 </tr>
@@ -2727,6 +3017,7 @@ const AgencyDirectorDashboard = () => {
       </div>
     </div>
   );
+  };
 
 
   // Render Contracts page
@@ -3194,7 +3485,10 @@ const AgencyDirectorDashboard = () => {
           value={reportFilters.month}
           onChange={(e) => setReportFilters({...reportFilters, month: e.target.value})}
         />
-        <button className="sa-primary-cta" onClick={loadAnalyticsData}>
+        <button className="sa-primary-cta" onClick={() => {
+          loadAnalyticsData();
+          loadNewAnalyticsData();
+        }}>
           Apply Filters
         </button>
       </div>
@@ -3389,7 +3683,7 @@ const AgencyDirectorDashboard = () => {
   const renderManagement = () => {
     const managementTabs = [
       { id: 'contracts', label: 'LEASE AGREEMENTS TO SIGN' },
-      { id: 'payments-to-approve', label: 'PAYMENT TO APPROVE' },
+      { id: 'expenses-to-approve', label: 'EXPENSES TO APPROVE' },
       { id: 'quotes-to-validate', label: 'QUOTE TO VALIDATE' }
     ];
 
@@ -3436,7 +3730,7 @@ const AgencyDirectorDashboard = () => {
         {/* Content based on selected sub-tab */}
         <div style={{ marginTop: '20px' }}>
           {managementSubTab === 'contracts' && renderContractsContent()}
-          {managementSubTab === 'payments-to-approve' && renderPaymentsToApproveContent()}
+          {managementSubTab === 'expenses-to-approve' && renderExpensesToApproveContent()}
           {managementSubTab === 'quotes-to-validate' && renderQuotesToValidateContent()}
         </div>
       </div>
@@ -3567,6 +3861,52 @@ const AgencyDirectorDashboard = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div style={{ marginTop: '28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <h3 style={{ margin: 0 }}>Quote History</h3>
+          <p style={{ color: '#6b7280', margin: 0 }}>{quoteRequests.length} total quote(s)</p>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+            <tr>
+              <th>No</th>
+              <th>Date</th>
+              <th>Property</th>
+              <th>Issue</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Validated By</th>
+              <th>Approved By</th>
+            </tr>
+          </thead>
+          <tbody>
+            {quoteRequests.map((quote, index) => (
+              <tr key={`quote-history-${quote.id || quote.ID || index}`}>
+                  <td>{index + 1}</td>
+                  <td>{quote.date || quote.Date ? new Date(quote.date || quote.Date).toLocaleDateString() : 'N/A'}</td>
+                  <td>{quote.property || quote.Property || 'N/A'}</td>
+                  <td>{quote.issue || quote.Issue || 'N/A'}</td>
+                  <td>{(quote.amount || quote.Amount || 0).toLocaleString()} XOF</td>
+                  <td>
+                    <span className={`sa-status-pill ${(quote.status || quote.Status || 'pending').toLowerCase().replace(/_/g, '-')}`}>
+                      {quote.status || quote.Status || 'Pending'}
+                    </span>
+                  </td>
+                  <td>{quote.validatedBy || quote.ValidatedBy || '—'}</td>
+                  <td>{quote.approvedBy || quote.ApprovedBy || '—'}</td>
+                </tr>
+              ))}
+              {quoteRequests.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="sa-table-empty">No quote history available yet</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -3915,220 +4255,71 @@ const AgencyDirectorDashboard = () => {
     );
   };
 
-  // Handle approve payment
-  const handleApprovePayment = async (paymentId) => {
-    try {
-      setLoading(true);
-      await agencyDirectorService.approveTenantPayment(paymentId);
-      addNotification('Payment approved successfully', 'success');
-      await loadPendingApprovals();
-    } catch (error) {
-      console.error('Error approving payment:', error);
-      addNotification(error.message || 'Failed to approve payment', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle reject payment
-  const handleRejectPayment = async (paymentId) => {
-    try {
-      setLoading(true);
-      await agencyDirectorService.rejectTenantPayment(paymentId);
-      addNotification('Payment rejected successfully', 'success');
-      await loadPendingApprovals();
-    } catch (error) {
-      console.error('Error rejecting payment:', error);
-      addNotification(error.message || 'Failed to reject payment', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Render Payments to Approve content (Payments + Expenses tabs)
-  const renderPaymentsToApproveContent = () => (
+  // Render Expenses to Approve content
+  const renderExpensesToApproveContent = () => (
     <div>
-      <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
-        <button
-          type="button"
-          onClick={() => setPaymentsToApproveSubTab('payments')}
-          style={{
-            padding: '12px 24px',
-            border: 'none',
-            background: 'transparent',
-            color: paymentsToApproveSubTab === 'payments' ? '#7c3aed' : '#6b7280',
-            borderBottom: paymentsToApproveSubTab === 'payments' ? '2px solid #7c3aed' : '2px solid transparent',
-            cursor: 'pointer',
-            fontWeight: paymentsToApproveSubTab === 'payments' ? '600' : '400',
-            marginBottom: '-2px'
-          }}
-        >
-          Payments ({pendingPayments.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setPaymentsToApproveSubTab('expenses')}
-          style={{
-            padding: '12px 24px',
-            border: 'none',
-            background: 'transparent',
-            color: paymentsToApproveSubTab === 'expenses' ? '#7c3aed' : '#6b7280',
-            borderBottom: paymentsToApproveSubTab === 'expenses' ? '2px solid #7c3aed' : '2px solid transparent',
-            cursor: 'pointer',
-            fontWeight: paymentsToApproveSubTab === 'expenses' ? '600' : '400',
-            marginBottom: '-2px'
-          }}
-        >
-          Expenses ({pendingExpenses.filter((e) => {
-            const scope = (e.scope || e.Scope || '').toString();
-            const building = (e.building || e.Building || '').toString().trim();
-            return scope === 'SAAF IMMO' || building === '-' || building === '';
-          }).length})
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <p style={{ color: '#6b7280', margin: 0 }}>All accountant-recorded expenses must be validated before they leave the accounting box.</p>
       </div>
-
-      {paymentsToApproveSubTab === 'payments' && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <p style={{ color: '#6b7280', margin: 0 }}>Tenant payments added by accountant, pending agency admin approval</p>
-          </div>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Tenant</th>
-                  <th>Property</th>
-                  <th>Amount</th>
-                  <th>Method</th>
-                  <th>Charge Type</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingPayments.map((payment, index) => (
-                  <tr key={`payment-${payment.id || payment.ID || index}`}>
-                    <td>{index + 1}</td>
-                    <td className="sa-cell-main">
-                      <span className="sa-cell-title">{payment.tenant || payment.Tenant || 'N/A'}</span>
-                    </td>
-                    <td>{payment.property || payment.Property || 'N/A'}</td>
-                    <td>{(payment.amount || payment.Amount || 0).toLocaleString()} XOF</td>
-                    <td>{payment.method || payment.Method || 'N/A'}</td>
-                    <td>{payment.chargeType || payment.ChargeType || 'N/A'}</td>
-                    <td>
-                      {payment.date || payment.Date
-                        ? new Date(payment.date || payment.Date).toLocaleDateString()
-                        : 'N/A'}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          className="table-action-button edit"
-                          onClick={() => handleApprovePayment(payment.id || payment.ID)}
-                          disabled={loading}
-                          style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          className="table-action-button delete"
-                          onClick={() => handleRejectPayment(payment.id || payment.ID)}
-                          disabled={loading}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {pendingPayments.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="sa-table-empty">No pending payments to approve</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {paymentsToApproveSubTab === 'expenses' && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <p style={{ color: '#6b7280', margin: 0 }}>Agency-only expenses (SAAF IMMO scope) pending director approval. Building expenses require owner approval and appear in the owner&apos;s dashboard.</p>
-          </div>
-          <div className="sa-table-wrapper">
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Building</th>
-                  <th>Category</th>
-                  <th>Description</th>
-                  <th>Amount</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingExpenses
-                  .filter((e) => {
-                    const scope = (e.scope || e.Scope || '').toString();
-                    const building = (e.building || e.Building || '').toString().trim();
-                    const isAgencyOnly = scope === 'SAAF IMMO' || building === '-' || building === '';
-                    return isAgencyOnly;
-                  })
-                  .map((expense, index) => (
-                  <tr key={`expense-${expense.id || expense.ID || index}`}>
-                    <td>{index + 1}</td>
-                    <td>{expense.building || expense.Building || 'N/A'}</td>
-                    <td>{expense.category || expense.Category || 'N/A'}</td>
-                    <td className="sa-cell-main">
-                      <span className="sa-cell-title">{expense.description || expense.Description || 'N/A'}</span>
-                    </td>
-                    <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
-                    <td>
-                      {expense.date || expense.Date
-                        ? new Date(expense.date || expense.Date).toLocaleDateString()
-                        : 'N/A'}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          className="table-action-button edit"
-                          onClick={() => handleApproveExpense(expense.id || expense.ID)}
-                          disabled={loading}
-                          style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          className="table-action-button delete"
-                          onClick={() => handleRejectExpense(expense.id || expense.ID)}
-                          disabled={loading}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {pendingExpenses.filter((e) => {
-                  const scope = (e.scope || e.Scope || '').toString();
-                  const building = (e.building || e.Building || '').toString().trim();
-                  return scope === 'SAAF IMMO' || building === '-' || building === '';
-                }).length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="sa-table-empty">No agency-only expenses to approve. Building expenses require owner approval.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+      <div className="sa-table-wrapper">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Building</th>
+              <th>Scope</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingExpenses.map((expense, index) => (
+              <tr key={`expense-${expense.id || expense.ID || index}`}>
+                <td>{index + 1}</td>
+                <td>{expense.building || expense.Building || 'N/A'}</td>
+                <td>{expense.scope || expense.Scope || 'N/A'}</td>
+                <td>{expense.category || expense.Category || 'N/A'}</td>
+                <td className="sa-cell-main">
+                  <span className="sa-cell-title">{expense.description || expense.Description || 'N/A'}</span>
+                </td>
+                <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
+                <td>
+                  {expense.date || expense.Date
+                    ? new Date(expense.date || expense.Date).toLocaleDateString()
+                    : 'N/A'}
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="table-action-button edit"
+                      onClick={() => handleApproveExpense(expense.id || expense.ID)}
+                      disabled={loading}
+                      style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="table-action-button delete"
+                      onClick={() => handleRejectExpense(expense.id || expense.ID)}
+                      disabled={loading}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {pendingExpenses.length === 0 && (
+              <tr>
+                <td colSpan={8} className="sa-table-empty">No pending expenses to approve</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 
@@ -4169,7 +4360,7 @@ const AgencyDirectorDashboard = () => {
                     : 'N/A'}
                 </td>
                 <td>
-                  <span className={`sa-status-pill ${(quote.status || quote.Status || 'pending').toLowerCase().replace('_', '-')}`}>
+                  <span className={`sa-status-pill ${(quote.status || quote.Status || 'pending').toLowerCase().replace(/_/g, '-')}`}>
                     {quote.status || quote.Status || 'Pending'}
                   </span>
                 </td>
@@ -4363,20 +4554,20 @@ const AgencyDirectorDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredOwners.map((owner, index) => (
-                  <tr key={`owner-${owner.id || owner.ID || index}`}>
-                    <td>{index + 1}</td>
-                    <td className="sa-cell-main">
-                      <span className="sa-cell-title">{owner.name || owner.Name}</span>
-                    </td>
-                    <td>{owner.email || owner.Email}</td>
-                    <td>{owner.propertiesCount || owner.PropertiesCount || 0}</td>
-                    <td>{owner.contractsCount || owner.ContractsCount || 0}</td>
-                    <td>
-                      <span className={`sa-status-pill ${(owner.status || owner.Status || 'active').toLowerCase()}`}>
-                        {owner.status || owner.Status || 'Active'}
-                      </span>
-                    </td>
+              {filteredOwners.map((owner, index) => (
+                <tr key={`owner-${owner.id || owner.ID || index}`}>
+                  <td>{index + 1}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{owner.name || owner.Name}</span>
+                  </td>
+                  <td>{owner.email || owner.Email}</td>
+                  <td>{getOwnerPropertyStats(owner, properties).propertiesCount || owner.propertiesCount || owner.PropertiesCount || 0}</td>
+                  <td>{getOwnerPropertyStats(owner, properties).contractsCount || owner.contractsCount || owner.ContractsCount || 0}</td>
+                  <td>
+                    <span className={`sa-status-pill ${(owner.status || owner.Status || 'active').toLowerCase()}`}>
+                      {owner.status || owner.Status || 'Active'}
+                    </span>
+                  </td>
                     <td className="sa-row-actions">
                       <button className="sa-icon-button" onClick={() => handleOpenEditOwner(owner)} title="Edit">✏️</button>
                       <button className="sa-icon-button" onClick={() => handleDeleteOwner(owner)} title="Delete">🗑️</button>

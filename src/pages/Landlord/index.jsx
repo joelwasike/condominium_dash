@@ -31,6 +31,14 @@ import ReportSubmission from '../../components/ReportSubmission';
 import RoleLayout from '../../components/RoleLayout';
 import SettingsPage from '../SettingsPage';
 import { t, getLanguage } from '../../utils/i18n';
+import {
+  dedupeBySignature,
+  formatPropertyBuilding,
+  formatTenantName,
+  getTransactionSignature,
+  normalizeAmount,
+  normalizeText
+} from '../../utils/accountingDisplay';
 import '../LandlordDashboard.css';
 import '../SalesManagerDashboard.css';
 import '../../components/RoleLayout.css';
@@ -114,6 +122,7 @@ const LandlordDashboard = () => {
   const [chatInput, setChatInput] = useState('');
   const isLoadingUsersRef = useRef(false);
   const messagesEndRef = useRef(null);
+  const hasMountedRef = useRef(false);
   
   // Filter states
   const [netPaymentStatusFilter, setNetPaymentStatusFilter] = useState('');
@@ -125,6 +134,166 @@ const LandlordDashboard = () => {
   const [paymentSubTab, setPaymentSubTab] = useState('net');
   const [tenantNameFilter, setTenantNameFilter] = useState('');
   const [tenantPropertyFilter, setTenantPropertyFilter] = useState('');
+
+  const readValue = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim() !== '') ?? '';
+  const parseDateValue = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+  const formatDateValue = (value) => parseDateValue(value)?.toLocaleDateString() || '—';
+  const getRecordId = (record) => record?.id ?? record?.ID ?? record?.Id ?? null;
+  const getPropertyLabel = (property) => readValue(
+    property?.name,
+    property?.Name,
+    property?.building,
+    property?.Building,
+    property?.Address,
+    property?.address,
+    property?.title,
+    property?.Title,
+    'Unknown'
+  );
+  const getPropertyType = (property) => normalizeText(readValue(property?.Type, property?.type, property?.PropertyType, property?.propertyType));
+  const getPropertyUnits = (property) => {
+    const units = property?.units ?? property?.Units ?? property?.apartments ?? property?.Apartments ?? [];
+    return Array.isArray(units) ? units : [];
+  };
+  const isOccupiedUnit = (unit) => {
+    const status = normalizeText(readValue(unit?.status, unit?.Status, unit?.statut));
+    return status === 'occupied' || status === 'leased' || status === 'tenanted' || Boolean(readValue(unit?.tenant, unit?.Tenant));
+  };
+  const getPropertyOccupancyStats = (property) => {
+    const units = getPropertyUnits(property);
+    const totalUnits = units.length > 0
+      ? units.length
+      : Math.max(1, Number(property?.apartmentsDisplay ?? property?.apartments ?? property?.NumberOfUnits ?? property?.numberOfUnits ?? property?.unitsCount ?? 1) || 1);
+    const occupiedUnits = units.length > 0
+      ? units.reduce((count, unit) => count + (isOccupiedUnit(unit) ? 1 : 0), 0)
+      : (normalizeText(readValue(property?.Status, property?.status, property?.statut)) === 'occupied' || Boolean(readValue(property?.tenant, property?.Tenant)) ? 1 : 0);
+    const safeOccupiedUnits = Math.min(occupiedUnits, totalUnits);
+    const vacantUnits = Math.max(0, totalUnits - safeOccupiedUnits);
+    return {
+      totalUnits,
+      occupiedUnits: safeOccupiedUnits,
+      vacantUnits,
+      occupancyRate: totalUnits > 0 ? (safeOccupiedUnits / totalUnits) * 100 : 0,
+      occupancyLabel: `${safeOccupiedUnits}/${totalUnits}`
+    };
+  };
+  const getPropertyStatusLabel = (property) => {
+    const rawStatus = readValue(property?.Status, property?.status, property?.statut);
+    const normalized = normalizeText(rawStatus);
+    const occupancy = getPropertyOccupancyStats(property);
+
+    if (normalized.includes('overdue') || normalized.includes('late') || normalized.includes('arrears')) return rawStatus || 'Overdue';
+    if (occupancy.totalUnits > 0) {
+      if (occupancy.occupiedUnits === 0) return 'Vacant';
+      if (occupancy.occupiedUnits >= occupancy.totalUnits) return 'Occupied';
+      return 'Partially occupied';
+    }
+    return rawStatus || 'Vacant';
+  };
+  const getPropertyFinancialIncome = (property) => {
+    const units = getPropertyUnits(property);
+    if (units.length > 0) {
+      return units.reduce((sum, unit) => {
+        if (!isOccupiedUnit(unit)) return sum;
+        return sum + normalizeAmount(readValue(unit?.rentPrice, unit?.rent, unit?.Rent, unit?.amount, unit?.Amount));
+      }, 0);
+    }
+    return normalizeAmount(readValue(property?.income, property?.Income, property?.rentPrice, property?.Rent, property?.rent));
+  };
+  const getTenantEntryDate = (tenant) => readValue(
+    tenant?.entryDate,
+    tenant?.EntryDate,
+    tenant?.enterDate,
+    tenant?.EnterDate,
+    tenant?.moveInDate,
+    tenant?.MoveInDate,
+    tenant?.CreatedAt,
+    tenant?.createdAt
+  );
+  const getTenantRentInAdvance = (tenant) => normalizeAmount(readValue(
+    tenant?.RentPaidAdvance,
+    tenant?.rentPaidAdvance,
+    tenant?.AdvanceRent,
+    tenant?.advanceRent,
+    tenant?.RentInAdvance,
+    tenant?.rentInAdvance,
+    tenant?.MonthsPaidInAdvance,
+    tenant?.monthsPaidInAdvance
+  ));
+  const getTenantMonthsInArrears = (tenant) => normalizeAmount(readValue(tenant?.MonthsInArrears, tenant?.monthsInArrears, tenant?.monthsLate, tenant?.monthsLateRent));
+  const getTenantOutstandingAmount = (tenant) => normalizeAmount(readValue(
+    tenant?.OutstandingAmount,
+    tenant?.outstandingAmount,
+    tenant?.balanceToPayEstimate,
+    tenant?.balanceToPay,
+    tenant?.AmountDue,
+    tenant?.amountDue,
+    tenant?.LateRent,
+    tenant?.lateRent
+  ));
+  const getTenantMonthlyRent = (tenant) => normalizeAmount(readValue(tenant?.MonthlyRent, tenant?.monthlyRent, tenant?.Amount, tenant?.amount, tenant?.rent, tenant?.Rent));
+  const getTenantPaymentStatus = (tenant) => normalizeText(readValue(tenant?.PaymentStatus, tenant?.paymentStatus, tenant?.Status, tenant?.status));
+  const getStatusClassName = (value, fallback = 'active') => normalizeText(value).replace(/\s+/g, '-') || fallback;
+  const getTenantTotalToPay = (tenant) => {
+    const status = getTenantPaymentStatus(tenant);
+    if (status === 'up-to-date' || status === 'uptodate' || status === 'paid') return 0;
+    const outstanding = getTenantOutstandingAmount(tenant);
+    if (outstanding > 0) return outstanding;
+    const monthlyRent = getTenantMonthlyRent(tenant);
+    const monthsInArrears = getTenantMonthsInArrears(tenant);
+    const rentInAdvance = getTenantRentInAdvance(tenant);
+    if (monthlyRent > 0 && monthsInArrears > 0) {
+      return Math.max(0, (monthlyRent * monthsInArrears) - rentInAdvance);
+    }
+    return 0;
+  };
+  const getTenantApartmentLabel = (tenant) => {
+    const propertyLabel = readValue(tenant?.Property, tenant?.property);
+    const buildingLabel = readValue(tenant?.Building, tenant?.building, tenant?.BuildingName, tenant?.buildingName);
+    const apartmentLabel = readValue(
+      tenant?.Apartment,
+      tenant?.apartment,
+      tenant?.Unit,
+      tenant?.unit,
+      tenant?.UnitNumber,
+      tenant?.unitNumber
+    );
+    return [propertyLabel, buildingLabel, apartmentLabel].filter(Boolean).join(' ') || '—';
+  };
+  const isAgencyAdminRole = (role) => {
+    const normalized = normalizeText(role);
+    return normalized === 'agency admin'
+      || normalized === 'agency_admin'
+      || normalized === 'admin'
+      || normalized === 'agency-admin'
+      || normalized.includes('agency admin');
+  };
+  const buildTrackingSeries = (revenueRows, expensesRows, occupancyRows) => {
+    const seriesMap = new Map();
+    const upsert = (rows, kind) => {
+      rows.forEach((row, index) => {
+        const month = readValue(row?.month, row?.Month, row?.label, row?.Label, row?.period, row?.Period, `Month ${index + 1}`);
+        const key = normalizeText(month) || `month-${index}`;
+        const existing = seriesMap.get(key) || { month, revenue: 0, expenses: 0, occupancy: 0, _index: index };
+        existing.month = existing.month || month;
+        existing._index = Math.min(existing._index ?? index, index);
+        if (kind === 'revenue') existing.revenue = normalizeAmount(readValue(row?.revenue, row?.Revenue, row?.amount, row?.Amount, row?.value, row?.Value));
+        if (kind === 'expenses') existing.expenses = normalizeAmount(readValue(row?.expenses, row?.Expenses, row?.amount, row?.Amount, row?.value, row?.Value));
+        if (kind === 'occupancy') existing.occupancy = normalizeAmount(readValue(row?.rate, row?.Rate, row?.occupancy, row?.Occupancy, row?.occupancyRate, row?.OccupancyRate));
+        seriesMap.set(key, existing);
+      });
+    };
+
+    upsert(revenueRows, 'revenue');
+    upsert(expensesRows, 'expenses');
+    upsert(occupancyRows, 'occupancy');
+
+    return [...seriesMap.values()].sort((a, b) => (a._index ?? 0) - (b._index ?? 0));
+  };
 
   // Property/Asset flow: buildings list → building detail (apartments, images)
   const [pmView, setPmView] = useState('list'); // 'list' | 'building-detail' | 'villa-detail'
@@ -174,7 +343,7 @@ const LandlordDashboard = () => {
         return;
       }
       
-      const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, maintenancesData, claimsData, inventoryData, trackingData, expensesData, quotesData] = await Promise.all([
+      const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, maintenancesData, claimsData, inventoryData, trackingData, expensesData, quotesData, netPaymentsData, paymentHistoryData] = await Promise.all([
         landlordService.getOverview(),
         landlordService.getProperties().catch(() => []),
         landlordService.getTenants().catch(() => []),
@@ -191,6 +360,8 @@ const LandlordDashboard = () => {
           endDate: expenseEndDate || undefined,
         }).catch(() => []),
         landlordService.getMaintenanceQuotes().catch(() => []),
+        landlordService.getNetPayments().catch(() => null),
+        landlordService.getPaymentHistory().catch(() => null),
       ]);
       
       setOverviewData(overview);
@@ -221,6 +392,8 @@ const LandlordDashboard = () => {
       setBusinessTracking(trackingData);
       setExpenses(Array.isArray(expensesData) ? expensesData : []);
       setMaintenanceQuotes(Array.isArray(quotesData) ? quotesData : []);
+      setNetPayments(netPaymentsData);
+      setPaymentHistory(paymentHistoryData);
     } catch (error) {
       console.error('Error loading landlord data:', error);
       setProperties([]);
@@ -261,9 +434,9 @@ const LandlordDashboard = () => {
     }
   };
   
-  // Load advertisements when advertisements or overview tab is active
+  // Load advertisements when the overview is shown; the tab switch effect handles the dedicated page.
   useEffect(() => {
-    if (activeTab === 'advertisements' || activeTab === 'overview') {
+    if (activeTab === 'overview') {
       loadAdvertisements();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -329,6 +502,29 @@ const LandlordDashboard = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Refresh the main data when the user returns to a data-heavy tab
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
+    if (['overview', 'properties', 'tenants', 'rents', 'tracking'].includes(activeTab)) {
+      loadData();
+    } else if (activeTab === 'payments') {
+      loadNetPayments();
+      loadPaymentHistory();
+    } else if (activeTab === 'expenses') {
+      loadExpenses();
+      loadPendingExpensesForApproval();
+    } else if (activeTab === 'chat' && !isLoadingUsersRef.current) {
+      loadUsers();
+    } else if (activeTab === 'advertisements') {
+      loadAdvertisements();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
   
   // Load net payments when filters change
   useEffect(() => {
@@ -447,8 +643,7 @@ const LandlordDashboard = () => {
           const userIdStr = userId ? String(userId) : null;
           const currentUserIdStr = currentUserId ? String(currentUserId) : null;
           const isNotCurrentUser = userIdStr && userIdStr !== currentUserIdStr;
-          const isNotTenant = userRole !== 'tenant';
-          const shouldInclude = isNotCurrentUser && isNotTenant;
+          const shouldInclude = isNotCurrentUser && isAgencyAdminRole(userRole);
           if (!shouldInclude && userIdStr) {
             console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
           }
@@ -503,7 +698,7 @@ const LandlordDashboard = () => {
               
               // Only add if it's not the current user
               const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-              if (userId && String(userId) !== currentUserIdStr && userRole !== 'tenant') {
+              if (userId && String(userId) !== currentUserIdStr && isAgencyAdminRole(userRole)) {
                 const newUser = {
                   userId: userId,
                   name: convUser.name || convUser.Name || conv.name || 'User',
@@ -885,20 +1080,66 @@ const LandlordDashboard = () => {
       return <div className="sa-table-empty">Loading overview data...</div>;
     }
 
-    // Calculate active tenants from tenants array (fallback if not in overview)
-    const activeTenantsCount = overviewData?.activeTenants || tenants.filter(t => 
-      (t.status || t.Status || '').toLowerCase() === 'active'
-    ).length;
-    
-    // Calculate occupancy rate if not provided
-    const totalProps = overviewData?.totalPropertiesUnderManagement || properties.length;
-    const occupiedProps = overviewData?.occupiedProperties || properties.filter(p => 
-      (p.Status || p.status || '').toLowerCase() === 'occupied'
-    ).length;
-    const occupancyRate = totalProps > 0 ? ((occupiedProps / totalProps) * 100).toFixed(1) : 0;
-    
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const userName = currentUser.name || currentUser.Name || 'Landlord';
+    const propertyRows = properties.map((property) => {
+      const occupancy = getPropertyOccupancyStats(property);
+      return {
+        property,
+        status: getPropertyStatusLabel(property),
+        occupancy,
+        income: getPropertyFinancialIncome(property)
+      };
+    });
+    const totalProps = propertyRows.length || normalizeAmount(overviewData?.totalPropertiesUnderManagement);
+    const occupiedProps = propertyRows.filter((row) => {
+      const status = normalizeText(row.status);
+      return status === 'occupied' || status === 'partially occupied' || status === 'occupied / partial' || row.occupancy.occupiedUnits > 0;
+    }).length;
+    const occupancyRate = totalProps > 0 ? ((occupiedProps / totalProps) * 100).toFixed(1) : '0.0';
+    const activeTenantsCount = tenants.filter((tenant) => {
+      const status = normalizeText(readValue(tenant?.status, tenant?.Status, tenant?.paymentStatus, tenant?.PaymentStatus));
+      return !['inactive', 'waiting list', 'waitinglist', 'vacant'].includes(status);
+    }).length;
+
+    const cashflowRows = (rows, amountKeys) => {
+      const map = new Map();
+      rows.forEach((row, index) => {
+        const date = parseDateValue(readValue(row?.date, row?.Date, row?.createdAt, row?.CreatedAt, row?.paidAt, row?.PaidAt));
+        const month = date
+          ? date.toLocaleString(undefined, { month: 'short', year: 'numeric' })
+          : readValue(row?.month, row?.Month, row?.label, row?.Label, `Month ${index + 1}`);
+        const key = normalizeText(month) || `month-${index}`;
+        const entry = map.get(key) || { month, total: 0, _index: index };
+        entry.total += normalizeAmount(readValue(...amountKeys.map((keyName) => row?.[keyName])));
+        map.set(key, entry);
+      });
+      return [...map.values()].sort((a, b) => (a._index ?? 0) - (b._index ?? 0));
+    };
+
+    const paymentRows = Array.isArray(payments) ? payments : [];
+    const netPaymentRows = Array.isArray(netPayments)
+      ? netPayments
+      : Array.isArray(netPayments?.payments)
+        ? netPayments.payments
+        : Array.isArray(netPayments?.data)
+          ? netPayments.data
+          : [];
+    const collectedSeries = cashflowRows(paymentRows, ['amount', 'Amount', 'paidAmount', 'PaidAmount', 'netAmount', 'NetAmount']);
+    const payoutSeries = cashflowRows(netPaymentRows, ['amount', 'Amount', 'netAmount', 'NetAmount', 'payout', 'Payout']);
+    const chartSeriesMap = new Map();
+    [...collectedSeries.map((row) => ({ ...row, kind: 'rent' })), ...payoutSeries.map((row) => ({ ...row, kind: 'payout' }))].forEach((row) => {
+      const key = normalizeText(row.month);
+      const existing = chartSeriesMap.get(key) || { month: row.month, rent: 0, payout: 0, _index: row._index };
+      existing.month = existing.month || row.month;
+      existing._index = Math.min(existing._index ?? row._index ?? 0, row._index ?? 0);
+      if (row.kind === 'rent') existing.rent = row.total;
+      if (row.kind === 'payout') existing.payout = row.total;
+      chartSeriesMap.set(key, existing);
+    });
+    const chartData = [...chartSeriesMap.values()].sort((a, b) => (a._index ?? 0) - (b._index ?? 0));
+    const totalRentCollected = chartData.reduce((sum, row) => sum + (row.rent || 0), 0) || normalizeAmount(overviewData?.totalRentCollected);
+    const totalNetPayoutReceived = chartData.reduce((sum, row) => sum + (row.payout || 0), 0) || normalizeAmount(overviewData?.totalNetPayoutReceived);
 
     return (
       <div className="sa-overview-page">
@@ -915,16 +1156,7 @@ const LandlordDashboard = () => {
             <div style={{ width: '100%', height: '200px', marginTop: '20px' }}>
               <ResponsiveContainer>
                 <AreaChart
-                  data={(() => {
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                    const currentRent = overviewData?.totalRentCollected || 0;
-                    const currentPayout = overviewData?.totalNetPayoutReceived || 0;
-                    return months.map((month, index) => ({
-                      month,
-                      rent: Math.round(currentRent * (0.7 + (index * 0.05))),
-                      payout: Math.round(currentPayout * (0.7 + (index * 0.05)))
-                    }));
-                  })()}
+                  data={chartData.length > 0 ? chartData : []}
                   margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
                 >
                   <defs>
@@ -990,22 +1222,25 @@ const LandlordDashboard = () => {
                 </AreaChart>
               </ResponsiveContainer>
           </div>
+          {chartData.length === 0 && (
+            <p className="sa-cell-sub" style={{ marginTop: '12px' }}>No recent payment data available yet.</p>
+          )}
           </div>
 
           <div className="sa-overview-metrics">
             <div className="sa-metric-card sa-metric-primary">
               <p className="sa-metric-label">Total Properties</p>
               <p className="sa-metric-period">Under Management</p>
-              <p className="sa-metric-value">{overviewData?.totalPropertiesUnderManagement || properties.length || 0}</p>
+              <p className="sa-metric-value">{totalProps || 0}</p>
           </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Total Rent Collected</p>
               <p className="sa-metric-period">All Time</p>
-              <p className="sa-metric-value">{(overviewData?.totalRentCollected || 0).toLocaleString()} XOF</p>
+              <p className="sa-metric-value">{totalRentCollected.toLocaleString()} XOF</p>
           </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Net Payout Received</p>
-              <p className="sa-metric-number">{(overviewData?.totalNetPayoutReceived || 0).toLocaleString()} XOF</p>
+              <p className="sa-metric-number">{totalNetPayoutReceived.toLocaleString()} XOF</p>
           </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Active Tenants</p>
@@ -1174,7 +1409,7 @@ const LandlordDashboard = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('properties')}>
                 <p className="sa-metric-label">Occupied Properties</p>
-                <p className="sa-metric-value">{overviewData?.occupiedProperties || occupiedProps}</p>
+                <p className="sa-metric-value">{overviewData?.occupiedProperties ?? occupiedProps}</p>
             </div>
               <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('properties')}>
                 <p className="sa-metric-label">Occupancy Rate</p>
@@ -1269,25 +1504,40 @@ const LandlordDashboard = () => {
         <table className="sa-table">
             <thead>
               <tr>
+                    <th>Entry date</th>
                     <th>Apartments</th>
-                <th>Type</th>
                     <th>Tenant</th>
-                <th>Rent</th>
-                    <th>Enter date</th>
-                <th>Status</th>
+                    <th>Rent</th>
+                    <th>Unpaid rents</th>
+                    <th>Rent in advance</th>
+                    <th>Status</th>
               </tr>
             </thead>
             <tbody>
-                  {units.map((row, i) => (
-                    <tr key={row.id || i}>
+                  {units.map((row, i) => {
+                    const entryDate = readValue(row?.enterDate, row?.EnterDate, row?.entryDate, row?.EntryDate);
+                    const unpaidRents = getTenantMonthsInArrears(row);
+                    const rentInAdvance = getTenantRentInAdvance(row);
+                    const statusLabel = readValue(row?.status, row?.statut, row?.Status) || '—';
+                    const statusText = normalizeText(statusLabel);
+                    const isOverdue = statusText.includes('overdue') || statusText.includes('late') || statusText.includes('arrears') || unpaidRents > 0;
+                    const rentValue = normalizeAmount(readValue(row?.rentPrice, row?.rent, row?.Rent));
+                    return (
+                    <tr key={getRecordId(row) || i}>
+                      <td>{formatDateValue(entryDate)}</td>
                       <td>{row.unitNumber || row.name || `Apartment ${i + 1}`}</td>
-                      <td>{row.type || '—'}</td>
                       <td>{row.tenant || '—'}</td>
-                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
-                      <td>{row.enterDate || '—'}</td>
-                      <td>{row.status || row.statut || '—'}</td>
+                      <td>{rentValue.toLocaleString()} F CFA</td>
+                      <td style={{ color: unpaidRents > 0 ? '#dc2626' : '#6b7280', fontWeight: unpaidRents > 0 ? 600 : 400 }}>{unpaidRents}</td>
+                      <td style={{ color: rentInAdvance > 0 ? '#059669' : '#6b7280', fontWeight: rentInAdvance > 0 ? 600 : 400 }}>{rentInAdvance.toLocaleString()} XOF</td>
+                      <td>
+                        <span className={`sa-status-pill ${isOverdue ? 'overdue' : getStatusClassName(statusLabel, 'vacant')}`} style={isOverdue ? { color: '#b91c1c', backgroundColor: '#fef2f2', borderColor: '#fecaca' } : undefined}>
+                          {isOverdue ? 'Overdue' : statusLabel}
+                        </span>
+                      </td>
               </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
                     </div>
@@ -1335,25 +1585,40 @@ const LandlordDashboard = () => {
               <table className="sa-table">
                 <thead>
                   <tr>
+                    <th>Entry date</th>
                     <th>Villa</th>
-                    <th>Type</th>
                     <th>Tenant</th>
                     <th>Rent</th>
-                    <th>Enter date</th>
+                    <th>Unpaid rents</th>
+                    <th>Rent in advance</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {units.map((row, i) => (
-                    <tr key={row.id || i}>
+                  {units.map((row, i) => {
+                    const entryDate = readValue(row?.enterDate, row?.EnterDate, row?.entryDate, row?.EntryDate);
+                    const unpaidRents = getTenantMonthsInArrears(row);
+                    const rentInAdvance = getTenantRentInAdvance(row);
+                    const statusLabel = readValue(row?.status, row?.statut, row?.Status) || '—';
+                    const statusText = normalizeText(statusLabel);
+                    const isOverdue = statusText.includes('overdue') || statusText.includes('late') || statusText.includes('arrears') || unpaidRents > 0;
+                    const rentValue = normalizeAmount(readValue(row?.rentPrice, row?.rent, row?.Rent));
+                    return (
+                    <tr key={getRecordId(row) || i}>
+                      <td>{formatDateValue(entryDate)}</td>
                       <td>{row.unitNumber || row.name || 'VILLA'}</td>
-                      <td>{row.type || '—'}</td>
                       <td>{row.tenant || '—'}</td>
-                      <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '—'} F CFA</td>
-                      <td>{row.enterDate || '—'}</td>
-                      <td>{row.status || row.statut || '—'}</td>
+                      <td>{rentValue.toLocaleString()} F CFA</td>
+                      <td style={{ color: unpaidRents > 0 ? '#dc2626' : '#6b7280', fontWeight: unpaidRents > 0 ? 600 : 400 }}>{unpaidRents}</td>
+                      <td style={{ color: rentInAdvance > 0 ? '#059669' : '#6b7280', fontWeight: rentInAdvance > 0 ? 600 : 400 }}>{rentInAdvance.toLocaleString()} XOF</td>
+                      <td>
+                        <span className={`sa-status-pill ${isOverdue ? 'overdue' : getStatusClassName(statusLabel, 'vacant')}`} style={isOverdue ? { color: '#b91c1c', backgroundColor: '#fef2f2', borderColor: '#fecaca' } : undefined}>
+                          {isOverdue ? 'Overdue' : statusLabel}
+                        </span>
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
             </tbody>
           </table>
             </div>
@@ -1363,8 +1628,8 @@ const LandlordDashboard = () => {
     }
 
     // Buildings list – click to see apartments
-    const propType = (p) => (p.Type || p.type || p.PropertyType || p.propertyType || '').toString().toLowerCase();
-    const isBuilding = (p) => ['building', 'apartment', 'condo', 'house', 'studio'].some(t => propType(p).includes(t));
+    const propType = (p) => getPropertyType(p);
+    const isBuilding = (p) => ['building', 'apartment', 'condo', 'house', 'studio'].some((t) => propType(p).includes(t));
     const isVilla = (p) => propType(p).includes('villa');
     const buildings = properties.filter(isBuilding);
     const villas = properties.filter(isVilla);
@@ -1400,7 +1665,10 @@ const LandlordDashboard = () => {
                   const type = propType(property);
                   const isV = type.includes('villa');
                   const handleClick = () => isV ? handleViewVilla(property) : handleViewBuilding(property);
-                  const apartmentsDisplay = property.apartmentsDisplay ?? property.apartments ?? property.NumberOfUnits ?? property.numberOfUnits ?? '—';
+                  const occupancy = getPropertyOccupancyStats(property);
+                  const apartmentsDisplay = occupancy.totalUnits;
+                  const statusLabel = getPropertyStatusLabel(property);
+                  const income = getPropertyFinancialIncome(property);
                   return (
                     <tr
                       key={property.ID || property.id || `property-${index}`}
@@ -1413,11 +1681,15 @@ const LandlordDashboard = () => {
                   </td>
                       <td>{property.Type || property.type || 'N/A'}</td>
                       <td>{apartmentsDisplay}</td>
-                      <td>{typeof property.rentPrice === 'number' ? property.rentPrice.toLocaleString() : property.Rent?.toLocaleString() || property.rent?.toLocaleString() || '—'}</td>
-                      <td>{(property.income ?? property.Income ?? 0).toLocaleString()} XOF</td>
+                      <td>{normalizeAmount(readValue(property.rentPrice, property.Rent, property.rent)).toLocaleString()} XOF</td>
+                      <td>{income.toLocaleString()} XOF</td>
                       <td>{property.location || property.localisation || property.Address || property.address || '—'}</td>
-                      <td>{property.occupancy ?? '—'}</td>
-                      <td>{property.statut || property.Status || property.status || '—'}</td>
+                      <td>{occupancy.occupancyLabel}</td>
+                      <td>
+                        <span className={`sa-status-pill ${getStatusClassName(statusLabel, 'vacant')}`}>
+                          {statusLabel}
+                        </span>
+                      </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <button type="button" className="sa-icon-button" title="View" onClick={handleClick}>👁️</button>
                   </td>
@@ -1470,12 +1742,17 @@ const LandlordDashboard = () => {
     const email = c.Email || c.email || '';
     const phone = c.Phone || c.phone || '';
     const status = c.Status || c.status || 'Unknown';
-    const propertyAddr = c.Property || c.property || '—';
+    const propertyAddr = formatPropertyBuilding(c, '—');
     const unitNumber = c.UnitNumber ?? c.unitNumber ?? '—';
     const amount = c.Amount ?? c.amount ?? 0;
     const lastPayment = c.LastPayment ?? c.lastPayment;
     const createdAt = c.CreatedAt ?? c.createdAt;
     const updatedAt = c.UpdatedAt ?? c.updatedAt;
+    const entryDate = getTenantEntryDate(c);
+    const rentInAdvance = getTenantRentInAdvance(c);
+    const monthsInArrears = getTenantMonthsInArrears(c);
+    const totalToPay = getTenantTotalToPay(c);
+    const occupiedApartment = getTenantApartmentLabel(c);
 
     return (
       <div className="sa-clients-page">
@@ -1517,8 +1794,13 @@ const LandlordDashboard = () => {
             <h3><DollarSign size={18} /> Rent & payment</h3>
             <dl className="sa-tenant-detail-dl">
               <div><dt>Property</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</dd></div>
+              <div><dt>Occupied apartment</dt><dd>{occupiedApartment}</dd></div>
               {unitNumber && unitNumber !== '—' && <div><dt>Unit</dt><dd>{unitNumber}</dd></div>}
               <div><dt>Monthly rent</dt><dd className="sa-tenant-detail-value-bold">{Number(amount).toLocaleString()} XOF</dd></div>
+              <div><dt>Entry date</dt><dd>{formatDateValue(entryDate)}</dd></div>
+              <div><dt>Rent in advance</dt><dd style={{ color: rentInAdvance > 0 ? '#059669' : '#6b7280', fontWeight: 600 }}>{rentInAdvance.toLocaleString()} XOF</dd></div>
+              <div><dt>Late rent</dt><dd style={{ color: monthsInArrears > 0 ? '#dc2626' : '#6b7280', fontWeight: 600 }}>{monthsInArrears}</dd></div>
+              <div><dt>Total to be paid</dt><dd style={{ color: totalToPay > 0 ? '#dc2626' : '#059669', fontWeight: 700 }}>{totalToPay.toLocaleString()} XOF</dd></div>
               <div><dt>Last payment</dt><dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</dd></div>
             </dl>
           </div>
@@ -1660,7 +1942,11 @@ const LandlordDashboard = () => {
               <th>No</th>
                   <th>Tenant Name</th>
                   <th>Property</th>
+                  <th>Occupied apartment</th>
+                  <th>Entry date</th>
                   <th>Rent Amount</th>
+                  <th>Rent in advance</th>
+                  <th>Total to be paid</th>
               <th>Status</th>
               <th />
             </tr>
@@ -1669,6 +1955,17 @@ const LandlordDashboard = () => {
                 {filteredTenants.map((tenant, index) => {
                   const tenantId = tenant.id ?? tenant.ID;
                   const tenantName = tenant.name ?? tenant.Name ?? 'N/A';
+                  const entryDate = getTenantEntryDate(tenant);
+                  const rentInAdvance = getTenantRentInAdvance(tenant);
+                  const totalToPay = getTenantTotalToPay(tenant);
+                  const monthsInArrears = getTenantMonthsInArrears(tenant);
+                  const apartmentLabel = getTenantApartmentLabel(tenant);
+                  const paymentStatus = getTenantPaymentStatus(tenant);
+                  const statusLabel = paymentStatus === 'up-to-date' || paymentStatus === 'uptodate' || paymentStatus === 'paid'
+                    ? 'Up to date'
+                    : monthsInArrears > 0
+                      ? 'Overdue'
+                      : (tenant.status ?? tenant.Status ?? 'Active');
                   return (
                     <tr
                       key={tenantId ?? index}
@@ -1678,9 +1975,17 @@ const LandlordDashboard = () => {
                     >
                       <td>{index + 1}</td>
                       <td className="sa-cell-main"><span className="sa-cell-title">{tenantName}</span></td>
-                      <td>{tenant.property ?? tenant.Property ?? 'N/A'}</td>
-                      <td>{(tenant.amount ?? tenant.Amount ?? 0).toLocaleString()} XOF</td>
-                      <td><span className={`sa-status-pill ${(tenant.status ?? tenant.Status ?? 'active').toLowerCase().replace(/\s+/g, '-')}`}>{tenant.status ?? tenant.Status ?? 'Active'}</span></td>
+                      <td>{formatPropertyBuilding(tenant, tenant.property ?? tenant.Property ?? 'N/A')}</td>
+                      <td>{apartmentLabel}</td>
+                      <td>{formatDateValue(entryDate)}</td>
+                      <td>{normalizeAmount(readValue(tenant.amount, tenant.Amount, tenant.MonthlyRent, tenant.monthlyRent)).toLocaleString()} XOF</td>
+                      <td style={{ color: rentInAdvance > 0 ? '#059669' : '#6b7280', fontWeight: rentInAdvance > 0 ? 600 : 400 }}>{rentInAdvance.toLocaleString()} XOF</td>
+                      <td style={{ color: totalToPay > 0 ? '#dc2626' : '#059669', fontWeight: 700 }}>{totalToPay.toLocaleString()} XOF</td>
+                      <td>
+                        <span className={`sa-status-pill ${getStatusClassName(statusLabel, 'active')}`} style={normalizeText(statusLabel) === 'overdue' ? { color: '#b91c1c', backgroundColor: '#fef2f2', borderColor: '#fecaca' } : undefined}>
+                          {statusLabel}
+                        </span>
+                      </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <button type="button" className="sa-icon-button" title="View" onClick={() => tenantId && setSelectedTenantId(String(tenantId))}>👁️</button>
               </td>
@@ -1688,7 +1993,7 @@ const LandlordDashboard = () => {
                   );
                 })}
                 {filteredTenants.length === 0 && (
-                  <tr><td colSpan={6} className="sa-table-empty">No tenants found</td></tr>
+                  <tr><td colSpan={9} className="sa-table-empty">No tenants found</td></tr>
                 )}
           </tbody>
         </table>
@@ -2650,148 +2955,177 @@ const LandlordDashboard = () => {
     </div>
   );
 
-  const renderRents = () => (
-    <div className="sa-clients-page">
-      <div className="sa-clients-header">
-        <div>
-          <h2>Rents Tracking</h2>
-          <p>Track collected and pending rents</p>
-        </div>
-        <div className="sa-clients-header-right">
-          <button 
-            className="sa-primary-cta" 
-            onClick={async () => {
-              try {
-                await landlordService.downloadReport({ type: 'financial' });
-                addNotification('Report downloaded successfully', 'success');
-              } catch (error) {
-                addNotification('Failed to download report', 'error');
-              }
-            }}
-            disabled={loading}
-          >
-            <FileText size={16} />
-            Download Report
-          </button>
-        </div>
-      </div>
+  const renderRents = () => {
+    const collectedRows = dedupeBySignature(
+      Array.isArray(rents?.collectedRents) ? rents.collectedRents.map((rent) => ({
+        ...rent,
+        signature: getTransactionSignature({
+          ...rent,
+          Tenant: formatTenantName(rent, ''),
+          Property: formatPropertyBuilding(rent, rent.property || rent.Property || ''),
+        })
+      })) : []
+    );
+    const pendingRows = dedupeBySignature(
+      Array.isArray(rents?.pendingRents) ? rents.pendingRents.map((rent) => ({
+        ...rent,
+        signature: getTransactionSignature({
+          ...rent,
+          Tenant: formatTenantName(rent, ''),
+          Property: formatPropertyBuilding(rent, rent.property || rent.Property || ''),
+        })
+      })) : []
+    );
+    const totalCollected = collectedRows.reduce((sum, rent) => sum + normalizeAmount(readValue(rent.amount, rent.Amount, rent.paidAmount, rent.PaidAmount)), 0) || normalizeAmount(rents?.totalCollected);
+    const totalPending = pendingRows.reduce((sum, rent) => sum + normalizeAmount(readValue(rent.amount, rent.Amount, rent.dueAmount, rent.DueAmount)), 0) || normalizeAmount(rents?.totalPending);
 
-      {rents && (
-        <>
-          <div className="sa-overview-metrics" style={{ marginBottom: '24px' }}>
-            <div className="sa-metric-card sa-metric-primary">
-              <p className="sa-metric-label">Total Collected</p>
-              <p className="sa-metric-value">{rents.totalCollected?.toLocaleString() || 0} XOF</p>
-            </div>
-            <div className="sa-metric-card">
-              <p className="sa-metric-label">Total Pending</p>
-              <p className="sa-metric-value">{rents.totalPending?.toLocaleString() || 0} XOF</p>
-            </div>
+    return (
+      <div className="sa-clients-page">
+        <div className="sa-clients-header">
+          <div>
+            <h2>Rents Tracking</h2>
+            <p>Track collected and pending rents</p>
           </div>
+          <div className="sa-clients-header-right">
+            <button 
+              className="sa-primary-cta" 
+              onClick={async () => {
+                try {
+                  await landlordService.downloadReport({ type: 'financial' });
+                  addNotification('Report downloaded successfully', 'success');
+                } catch (error) {
+                  addNotification('Failed to download report', 'error');
+                }
+              }}
+              disabled={loading}
+            >
+              <FileText size={16} />
+              Download Report
+            </button>
+          </div>
+        </div>
 
-          {rents.collectedRents && rents.collectedRents.length > 0 && (
-            <div className="sa-section-card" style={{ marginBottom: '24px' }}>
-              <div className="sa-section-header">
-                <div>
-                  <h3>Collected Rents</h3>
-                  <p>{rents.collectedRents.length} collected rent payments</p>
-                </div>
+        {rents && (
+          <>
+            <div className="sa-overview-metrics" style={{ marginBottom: '24px' }}>
+              <div className="sa-metric-card sa-metric-primary">
+                <p className="sa-metric-label">Total Collected</p>
+                <p className="sa-metric-value">{totalCollected.toLocaleString()} XOF</p>
               </div>
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>No</th>
-                      <th>Date</th>
-                      <th>Tenant</th>
-                      <th>Property</th>
-                      <th>Amount</th>
-                      <th>Method</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rents.collectedRents.map((rent, index) => (
-                      <tr key={rent.id || rent.ID || `collected-${index}`}>
-                        <td>{index + 1}</td>
-                        <td>{new Date(rent.date || rent.Date).toLocaleDateString()}</td>
-                        <td className="sa-cell-main">
-                          <span className="sa-cell-title">{rent.tenant || rent.Tenant || 'Unknown'}</span>
-                        </td>
-                        <td>{rent.property || rent.Property || 'Unknown'}</td>
-                        <td>{(rent.amount || rent.Amount || 0).toLocaleString()} XOF</td>
-                        <td>{rent.method || rent.Method || 'Unknown'}</td>
-                        <td>
-                          <span className={`sa-status-pill ${(rent.status || rent.Status || 'approved').toLowerCase()}`}>
-                            {rent.status || rent.Status || 'Approved'}
-                          </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-              </div>
-              </div>
-          )}
-
-          {rents.pendingRents && rents.pendingRents.length > 0 && (
-            <div className="sa-section-card">
-              <div className="sa-section-header">
-                <div>
-                  <h3>Tenants Who Have Not Paid</h3>
-                  <p>{rents.pendingRents.length} unpaid rent payment(s) – Pending and Overdue</p>
-                </div>
-              </div>
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>No</th>
-                      <th>Tenant</th>
-                      <th>Property</th>
-                      <th>Amount</th>
-                      <th>Due Date</th>
-                      <th>Days Overdue</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rents.pendingRents.map((rent, index) => {
-                      const daysOverdue = rent.daysOverdue ?? 0;
-                      const dueDate = rent.date || rent.Date;
-                      return (
-                      <tr key={rent.id || rent.ID || `pending-${index}`}>
-                        <td>{index + 1}</td>
-                        <td className="sa-cell-main">
-                          <span className="sa-cell-title">{rent.tenant || rent.Tenant || 'Unknown'}</span>
-                        </td>
-                        <td>{rent.property || rent.Property || 'Unknown'}</td>
-                        <td>{(rent.amount || rent.Amount || 0).toLocaleString()} XOF</td>
-                        <td>{dueDate ? new Date(dueDate).toLocaleDateString() : '—'}</td>
-                        <td>
-                          {daysOverdue > 0 ? (
-                            <span style={{ color: '#dc2626', fontWeight: 500 }}>{daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue</span>
-                          ) : (
-                            <span style={{ color: '#6b7280' }}>Due today</span>
-                          )}
-                        </td>
-                        <td>
-                          <span className={`sa-status-pill ${(rent.status || rent.Status || 'pending').toLowerCase()}`}>
-                            {rent.status || rent.Status || 'Pending'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                    })}
-                  </tbody>
-                </table>
+              <div className="sa-metric-card">
+                <p className="sa-metric-label">Total Pending</p>
+                <p className="sa-metric-value">{totalPending.toLocaleString()} XOF</p>
               </div>
             </div>
-          )}
-        </>
-      )}
+
+            {collectedRows.length > 0 && (
+              <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+                <div className="sa-section-header">
+                  <div>
+                    <h3>Collected Rents</h3>
+                    <p>{collectedRows.length} collected rent payments</p>
                   </div>
-  );
+                </div>
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>No</th>
+                        <th>Date</th>
+                        <th>Tenant</th>
+                        <th>Property</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {collectedRows.map((rent, index) => {
+                        const statusLabel = readValue(rent.status, rent.Status, 'Approved');
+                        return (
+                          <tr key={getRecordId(rent) || rent.signature || `collected-${index}`}>
+                            <td>{index + 1}</td>
+                            <td>{formatDateValue(readValue(rent.date, rent.Date, rent.createdAt, rent.CreatedAt))}</td>
+                            <td className="sa-cell-main">
+                              <span className="sa-cell-title">{formatTenantName(rent, 'Unknown')}</span>
+                            </td>
+                            <td>{formatPropertyBuilding(rent, 'Unknown')}</td>
+                            <td>{normalizeAmount(readValue(rent.amount, rent.Amount, rent.paidAmount, rent.PaidAmount)).toLocaleString()} XOF</td>
+                            <td>{rent.method || rent.Method || 'Unknown'}</td>
+                            <td>
+                              <span className={`sa-status-pill ${getStatusClassName(statusLabel, 'approved')}`}>
+                                {statusLabel}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {pendingRows.length > 0 && (
+              <div className="sa-section-card">
+                <div className="sa-section-header">
+                  <div>
+                    <h3>Tenants Who Have Not Paid</h3>
+                    <p>{pendingRows.length} unpaid rent payment(s) – Pending and Overdue</p>
+                  </div>
+                </div>
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>No</th>
+                        <th>Tenant</th>
+                        <th>Property</th>
+                        <th>Amount</th>
+                        <th>Due Date</th>
+                        <th>Days Overdue</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingRows.map((rent, index) => {
+                        const daysOverdue = normalizeAmount(readValue(rent.daysOverdue, rent.DaysOverdue));
+                        const dueDate = readValue(rent.date, rent.Date, rent.dueDate, rent.DueDate);
+                        const statusLabel = readValue(rent.status, rent.Status, 'Pending');
+                        return (
+                          <tr key={getRecordId(rent) || rent.signature || `pending-${index}`}>
+                            <td>{index + 1}</td>
+                            <td className="sa-cell-main">
+                              <span className="sa-cell-title">{formatTenantName(rent, 'Unknown')}</span>
+                            </td>
+                            <td>{formatPropertyBuilding(rent, 'Unknown')}</td>
+                            <td>{normalizeAmount(readValue(rent.amount, rent.Amount, rent.dueAmount, rent.DueAmount)).toLocaleString()} XOF</td>
+                            <td>{dueDate ? formatDateValue(dueDate) : '—'}</td>
+                            <td>
+                              {daysOverdue > 0 ? (
+                                <span style={{ color: '#dc2626', fontWeight: 500 }}>{daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue</span>
+                              ) : (
+                                <span style={{ color: '#6b7280' }}>Due today</span>
+                              )}
+                            </td>
+                            <td>
+                              <span className={`sa-status-pill ${getStatusClassName(statusLabel, 'pending')}`}>
+                                {statusLabel}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   const renderExpenses = () => (
     <div className="sa-clients-page">
@@ -2995,18 +3329,27 @@ const LandlordDashboard = () => {
   );
       
   const renderBusinessTracking = () => {
-    const revenueByMonth = businessTracking?.revenueByMonth || [];
-    const expensesByMonth = businessTracking?.expensesByMonth || [];
-    const occupancyByMonth = businessTracking?.occupancyByMonth || [];
-    const chartData = revenueByMonth.map((r, i) => ({
-      month: r.month,
-      revenue: r.revenue ?? 0,
-      expenses: expensesByMonth[i]?.expenses ?? 0,
-      occupancy: occupancyByMonth[i]?.rate ?? 0
-    }));
+    const revenueByMonth = Array.isArray(businessTracking?.revenueByMonth) ? businessTracking.revenueByMonth : [];
+    const expensesByMonth = Array.isArray(businessTracking?.expensesByMonth) ? businessTracking.expensesByMonth : [];
+    const occupancyByMonth = Array.isArray(businessTracking?.occupancyByMonth) ? businessTracking.occupancyByMonth : [];
+    const chartData = buildTrackingSeries(revenueByMonth, expensesByMonth, occupancyByMonth);
+    const totalRevenue = chartData.reduce((sum, row) => sum + normalizeAmount(row.revenue), 0) || normalizeAmount(businessTracking?.totalRevenue);
+    const maintenanceCosts = chartData.reduce((sum, row) => sum + normalizeAmount(row.expenses), 0) || normalizeAmount(businessTracking?.maintenanceCosts);
+    const occupancyRate = chartData.length > 0
+      ? chartData[chartData.length - 1].occupancy
+      : normalizeAmount(businessTracking?.occupancyRate);
+    const netProfit = totalRevenue - maintenanceCosts || normalizeAmount(businessTracking?.netProfit);
+    const roi = maintenanceCosts > 0
+      ? ((netProfit / maintenanceCosts) * 100)
+      : normalizeAmount(businessTracking?.roi);
+    const latestRevenue = chartData.length > 0 ? chartData[chartData.length - 1].revenue : totalRevenue;
+    const previousRevenue = chartData.length > 1 ? chartData[chartData.length - 2].revenue : 0;
+    const revenueTrends = previousRevenue > 0
+      ? `${(((latestRevenue - previousRevenue) / previousRevenue) * 100).toFixed(1)}%`
+      : (businessTracking?.revenueTrends ?? '+0%');
     const pieData = [
-      { name: 'Revenue', value: businessTracking?.totalRevenue ?? 0, color: '#3b82f6' },
-      { name: 'Expenses', value: businessTracking?.maintenanceCosts ?? 0, color: '#f59e0b' }
+      { name: 'Revenue', value: totalRevenue, color: '#3b82f6' },
+      { name: 'Expenses', value: maintenanceCosts, color: '#f59e0b' }
     ].filter(d => d.value > 0);
 
     return (
@@ -3021,27 +3364,27 @@ const LandlordDashboard = () => {
         <div className="sa-overview-metrics" style={{ width: '100%', marginBottom: '24px' }}>
         <div className="sa-metric-card sa-metric-primary">
           <p className="sa-metric-label">Revenue Trends</p>
-            <p className="sa-metric-value">{businessTracking?.revenueTrends ?? '+0%'}</p>
+            <p className="sa-metric-value">{revenueTrends}</p>
         </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Occupancy Rate</p>
-            <p className="sa-metric-number">{Number(businessTracking?.occupancyRate ?? 0).toFixed(1)}%</p>
+            <p className="sa-metric-number">{Number(occupancyRate ?? 0).toFixed(1)}%</p>
         </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Maintenance Costs</p>
-            <p className="sa-metric-number">{(businessTracking?.maintenanceCosts ?? 0).toLocaleString()} XOF</p>
+            <p className="sa-metric-number">{maintenanceCosts.toLocaleString()} XOF</p>
         </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">ROI</p>
-            <p className="sa-metric-number">{Number(businessTracking?.roi ?? 0).toFixed(1)}%</p>
+            <p className="sa-metric-number">{Number(roi ?? 0).toFixed(1)}%</p>
         </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Total Revenue</p>
-            <p className="sa-metric-number">{(businessTracking?.totalRevenue ?? 0).toLocaleString()} XOF</p>
+            <p className="sa-metric-number">{totalRevenue.toLocaleString()} XOF</p>
           </div>
           <div className="sa-metric-card">
             <p className="sa-metric-label">Net Profit</p>
-            <p className="sa-metric-number">{(businessTracking?.netProfit ?? 0).toLocaleString()} XOF</p>
+            <p className="sa-metric-number">{netProfit.toLocaleString()} XOF</p>
           </div>
         </div>
 

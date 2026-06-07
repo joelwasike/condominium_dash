@@ -49,6 +49,7 @@ const AccountingDashboard = () => {
   const [landlordPayments, setLandlordPayments] = useState([]);
   const [collections, setCollections] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [workingDisbursements, setWorkingDisbursements] = useState([]);
   const [monthlySummary, setMonthlySummary] = useState(null);
   const [advertisements, setAdvertisements] = useState([]);
   const [landlords, setLandlords] = useState([]);
@@ -88,6 +89,7 @@ const AccountingDashboard = () => {
   const [expenseOwnerFilter, setExpenseOwnerFilter] = useState('');
   const [expenseSearchText, setExpenseSearchText] = useState('');
   const [expenseViewCard, setExpenseViewCard] = useState('total');
+  const [expensePanelMode, setExpensePanelMode] = useState('expenses');
   const [expensesSummary, setExpensesSummary] = useState(null);
   const [expensesPerOwner, setExpensesPerOwner] = useState([]);
   const [rentSummary, setRentSummary] = useState(null);
@@ -288,6 +290,25 @@ const AccountingDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter, expenseViewCard]);
 
+  const loadWorkingDisbursements = useCallback(async () => {
+    if (isDemoMode()) {
+      const pending = expenses.filter(exp => String(exp.Status || exp.status || '').toLowerCase() === 'approved' && !exp.PaidAt && !exp.paidAt);
+      setWorkingDisbursements(pending);
+      return;
+    }
+    try {
+      const data = await accountingService.getWorkingDisbursements();
+      setWorkingDisbursements(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to load working disbursements:', error);
+      setWorkingDisbursements([]);
+    }
+  }, [expenses]);
+
+  const markExpenseAsPaid = useCallback(async (expenseId) => {
+    return accountingService.markExpenseAsPaid(expenseId);
+  }, []);
+
   // Load expenses summary
   const loadExpensesSummary = useCallback(async () => {
     if (isDemoMode()) {
@@ -420,6 +441,7 @@ const AccountingDashboard = () => {
       } else {
         loadExpenses();
       }
+      loadWorkingDisbursements();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter, expenseViewCard]);
@@ -1165,7 +1187,7 @@ const AccountingDashboard = () => {
   const sharedProps = {
     loading, setLoading, addNotification,
     overviewData, setOverviewData, tenantPayments, setTenantPayments, landlordPayments, setLandlordPayments,
-    collections, setCollections, expenses, setExpenses, monthlySummary, advertisements, landlords,
+    collections, setCollections, expenses, setExpenses, workingDisbursements, setWorkingDisbursements, monthlySummary, advertisements, landlords,
     currentAdIndex, setCurrentAdIndex, carouselIntervalRef,
     tenants, setTenants, deposits, setDeposits, pendingRefunds, setPendingRefunds,
     cashierAccounts, setCashierAccounts, cashierTransactions, setCashierTransactions, agencyBalance,
@@ -1195,7 +1217,7 @@ const AccountingDashboard = () => {
     expenseBuildingFilter, setExpenseBuildingFilter, expenseCategoryFilter, setExpenseCategoryFilter,
     expenseScopeFilter, setExpenseScopeFilter, expenseOwnerFilter, setExpenseOwnerFilter,
     expenseStartDateFilter, setExpenseStartDateFilter, expenseEndDateFilter, setExpenseEndDateFilter,
-    expenseSearchText, setExpenseSearchText, expenseViewCard, setExpenseViewCard,
+    expenseSearchText, setExpenseSearchText, expenseViewCard, setExpenseViewCard, expensePanelMode, setExpensePanelMode,
     expensesSummary, expensesPerOwner,
     expenseProperties, expenseFormScope, setExpenseFormScope, expenseFormBuilding, setExpenseFormBuilding, expenseFormUnits, setExpenseFormUnits, expenseDate, setExpenseDate,
     showCashierAccountModal, setShowCashierAccountModal, showCashierTransactionModal, setShowCashierTransactionModal,
@@ -1211,8 +1233,9 @@ const AccountingDashboard = () => {
     // Functions
     downloadReceipt, sendReceipt, printExpenseReceipt, printPaymentReceipt, printRefundReceipt,
     transferToLandlord, exportPaymentsToCSV, handleImportPayments, handleSendMessage,
-    loadChatForUser, loadExpenses, loadCashierData, loadDeposits, loadDepositRefundsPending,
+    loadChatForUser, loadExpenses, loadWorkingDisbursements, loadCashierData, loadDeposits, loadDepositRefundsPending,
     loadReport, exportReportToCSV, getFilteredExpenses, exportExpensesToCSV,
+    markExpenseAsPaid,
     loadData,
   };
 

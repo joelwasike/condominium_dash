@@ -6,7 +6,9 @@ import { t } from '../../utils/i18n';
 const ExpensesTab = (props) => {
   const {
     loading, setLoading, addNotification, expenses, setExpenses,
-    expenseViewCard, setExpenseViewCard, expensesSummary, expensesPerOwner,
+    workingDisbursements, setWorkingDisbursements,
+    expenseViewCard, setExpenseViewCard, expensePanelMode, setExpensePanelMode,
+    expensesSummary, expensesPerOwner,
     expenseBuildingFilter, setExpenseBuildingFilter,
     expenseCategoryFilter, setExpenseCategoryFilter,
     expenseScopeFilter, setExpenseScopeFilter,
@@ -14,7 +16,8 @@ const ExpensesTab = (props) => {
     expenseStartDateFilter, setExpenseStartDateFilter,
     expenseEndDateFilter, setExpenseEndDateFilter,
     setShowExpenseModal, setSelectedExpense, setShowViewExpenseModal,
-    getFilteredExpenses, exportExpensesToCSV, printExpenseReceipt
+    getFilteredExpenses, exportExpensesToCSV, printExpenseReceipt,
+    markExpenseAsPaid, loadWorkingDisbursements
   } = props;
 
   const filteredExpenses = getFilteredExpenses();
@@ -22,6 +25,10 @@ const ExpensesTab = (props) => {
   const uniqueCategories = [...new Set(expenses.map(exp => exp.Category || exp.category).filter(Boolean))];
   const uniqueScopes = [...new Set(expenses.map(exp => exp.Scope || exp.scope).filter(Boolean))];
   const uniqueOwners = [...new Set(expenses.map(exp => exp.Owner || exp.owner || exp.Landlord || exp.landlord).filter(Boolean))];
+  const workingRows = Array.isArray(workingDisbursements) ? workingDisbursements : [];
+
+  const getWorkingReason = (item) => item.Notes || item.notes || item.Description || item.description || item.Category || item.category || 'N/A';
+  const getWorkingOwner = (item) => item.Owner || item.owner || item.Landlord || item.landlord || 'N/A';
 
   const totalExp = expensesSummary?.totalExpenses ?? 0;
   const agencyExp = expensesSummary?.agencyExpenses ?? 0;
@@ -44,10 +51,13 @@ const ExpensesTab = (props) => {
           <div style={{ display: 'flex', gap: '12px' }}>
             <button className="sa-outline-button" onClick={exportExpensesToCSV} disabled={loading || filteredExpenses.length === 0}><Download size={18} /> Export to CSV</button>
             <button className="sa-primary-cta" onClick={() => setShowExpenseModal(true)} disabled={loading}><Plus size={18} /> {t('accounting.addExpense')}</button>
+            <button className="sa-outline-button" onClick={() => setExpensePanelMode(expensePanelMode === 'working' ? 'expenses' : 'working')} disabled={loading}>
+              {expensePanelMode === 'working' ? 'Back to Expenses' : 'Working Disbursement'}
+            </button>
           </div>
         </div>
 
-        {expenseViewCard !== 'owner' && (
+        {expensePanelMode !== 'working' && expenseViewCard !== 'owner' && (
           <div className="sa-filters-section" style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
             <select className="sa-filter-select" value={expenseBuildingFilter} onChange={(e) => setExpenseBuildingFilter(e.target.value)}><option value="">All Buildings</option>{uniqueBuildings.map(b => <option key={b} value={b}>{b}</option>)}</select>
             <select className="sa-filter-select" value={expenseCategoryFilter} onChange={(e) => setExpenseCategoryFilter(e.target.value)}><option value="">All Categories</option>{uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}</select>
@@ -61,7 +71,75 @@ const ExpensesTab = (props) => {
           </div>
         )}
 
-        {expenseViewCard === 'owner' ? (
+        {expensePanelMode === 'working' ? (
+          loading ? <div className="loading">Loading working disbursements...</div> : workingRows.length === 0 ? <div className="no-data">No working disbursements waiting for payment</div> : (
+            <div style={{ padding: '16px' }}>
+              <div style={{ marginBottom: '12px', color: '#6b7280', fontSize: '0.875rem' }}>
+                Approved expenses and validated quotes appear here until the accountant marks them paid.
+              </div>
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Reason</th>
+                      <th>Amount</th>
+                      <th>Owner</th>
+                      <th>Status</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workingRows.map((item, index) => {
+                      const itemId = item.ID || item.id;
+                      const paid = Boolean(item.PaidAt || item.paidAt);
+                      return (
+                        <tr key={itemId || `working-${index}`}>
+                          <td>{item.Date ? new Date(item.Date).toLocaleDateString() : (item.date ? new Date(item.date).toLocaleDateString() : 'N/A')}</td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{getWorkingReason(item)}</div>
+                            <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>{item.Building || item.building || 'N/A'}</div>
+                          </td>
+                          <td>{(item.Amount || item.amount || 0).toFixed(2)} XOF</td>
+                          <td>{getWorkingOwner(item)}</td>
+                          <td>
+                            <span className={`sa-status-pill ${(paid ? 'paid' : (item.Status || item.status || 'approved')).toLowerCase()}`}>
+                              {paid ? 'Paid' : (item.Status || item.status || 'Approved')}
+                            </span>
+                          </td>
+                          <td className="table-menu">
+                            <div className="sa-row-actions">
+                              <button
+                                className="table-action-button"
+                                style={{ backgroundColor: '#16a34a', color: '#fff' }}
+                                disabled={loading || paid}
+                                onClick={async () => {
+                                  try {
+                                    setLoading(true);
+                                    await markExpenseAsPaid(itemId);
+                                    addNotification('Expense marked as paid', 'success');
+                                    await loadWorkingDisbursements();
+                                  } catch (error) {
+                                    console.error('Failed to mark expense as paid:', error);
+                                    addNotification(error.message || 'Failed to mark expense as paid', 'error');
+                                  } finally {
+                                    setLoading(false);
+                                  }
+                                }}
+                              >
+                                Pay
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        ) : expenseViewCard === 'owner' ? (
           loading ? <div className="loading">Loading expenses per owner...</div> : expensesPerOwner.length === 0 ? <div className="no-data">No owner expenses found</div> : (
             <div style={{ padding: '16px' }}>
               {expensesPerOwner.map((ownerGroup, idx) => (
@@ -149,12 +227,24 @@ ExpensesTab.AddModal = (props) => {
               setLoading(true);
               const formData = new FormData(e.target);
               const accountId = formData.get('accountId');
-              const scope = 'Building';
+              const scope = formData.get('scope') || 'Building';
               const property = formData.get('building');
               const unit = formData.get('unit');
               const owner = formData.get('owner');
-              const buildingValue = unit ? `${property} - ${unit}` : property || '-';
-              const expenseData = { scope, building: buildingValue, owner: owner || undefined, category: formData.get('category'), requestedBy: formData.get('requestedBy') || '', amount: parseFloat(formData.get('amount')), date: formData.get('date'), notes: formData.get('notes'), accountId: accountId ? parseInt(accountId) : null, requiresOwnerApproval: scope === 'Building', deductFrom: scope === 'Building' ? 'owner_balance' : 'commission_account' };
+              const buildingValue = scope === 'SAAF IMMO' ? '-' : (unit ? `${property} - ${unit}` : property || '-');
+              const expenseData = {
+                scope,
+                building: buildingValue,
+                owner: owner || undefined,
+                category: formData.get('category'),
+                requestedBy: formData.get('requestedBy') || '',
+                amount: parseFloat(formData.get('amount')),
+                date: formData.get('date'),
+                notes: formData.get('notes'),
+                accountId: accountId ? parseInt(accountId) : null,
+                requiresOwnerApproval: scope !== 'SAAF IMMO',
+                deductFrom: scope === 'SAAF IMMO' ? 'commission_account' : 'owner_balance',
+              };
               const newExpense = await accountingService.addExpense(expenseData);
               setExpenses(prev => [newExpense, ...prev]);
               if (accountId) { try { const [accounts, transactions] = await Promise.all([accountingService.getCashierAccounts().catch(() => []), accountingService.getCashierTransactions().catch(() => [])]); setCashierAccounts(Array.isArray(accounts) ? accounts : []); setCashierTransactions(Array.isArray(transactions) ? transactions : []); } catch (error) { console.error('Error reloading cashier data:', error); } }
@@ -165,9 +255,41 @@ ExpensesTab.AddModal = (props) => {
               e.target.reset();
             } catch (error) { console.error('Error adding expense:', error); addNotification('Failed to add expense. Please try again.', 'error'); } finally { setLoading(false); }
           }}>
-            <div className="form-group"><label>Owner</label><select name="owner"><option value="">Select Owner</option>{landlords.map((l) => { const name = l.Name || l.name || l.Landlord || l.landlord || l.Email || l.email || '-'; return <option key={l.ID || l.id} value={name}>{name}</option>; })}</select></div>
-            <div className="form-group"><label>Property</label><select name="building" required value={expenseFormBuilding} onChange={(e) => setExpenseFormBuilding(e.target.value)}><option value="">Select Property</option>{expenseProperties.map((p) => { const addr = p.address || p.Address || ''; return <option key={addr} value={addr}>{addr}</option>; })}</select></div>
-            {expenseFormBuilding && (<div className="form-group"><label>Apartment / Unit (optional)</label><select name="unit"><option value="">-- Entire property --</option>{expenseFormUnits.map((u) => { const unitNum = u.UnitNumber || u.unitNumber || ''; return <option key={u.ID || u.id || unitNum} value={unitNum}>{unitNum}</option>; })}</select>{expenseFormUnits.length === 0 && <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>No units found for this property</small>}</div>)}
+            <div className="form-group">
+              <label>Scope</label>
+              <select
+                name="scope"
+                required
+                value={expenseFormScope}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setExpenseFormScope(val);
+                  if (val === 'SAAF IMMO') {
+                    setExpenseFormBuilding('');
+                    setExpenseFormUnits([]);
+                  }
+                }}
+              >
+                <option value="Building">Building</option>
+                <option value="SAAF IMMO">SAAF IMMO</option>
+              </select>
+              <small style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '6px', display: 'block', lineHeight: 1.4 }}>
+                Building expenses validate first with the director, then with the owner. Agency expenses validate with the director only.
+              </small>
+            </div>
+            {expenseFormScope === 'Building' && (
+              <>
+                <div className="form-group"><label>Owner</label><select name="owner"><option value="">Select Owner</option>{landlords.map((l) => { const name = l.Name || l.name || l.Landlord || l.landlord || l.Email || l.email || '-'; return <option key={l.ID || l.id} value={name}>{name}</option>; })}</select></div>
+                <div className="form-group"><label>Property</label><select name="building" required value={expenseFormBuilding} onChange={(e) => setExpenseFormBuilding(e.target.value)}><option value="">Select Property</option>{expenseProperties.map((p) => { const addr = p.address || p.Address || ''; return <option key={addr} value={addr}>{addr}</option>; })}</select></div>
+                {expenseFormBuilding && (<div className="form-group"><label>Apartment / Unit (optional)</label><select name="unit"><option value="">-- Entire property --</option>{expenseFormUnits.map((u) => { const unitNum = u.UnitNumber || u.unitNumber || ''; return <option key={u.ID || u.id || unitNum} value={unitNum}>{unitNum}</option>; })}</select>{expenseFormUnits.length === 0 && <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>No units found for this property</small>}</div>)}
+              </>
+            )}
+            {expenseFormScope === 'SAAF IMMO' && (
+              <div className="form-group">
+                <label>Agency label</label>
+                <input type="text" value="SAAF IMMO" disabled />
+              </div>
+            )}
             <div className="form-group"><label>Category</label><select name="category" required><option value="">Select Category</option><option value="Maintenance">Maintenance</option><option value="Utilities">Utilities</option><option value="Taxes">Taxes</option><option value="Software">Software</option><option value="Other">Other</option></select></div>
             <div className="form-group"><label>Requested by (name of person)</label><input type="text" name="requestedBy" placeholder="Enter name of person who requested the payment" /></div>
             <div className="form-group"><label>Amount</label><input type="number" name="amount" step="0.01" required /></div>

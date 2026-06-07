@@ -568,11 +568,18 @@ const TechnicianDashboard = () => {
       // owner or agency admin.
       const alreadyGenerated = task.quoteGenerated || task.QuoteGenerated;
       if (!alreadyGenerated) {
+        const quoteAmount = Number(String(task.EstimatedCost || task.estimatedCost || 0).replace(/[^0-9.-]/g, '')) || 0;
+        if (quoteAmount <= 0) {
+          addNotification('Please set a valid estimated cost before completing the task.', 'warning');
+          loadData();
+          setLoading(false);
+          return;
+        }
         const quoteData = {
           maintenanceId: taskId,
           property: task.Property || task.property || '',
           issue: task.Issue || task.issue || 'Maintenance Task',
-          amount: task.EstimatedCost || task.estimatedCost || 0,
+          amount: quoteAmount,
           recipient: 'management@example.com',
         };
         try {
@@ -1352,7 +1359,21 @@ const TechnicianDashboard = () => {
           maintenance.estimated_cost ??
           maintenance.Estimated_Cost ??
           0;
-        const estimatedCost = Number(estimatedCostRaw) || 0;
+        let estimatedCost = Number(String(estimatedCostRaw).replace(/[^0-9.-]/g, '')) || 0;
+        if (estimatedCost <= 0) {
+          const promptValue = window.prompt(
+            'Enter the quote amount to submit for validation:',
+            estimatedCostRaw ? String(estimatedCostRaw) : ''
+          );
+          if (promptValue === null) {
+            return;
+          }
+          estimatedCost = Number(String(promptValue).replace(/[^0-9.-]/g, '')) || 0;
+          if (estimatedCost <= 0) {
+            addNotification('Please set a valid quote amount before submitting.', 'warning');
+            return;
+          }
+        }
         const quoteData = {
           maintenanceId: maintenance.id || maintenance.ID,
           property: maintenance.property || maintenance.Property,
@@ -1501,7 +1522,7 @@ const TechnicianDashboard = () => {
                     maintenance.estimated_cost ??
                     maintenance.Estimated_Cost ??
                     0;
-                  const estimatedCost = Number(estimatedCostRaw) || 0;
+                  const estimatedCost = Number(String(estimatedCostRaw).replace(/[^0-9.-]/g, '')) || 0;
                   const quoteGenerated = maintenance.quoteGenerated || maintenance.QuoteGenerated || false;
                   const photos = maintenance.photos || maintenance.Photos || maintenance.photoURLs || maintenance.PhotoURLs || [];
                   

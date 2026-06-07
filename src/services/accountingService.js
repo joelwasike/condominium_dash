@@ -330,6 +330,12 @@ export const accountingService = {
     return await apiRequest(url);
   },
 
+  getWorkingDisbursements: async () => {
+    const url = buildApiUrl('/api/accounting/expenses/working-disbursements');
+    const data = await apiRequest(url);
+    return unwrapList(data);
+  },
+
   addExpense: async (expenseData) => {
     const url = buildApiUrl('/api/accounting/expenses');
     return await apiRequest(url, {
@@ -343,6 +349,13 @@ export const accountingService = {
     return await apiRequest(url, {
       method: 'PUT',
       body: JSON.stringify(expenseData),
+    });
+  },
+
+  markExpenseAsPaid: async (expenseId) => {
+    const url = buildApiUrl(`/api/accounting/expenses/${expenseId}/pay`);
+    return await apiRequest(url, {
+      method: 'POST',
     });
   },
 

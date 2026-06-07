@@ -12,17 +12,24 @@ const AccountBalancesTab = (props) => {
   const bankBalance = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank' && acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
   const globalBalance = overviewData?.globalBalance ?? overviewData?.totalAvailableBalance ?? overviewData?.TotalAvailableBalance ?? 0;
   const bankAccountIds = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank').map(acc => acc.ID || acc.id);
+  const activeAccounts = cashierAccounts.filter(acc => acc.IsActive !== false && acc.isActive !== false);
   const accountsByType = { mobile_money: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'mobile_money'), bank: cashierAccounts.filter(acc => (acc.Type || acc.type) === 'bank'), other: cashierAccounts.filter(acc => !['mobile_money', 'cash_register', 'bank'].includes(acc.Type || acc.type)) };
   const mobileMoneySummary = useMemo(() => {
-    const groups = new Map();
-    accountsByType.mobile_money.forEach((account) => {
-      const label = (account.Name || account.name || account.Description || account.description || 'Unnamed').trim();
-      groups.set(label, (groups.get(label) || 0) + (account.Balance || account.balance || 0));
+    const providerMatchers = [
+      { name: 'Orange Business', match: /orange\s*business/i },
+      { name: 'Wave', match: /\bwave\b/i },
+      { name: 'Orange Money', match: /orange\s*money|\bom\b/i },
+    ];
+    return providerMatchers.map((provider) => {
+      const balance = activeAccounts
+        .filter((account) => {
+          const label = `${account.Name || account.name || ''} ${account.Description || account.description || ''}`;
+          return provider.match.test(label);
+        })
+        .reduce((sum, account) => sum + (account.Balance || account.balance || 0), 0);
+      return { name: provider.name, balance };
     });
-    return Array.from(groups.entries())
-      .map(([name, balance]) => ({ name, balance }))
-      .sort((left, right) => left.name.localeCompare(right.name));
-  }, [accountsByType.mobile_money]);
+  }, [activeAccounts]);
   const mobileMoneyTotal = mobileMoneySummary.reduce((sum, item) => sum + item.balance, 0);
 
   const renderAccountGroup = (accounts, icon, title, iconColor) => accounts.length > 0 && (
@@ -80,9 +87,7 @@ const AccountBalancesTab = (props) => {
             </div>
             {showMobileMoneyDetails && (
               <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {mobileMoneySummary.length === 0 ? (
-                  <p style={{ margin: 0, color: '#6b7280' }}>No mobile money accounts found.</p>
-                ) : mobileMoneySummary.map((provider) => (
+                {mobileMoneySummary.map((provider) => (
                   <div key={provider.name} style={{ padding: '10px 12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
                     <p style={{ margin: 0, fontWeight: 600, color: '#111827' }}>{provider.name}</p>
                     <p style={{ margin: '4px 0 0 0', color: '#1d4ed8', fontWeight: 700 }}>{provider.balance.toFixed(2)} XOF</p>
