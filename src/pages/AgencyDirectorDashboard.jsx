@@ -856,10 +856,15 @@ const AgencyDirectorDashboard = () => {
     [tabs, activeTab]
   );
 
+  const agencyUsers = useMemo(() => {
+    if (!Array.isArray(users)) return [];
+    return users.filter(user => !isTenantRole(user.Role || user.role));
+  }, [users]);
+
   // Filtered users
   const filteredUsers = useMemo(() => {
-    if (!users || !Array.isArray(users)) return [];
-    return users.filter(user => {
+    if (!agencyUsers || !Array.isArray(agencyUsers)) return [];
+    return agencyUsers.filter(user => {
       if (userCompanyFilter && (user.Company || user.company) !== userCompanyFilter) return false;
       if (userRoleFilter && (user.Role || user.role) !== userRoleFilter) return false;
       if (userSearchText) {
@@ -870,7 +875,7 @@ const AgencyDirectorDashboard = () => {
       }
       return true;
     });
-  }, [users, userCompanyFilter, userRoleFilter, userSearchText]);
+  }, [agencyUsers, userCompanyFilter, userRoleFilter, userSearchText]);
 
   // Filtered properties
   const filteredProperties = useMemo(() => {
@@ -885,22 +890,31 @@ const AgencyDirectorDashboard = () => {
   // Unique companies and roles
   const uniqueCompanies = useMemo(() => {
     const companies = new Set();
-    users.forEach(user => {
+    agencyUsers.forEach(user => {
       if (user.Company || user.company) companies.add(user.Company || user.company);
     });
     properties.forEach(prop => {
       if (prop.Company || prop.company) companies.add(prop.Company || prop.company);
     });
     return Array.from(companies).sort();
-  }, [users, properties]);
+  }, [agencyUsers, properties]);
 
   const uniqueRoles = useMemo(() => {
     const roles = new Set();
-    users.forEach(user => {
+    agencyUsers.forEach(user => {
       if (user.Role || user.role) roles.add(user.Role || user.role);
     });
     return Array.from(roles).sort();
-  }, [users]);
+  }, [agencyUsers]);
+
+  const nonRentPendingPayments = useMemo(() => {
+    if (!Array.isArray(pendingPayments)) return [];
+    return pendingPayments.filter((payment) => {
+      const chargeType = (payment.chargeType || payment.ChargeType || payment.type || payment.Type || payment.category || payment.Category || '').toString().trim().toLowerCase();
+      const description = (payment.description || payment.Description || payment.reason || payment.Reason || payment.note || payment.Note || '').toString().trim().toLowerCase();
+      return chargeType !== 'rent' && !description.includes('rent');
+    });
+  }, [pendingPayments]);
 
   // User management
   const handleOpenAddUser = () => {
@@ -4160,7 +4174,7 @@ const AgencyDirectorDashboard = () => {
             marginBottom: '-2px'
           }}
         >
-          Payments ({pendingPayments.length})
+          Payments ({nonRentPendingPayments.length})
         </button>
         <button
           type="button"
@@ -4204,7 +4218,7 @@ const AgencyDirectorDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {pendingPayments.map((payment, index) => (
+                {nonRentPendingPayments.map((payment, index) => (
                   <tr key={`payment-${payment.id || payment.ID || index}`}>
                     <td>{index + 1}</td>
                     <td className="sa-cell-main">
@@ -4240,7 +4254,7 @@ const AgencyDirectorDashboard = () => {
                     </td>
                   </tr>
                 ))}
-                {pendingPayments.length === 0 && (
+                {nonRentPendingPayments.length === 0 && (
                   <tr>
                     <td colSpan={8} className="sa-table-empty">No pending payments to approve</td>
                   </tr>
@@ -4944,5 +4958,3 @@ const AgencyDirectorDashboard = () => {
 };
 
 export default AgencyDirectorDashboard;
-
-
