@@ -699,12 +699,19 @@ const AgencyDirectorDashboard = () => {
   // Handle subscription payment
   const handlePaySubscription = async (e) => {
     e.preventDefault();
+    if (subscriptionForm.provider === 'om' && !subscriptionForm.otp.trim()) {
+      addNotification('OTP is required for Orange Money payments', 'error');
+      return;
+    }
     try {
       const result = await agencyDirectorService.paySubscriptionViaMoMo(subscriptionForm);
       const paymentUrl = result?.response?.payment_url;
       if (subscriptionForm.provider === 'wave' && paymentUrl) {
-        window.open(paymentUrl, '_blank', 'noopener,noreferrer');
-        addNotification('Wave payment page opened. Complete payment, then come back to check status.', 'success');
+        const popup = window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        if (!popup) {
+          window.location.assign(paymentUrl);
+        }
+        addNotification('Redirecting to Wave payment page…', 'info');
       } else {
         addNotification('Subscription payment initiated. Please confirm the prompt on your phone.', 'success');
       }
@@ -813,12 +820,19 @@ const AgencyDirectorDashboard = () => {
   // Annual subscription handler
   const handlePayAnnualSubscription = async (e) => {
     e.preventDefault();
+    if (subscriptionForm.provider === 'om' && !subscriptionForm.otp.trim()) {
+      addNotification('OTP is required for Orange Money payments', 'error');
+      return;
+    }
     try {
       const result = await agencyDirectorService.payAnnualSubscriptionViaMoMo(subscriptionForm);
       const paymentUrl = result?.response?.payment_url;
       if (subscriptionForm.provider === 'wave' && paymentUrl) {
-        window.open(paymentUrl, '_blank', 'noopener,noreferrer');
-        addNotification('Wave payment page opened. Complete payment, then come back to check status.', 'success');
+        const popup = window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        if (!popup) {
+          window.location.assign(paymentUrl);
+        }
+        addNotification('Redirecting to Wave payment page…', 'info');
       } else {
         addNotification('Annual subscription payment initiated. Please confirm the prompt on your phone.', 'success');
       }
