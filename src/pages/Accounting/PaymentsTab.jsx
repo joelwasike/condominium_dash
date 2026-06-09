@@ -256,7 +256,7 @@ const PaymentsTab = (props) => {
             <table className="sa-table">
               <thead>
                 <tr>
-                  <th>Type</th><th>Tenant/Buyer</th><th>Property/Building</th><th>Landlord</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Date</th><th className="table-menu"></th>
+                  <th>Type</th><th>Tenant/Buyer</th><th>Property/Building</th><th>Landlord</th><th>Amount</th><th>Payment Method</th><th>Date</th><th className="table-menu"></th>
                 </tr>
               </thead>
               <tbody>
@@ -275,7 +275,6 @@ const PaymentsTab = (props) => {
                         <td>{ownerName}</td>
                         <td>{collection.Amount?.toFixed(2) || '0.00'} XOF</td>
                         <td>{collection.PaymentMethod || collection.Method || 'Cash'}</td>
-                        <td><span className={`sa-status-pill ${(collection.Status || 'unknown').toLowerCase()}`}>{collection.Status || 'Unknown'}</span></td>
                         <td>{collection.Date ? new Date(collection.Date).toLocaleDateString() : 'N/A'}</td>
                         <td className="table-menu">
                           <div className="sa-row-actions">
@@ -298,7 +297,6 @@ const PaymentsTab = (props) => {
                       <td>{ownerName}</td>
                       <td>{payment.Amount?.toFixed(2) || '0.00'} XOF</td>
                       <td>{payment.Method || payment.PaymentMethod || 'N/A'}</td>
-                      <td><span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>{payment.Status || 'Unknown'}</span></td>
                       <td>{payment.Date ? new Date(payment.Date).toLocaleDateString() : 'N/A'}</td>
                       <td className="table-menu">
                         <div className="sa-row-actions">

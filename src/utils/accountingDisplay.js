@@ -17,7 +17,7 @@ export const normalizeAmount = (value) => {
 };
 
 export const formatOwnerName = (item, fallback = 'N/A') => (
-  readField(item, ['Landlord', 'landlord', 'Owner', 'owner', 'OwnerName', 'ownerName'], fallback) || fallback
+  readField(item, ['Owner', 'owner', 'OwnerName', 'ownerName', 'Landlord', 'landlord'], fallback) || fallback
 );
 
 export const formatTenantName = (item, fallback = 'N/A') => (
@@ -25,13 +25,14 @@ export const formatTenantName = (item, fallback = 'N/A') => (
 );
 
 export const formatPropertyBuilding = (item, fallback = 'N/A') => {
-  const property = readField(item, ['Property', 'property'], '');
-  const building = readField(item, ['Building', 'building'], '');
-  if (!property && !building) return fallback;
-  if (property && building && normalizeText(property) !== normalizeText(building)) {
-    return `${property} / ${building}`;
+  const unit = readField(item, ['Unit', 'unit', 'UnitName', 'unitName', 'UnitNumber', 'unitNumber', 'Apartment', 'apartment'], '');
+  const property = readField(item, ['Property', 'property', 'Building', 'building', 'Address', 'address'], '');
+
+  if (!unit && !property) return fallback;
+  if (unit && property && normalizeText(unit) !== normalizeText(property)) {
+    return `${unit} / ${property}`;
   }
-  return property || building || fallback;
+  return unit || property || fallback;
 };
 
 export const formatDateValue = (value) => {
