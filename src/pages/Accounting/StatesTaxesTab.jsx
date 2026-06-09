@@ -14,9 +14,21 @@ const readField = (item, keys, fallback = '') => {
   return fallback;
 };
 
-const formatDailyReportPropertyLabel = (item, fallback = '') => {
-  const unit = String(readField(item, ['UnitNumber', 'unitNumber', 'UnitName', 'unitName', 'Unit', 'unit', 'Apartment', 'apartment'], '')).trim();
-  const property = String(readField(item, ['Property', 'property', 'Building', 'building', 'Address', 'address'], '')).trim();
+const sanitizeLabelPart = (value) => String(value || '').trim().replace(/[\s\-\/·]+$/g, '').trim();
+
+const formatDailyReportPropertyLabel = (item, fallback = '', relatedTenant = null) => {
+  const unit = sanitizeLabelPart(readField(item, ['UnitNumber', 'unitNumber', 'UnitName', 'unitName', 'Unit', 'unit', 'Apartment', 'apartment', 'Room', 'room'], ''));
+  const property = sanitizeLabelPart(
+    readField(
+      item,
+      ['PropertyName', 'propertyName', 'BuildingName', 'buildingName', 'Property', 'property', 'Building', 'building', 'Address', 'address'],
+      ''
+    ) || readField(
+      relatedTenant,
+      ['PropertyName', 'propertyName', 'BuildingName', 'buildingName', 'Property', 'property', 'Building', 'building', 'Address', 'address'],
+      ''
+    )
+  );
 
   if (unit && property) return `${unit}-${property}`;
   return unit || property || fallback;
@@ -70,6 +82,15 @@ const StatesTaxesTab = (props) => {
     const tenantRows = Array.isArray(tenants) ? tenants : [];
     const paymentRows = Array.isArray(tenantPayments) ? tenantPayments : [];
     const propertyMap = new Map();
+    const tenantLookup = new Map();
+
+    tenantRows.forEach((tenant) => {
+      const name = sanitizeLabelPart(formatTenantName(tenant, ''));
+      if (!name) return;
+      if (!tenantLookup.has(normalizeText(name))) {
+        tenantLookup.set(normalizeText(name), tenant);
+      }
+    });
 
     tenantRows.forEach((tenant, index) => {
       const propertyLabel = formatDailyReportPropertyLabel(tenant, '').trim();
@@ -113,11 +134,12 @@ const StatesTaxesTab = (props) => {
         return;
       }
 
-      const propertyLabel = formatDailyReportPropertyLabel(payment, '').trim();
+      const tenantName = formatTenantName(payment, '').trim();
+      const relatedTenant = tenantLookup.get(normalizeText(tenantName)) || null;
+      const propertyLabel = formatDailyReportPropertyLabel(payment, '', relatedTenant).trim();
       if (!propertyLabel) return;
 
       const key = normalizeText(propertyLabel);
-      const tenantName = formatTenantName(payment, '').trim();
       const paidKey = `${key}::${normalizeText(tenantName || payment?.ID || payment?.id || index)}`;
       const amount = normalizeAmount(payment?.Amount ?? payment?.amount ?? 0);
 
