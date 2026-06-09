@@ -59,6 +59,8 @@ const PropertyManagementTab = ({
   setShowPropertyImportModal,
   setPropertyImportFile,
   setSelectedPropertyType,
+  propertyCategoryFilter,
+  setPropertyCategoryFilter,
   setCreatePropertyImages,
   setSelectedPropertyDetail,
   openEditPropertyModal,
@@ -78,6 +80,18 @@ const PropertyManagementTab = ({
 
   const getPropertyOwnerId = (property) => property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
   const getOwnerId = (owner) => owner.id || owner.ID;
+  const normalizeCategory = (value) => (value || '').toString().trim().toLowerCase();
+  const matchesCategory = (property) => {
+    if (!propertyCategoryFilter) return true;
+    const propertyType = normalizeCategory(property.PropertyType || property.propertyType);
+    if (propertyCategoryFilter === 'sale') return propertyType === 'for sale';
+    if (propertyCategoryFilter === 'rent') return propertyType !== 'for sale';
+    return true;
+  };
+  const getPropertyCategoryLabel = (property) => {
+    const propertyType = normalizeCategory(property.PropertyType || property.propertyType);
+    return propertyType === 'for sale' ? 'For sell' : 'For rent';
+  };
 
   const toggleSelectMany = (ids) => {
     setSelectedPropertyIds((prev) => {
@@ -279,7 +293,7 @@ const PropertyManagementTab = ({
 
   // Owner assets view
   if (pmView === 'owner-detail' && ownerAssets) {
-    const assets = ownerAssets.assets || [];
+    const assets = (ownerAssets.assets || []).filter(matchesCategory);
     const assetIds = assets.map((a) => a.id ?? a.ID).filter((id) => id != null);
     const allSelected = assetIds.length > 0 && assetIds.every((id) => selectedPropertyIds.includes(id));
 
@@ -308,6 +322,11 @@ const PropertyManagementTab = ({
           <button type="button" style={btnPrimary} onClick={() => setShowAddApartmentModal(true)}>ADD APPARTMENT</button>
           <button type="button" style={btnPrimary} onClick={() => setShowAddVillaModal(true)}>ADD VILLA</button>
           <button type="button" style={btnPrimary} onClick={() => setShowAddLandModal(true)}>ADD LAND</button>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
+          <button type="button" style={filterBtn(!propertyCategoryFilter)} onClick={() => setPropertyCategoryFilter('')}>All Properties</button>
+          <button type="button" style={filterBtn(propertyCategoryFilter === 'rent')} onClick={() => setPropertyCategoryFilter('rent')}>For Rent</button>
+          <button type="button" style={filterBtn(propertyCategoryFilter === 'sale')} onClick={() => setPropertyCategoryFilter('sale')}>For Sale</button>
         </div>
         {pmLoading && <p style={{ marginTop: 8, color: '#64748b' }}>Loading...</p>}
         <div style={{ ...card, marginTop: '20px' }}>
@@ -345,7 +364,7 @@ const PropertyManagementTab = ({
                     <td style={tdStyle}>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice ?? '—'}</td>
                     <td style={tdStyle}>{row.location || row.localisation || '—'}</td>
                     <td style={tdStyle}>{row.occupancy ?? '—'}</td>
-                    <td style={tdStyle}>{row.statut ?? '—'}</td>
+                    <td style={tdStyle}>{row.statut ?? getPropertyCategoryLabel(row)}</td>
                     <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button type="button" style={actionBtn('#3b82f6')} onClick={async () => {
@@ -401,7 +420,7 @@ const PropertyManagementTab = ({
   }
 
   // Property Management entry - owners list
-  const unassignedProperties = properties.filter((p) => !getPropertyOwnerId(p));
+  const unassignedProperties = properties.filter((p) => !getPropertyOwnerId(p) && matchesCategory(p));
   const unassignedIds = unassignedProperties.map((p) => p.id ?? p.ID).filter((id) => id != null);
   const allUnassignedSelected = unassignedIds.length > 0 && unassignedIds.every((id) => selectedPropertyIds.includes(id));
   return (
@@ -420,6 +439,12 @@ const PropertyManagementTab = ({
             <input type="text" placeholder="Search by member name" value={propertyManagementSearch} onChange={(e) => setPropertyManagementSearch(e.target.value)} style={{ ...searchBar, paddingLeft: '36px' }} />
           </div>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <button type="button" style={filterBtn(!propertyCategoryFilter)} onClick={() => setPropertyCategoryFilter('')}>All Properties</button>
+        <button type="button" style={filterBtn(propertyCategoryFilter === 'rent')} onClick={() => setPropertyCategoryFilter('rent')}>For Rent</button>
+        <button type="button" style={filterBtn(propertyCategoryFilter === 'sale')} onClick={() => setPropertyCategoryFilter('sale')}>For Sale</button>
       </div>
 
       <div style={card}>
