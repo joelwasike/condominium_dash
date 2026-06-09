@@ -1,7 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
-import { formatPropertyBuilding, formatTenantName, normalizeAmount, normalizeText } from '../../utils/accountingDisplay';
+import { formatTenantName, normalizeAmount, normalizeText } from '../../utils/accountingDisplay';
+
+const readField = (item, keys, fallback = '') => {
+  if (!item) return fallback;
+  for (const key of keys) {
+    const value = item[key];
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+  return fallback;
+};
+
+const formatDailyReportPropertyLabel = (item, fallback = '') => {
+  const unit = String(readField(item, ['UnitNumber', 'unitNumber', 'UnitName', 'unitName', 'Unit', 'unit', 'Apartment', 'apartment'], '')).trim();
+  const property = String(readField(item, ['Property', 'property', 'Building', 'building', 'Address', 'address'], '')).trim();
+
+  if (unit && property) return `${unit}-${property}`;
+  return unit || property || fallback;
+};
 
 const getMonthRange = (month) => {
   if (!month || !/^\d{4}-\d{2}$/.test(month)) return null;
@@ -53,7 +72,7 @@ const StatesTaxesTab = (props) => {
     const propertyMap = new Map();
 
     tenantRows.forEach((tenant, index) => {
-      const propertyLabel = formatPropertyBuilding(tenant, '').trim();
+      const propertyLabel = formatDailyReportPropertyLabel(tenant, '').trim();
       if (!propertyLabel) return;
 
       const key = normalizeText(propertyLabel);
@@ -94,7 +113,7 @@ const StatesTaxesTab = (props) => {
         return;
       }
 
-      const propertyLabel = formatPropertyBuilding(payment, '').trim();
+      const propertyLabel = formatDailyReportPropertyLabel(payment, '').trim();
       if (!propertyLabel) return;
 
       const key = normalizeText(propertyLabel);
