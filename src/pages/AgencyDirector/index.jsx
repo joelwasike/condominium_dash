@@ -707,6 +707,7 @@ const AgencyDirectorDashboard = () => {
       const result = await agencyDirectorService.paySubscriptionViaMoMo(subscriptionForm);
       const paymentUrl = result?.response?.payment_url;
       if (subscriptionForm.provider === 'wave' && paymentUrl) {
+        // Some browsers block popups after an awaited network call; fallback to same-tab redirect.
         const popup = window.open(paymentUrl, '_blank', 'noopener,noreferrer');
         if (!popup) {
           window.location.assign(paymentUrl);
@@ -828,6 +829,7 @@ const AgencyDirectorDashboard = () => {
       const result = await agencyDirectorService.payAnnualSubscriptionViaMoMo(subscriptionForm);
       const paymentUrl = result?.response?.payment_url;
       if (subscriptionForm.provider === 'wave' && paymentUrl) {
+        // Some browsers block popups after an awaited network call; fallback to same-tab redirect.
         const popup = window.open(paymentUrl, '_blank', 'noopener,noreferrer');
         if (!popup) {
           window.location.assign(paymentUrl);
