@@ -159,18 +159,65 @@ const LandlordDashboard = () => {
     const units = property?.units ?? property?.Units ?? property?.apartments ?? property?.Apartments ?? [];
     return Array.isArray(units) ? units : [];
   };
+  const getPropertyTotalUnits = (property) => {
+    const rawTotal = readValue(
+      property?.numberOfUnits,
+      property?.NumberOfUnits,
+      property?.apartmentsDisplay,
+      property?.ApartmentsDisplay,
+      property?.occupancy,
+      property?.Occupancy,
+      property?.totalUnits,
+      property?.TotalUnits,
+      property?.unitsCount,
+      property?.UnitsCount
+    );
+    if (typeof rawTotal === 'string' && rawTotal.includes('/')) {
+      const [, totalPart] = rawTotal.split('/');
+      return Math.max(0, Number.parseInt(totalPart, 10) || 0);
+    }
+    return Math.max(0, Number(rawTotal) || 0);
+  };
   const isOccupiedUnit = (unit) => {
     const status = normalizeText(readValue(unit?.status, unit?.Status, unit?.statut));
-    return status === 'occupied' || status === 'leased' || status === 'tenanted' || Boolean(readValue(unit?.tenant, unit?.Tenant));
+    if (['vacant', 'empty', 'available', 'unoccupied', 'free'].includes(status)) {
+      return false;
+    }
+    return (
+      status.includes('occupied') ||
+      status.includes('leased') ||
+      status.includes('tenanted') ||
+      status.includes('partial') ||
+      status.includes('rented') ||
+      Boolean(readValue(unit?.tenant, unit?.Tenant))
+    );
   };
   const getPropertyOccupancyStats = (property) => {
     const units = getPropertyUnits(property);
     const totalUnits = units.length > 0
       ? units.length
-      : Math.max(1, Number(property?.apartmentsDisplay ?? property?.apartments ?? property?.NumberOfUnits ?? property?.numberOfUnits ?? property?.unitsCount ?? 1) || 1);
+      : Math.max(1, getPropertyTotalUnits(property) || 1);
     const occupiedUnits = units.length > 0
       ? units.reduce((count, unit) => count + (isOccupiedUnit(unit) ? 1 : 0), 0)
-      : (normalizeText(readValue(property?.Status, property?.status, property?.statut)) === 'occupied' || Boolean(readValue(property?.tenant, property?.Tenant)) ? 1 : 0);
+      : (() => {
+          const filledUnits = normalizeAmount(readValue(
+            property?.filledUnits,
+            property?.FilledUnits,
+            property?.occupiedUnits,
+            property?.OccupiedUnits,
+            property?.occupantCount,
+            property?.OccupantCount
+          ));
+          if (filledUnits > 0) return filledUnits;
+          const occupancy = readValue(property?.occupancy, property?.Occupancy);
+          if (typeof occupancy === 'string' && occupancy.includes('/')) {
+            const [filledPart] = occupancy.split('/');
+            const parsedFilled = Number.parseInt(filledPart, 10);
+            if (!Number.isNaN(parsedFilled)) return parsedFilled;
+          }
+          const status = normalizeText(readValue(property?.Status, property?.status, property?.statut));
+          return (status === 'occupied' || Boolean(readValue(property?.tenant, property?.Tenant))) ? 1 : 0;
+        })();
     const safeOccupiedUnits = Math.min(occupiedUnits, totalUnits);
     const vacantUnits = Math.max(0, totalUnits - safeOccupiedUnits);
     return {
@@ -237,7 +284,54 @@ const LandlordDashboard = () => {
   ));
   const getTenantMonthlyRent = (tenant) => normalizeAmount(readValue(tenant?.MonthlyRent, tenant?.monthlyRent, tenant?.Amount, tenant?.amount, tenant?.rent, tenant?.Rent));
   const getTenantPaymentStatus = (tenant) => normalizeText(readValue(tenant?.PaymentStatus, tenant?.paymentStatus, tenant?.Status, tenant?.status));
+  const getPaymentStatus = (payment) => normalizeText(readValue(payment?.status, payment?.Status, payment?.paymentStatus, payment?.PaymentStatus));
   const getStatusClassName = (value, fallback = 'active') => normalizeText(value).replace(/\s+/g, '-') || fallback;
+  const getTenantPropertyName = (tenant) => readValue(
+    tenant?.Property,
+    tenant?.property,
+    tenant?.Building,
+    tenant?.building,
+    tenant?.BuildingName,
+    tenant?.buildingName
+  ) || 'N/A';
+  const getTenantApartmentLabel = (tenant) => {
+    const propertyName = readValue(
+      tenant?.Property,
+      tenant?.property,
+      tenant?.Building,
+      tenant?.building,
+      tenant?.BuildingName,
+      tenant?.buildingName
+    );
+    const buildingName = readValue(tenant?.Building, tenant?.building, tenant?.BuildingName, tenant?.buildingName);
+    const apartmentName = readValue(
+      tenant?.Apartment,
+      tenant?.apartment,
+      tenant?.Unit,
+      tenant?.unit,
+      tenant?.UnitNumber,
+      tenant?.unitNumber
+    );
+    if (propertyName && apartmentName) return `${propertyName} App ${apartmentName}`;
+    if (propertyName && buildingName && normalizeText(propertyName) !== normalizeText(buildingName)) return `${propertyName} ${buildingName}`;
+    return apartmentName ? `App ${apartmentName}` : (propertyName || buildingName || '—');
+  };
+  const getUnitStatusStyle = (status, isOverdue = false) => {
+    const normalized = normalizeText(status);
+    if (isOverdue || normalized.includes('overdue') || normalized.includes('late') || normalized.includes('arrears')) {
+      return { color: '#b91c1c', backgroundColor: '#fef2f2', borderColor: '#fecaca' };
+    }
+    if (normalized.includes('occupied') || normalized.includes('leased') || normalized.includes('tenanted') || normalized.includes('rented')) {
+      return { color: '#166534', backgroundColor: '#dcfce7', borderColor: '#bbf7d0' };
+    }
+    if (normalized.includes('partial')) {
+      return { color: '#c2410c', backgroundColor: '#ffedd5', borderColor: '#fed7aa' };
+    }
+    if (normalized.includes('pending') || normalized.includes('due')) {
+      return { color: '#1d4ed8', backgroundColor: '#dbeafe', borderColor: '#bfdbfe' };
+    }
+    return { color: '#475569', backgroundColor: '#f1f5f9', borderColor: '#e2e8f0' };
+  };
   const getTenantTotalToPay = (tenant) => {
     const status = getTenantPaymentStatus(tenant);
     if (status === 'up-to-date' || status === 'uptodate' || status === 'paid') return 0;
@@ -250,19 +344,6 @@ const LandlordDashboard = () => {
       return Math.max(0, (monthlyRent * monthsInArrears) - rentInAdvance);
     }
     return 0;
-  };
-  const getTenantApartmentLabel = (tenant) => {
-    const propertyLabel = readValue(tenant?.Property, tenant?.property);
-    const buildingLabel = readValue(tenant?.Building, tenant?.building, tenant?.BuildingName, tenant?.buildingName);
-    const apartmentLabel = readValue(
-      tenant?.Apartment,
-      tenant?.apartment,
-      tenant?.Unit,
-      tenant?.unit,
-      tenant?.UnitNumber,
-      tenant?.unitNumber
-    );
-    return [propertyLabel, buildingLabel, apartmentLabel].filter(Boolean).join(' ') || '—';
   };
   const isAgencyAdminRole = (role) => {
     const normalized = normalizeText(role);
@@ -1092,14 +1173,28 @@ const LandlordDashboard = () => {
       };
     });
     const totalProps = propertyRows.length || normalizeAmount(overviewData?.totalPropertiesUnderManagement);
-    const occupiedProps = propertyRows.filter((row) => {
-      const status = normalizeText(row.status);
-      return status === 'occupied' || status === 'partially occupied' || status === 'occupied / partial' || row.occupancy.occupiedUnits > 0;
-    }).length;
-    const occupancyRate = totalProps > 0 ? ((occupiedProps / totalProps) * 100).toFixed(1) : '0.0';
+    const totalUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.totalUnits, 0) || normalizeAmount(overviewData?.totalUnits);
+    const occupiedUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.occupiedUnits, 0) || normalizeAmount(overviewData?.occupiedUnits);
+    const vacantUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.vacantUnits, 0) || normalizeAmount(overviewData?.vacantUnits);
+    const occupancyRate = totalUnits > 0 ? ((occupiedUnits / totalUnits) * 100).toFixed(1) : '0.0';
+    const activeTenantSignatures = new Set();
     const activeTenantsCount = tenants.filter((tenant) => {
       const status = normalizeText(readValue(tenant?.status, tenant?.Status, tenant?.paymentStatus, tenant?.PaymentStatus));
-      return !['inactive', 'waiting list', 'waitinglist', 'vacant'].includes(status);
+      if (['inactive', 'waiting list', 'waitinglist', 'vacant'].includes(status)) {
+        return false;
+      }
+      const signature = [
+        normalizeText(readValue(tenant?.email, tenant?.Email)),
+        normalizeText(readValue(tenant?.name, tenant?.Name)),
+        normalizeText(readValue(tenant?.property, tenant?.Property)),
+        normalizeText(readValue(tenant?.phone, tenant?.Phone)),
+        normalizeText(readValue(tenant?.source, tenant?.Source)),
+      ].join('|');
+      if (activeTenantSignatures.has(signature)) {
+        return false;
+      }
+      activeTenantSignatures.add(signature);
+      return true;
     }).length;
 
     const cashflowRows = (rows, amountKeys) => {
@@ -1125,8 +1220,17 @@ const LandlordDashboard = () => {
         : Array.isArray(netPayments?.data)
           ? netPayments.data
           : [];
-    const collectedSeries = cashflowRows(paymentRows, ['amount', 'Amount', 'paidAmount', 'PaidAmount', 'netAmount', 'NetAmount']);
-    const payoutSeries = cashflowRows(netPaymentRows, ['amount', 'Amount', 'netAmount', 'NetAmount', 'payout', 'Payout']);
+    const collectedPaymentRows = paymentRows.filter((row) => {
+      const chargeType = normalizeText(readValue(row?.chargeType, row?.ChargeType, row?.type, row?.Type, row?.category, row?.Category));
+      const status = getPaymentStatus(row);
+      return chargeType === 'rent' && (!status || ['approved', 'successful', 'completed', 'paid', 'collected'].includes(status));
+    });
+    const payoutRows = netPaymentRows.filter((row) => {
+      const status = normalizeText(readValue(row?.status, row?.Status, row?.paymentStatus, row?.PaymentStatus));
+      return !status || ['paid', 'completed', 'successful', 'approved'].includes(status);
+    });
+    const collectedSeries = cashflowRows(collectedPaymentRows.length > 0 ? collectedPaymentRows : paymentRows, ['amount', 'Amount', 'paidAmount', 'PaidAmount', 'netAmount', 'NetAmount']);
+    const payoutSeries = cashflowRows(payoutRows, ['amount', 'Amount', 'netAmount', 'NetAmount', 'payout', 'Payout']);
     const chartSeriesMap = new Map();
     [...collectedSeries.map((row) => ({ ...row, kind: 'rent' })), ...payoutSeries.map((row) => ({ ...row, kind: 'payout' }))].forEach((row) => {
       const key = normalizeText(row.month);
@@ -1140,6 +1244,9 @@ const LandlordDashboard = () => {
     const chartData = [...chartSeriesMap.values()].sort((a, b) => (a._index ?? 0) - (b._index ?? 0));
     const totalRentCollected = chartData.reduce((sum, row) => sum + (row.rent || 0), 0) || normalizeAmount(overviewData?.totalRentCollected);
     const totalNetPayoutReceived = chartData.reduce((sum, row) => sum + (row.payout || 0), 0) || normalizeAmount(overviewData?.totalNetPayoutReceived);
+    const paymentRate = paymentRows.length > 0
+      ? (collectedPaymentRows.length / paymentRows.length) * 100
+      : normalizeAmount(overviewData?.paymentRate);
 
     return (
       <div className="sa-overview-page">
@@ -1408,8 +1515,12 @@ const LandlordDashboard = () => {
           <div style={{ padding: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('properties')}>
-                <p className="sa-metric-label">Occupied Properties</p>
-                <p className="sa-metric-value">{overviewData?.occupiedProperties ?? occupiedProps}</p>
+                <p className="sa-metric-label">Occupied Units</p>
+                <p className="sa-metric-value">{occupiedUnits}</p>
+            </div>
+              <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('properties')}>
+                <p className="sa-metric-label">Vacant Units</p>
+                <p className="sa-metric-value">{vacantUnits}</p>
             </div>
               <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('properties')}>
                 <p className="sa-metric-label">Occupancy Rate</p>
@@ -1417,7 +1528,7 @@ const LandlordDashboard = () => {
             </div>
               <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('payments')}>
                 <p className="sa-metric-label">Payment Rate</p>
-                <p className="sa-metric-value">{overviewData?.paymentRate || 0}%</p>
+                <p className="sa-metric-value">{Number(paymentRate || 0).toFixed(1)}%</p>
           </div>
             </div>
             </div>
@@ -1531,7 +1642,7 @@ const LandlordDashboard = () => {
                       <td style={{ color: unpaidRents > 0 ? '#dc2626' : '#6b7280', fontWeight: unpaidRents > 0 ? 600 : 400 }}>{unpaidRents}</td>
                       <td style={{ color: rentInAdvance > 0 ? '#059669' : '#6b7280', fontWeight: rentInAdvance > 0 ? 600 : 400 }}>{rentInAdvance.toLocaleString()} XOF</td>
                       <td>
-                        <span className={`sa-status-pill ${isOverdue ? 'overdue' : getStatusClassName(statusLabel, 'vacant')}`} style={isOverdue ? { color: '#b91c1c', backgroundColor: '#fef2f2', borderColor: '#fecaca' } : undefined}>
+                        <span className={`sa-status-pill ${isOverdue ? 'overdue' : getStatusClassName(statusLabel, 'vacant')}`} style={getUnitStatusStyle(statusLabel, isOverdue)}>
                           {isOverdue ? 'Overdue' : statusLabel}
                         </span>
                       </td>
@@ -1612,7 +1723,7 @@ const LandlordDashboard = () => {
                       <td style={{ color: unpaidRents > 0 ? '#dc2626' : '#6b7280', fontWeight: unpaidRents > 0 ? 600 : 400 }}>{unpaidRents}</td>
                       <td style={{ color: rentInAdvance > 0 ? '#059669' : '#6b7280', fontWeight: rentInAdvance > 0 ? 600 : 400 }}>{rentInAdvance.toLocaleString()} XOF</td>
                       <td>
-                        <span className={`sa-status-pill ${isOverdue ? 'overdue' : getStatusClassName(statusLabel, 'vacant')}`} style={isOverdue ? { color: '#b91c1c', backgroundColor: '#fef2f2', borderColor: '#fecaca' } : undefined}>
+                        <span className={`sa-status-pill ${isOverdue ? 'overdue' : getStatusClassName(statusLabel, 'vacant')}`} style={getUnitStatusStyle(statusLabel, isOverdue)}>
                           {isOverdue ? 'Overdue' : statusLabel}
                         </span>
                       </td>
@@ -1959,7 +2070,6 @@ const LandlordDashboard = () => {
                   const rentInAdvance = getTenantRentInAdvance(tenant);
                   const totalToPay = getTenantTotalToPay(tenant);
                   const monthsInArrears = getTenantMonthsInArrears(tenant);
-                  const apartmentLabel = getTenantApartmentLabel(tenant);
                   const paymentStatus = getTenantPaymentStatus(tenant);
                   const statusLabel = paymentStatus === 'up-to-date' || paymentStatus === 'uptodate' || paymentStatus === 'paid'
                     ? 'Up to date'
@@ -1975,8 +2085,8 @@ const LandlordDashboard = () => {
                     >
                       <td>{index + 1}</td>
                       <td className="sa-cell-main"><span className="sa-cell-title">{tenantName}</span></td>
-                      <td>{formatPropertyBuilding(tenant, tenant.property ?? tenant.Property ?? 'N/A')}</td>
-                      <td>{apartmentLabel}</td>
+                      <td>{getTenantPropertyName(tenant)}</td>
+                      <td>{getTenantApartmentLabel(tenant)}</td>
                       <td>{formatDateValue(entryDate)}</td>
                       <td>{normalizeAmount(readValue(tenant.amount, tenant.Amount, tenant.MonthlyRent, tenant.monthlyRent)).toLocaleString()} XOF</td>
                       <td style={{ color: rentInAdvance > 0 ? '#059669' : '#6b7280', fontWeight: rentInAdvance > 0 ? 600 : 400 }}>{rentInAdvance.toLocaleString()} XOF</td>
@@ -3325,25 +3435,70 @@ const LandlordDashboard = () => {
       loadChatForUser={loadChatForUser}
       handleSendMessage={handleSendMessage}
       messagesEndRef={messagesEndRef}
+      hideGroups
     />
   );
       
   const renderBusinessTracking = () => {
-    const revenueByMonth = Array.isArray(businessTracking?.revenueByMonth) ? businessTracking.revenueByMonth : [];
-    const expensesByMonth = Array.isArray(businessTracking?.expensesByMonth) ? businessTracking.expensesByMonth : [];
-    const occupancyByMonth = Array.isArray(businessTracking?.occupancyByMonth) ? businessTracking.occupancyByMonth : [];
+    const propertyRows = properties.map((property) => ({
+      property,
+      occupancy: getPropertyOccupancyStats(property),
+    }));
+    const totalProperties = propertyRows.length;
+    const totalUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.totalUnits, 0);
+    const occupiedUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.occupiedUnits, 0);
+    const currentOccupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : null;
+
+    const paymentRows = Array.isArray(payments) ? payments : [];
+    const expenseRows = Array.isArray(expenses) ? expenses : [];
+    const approvedRentPayments = dedupeBySignature(paymentRows).filter((row) => {
+      const chargeType = normalizeText(readValue(row?.chargeType, row?.ChargeType, row?.type, row?.Type, row?.category, row?.Category));
+      const status = getPaymentStatus(row);
+      return chargeType === 'rent' && (!status || ['approved', 'successful', 'completed', 'paid', 'collected'].includes(status));
+    });
+    const relevantExpenses = dedupeBySignature(expenseRows);
+
+    const monthlySeries = (rows, amountKeys, kind) => {
+      const map = new Map();
+      rows.forEach((row, index) => {
+        const date = parseDateValue(readValue(row?.date, row?.Date, row?.createdAt, row?.CreatedAt, row?.paidAt, row?.PaidAt));
+        const month = date
+          ? date.toLocaleString(undefined, { month: 'short', year: 'numeric' })
+          : readValue(row?.month, row?.Month, row?.label, row?.Label, `Month ${index + 1}`);
+        const key = normalizeText(month) || `month-${index}`;
+        const entry = map.get(key) || { month, [kind]: 0, _index: index };
+        entry.month = entry.month || month;
+        entry._index = Math.min(entry._index ?? index, index);
+        entry[kind] += normalizeAmount(readValue(...amountKeys.map((field) => row?.[field])));
+        map.set(key, entry);
+      });
+      return [...map.values()].sort((a, b) => (a._index ?? 0) - (b._index ?? 0));
+    };
+
+    const revenueByMonth = monthlySeries(approvedRentPayments, ['amount', 'Amount', 'paidAmount', 'PaidAmount', 'netAmount', 'NetAmount'], 'revenue');
+    const expensesByMonth = monthlySeries(relevantExpenses, ['amount', 'Amount'], 'expenses');
+    const occupancyByMonth = Array.isArray(businessTracking?.occupancyByMonth) && businessTracking.occupancyByMonth.length > 0
+      ? businessTracking.occupancyByMonth
+      : Array.from({ length: Math.max(revenueByMonth.length, expensesByMonth.length, 6) }, (_, index) => ({
+          month: `Month ${index + 1}`,
+          rate: currentOccupancyRate,
+        }));
     const chartData = buildTrackingSeries(revenueByMonth, expensesByMonth, occupancyByMonth);
-    const totalRevenue = chartData.reduce((sum, row) => sum + normalizeAmount(row.revenue), 0) || normalizeAmount(businessTracking?.totalRevenue);
-    const maintenanceCosts = chartData.reduce((sum, row) => sum + normalizeAmount(row.expenses), 0) || normalizeAmount(businessTracking?.maintenanceCosts);
-    const occupancyRate = chartData.length > 0
-      ? chartData[chartData.length - 1].occupancy
-      : normalizeAmount(businessTracking?.occupancyRate);
-    const netProfit = totalRevenue - maintenanceCosts || normalizeAmount(businessTracking?.netProfit);
+    const revenueSum = revenueByMonth.reduce((sum, row) => sum + normalizeAmount(row.revenue), 0);
+    const expenseSum = expensesByMonth.reduce((sum, row) => sum + normalizeAmount(row.expenses), 0);
+    const totalRevenue = revenueByMonth.length > 0 ? revenueSum : normalizeAmount(businessTracking?.totalRevenue);
+    const maintenanceCosts = expensesByMonth.length > 0 ? expenseSum : normalizeAmount(businessTracking?.maintenanceCosts);
+    const occupancyRate = currentOccupancyRate !== null
+      ? currentOccupancyRate
+      : (chartData.length > 0 ? chartData[chartData.length - 1].occupancy : normalizeAmount(businessTracking?.occupancyRate));
+    const netProfit = revenueByMonth.length > 0 || expensesByMonth.length > 0
+      ? (totalRevenue - maintenanceCosts)
+      : normalizeAmount(businessTracking?.netProfit);
     const roi = maintenanceCosts > 0
       ? ((netProfit / maintenanceCosts) * 100)
       : normalizeAmount(businessTracking?.roi);
-    const latestRevenue = chartData.length > 0 ? chartData[chartData.length - 1].revenue : totalRevenue;
-    const previousRevenue = chartData.length > 1 ? chartData[chartData.length - 2].revenue : 0;
+    const latestRevenue = revenueByMonth.length > 0 ? revenueByMonth[revenueByMonth.length - 1].revenue : totalRevenue;
+    const previousRevenue = revenueByMonth.length > 1 ? revenueByMonth[revenueByMonth.length - 2].revenue : 0;
     const revenueTrends = previousRevenue > 0
       ? `${(((latestRevenue - previousRevenue) / previousRevenue) * 100).toFixed(1)}%`
       : (businessTracking?.revenueTrends ?? '+0%');

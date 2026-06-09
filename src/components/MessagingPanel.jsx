@@ -76,6 +76,7 @@ export default function MessagingPanel({
   loadChatForUser,
   handleSendMessage,
   messagesEndRef,
+  hideGroups = false,
 }) {
   const [search, setSearch] = useState('');
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
@@ -83,7 +84,7 @@ export default function MessagingPanel({
   const [groupMessages, setGroupMessages] = useState([]);
   const currentUserId = useMemo(() => getCurrentUserId(), []);
 
-  const isGroupSelected = selectedUserId && String(selectedUserId).startsWith('group:');
+  const isGroupSelected = !hideGroups && selectedUserId && String(selectedUserId).startsWith('group:');
   const selectedGroupId = isGroupSelected ? String(selectedUserId).replace('group:', '') : null;
   const selectedGroup = groups.find(g => g.groupId === selectedGroupId);
 
@@ -91,6 +92,10 @@ export default function MessagingPanel({
 
   // Load groups on mount
   useEffect(() => {
+    if (hideGroups) {
+      setGroups([]);
+      return;
+    }
     const loadGroups = async () => {
       try {
         const url = buildApiUrl('/api/messaging/groups');
@@ -99,7 +104,7 @@ export default function MessagingPanel({
       } catch {}
     };
     loadGroups();
-  }, []);
+  }, [hideGroups]);
 
   // Load group messages when a group is selected
   useEffect(() => {
@@ -115,6 +120,7 @@ export default function MessagingPanel({
   }, [isGroupSelected, selectedGroupId]);
 
   const handleSelectGroup = (groupId) => {
+    if (hideGroups) return;
     loadChatForUser('group:' + groupId);
     setMobileView('chat');
   };
@@ -212,7 +218,7 @@ export default function MessagingPanel({
         {/* User list */}
         <div style={s.userList}>
           {/* Pinned group chats */}
-          {groups.map(group => {
+          {!hideGroups && groups.map(group => {
             const active = selectedUserId === 'group:' + group.groupId;
             const isCompany = group.groupId === 'company';
             const borderColor = isCompany ? '#3b82f6' : '#10b981';

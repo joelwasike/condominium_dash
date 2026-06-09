@@ -163,6 +163,7 @@ const AgencyDirectorDashboard = () => {
   const [revenueByAgency, setRevenueByAgency] = useState([]);
   const [commissionsData, setCommissionsData] = useState({});
   const [allBuildingsReport, setAllBuildingsReport] = useState([]);
+  const [companyBuildings, setCompanyBuildings] = useState([]);
   const [unpaidRentReport, setUnpaidRentReport] = useState(null);
   const [reportFilters, setReportFilters] = useState({
     ownerId: '',
@@ -329,6 +330,27 @@ const AgencyDirectorDashboard = () => {
     };
   };
 
+  const getUniqueTenantCount = (tenantList) => {
+    const seen = new Set();
+    return (Array.isArray(tenantList) ? tenantList : []).filter((tenant) => {
+      const tenantStatus = normalizeText(getValue(tenant?.status, tenant?.Status, tenant?.statut));
+      if (tenantStatus && ['deleted', 'archived', 'inactive', 'removed'].includes(tenantStatus)) {
+        return false;
+      }
+      const tenantId = getRecordId(tenant);
+      const tenantEmail = normalizeText(getValue(tenant?.email, tenant?.Email));
+      const tenantName = normalizeText(getValue(tenant?.name, tenant?.Name));
+      const signature =
+        tenantId != null ? `id:${tenantId}` :
+        tenantEmail ? `email:${tenantEmail}` :
+        tenantName ? `name:${tenantName}` :
+        '';
+      if (!signature || seen.has(signature)) return false;
+      seen.add(signature);
+      return true;
+    }).length;
+  };
+
   const getTransactionDate = (record) => {
     const rawDate = getValue(record?.date, record?.Date, record?.createdAt, record?.CreatedAt, record?.updatedAt, record?.UpdatedAt);
     if (!rawDate) return null;
@@ -378,6 +400,9 @@ const AgencyDirectorDashboard = () => {
         setFinancialData(demoData.financial);
         setAccountingData(demoData.accounting);
         setLandlordPayments(demoData.landlordPayments);
+        setAllBuildingsReport(demoData.properties || []);
+        setCompanyBuildings(demoData.properties || []);
+        setTenants(demoData.tenants || []);
         setSubscriptionInfo(demoData.subscriptionInfo);
         setOwners(demoData.owners);
         setSuperAdmins([]);
@@ -386,22 +411,77 @@ const AgencyDirectorDashboard = () => {
         return;
       }
       
-      const [overview, usersData, propertiesData, financial, accounting, landlordPaymentsData, subscriptionStatusData] = await Promise.all([
+      const [overview, usersData, propertiesData, financial, accounting, landlordPaymentsData, subscriptionStatusData, buildingsReportData, tenantsData, collectionsData] = await Promise.all([
         agencyDirectorService.getOverview().catch(() => null),
         agencyDirectorService.getUsers().catch(() => []),
         agencyDirectorService.getProperties().catch(() => []),
         agencyDirectorService.getFinancialOverview().catch(() => null),
         agencyDirectorService.getAccountingOverview().catch(() => null),
         agencyDirectorService.getLandlordPayments().catch(() => []),
-        agencyDirectorService.getSubscriptionStatus().catch(() => null)
+        agencyDirectorService.getSubscriptionStatus().catch(() => null),
+        agencyDirectorService.getAllBuildingsReport().catch(() => []),
+        agencyDirectorService.getTenants().catch(() => []),
+        agencyDirectorService.getCollections().catch(() => [])
       ]);
+
+      const normalizedBuildingsReport = Array.isArray(buildingsReportData) ? buildingsReportData : [];
+      const normalizedProperties = Array.isArray(propertiesData) ? propertiesData : [];
+      const normalizedTenants = Array.isArray(tenantsData) ? tenantsData : [];
+      const normalizedCollections = Array.isArray(collectionsData)
+        ? collectionsData
+        : (Array.isArray(collectionsData?.collections) ? collectionsData.collections : []);
+
+      const totalCollections = normalizedCollections.reduce((sum, record) => {
+        const chargeType = normalizeText(getValue(record?.ChargeType, record?.chargeType, record?.type, record?.category));
+        if (chargeType && chargeType !== 'rent') return sum;
+        return sum + getNumericValue(record?.Amount, record?.amount, record?.total, record?.value, record);
+      }, 0);
+
+      const detailedBuildings = await Promise.all(normalizedBuildingsReport.map(async (building) => {
+        const buildingId = getRecordId(building);
+        let buildingDetailData = null;
+        if (buildingId != null) {
+          buildingDetailData = await agencyDirectorService.getPropertyBuildingDetail(buildingId).catch(() => null);
+        }
+
+        const matchingProperty = normalizedProperties.find((property) => {
+          const propertyId = getRecordId(property);
+          if (buildingId != null && propertyId != null && String(propertyId) === String(buildingId)) {
+            return true;
+          }
+          const propertyLabel = normalizeText(getPropertyLabel(property));
+          const buildingLabel = normalizeText(getPropertyLabel(building));
+          return propertyLabel && buildingLabel && propertyLabel === buildingLabel;
+        });
+
+        const source = buildingDetailData || matchingProperty || building;
+        const sourceUnits = getPropertyUnits(source);
+        const normalizedUnits = sourceUnits.map((unit) => ({
+          ...unit,
+          status: unit?.status ?? unit?.Status ?? unit?.statut ?? 'Vacant',
+        }));
+
+        return {
+          ...building,
+          ...(matchingProperty || {}),
+          ...(buildingDetailData || {}),
+          units: normalizedUnits.length > 0 ? normalizedUnits : getPropertyUnits(building),
+        };
+      }));
 
       setOverviewData(overview);
       setUsers(Array.isArray(usersData) ? usersData : []);
-      setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+      setProperties(normalizedProperties);
       setFinancialData(financial);
-      setAccountingData(accounting);
+      setAccountingData({
+        ...(accounting || {}),
+        collections: totalCollections,
+        rawCollections: normalizedCollections,
+      });
       setLandlordPayments(Array.isArray(landlordPaymentsData) ? landlordPaymentsData : []);
+      setAllBuildingsReport(normalizedBuildingsReport);
+      setCompanyBuildings(detailedBuildings);
+      setTenants(normalizedTenants);
       setSubscriptionInfo(subscriptionStatusData);
       
       // Fetch conversations to get super admins and other users who have messaged
@@ -1758,7 +1838,8 @@ const AgencyDirectorDashboard = () => {
     if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Loading overview data...</div>;
 
     const stats = overviewData || {};
-    const propertyStats = (properties || []).reduce((acc, property) => {
+    const overviewProperties = companyBuildings.length > 0 ? companyBuildings : properties;
+    const propertyStats = overviewProperties.reduce((acc, property) => {
       const occupancy = getPropertyOccupancyStats(property);
       acc.totalUnits += occupancy.totalUnits;
       acc.occupiedUnits += occupancy.occupiedUnits;
@@ -1775,10 +1856,10 @@ const AgencyDirectorDashboard = () => {
       }
       return acc;
     }, { totalUnits: 0, occupiedUnits: 0, vacantUnits: 0, activeTenants: new Set() });
-    const totalProperties = (properties?.length || stats.totalProperties || 0);
+    const totalProperties = (allBuildingsReport?.length || overviewProperties.length || stats.totalProperties || 0);
     const totalRentCollected = getNumericValue(accountingData?.collections, stats.totalRentCollected, financialData?.totalRevenue, 0);
-    const overallOccupancyRate = stats.overallOccupancyRate || (propertyStats.totalUnits > 0 ? (propertyStats.occupiedUnits / propertyStats.totalUnits * 100).toFixed(1) : 0);
-    const activeTenants = propertyStats.activeTenants.size || stats.numberOfActiveTenants || stats.activeTenants || 0;
+    const overallOccupancyRate = stats.overallOccupancyRate || (propertyStats.totalUnits > 0 ? (propertyStats.occupiedUnits / propertyStats.totalUnits) * 100 : 0);
+    const activeTenants = getUniqueTenantCount(tenants);
     const totalUnpaidRent = Number(getValue(stats.totalUnpaidRent, 0) || 0);
     const teamMembers = agencyUsers.length || stats.totalUsers || 0;
 

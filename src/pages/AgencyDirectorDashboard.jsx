@@ -916,6 +916,47 @@ const AgencyDirectorDashboard = () => {
     });
   }, [pendingPayments]);
 
+  const getPaymentPropertyLabel = (payment) => {
+    const directLabel = (
+      payment?.propertyName ||
+      payment?.PropertyName ||
+      payment?.buildingName ||
+      payment?.BuildingName ||
+      payment?.building ||
+      payment?.Building ||
+      payment?.property ||
+      payment?.Property ||
+      payment?.address ||
+      payment?.Address
+    );
+    const directText = String(directLabel || '').trim();
+    if (directText && directText !== '-' && directText !== '—') {
+      return directText;
+    }
+
+    const propertyId = payment?.propertyId || payment?.PropertyId || payment?.buildingId || payment?.BuildingId || payment?.propertyID || payment?.buildingID;
+    if (propertyId != null) {
+      const match = properties.find((prop) => String(prop.id || prop.ID) === String(propertyId));
+      if (match) {
+        return match.name || match.Name || match.address || match.Address || match.building || match.Building || 'N/A';
+      }
+    }
+
+    const propertyName = String(payment?.property || payment?.Property || '').trim();
+    if (propertyName && propertyName !== '-' && propertyName !== '—') {
+      const match = properties.find((prop) => {
+        const label = String(prop.name || prop.Name || prop.address || prop.Address || prop.building || prop.Building || '').trim();
+        return label && label.toLowerCase() === propertyName.toLowerCase();
+      });
+      if (match) {
+        return match.name || match.Name || match.address || match.Address || match.building || match.Building || propertyName;
+      }
+      return propertyName;
+    }
+
+    return 'N/A';
+  };
+
   // User management
   const handleOpenAddUser = () => {
     setEditingUser(null);
@@ -4209,7 +4250,7 @@ const AgencyDirectorDashboard = () => {
                 <tr>
                   <th>No</th>
                   <th>Tenant</th>
-                  <th>Property</th>
+                  <th>Building</th>
                   <th>Amount</th>
                   <th>Method</th>
                   <th>Charge Type</th>
@@ -4224,7 +4265,7 @@ const AgencyDirectorDashboard = () => {
                     <td className="sa-cell-main">
                       <span className="sa-cell-title">{payment.tenant || payment.Tenant || 'N/A'}</span>
                     </td>
-                    <td>{payment.property || payment.Property || 'N/A'}</td>
+                    <td>{getPaymentPropertyLabel(payment)}</td>
                     <td>{(payment.amount || payment.Amount || 0).toLocaleString()} XOF</td>
                     <td>{payment.method || payment.Method || 'N/A'}</td>
                     <td>{payment.chargeType || payment.ChargeType || 'N/A'}</td>
