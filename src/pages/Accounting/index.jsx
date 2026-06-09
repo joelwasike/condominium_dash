@@ -137,6 +137,7 @@ const AccountingDashboard = () => {
   const [showDepositRefundModal, setShowDepositRefundModal] = useState(false);
   const [depositPaymentForm, setDepositPaymentForm] = useState({
     tenant: '',
+    tenantId: '',
     property: '',
     tenantType: 'individual',
     monthlyRent: '',
@@ -189,6 +190,7 @@ const AccountingDashboard = () => {
     paymentType: 'rent',
     status: 'Collected',
     tenant: '',
+    tenantId: '',
     property: '',
     method: 'Cash',
     chargeType: 'Rent',
@@ -586,6 +588,18 @@ const AccountingDashboard = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCollectionPaymentModal, collectionPaymentType]);
+
+  useEffect(() => {
+    if (showDepositPaymentModal) {
+      accountingService.getDepositEligibleTenants()
+        .then((data) => setDepositEligibleTenants(Array.isArray(data) ? data : []))
+        .catch((error) => {
+          console.error('Error loading deposit eligible clients:', error);
+          setDepositEligibleTenants([]);
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDepositPaymentModal]);
 
   // Load properties when opening Add Expense modal
   useEffect(() => {
@@ -1042,7 +1056,7 @@ const AccountingDashboard = () => {
   };
 
   // Handle send message
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (channel = 'sms') => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
     const storedUser = localStorage.getItem('user');
@@ -1051,11 +1065,11 @@ const AccountingDashboard = () => {
     if (!currentUserId) { addNotification('Unable to identify current user. Please log in again.', 'error'); return; }
     const content = chatInput.trim();
     const tempMessageId = `temp-${Date.now()}`;
-    const optimisticMessage = { id: tempMessageId, ID: tempMessageId, fromUserId: currentUserId, toUserId: selectedUserId, content, createdAt: new Date().toISOString(), read: false, type: 'message' };
+    const optimisticMessage = { id: tempMessageId, ID: tempMessageId, fromUserId: currentUserId, toUserId: selectedUserId, content, channel, status: 'Sent', createdAt: new Date().toISOString(), read: false, type: 'message' };
     setChatMessages(prev => [...prev, optimisticMessage]);
     setChatInput('');
     try {
-      const sentMessage = await messagingService.sendMessage({ toUserId: selectedUserId, content });
+      const sentMessage = await messagingService.sendMessage({ toUserId: selectedUserId, content, channel });
       if (sentMessage && sentMessage.id) {
         setChatMessages(prev => prev.map(msg => msg.id === tempMessageId ? sentMessage : msg));
       } else {

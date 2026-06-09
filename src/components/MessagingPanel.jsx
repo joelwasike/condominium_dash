@@ -79,6 +79,7 @@ export default function MessagingPanel({
   hideGroups = false,
 }) {
   const [search, setSearch] = useState('');
+  const [messageChannel, setMessageChannel] = useState('sms');
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
   const [groups, setGroups] = useState([]);
   const [groupMessages, setGroupMessages] = useState([]);
@@ -140,8 +141,23 @@ export default function MessagingPanel({
     if (isGroupSelected) {
       handleSendGroupMessage();
     } else {
-      handleSendMessage();
+      handleSendMessage(messageChannel);
     }
+  };
+
+  const getMessageStatus = (msg, isOutgoing) => {
+    const raw = (msg.status || msg.Status || '').trim();
+    if (raw) return raw;
+    if (isOutgoing) return msg.read || msg.Read ? 'Delivered' : 'Sent';
+    return '';
+  };
+
+  const getStatusStyle = (status) => {
+    const key = String(status || '').toLowerCase();
+    if (key === 'delivered') return { backgroundColor: '#dcfce7', color: '#166534' };
+    if (key === 'failed') return { backgroundColor: '#fee2e2', color: '#b91c1c' };
+    if (key === 'sent') return { backgroundColor: '#dbeafe', color: '#1d4ed8' };
+    return { backgroundColor: '#f3f4f6', color: '#374151' };
   };
 
   const filteredUsers = useMemo(() => {
@@ -407,6 +423,7 @@ export default function MessagingPanel({
                     const fromId = msg.fromUserId;
                     const fromName = msg.fromName || 'Unknown';
                     const isOutgoing = String(fromId) === String(currentUserId);
+                    const status = getMessageStatus(msg, isOutgoing);
                     const id = msg.id || i;
 
                     return (
@@ -433,6 +450,11 @@ export default function MessagingPanel({
                           <span style={{ ...s.bubbleMeta, ...(isOutgoing ? s.bubbleMetaOut : {}) }}>
                             {formatFullTime(ts)}
                           </span>
+                          {isOutgoing && status && (
+                            <span style={{ ...s.statusPill, ...getStatusStyle(status) }}>
+                              {status}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -464,6 +486,7 @@ export default function MessagingPanel({
                     const ts = msg.createdAt || msg.CreatedAt || '';
                     const fromId = msg.fromUserId || msg.FromUserId;
                     const isOutgoing = String(fromId) === String(currentUserId);
+                    const status = getMessageStatus(msg, isOutgoing);
                     const id = msg.id || msg.ID || i;
 
                     return (
@@ -481,6 +504,11 @@ export default function MessagingPanel({
                           <span style={{ ...s.bubbleMeta, ...(isOutgoing ? s.bubbleMetaOut : {}) }}>
                             {formatFullTime(ts)}
                           </span>
+                          {isOutgoing && status && (
+                            <span style={{ ...s.statusPill, ...getStatusStyle(status) }}>
+                              {status}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -501,6 +529,17 @@ export default function MessagingPanel({
 
             {/* Input */}
             <div style={s.inputBar}>
+              {!isGroupSelected && (
+                <select
+                  value={messageChannel}
+                  onChange={e => setMessageChannel(e.target.value)}
+                  style={s.channelSelect}
+                >
+                  <option value="sms">SMS</option>
+                  <option value="email">Email</option>
+                  <option value="both">The two</option>
+                </select>
+              )}
               <input
                 type="text"
                 placeholder={selectedGroup ? `Message ${selectedGroup.name}...` : 'Type a message...'}
@@ -937,6 +976,17 @@ const s = {
   bubbleMetaOut: {
     color: 'rgba(255,255,255,0.7)',
   },
+  statusPill: {
+    display: 'inline-flex',
+    alignSelf: 'flex-end',
+    marginTop: '6px',
+    padding: '2px 8px',
+    borderRadius: '999px',
+    fontSize: '0.62rem',
+    fontWeight: 700,
+    letterSpacing: '0.03em',
+    textTransform: 'uppercase',
+  },
 
   /* Empty chat */
   emptyChat: {
@@ -979,6 +1029,19 @@ const s = {
     background: '#fff',
     borderTop: '1px solid #f1f5f9',
     flexShrink: 0,
+  },
+  channelSelect: {
+    minWidth: '112px',
+    height: '44px',
+    padding: '0 12px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '14px',
+    background: '#f8fafc',
+    color: '#334155',
+    fontSize: '0.86rem',
+    fontFamily: 'inherit',
+    outline: 'none',
+    boxSizing: 'border-box',
   },
   input: {
     flex: 1,

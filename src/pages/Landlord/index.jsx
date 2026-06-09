@@ -842,7 +842,7 @@ const LandlordDashboard = () => {
   }, [loadChatForUser]); // addNotification is stable, no need to include
 
   // Send message
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (channel = 'sms') => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
 
@@ -866,6 +866,8 @@ const LandlordDashboard = () => {
       fromUserId: currentUserId,
       toUserId: selectedUserId,
       content: content,
+      channel,
+      status: 'Sent',
       read: false,
       createdAt: new Date().toISOString(),
       type: 'message',
@@ -883,6 +885,7 @@ const LandlordDashboard = () => {
       const message = await messagingService.sendMessage({
         toUserId: selectedUserId,
         content: content,
+        channel,
       });
       
       // Replace temp message with actual message

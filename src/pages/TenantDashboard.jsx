@@ -1075,12 +1075,15 @@ const TenantDashboard = () => {
       return <div className="sa-table-empty">Loading overview data...</div>;
     }
 
-    const data = overviewData || {
-      lease: { property: '', endDate: '' },
-      nextRentDue: { amount: null, date: '' },
-      openMaintenanceTickets: 0,
-      tenant: ''
-    };
+  const data = overviewData || {
+    lease: { property: '', endDate: '' },
+    nextRentDue: { amount: null, date: '' },
+    openMaintenanceTickets: 0,
+    tenant: ''
+  };
+  const nextRentDueAmount = Number(data.nextRentDue?.amount ?? 0);
+  const leaseRentAmount = Number(data.lease?.rent ?? 0);
+  const displayNextRentDueAmount = nextRentDueAmount > 0 ? nextRentDueAmount : leaseRentAmount;
 
     // Calculate open maintenance from actual requests (filter by status)
     const openMaintenanceCount = maintenanceRequests.filter(m => {
@@ -1220,8 +1223,8 @@ const TenantDashboard = () => {
               <p className="sa-metric-label">Next Rent Due</p>
               <p className="sa-metric-period">Due: {data.nextRentDue?.date || 'N/A'}</p>
               <p className="sa-metric-value">
-                {data.nextRentDue?.amount !== null && data.nextRentDue?.amount !== undefined
-                  ? `${Number(data.nextRentDue.amount).toLocaleString()} XOF`
+                {displayNextRentDueAmount > 0
+                  ? `${displayNextRentDueAmount.toLocaleString()} XOF`
                   : 'N/A'}
               </p>
               {data.nextRentDue?.status === 'ahead' && Number(data.nextRentDue?.aheadAmount || 0) > 0 && (

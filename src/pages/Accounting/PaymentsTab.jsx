@@ -6,7 +6,6 @@ import RentReceiptTemplate from '../../components/RentReceiptTemplate';
 import { t } from '../../utils/i18n';
 import {
   dedupeBySignature,
-  formatOwnerName,
   formatPropertyBuilding,
   formatTenantName,
   getTransactionSignature,
@@ -35,10 +34,51 @@ const PaymentsTab = (props) => {
     downloadReceipt, printPaymentReceipt, tenants, depositEligibleTenants
   } = props;
   const [paymentTablePage, setPaymentTablePage] = useState(1);
+  const [propertyOwners, setPropertyOwners] = useState([]);
 
   const nameLower = (paymentNameFilter || '').trim().toLowerCase();
   const dateStart = paymentDateStartFilter ? new Date(paymentDateStartFilter + 'T00:00:00') : null;
   const dateEnd = paymentDateEndFilter ? new Date(paymentDateEndFilter + 'T23:59:59') : null;
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await accountingService.getProperties();
+        if (mounted) {
+          setPropertyOwners(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (mounted) setPropertyOwners([]);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const ownerNameByProperty = useMemo(() => {
+    const map = new Map();
+    (Array.isArray(propertyOwners) ? propertyOwners : []).forEach((property) => {
+      const address = (property.address || property.Address || '').toString().trim().toLowerCase();
+      const landlord = (property.landlord || property.Landlord || '').toString().trim();
+      const owner = (property.ownerName || property.OwnerName || property.owner || property.Owner || landlord || '').toString().trim();
+      if (address && owner) {
+        map.set(address, owner);
+      }
+    });
+    return map;
+  }, [propertyOwners]);
+
+  const resolveOwnerName = (item, fallback = 'N/A') => {
+    const direct = item?.OwnerName || item?.ownerName || item?.Owner || item?.owner || item?.Landlord || item?.landlord || '';
+    if (String(direct).trim()) return String(direct).trim();
+    const propertyKey = (item?.Property || item?.property || item?.Building || item?.building || item?.Address || item?.address || '').toString().trim().toLowerCase();
+    if (propertyKey && ownerNameByProperty.has(propertyKey)) {
+      return ownerNameByProperty.get(propertyKey);
+    }
+    return fallback;
+  };
 
   const matchesStatus = (status) => {
     if (paymentStatusFilter === 'all') return true;
@@ -67,7 +107,7 @@ const PaymentsTab = (props) => {
     if (paymentView === 'deposit' && col.ChargeType !== 'Deposit') return false;
     if (paymentView === 'sale' && col.ChargeType !== 'Sale') return false;
     if (!matchesStatus(col.Status)) return false;
-    if (!matchesName(col.Tenant, col.Buyer, formatPropertyBuilding(col, ''), formatOwnerName(col, ''))) return false;
+    if (!matchesName(col.Tenant, col.Buyer, formatPropertyBuilding(col, ''), resolveOwnerName(col, ''))) return false;
     if (!matchesDate(col.Date)) return false;
     return true;
   });
@@ -75,7 +115,7 @@ const PaymentsTab = (props) => {
   const filteredTenantPayments = (paymentView === 'all' || paymentView === 'tenant')
     ? tenantPayments.filter(p => {
         if (!matchesStatus(p.Status)) return false;
-        if (!matchesName(formatTenantName(p, ''), null, formatPropertyBuilding(p, ''), formatOwnerName(p, ''))) return false;
+        if (!matchesName(formatTenantName(p, ''), null, formatPropertyBuilding(p, ''), resolveOwnerName(p, ''))) return false;
         if (!matchesDate(p.Date)) return false;
         return true;
       })
@@ -115,7 +155,7 @@ const PaymentsTab = (props) => {
         if (rightDate !== leftDate) return rightDate - leftDate;
         return (right.priority || 0) - (left.priority || 0);
       });
-  }, [filteredCollections, filteredTenantPayments]);
+  }, [filteredCollections, filteredTenantPayments, ownerNameByProperty]);
 
   useEffect(() => {
     setPaymentTablePage(1);
@@ -263,7 +303,7 @@ const PaymentsTab = (props) => {
                 {paginatedPaymentRows.map((row) => {
                   if (row.rowType === 'collection') {
                     const collection = row.data;
-                    const ownerName = formatOwnerName(collection, 'N/A');
+                    const ownerName = resolveOwnerName(collection, 'N/A');
                     const propertyBuilding = formatPropertyBuilding(collection, 'N/A');
                     return (
                       <tr key={row.key}>
@@ -287,7 +327,7 @@ const PaymentsTab = (props) => {
                   }
 
                   const payment = row.data;
-                  const ownerName = formatOwnerName(payment, 'N/A');
+                  const ownerName = resolveOwnerName(payment, 'N/A');
                   const propertyBuilding = formatPropertyBuilding(payment, 'N/A');
                   return (
                     <tr key={row.key}>
@@ -350,10 +390,10 @@ PaymentsTab.CollectionModal = (props) => {
     collectionPaymentType, setCollectionPaymentType,
     collectionPaymentForm, setCollectionPaymentForm,
     tenants, depositEligibleTenants, propertiesForSale,
-    setOverviewData, setTenantPayments, setCollections
+    setOverviewData, setTenantPayments, setCollections, setDepositEligibleTenants
   } = props;
   const tenantList = collectionPaymentType === 'deposit'
-    ? (Array.isArray(depositEligibleTenants) && depositEligibleTenants.length > 0 ? depositEligibleTenants : tenants)
+    ? (Array.isArray(depositEligibleTenants) ? depositEligibleTenants : [])
     : tenants;
   const tenantNameListId = collectionPaymentType ? `tenant-options-${collectionPaymentType}` : 'tenant-options';
 
@@ -416,7 +456,7 @@ PaymentsTab.CollectionModal = (props) => {
                 } catch (collError) { console.error('Error creating collection record:', collError); }
                 const [overview, tenantPaymentsData, collectionsData] = await Promise.all([accountingService.getOverview(), accountingService.getTenantPayments(), accountingService.getCollections()]);
                 setOverviewData(overview); setTenantPayments(Array.isArray(tenantPaymentsData) ? tenantPaymentsData : []); setCollections(Array.isArray(collectionsData) ? collectionsData : []);
-                setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', applicationFees: false, paymentMethod: 'cash', paymentProvider: '', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
+                setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', tenantId: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', applicationFees: false, paymentMethod: 'cash', paymentProvider: '', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
                 setCollectionPaymentType(null); setShowCollectionPaymentModal(false);
               } catch (error) { console.error('Error recording tenant payment:', error); addNotification(error.message || 'Failed to record tenant payment', 'error'); } finally { setLoading(false); }
             }}>
@@ -433,16 +473,17 @@ PaymentsTab.CollectionModal = (props) => {
                       setCollectionPaymentForm({
                         ...collectionPaymentForm,
                         tenant: selectedTenant.tenantName || selectedTenant.TenantName || '',
+                        tenantId: selectedTenant.tenantId ?? selectedTenant.TenantID ?? selectedTenant.id ?? '',
                         property: selectedTenant.property || selectedTenant.Property || '',
                         amount: selectedTenant.monthlyRent ?? selectedTenant.MonthlyRent ?? '',
                         applicationFees: !!(selectedTenant.applicationFees ?? selectedTenant.ApplicationFees),
                       });
                     } else {
-                      setCollectionPaymentForm({ ...collectionPaymentForm, tenant: val || '' });
+                      setCollectionPaymentForm({ ...collectionPaymentForm, tenant: val || '', tenantId: '' });
                     }
                   }}
                   required
-                  placeholder="Type to search tenant"
+                  placeholder="Type to search validated client"
                 />
                 <datalist id={tenantNameListId}>
                   {tenantList.filter((item) => (item.property || item.Property)).map((item) => {
@@ -459,7 +500,7 @@ PaymentsTab.CollectionModal = (props) => {
                 <label htmlFor="tenantProperty">Property *</label>
                 <input id="tenantProperty" type="text" value={collectionPaymentForm.property} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})} readOnly={!!(collectionPaymentForm.tenant && collectionPaymentForm.property)} required placeholder="Select a tenant to auto-fill" style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}} />
               </div>
-              {collectionPaymentForm.tenant && (() => { const sel = tenants.find(t => (t.tenantName || t.TenantName) === collectionPaymentForm.tenant); const due = sel ? (sel.outstandingAmount ?? sel.OutstandingAmount ?? 0) : 0; const months = sel ? (sel.monthsInArrears ?? sel.MonthsInArrears ?? 0) : 0; const hasArrears = due > 0; return (<div className="form-group" style={{ padding: '12px', backgroundColor: hasArrears ? '#fef3c7' : '#f0fdf4', borderRadius: '8px', border: hasArrears ? '1px solid #f59e0b' : '1px solid #22c55e' }}><label style={{ color: hasArrears ? '#92400e' : '#166534', fontWeight: '600' }}>Amount Due (Outstanding)</label><div style={{ fontSize: '1.1rem', fontWeight: '600', color: hasArrears ? '#b45309' : '#15803d' }}>{(due || 0).toLocaleString()} XOF{months > 0 && <span style={{ fontSize: '0.85rem', fontWeight: '500', marginLeft: '8px' }}>({months} month{months > 1 ? 's' : ''} in arrears)</span>}{!hasArrears && <span style={{ fontSize: '0.85rem', fontWeight: '500', marginLeft: '8px' }}>(Up to date)</span>}</div></div>); })()}
+              {collectionPaymentForm.tenant && (() => { const sel = tenantList.find(t => (t.tenantName || t.TenantName || t.name || t.Name) === collectionPaymentForm.tenant); const due = sel ? (sel.outstandingAmount ?? sel.OutstandingAmount ?? 0) : 0; const months = sel ? (sel.monthsInArrears ?? sel.MonthsInArrears ?? 0) : 0; const hasArrears = due > 0; return (<div className="form-group" style={{ padding: '12px', backgroundColor: hasArrears ? '#fef3c7' : '#f0fdf4', borderRadius: '8px', border: hasArrears ? '1px solid #f59e0b' : '1px solid #22c55e' }}><label style={{ color: hasArrears ? '#92400e' : '#166534', fontWeight: '600' }}>Amount Due (Outstanding)</label><div style={{ fontSize: '1.1rem', fontWeight: '600', color: hasArrears ? '#b45309' : '#15803d' }}>{(due || 0).toLocaleString()} XOF{months > 0 && <span style={{ fontSize: '0.85rem', fontWeight: '500', marginLeft: '8px' }}>({months} month{months > 1 ? 's' : ''} in arrears)</span>}{!hasArrears && <span style={{ fontSize: '0.85rem', fontWeight: '500', marginLeft: '8px' }}>(Up to date)</span>}</div></div>); })()}
               <div className="form-group"><label htmlFor="tenantAmount">Amount (XOF) *</label><input id="tenantAmount" type="number" min="0" step="0.01" value={collectionPaymentForm.amount} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, amount: e.target.value})} required placeholder="Enter payment amount" /><small style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>Can include arrears, current month, or months ahead</small></div>
               <div className="form-group">
                 <label htmlFor="tenantMethod">Payment Method *</label>
@@ -501,11 +542,15 @@ PaymentsTab.CollectionModal = (props) => {
               try {
                 setLoading(true);
                 const monthlyRent = parseFloat(collectionPaymentForm.monthlyRent || '0');
-                  const selectedTenant = tenantList.find(t => (t.tenantName || t.TenantName || t.name || t.Name) === collectionPaymentForm.tenant);
+                const selectedTenant = tenantList.find(t => String(t.tenantId ?? t.TenantID ?? t.id ?? '') === String(collectionPaymentForm.tenantId) || (t.tenantName || t.TenantName || t.name || t.Name) === collectionPaymentForm.tenant);
+                if (!collectionPaymentForm.tenantId) {
+                  throw new Error('Please select a validated client from the list');
+                }
                   const applicationFees = !!(selectedTenant?.applicationFees ?? selectedTenant?.ApplicationFees);
                   const depositTotal = monthlyRent * 4.5 + (applicationFees ? 37000 : 0);
                 await accountingService.recordDepositPayment({
                   tenant: collectionPaymentForm.tenant,
+                  tenantId: Number(collectionPaymentForm.tenantId),
                   property: collectionPaymentForm.property,
                   tenantType: collectionPaymentForm.tenantType,
                   monthlyRent,
@@ -516,6 +561,12 @@ PaymentsTab.CollectionModal = (props) => {
                   paymentProvider: collectionPaymentForm.paymentProvider
                 });
                 addNotification('Security deposit recorded successfully!', 'success');
+                try {
+                  const eligibleClients = await accountingService.getDepositEligibleTenants();
+                  setDepositEligibleTenants(Array.isArray(eligibleClients) ? eligibleClients : []);
+                } catch (refreshError) {
+                  console.error('Error refreshing deposit eligible clients:', refreshError);
+                }
                   try {
                     await accountingService.recordCollection({
                       building: collectionPaymentForm.property,
@@ -529,12 +580,12 @@ PaymentsTab.CollectionModal = (props) => {
                   } catch (collError) { console.error('Error creating collection record:', collError); }
                 const [overview, collectionsData] = await Promise.all([accountingService.getOverview(), accountingService.getCollections()]);
                 setOverviewData(overview); setCollections(Array.isArray(collectionsData) ? collectionsData : []);
-                setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', applicationFees: false, paymentMethod: 'cash', paymentProvider: '', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
+                setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', tenantId: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', applicationFees: false, paymentMethod: 'cash', paymentProvider: '', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
                 setCollectionPaymentType(null); setShowCollectionPaymentModal(false);
               } catch (error) { console.error('Error recording deposit:', error); addNotification(error.message || 'Failed to record security deposit', 'error'); } finally { setLoading(false); }
             }}>
               <div className="form-group">
-                <label>Tenant *</label>
+                <label>Validated Client *</label>
                 <input
                   list={tenantNameListId}
                   value={collectionPaymentForm.tenant}
@@ -545,16 +596,17 @@ PaymentsTab.CollectionModal = (props) => {
                       setCollectionPaymentForm({
                         ...collectionPaymentForm,
                         tenant: selectedTenant.tenantName || selectedTenant.TenantName || '',
+                        tenantId: selectedTenant.tenantId ?? selectedTenant.TenantID ?? selectedTenant.id ?? '',
                         property: selectedTenant.property || selectedTenant.Property || '',
                         monthlyRent: selectedTenant.monthlyRent ?? selectedTenant.MonthlyRent ?? '',
                         applicationFees: !!(selectedTenant.applicationFees ?? selectedTenant.ApplicationFees),
                       });
                     } else {
-                      setCollectionPaymentForm({ ...collectionPaymentForm, tenant: val || '' });
+                      setCollectionPaymentForm({ ...collectionPaymentForm, tenant: val || '', tenantId: '' });
                     }
                   }}
                   required
-                  placeholder="Type to search approved tenant"
+                  placeholder="Type to search validated client"
                 />
                 <datalist id={tenantNameListId}>
                   {tenantList.filter((item) => (item.property || item.Property)).map((item) => {
@@ -569,7 +621,7 @@ PaymentsTab.CollectionModal = (props) => {
               </div>
               <div className="form-group"><label>Property *</label><input type="text" value={collectionPaymentForm.property} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})} readOnly={!!(collectionPaymentForm.tenant && collectionPaymentForm.property)} required placeholder="Select a tenant to auto-fill" style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}} /></div>
               <div className="form-group"><label>Tenant Type *</label><select value={collectionPaymentForm.tenantType} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, tenantType: e.target.value})} required><option value="individual">Individual</option><option value="company">Company</option></select><small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>Deposit: 4.5 months rent for all properties</small></div>
-              <div className="form-group"><label>Monthly Rent (XOF) *</label><input type="number" min="0" step="0.01" value={collectionPaymentForm.monthlyRent} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, monthlyRent: e.target.value})} required placeholder="Enter monthly rent amount" />{collectionPaymentForm.monthlyRent && <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>Deposit Amount: {(parseFloat(collectionPaymentForm.monthlyRent) * 4.5 + (((tenantList.find(t => (t.tenantName || t.TenantName || t.name || t.Name) === collectionPaymentForm.tenant) || {}).applicationFees ?? (tenantList.find(t => (t.tenantName || t.TenantName || t.name || t.Name) === collectionPaymentForm.tenant) || {}).ApplicationFees) ? 37000 : 0)).toFixed(2)} XOF</small>}</div>
+              <div className="form-group"><label>Monthly Rent (XOF) *</label><input type="number" min="0" step="0.01" value={collectionPaymentForm.monthlyRent} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, monthlyRent: e.target.value})} required placeholder="Enter monthly rent amount" />{collectionPaymentForm.monthlyRent && <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>Deposit Amount: {(parseFloat(collectionPaymentForm.monthlyRent) * 4.5 + (((tenantList.find(t => String(t.tenantId ?? t.TenantID ?? t.id ?? '') === String(collectionPaymentForm.tenantId)) || tenantList.find(t => (t.tenantName || t.TenantName || t.name || t.Name) === collectionPaymentForm.tenant) || {}).applicationFees ?? (tenantList.find(t => String(t.tenantId ?? t.TenantID ?? t.id ?? '') === String(collectionPaymentForm.tenantId)) || tenantList.find(t => (t.tenantName || t.TenantName || t.name || t.Name) === collectionPaymentForm.tenant) || {}).ApplicationFees) ? 37000 : 0)).toFixed(2)} XOF</small>}</div>
               <div className="form-group">
                 <label>Payment Method *</label>
                 <select
@@ -618,7 +670,7 @@ PaymentsTab.CollectionModal = (props) => {
                 addNotification('Property sale recorded successfully!', 'success');
                 const [overview, collectionsData] = await Promise.all([accountingService.getOverview(), accountingService.getCollections()]);
                 setOverviewData(overview); setCollections(Array.isArray(collectionsData) ? collectionsData : []);
-                setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', applicationFees: false, paymentMethod: 'cash', paymentProvider: '', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
+                setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', tenantId: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', applicationFees: false, paymentMethod: 'cash', paymentProvider: '', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
                 setCollectionPaymentType(null); setShowCollectionPaymentModal(false);
               } catch (error) { console.error('Error recording property sale:', error); addNotification(error.message || 'Failed to record property sale', 'error'); } finally { setLoading(false); }
             }}>

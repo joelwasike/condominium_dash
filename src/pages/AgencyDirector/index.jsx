@@ -654,7 +654,7 @@ const AgencyDirectorDashboard = () => {
   }, [chatUsers, selectedUserId, loadChatForUser]);
 
   // Handle sending message
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (channel = 'sms') => {
     if (!chatInput.trim() || !selectedUserId) return;
     // Group messages handled by MessagingPanel internally
     if (String(selectedUserId).startsWith('group:')) return;
@@ -683,6 +683,7 @@ const AgencyDirectorDashboard = () => {
         fromUserId: currentUserId,
         toUserId: selectedUserId,
         content,
+        channel,
       };
       await agencyDirectorService.sendMessage(payload);
       

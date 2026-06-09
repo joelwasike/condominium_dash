@@ -123,6 +123,19 @@ const PasswordDisplayItem = ({ email, password }) => {
   );
 };
 
+const normalizeText = (value) => (value ?? '').toString().trim();
+const normalizeLower = (value) => normalizeText(value).toLowerCase();
+const isForRentProperty = (property) => {
+  const propertyType = normalizeLower(property?.PropertyType || property?.propertyType);
+  const status = normalizeLower(property?.Status || property?.status);
+  return propertyType !== 'for sale' && status !== 'for sale';
+};
+const isAlreadyLinkedTenant = (tenant) => {
+  const property = normalizeText(tenant?.Property || tenant?.property);
+  const unitNumber = normalizeText(tenant?.UnitNumber || tenant?.unitNumber);
+  return Boolean(property || unitNumber);
+};
+
 const SalesManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showTenantCreationModal, setShowTenantCreationModal] = useState(false);
@@ -413,7 +426,7 @@ const SalesManagerDashboard = () => {
         const list = await salesManagerService.getProperties();
         const props = Array.isArray(list) ? list : (list?.items || list?.data || []);
         if (cancelled) return;
-        setEditPropertyOptions(Array.isArray(props) ? props : []);
+        setEditPropertyOptions((Array.isArray(props) ? props : []).filter(isForRentProperty));
 
         const currentAddr = (editingClient?.Property || editingClient?.property || '').toString().trim().toLowerCase();
         if (currentAddr) {
@@ -2451,8 +2464,20 @@ const SalesManagerDashboard = () => {
     });
   }, [clients, clientStatusFilter, clientPropertyFilter, clientSearchText]);
 
+  const rentalProperties = useMemo(() => {
+    return (Array.isArray(properties) ? properties : []).filter(isForRentProperty);
+  }, [properties]);
+
+  const availableClients = useMemo(() => {
+    return (Array.isArray(clients) ? clients : []).filter((client) => !isAlreadyLinkedTenant(client));
+  }, [clients]);
+
+  const availableApprovedClients = useMemo(() => {
+    return (Array.isArray(approvedClients) ? approvedClients : []).filter((client) => !isAlreadyLinkedTenant(client));
+  }, [approvedClients]);
+
   // Handle send message
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (channel = 'sms') => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
     const storedUser = localStorage.getItem('user');
@@ -2477,6 +2502,8 @@ const SalesManagerDashboard = () => {
       fromUserId: currentUserId,
       toUserId: selectedUserId,
       content: content,
+      channel,
+      status: 'Sent',
       createdAt: new Date().toISOString(),
       read: false,
       type: 'message'
@@ -2484,7 +2511,7 @@ const SalesManagerDashboard = () => {
     setChatMessages(prev => [...prev, optimisticMessage]);
     setChatInput('');
     try {
-      const payload = { toUserId: selectedUserId, content };
+      const payload = { toUserId: selectedUserId, content, channel };
       const sentMessage = await messagingService.sendMessage(payload);
       if (sentMessage && sentMessage.id) {
         setChatMessages(prev => prev.map(msg => msg.id === tempMessageId ? sentMessage : msg));
@@ -2685,7 +2712,7 @@ const SalesManagerDashboard = () => {
                   <label htmlFor="visit-property">Property *</label>
                   <select id="visit-property" name="property" defaultValue={visitProperty} required>
                     <option value="">Select Property</option>
-                    {properties.map((prop, index) => {
+                    {rentalProperties.map((prop, index) => {
                       const address = prop.Address || prop.address;
                       const propId = prop.ID || prop.id || `prop-${index}`;
                       return address ? <option key={propId} value={address}>{address}</option> : null;
@@ -3274,7 +3301,7 @@ const SalesManagerDashboard = () => {
                         required
                       >
                         <option value="">Select approved client</option>
-                        {approvedClients.map(client => {
+                        {availableApprovedClients.map(client => {
                           const id = client.ID || client.id;
                           const label = client.name || client.Name || client.email || client.Email || `Client ${id}`;
                           return (
@@ -3366,7 +3393,7 @@ const SalesManagerDashboard = () => {
                       >
                         <option value="">Select Property</option>
                         {(() => {
-                          const withEmptyUnits = properties.filter(property => {
+                          const withEmptyUnits = rentalProperties.filter(property => {
                             const address = (property.Address || property.address || '').toString().trim();
                             const total = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
                             const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
@@ -4056,7 +4083,7 @@ const SalesManagerDashboard = () => {
                                   onChange={(e) => updateCreatePropertyUnit(index, 'tenant', e.target.value)}
                                 >
                                   <option value="">Select tenant</option>
-                                  {clients.map(c => (
+                                  {availableClients.map(c => (
                                     <option key={c.id || c.ID} value={c.name || c.Name || c.email || c.Email}>
                                       {c.name || c.Name || c.email || c.Email}
                                     </option>
@@ -4837,7 +4864,7 @@ const SalesManagerDashboard = () => {
                                 <label>Tenant</label>
                                 <select value={unit.tenant || ''} onChange={(e) => updateEditPropertyUnit(index, 'tenant', e.target.value)}>
                                   <option value="">Select tenant</option>
-                                  {clients.map(c => (
+                                  {availableClients.map(c => (
                                     <option key={c.id || c.ID} value={c.name || c.Name || c.email || c.Email}>{c.name || c.Name || c.email || c.Email}</option>
                                   ))}
                                 </select>

@@ -526,7 +526,7 @@ const TenantDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadChatForUser]); // addNotification is stable, no need to include
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (channel = 'sms') => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
 
@@ -539,6 +539,8 @@ const TenantDashboard = () => {
       content: content,
       senderId: null, // Will be set by backend
       receiverId: selectedUserId,
+      channel,
+      status: 'Sent',
       createdAt: new Date().toISOString(),
       isOptimistic: true
     };
@@ -550,6 +552,7 @@ const TenantDashboard = () => {
       const payload = {
         toUserId: selectedUserId,
         content,
+        channel,
       };
       const sentMessage = await messagingService.sendMessage(payload);
       
@@ -1183,6 +1186,9 @@ const TenantDashboard = () => {
       openMaintenanceTickets: 0,
       tenant: ''
     };
+    const nextRentDueAmount = Number(data.nextRentDue?.amount ?? 0);
+    const leaseRentAmount = Number(data.lease?.rent ?? 0);
+    const displayNextRentDueAmount = nextRentDueAmount > 0 ? nextRentDueAmount : leaseRentAmount;
 
     // Calculate open maintenance from actual requests (filter by status)
     const openMaintenanceCount = maintenanceRequests.filter(m => {
@@ -1317,15 +1323,18 @@ const TenantDashboard = () => {
             </div>
           </div>
 
-          <div className="sa-overview-metrics">
+            <div className="sa-overview-metrics">
             <div className="sa-metric-card sa-metric-primary">
               <p className="sa-metric-label">Next Rent Due</p>
               <p className="sa-metric-period">Due: {data.nextRentDue?.date || 'N/A'}</p>
               <p className="sa-metric-value">
-                {data.nextRentDue?.amount !== null && data.nextRentDue?.amount !== undefined
-                  ? `${Number(data.nextRentDue.amount).toLocaleString()} XOF`
+                {displayNextRentDueAmount > 0
+                  ? `${displayNextRentDueAmount.toLocaleString()} XOF`
                   : 'N/A'}
               </p>
+              {data.nextRentDue?.status === 'ahead' && Number(data.nextRentDue?.aheadAmount || 0) > 0 && (
+                <p className="sa-metric-period">Ahead by: {Number(data.nextRentDue.aheadAmount).toLocaleString()} XOF</p>
+              )}
             </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Current Lease</p>

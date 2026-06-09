@@ -60,6 +60,14 @@ const COMPANY_DOCUMENTS = [
   { key: 'manager_rib', label: 'RIB of the manager' },
 ];
 
+const normalizeText = (value) => (value ?? '').toString().trim();
+const normalizeLower = (value) => normalizeText(value).toLowerCase();
+const isForSaleProperty = (property) => {
+  const propertyType = normalizeLower(property?.PropertyType || property?.propertyType);
+  const status = normalizeLower(property?.Status || property?.status);
+  return propertyType === 'for sale' || status === 'for sale';
+};
+
 const AdministrativeDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showLeaseModal, setShowLeaseModal] = useState(false);
@@ -165,6 +173,10 @@ const AdministrativeDashboard = () => {
     terminations: []
   });
   const [reportsData, setReportsData] = useState(null);
+
+  const rentalProperties = useMemo(() => {
+    return (Array.isArray(properties) ? properties : []).filter((property) => !isForSaleProperty(property));
+  }, [properties]);
 
   const selectedClient = useMemo(() => {
     if (!clientDocForm.clientId) return null;
@@ -675,7 +687,7 @@ const AdministrativeDashboard = () => {
     []
   );
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (channel = 'sms') => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
 
@@ -704,6 +716,8 @@ const AdministrativeDashboard = () => {
       fromUserId: currentUserId,
       toUserId: selectedUserId,
       content: content,
+      channel,
+      status: 'Sent',
       createdAt: new Date().toISOString(),
       Content: content,
       CreatedAt: new Date().toISOString(),
@@ -718,6 +732,7 @@ const AdministrativeDashboard = () => {
       const response = await messagingService.sendMessage({
         toUserId: selectedUserId,
         content: content,
+        channel,
       });
       
       setChatMessages(prev => {
@@ -753,6 +768,23 @@ const AdministrativeDashboard = () => {
     } catch (error) {
       console.error('Error approving document:', error);
       addNotification('Failed to approve document', 'error');
+    }
+  };
+
+  const handleApproveTermination = async (termination) => {
+    const terminationId = termination?.id || termination?.ID;
+    if (!terminationId) return;
+    try {
+      setLoading(true);
+      const nextStatus = (termination?.status || termination?.Status || '').toLowerCase() === 'received' ? 'Accepted' : 'Completed';
+      await adminService.updateTerminationStatus(terminationId, nextStatus);
+      addNotification('Termination status updated successfully', 'success');
+      loadData();
+    } catch (error) {
+      console.error('Error updating termination status:', error);
+      addNotification(error.message || 'Failed to update termination status', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1117,12 +1149,14 @@ const AdministrativeDashboard = () => {
                       >
                         View
                       </button>
-                      <button
-                        className="table-action-button edit"
-                        onClick={() => handleApproveDocument(doc.id)}
-                      >
-                        Approve
-                      </button>
+                      {normalizeLower(doc.status) !== 'approved' && (
+                        <button
+                          className="table-action-button edit"
+                          onClick={() => handleApproveDocument(doc.id)}
+                        >
+                          Approve
+                        </button>
+                      )}
                       <button
                         className="table-action-button delete"
                         onClick={() => {
@@ -2126,8 +2160,7 @@ const AdministrativeDashboard = () => {
                         <button 
                           className="sa-icon-button" 
                           onClick={() => {
-                            // Mark inventory as done
-                            addNotification('Inventory marked as completed', 'success');
+                            handleApproveTermination(termination);
                           }}
                           title="Mark Inventory Done"
                           style={{ color: '#16a34a' }}
@@ -2579,16 +2612,18 @@ const AdministrativeDashboard = () => {
                       >
                         👁️
                       </button>
-                      <button
-                        className="sa-icon-button"
-                        title="Approve Client"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleClientStatusUpdate(client.ID || client.id, 'Approved');
-                        }}
-                      >
-                        ✅
-                      </button>
+                      {normalizeLower(client.status || client.Status || client.ApplicationStatus || client.applicationStatus || '') !== 'approved' && (
+                        <button
+                          className="sa-icon-button"
+                          title="Approve Client"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleClientStatusUpdate(client.ID || client.id, 'Approved');
+                          }}
+                        >
+                          ✅
+                        </button>
+                      )}
                       <button
                         className="sa-icon-button"
                         title="Edit Client"
@@ -3527,7 +3562,7 @@ const AdministrativeDashboard = () => {
               required
             >
               <option value="">Select property</option>
-            {(properties.filter(property => {
+            {(rentalProperties.filter(property => {
                 const label = (property.Address || property.address || property.name || property.Name || `Property ${property.ID || property.id}`).toString().trim();
                 const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
                 const occupiedFromLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;
@@ -3543,10 +3578,10 @@ const AdministrativeDashboard = () => {
                   </option>
                 );
               })}
-            {properties.length === 0 && (
+            {rentalProperties.length === 0 && (
               <option value="" disabled>No properties found</option>
             )}
-            {properties.length > 0 && properties.filter(property => {
+            {rentalProperties.length > 0 && rentalProperties.filter(property => {
               const label = (property.Address || property.address || property.name || property.Name || '').toString().trim();
               const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
               const occLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;

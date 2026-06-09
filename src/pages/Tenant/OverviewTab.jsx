@@ -21,6 +21,9 @@ const OverviewTab = ({ loading, overviewData, payments, maintenanceRequests }) =
     openMaintenanceTickets: 0,
     tenant: ''
   };
+  const nextRentDueAmount = Number(data.nextRentDue?.amount ?? 0);
+  const leaseRentAmount = Number(data.lease?.rent ?? 0);
+  const displayNextRentDueAmount = nextRentDueAmount > 0 ? nextRentDueAmount : leaseRentAmount;
 
   const openMaintenanceCount = maintenanceRequests.filter(m => {
     const status = (m.Status || m.status || '').toLowerCase();
@@ -59,7 +62,7 @@ const OverviewTab = ({ loading, overviewData, payments, maintenanceRequests }) =
   })();
 
   const metricCards = [
-    { label: 'Next Rent Due', sub: `Due: ${data.nextRentDue?.date || 'N/A'}`, value: data.nextRentDue?.amount ? `${Number(data.nextRentDue.amount).toLocaleString()} XOF` : 'N/A', color: '#3b82f6', bg: 'linear-gradient(135deg,#3b82f6,#2563eb)', white: true },
+    { label: 'Next Rent Due', sub: `Due: ${data.nextRentDue?.date || 'N/A'}`, value: displayNextRentDueAmount > 0 ? `${displayNextRentDueAmount.toLocaleString()} XOF` : 'N/A', color: '#3b82f6', bg: 'linear-gradient(135deg,#3b82f6,#2563eb)', white: true },
     { label: 'Current Lease', sub: data.lease?.property || 'No property', value: data.lease?.property ? 'Active' : 'N/A', color: '#10b981', bg: 'linear-gradient(135deg,#10b981,#059669)', white: true },
     { label: 'Open Maintenance', sub: 'Pending requests', value: openMaintenanceCount, color: '#f59e0b' },
     { label: 'Total Payments', sub: 'All time', value: payments.length, color: '#8b5cf6' },

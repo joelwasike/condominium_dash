@@ -1571,6 +1571,7 @@ const TechnicianDashboard = () => {
             <tr>
               <th>No</th>
               <th>Property</th>
+              <th>Tenant</th>
               <th>Issue</th>
               <th>Priority</th>
               <th>Status</th>
@@ -1585,7 +1586,7 @@ const TechnicianDashboard = () => {
           <tbody>
             {visibleRequests.length === 0 ? (
               <tr>
-                  <td colSpan={11} className="sa-table-empty">
+                  <td colSpan={12} className="sa-table-empty">
                   No maintenance requests found
                 </td>
               </tr>
@@ -1593,6 +1594,7 @@ const TechnicianDashboard = () => {
                 visibleRequests.map((maintenance, index) => {
                   const maintenanceId = maintenance.id || maintenance.ID;
                   const property = maintenance.property || maintenance.Property;
+                  const tenant = maintenance.tenant || maintenance.Tenant || maintenance.tenantName || maintenance.TenantName || '—';
                   const issue = maintenance.title || maintenance.Title || maintenance.issue || maintenance.Issue || 'Maintenance Request';
                   const description = maintenance.description || maintenance.Description || '';
                   const priority = (maintenance.priority || maintenance.Priority || 'normal').toLowerCase();
@@ -1616,6 +1618,7 @@ const TechnicianDashboard = () => {
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{property}</span>
                       </td>
+                      <td>{tenant}</td>
                       <td>
                         <div className="sa-cell-main">
                           <span className="sa-cell-title">{issue}</span>
