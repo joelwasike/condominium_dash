@@ -140,7 +140,7 @@ const TransactionHistoryTab = (props) => {
           <input type="date" className="sa-filter-select" value={historyEndDateFilter} onChange={(e) => setHistoryEndDateFilter(e.target.value)} placeholder="End Date" />
         </div>
         {loading ? <div className="loading">Loading transactions...</div> : filteredHistory.length === 0 ? <div className="no-data">No transactions found</div> : (
-          <div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Date</th><th>Type</th><th>Tenant/Owner/Account</th><th>Property</th><th>Amount</th><th>Status</th><th>Method/Notes</th></tr></thead><tbody>
+          <div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Date</th><th>Type</th><th>Tenant/Owner/Account</th><th>Property</th><th>Amount</th><th>Method/Notes</th></tr></thead><tbody>
             {filteredHistory.map((transaction, index) => {
               const typeClass = transaction.type.toLowerCase().replace(/\s+/g, '-');
               return (
@@ -150,7 +150,6 @@ const TransactionHistoryTab = (props) => {
                   <td>{transaction.tenant || '-'}</td>
                   <td>{transaction.property || '-'}</td>
                   <td style={{ color: transaction.amount >= 0 ? '#059669' : '#dc2626', fontWeight: '600' }}>{transaction.amount >= 0 ? '+' : ''}{transaction.amount.toFixed(2)} XOF</td>
-                  <td><span className={`sa-status-pill ${(transaction.status || '').toLowerCase()}`}>{transaction.status || 'N/A'}</span></td>
                   <td>{transaction.method || transaction.notes || '-'}</td>
                 </tr>
               );

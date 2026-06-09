@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Download, ArrowLeft, DollarSign, Users, MapPin, Mail, Phone, Receipt } from 'lucide-react';
+import { Search, Download, ArrowLeft, DollarSign, Users, MapPin, Phone, Receipt } from 'lucide-react';
 import { t } from '../../utils/i18n';
 import { formatPropertyBuilding, formatTenantName, normalizeAmount } from '../../utils/accountingDisplay';
 
@@ -39,7 +39,7 @@ const TenantManagementTab = (props) => {
 
   const exportToCSV = (tenantList, filename) => {
     if (tenantList.length === 0) { addNotification('No tenants to export', 'info'); return; }
-    const headers = ['Tenant Name','Phone','Property / Building','Monthly Rent','Rent in Advance','Late Rent','Payment Status','Outstanding Amount','Last Payment Date','Next Payment Due'];
+    const headers = ['Tenant Name','Phone','Property / Building','Monthly Rent','Rents Paid in Advance','Late Rent','Payment Status','Outstanding Amount','Last Payment Date','Next Payment Due'];
     const rows = tenantList.map(tenant => [
       formatTenantName(tenant, ''),
       (tenant.Phone || tenant.phone || ''),
@@ -79,7 +79,7 @@ const TenantManagementTab = (props) => {
         <select className="sa-filter-select" value={tenantPaymentStatusFilter} onChange={(e) => setTenantPaymentStatusFilter(e.target.value)}><option value="all">All Tenants</option><option value="up-to-date">Up-to-Date</option><option value="outstanding">Outstanding</option></select>
       </div>
       {loading ? <div className="loading">Loading tenants...</div> : filteredTenants.length === 0 ? <div className="no-data">No tenants found</div> : (
-        <div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Tenant Name</th><th>Property / Building</th><th>Monthly Rent</th><th>Rent in Advance</th><th>Late Rent</th><th>Payment Status</th><th>Outstanding Amount</th><th>Last Payment</th></tr></thead><tbody>
+        <div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Tenant Name</th><th>Property / Building</th><th>Monthly Rent</th><th>Rents Paid in Advance</th><th>Late Rent</th><th>Payment Status</th><th>Outstanding Amount</th><th>Last Payment</th></tr></thead><tbody>
           {filteredTenants.map((tenant, index) => {
             const status = tenant.PaymentStatus || tenant.paymentStatus || 'unknown';
             const arrears = tenant.MonthsInArrears || tenant.monthsInArrears || 0;
@@ -110,7 +110,6 @@ function renderTenantDetail(props) {
   const { selectedTenant: t2, setSelectedTenant, tenantPayments, showAllPayments, setShowAllPayments } = props;
   if (!t2) return (<div className="sa-clients-page"><button type="button" className="sa-outline-button sa-tenant-detail-back-btn" onClick={() => setSelectedTenant(null)} style={{ marginBottom: '16px' }}><ArrowLeft size={16} /> Back to list</button><div className="sa-section-card"><p className="sa-cell-sub" style={{ margin: 0 }}>Tenant not found.</p></div></div>);
   const name = t2.TenantName || t2.tenantName || 'N/A';
-  const email = t2.Email || t2.email || '';
   const phone = t2.Phone || t2.phone || '';
   const propertyAddr = t2.Property || t2.property || '-';
   const building = t2.Building || t2.building || '';
@@ -141,7 +140,7 @@ function renderTenantDetail(props) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(320px, 0.9fr)', gap: '24px', alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: '24px' }}>
-          <div className="sa-section-card sa-tenant-detail-card"><h3><Users size={18} /> Personal information</h3><dl className="sa-tenant-detail-dl"><div><dt>Name</dt><dd>{name}</dd></div>{email && <div><dt>Email</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {email}</dd></div>}{phone && <div><dt>Phone</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</dd></div>}<div><dt>Payment status</dt><dd><span className={`sa-status-pill ${(statusLabel || '').toLowerCase()}`}>{statusLabel}</span></dd></div><div><dt>Months in arrears</dt><dd>{arrears}</dd></div></dl></div>
+          <div className="sa-section-card sa-tenant-detail-card"><h3><Users size={18} /> Personal information</h3><dl className="sa-tenant-detail-dl"><div><dt>Name</dt><dd>{name}</dd></div>{phone && <div><dt>Phone</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</dd></div>}<div><dt>Payment status</dt><dd><span className={`sa-status-pill ${(statusLabel || '').toLowerCase()}`}>{statusLabel}</span></dd></div><div><dt>Months in arrears</dt><dd>{arrears}</dd></div></dl></div>
           <div className="sa-section-card sa-tenant-detail-card"><h3><DollarSign size={18} /> Rent & payment</h3><dl className="sa-tenant-detail-dl"><div><dt>Property</dt><dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</dd></div>{building && <div><dt>Building</dt><dd>{building}</dd></div>}<div><dt>Monthly rent</dt><dd className="sa-tenant-detail-value-bold">{Number(monthlyRent).toLocaleString()} XOF</dd></div><div><dt>Rent in advance</dt><dd style={{ color: rentInAdvance > 0 ? '#059669' : '#6b7280', fontWeight: '600' }}>{Number(rentInAdvance).toLocaleString()} XOF</dd></div><div><dt>Late rent</dt><dd style={{ color: outstanding > 0 ? '#dc2626' : '#059669', fontWeight: '600' }}>{Number(outstanding).toLocaleString()} XOF</dd></div><div><dt>Last payment</dt><dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '-'}</dd></div>{nextDue && <div><dt>Next payment due</dt><dd>{new Date(nextDue).toLocaleDateString()}</dd></div>}</dl></div>
         </div>
         <div style={{ display: 'grid', gap: '24px' }}>

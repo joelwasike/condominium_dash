@@ -1,9 +1,33 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
+import { formatPropertyBuilding, formatTenantName, normalizeAmount, normalizeText } from '../../utils/accountingDisplay';
+
+const getMonthRange = (month) => {
+  if (!month || !/^\d{4}-\d{2}$/.test(month)) return null;
+  const [yearStr, monthStr] = month.split('-');
+  const year = Number(yearStr);
+  const monthIndex = Number(monthStr) - 1;
+  if (!Number.isFinite(year) || !Number.isFinite(monthIndex)) return null;
+  const start = new Date(year, monthIndex, 1);
+  const end = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+  return { start, end };
+};
+
+const getPaymentDate = (row) => {
+  const value = row?.Date || row?.date || row?.CreatedAt || row?.createdAt || row?.PaidAt || row?.paidAt;
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const isRentPaymentRow = (row) => {
+  const chargeType = normalizeText(row?.ChargeType || row?.chargeType || row?.Type || row?.type || 'rent');
+  return chargeType === 'rent' || chargeType === '';
+};
 
 const StatesTaxesTab = (props) => {
-  const { loading, setLoading, selectedMonth, setSelectedMonth, addNotification } = props;
+  const { loading, setLoading, selectedMonth, setSelectedMonth, addNotification, tenants, tenantPayments } = props;
   const [report, setReport] = useState(null);
 
   useEffect(() => {
@@ -22,29 +46,104 @@ const StatesTaxesTab = (props) => {
   }, [selectedMonth, setLoading]);
 
   const general = report?.generalInformation || {};
+  const reportMonthRange = useMemo(() => getMonthRange(selectedMonth), [selectedMonth]);
   const rows = useMemo(() => {
-    const sourceRows = Array.isArray(report?.statusOfTenantPayments) ? report.statusOfTenantPayments : [];
-    const uniqueRows = [];
-    const seen = new Set();
+    const tenantRows = Array.isArray(tenants) ? tenants : [];
+    const paymentRows = Array.isArray(tenantPayments) ? tenantPayments : [];
+    const propertyMap = new Map();
 
-    sourceRows.forEach((row, index) => {
-      const key = String(
-        row.propertyId ??
-        row.propertyID ??
-        row.property ??
-        row.Property ??
-        `row-${index}`
-      ).trim().toLowerCase();
+    tenantRows.forEach((tenant, index) => {
+      const propertyLabel = formatPropertyBuilding(tenant, '').trim();
+      if (!propertyLabel) return;
 
-      if (seen.has(key)) return;
-      seen.add(key);
-      uniqueRows.push(row);
+      const key = normalizeText(propertyLabel);
+      const monthlyRent = normalizeAmount(
+        tenant?.MonthlyRent ??
+        tenant?.monthlyRent ??
+        tenant?.Rent ??
+        tenant?.rent ??
+        tenant?.Amount ??
+        tenant?.amount ??
+        0
+      );
+
+      if (!propertyMap.has(key)) {
+        propertyMap.set(key, {
+          property: propertyLabel,
+          numberOfTenants: 0,
+          numberOfTenantsWhoPaid: 0,
+          rentAwaited: 0,
+          rentCollected: 0,
+          remainingRent: 0,
+          _paidTenantKeys: new Set(),
+          _sortIndex: index,
+        });
+      }
+
+      const bucket = propertyMap.get(key);
+      bucket.property = bucket.property || propertyLabel;
+      bucket.numberOfTenants += 1;
+      bucket.rentAwaited += monthlyRent;
     });
 
-    return uniqueRows;
-  }, [report]);
-  const summary = report?.summaryOfMonth || {};
+    paymentRows.forEach((payment, index) => {
+      if (!isRentPaymentRow(payment)) return;
 
+      const paymentDate = getPaymentDate(payment);
+      if (reportMonthRange && paymentDate && (paymentDate < reportMonthRange.start || paymentDate > reportMonthRange.end)) {
+        return;
+      }
+
+      const propertyLabel = formatPropertyBuilding(payment, '').trim();
+      if (!propertyLabel) return;
+
+      const key = normalizeText(propertyLabel);
+      const tenantName = formatTenantName(payment, '').trim();
+      const paidKey = `${key}::${normalizeText(tenantName || payment?.ID || payment?.id || index)}`;
+      const amount = normalizeAmount(payment?.Amount ?? payment?.amount ?? 0);
+
+      if (!propertyMap.has(key)) {
+        propertyMap.set(key, {
+          property: propertyLabel,
+          numberOfTenants: 0,
+          numberOfTenantsWhoPaid: 0,
+          rentAwaited: 0,
+          rentCollected: 0,
+          remainingRent: 0,
+          _paidTenantKeys: new Set(),
+          _sortIndex: tenantRows.length + index,
+        });
+      }
+
+      const bucket = propertyMap.get(key);
+      bucket.property = bucket.property || propertyLabel;
+      bucket.rentCollected += amount;
+      if (!bucket._paidTenantKeys.has(paidKey)) {
+        bucket._paidTenantKeys.add(paidKey);
+        bucket.numberOfTenantsWhoPaid += 1;
+      }
+    });
+
+    return [...propertyMap.values()]
+      .map((bucket) => {
+        const remainingRent = Math.max(0, bucket.rentAwaited - bucket.rentCollected);
+        return {
+          property: bucket.property,
+          numberOfTenants: bucket.numberOfTenants,
+          numberOfTenantsWhoPaid: bucket.numberOfTenantsWhoPaid,
+          rentAwaited: bucket.rentAwaited,
+          rentCollected: bucket.rentCollected,
+          remainingRent,
+          collectionRatePercent: bucket.rentAwaited > 0 ? (bucket.rentCollected / bucket.rentAwaited) * 100 : 0,
+        };
+      })
+      .sort((left, right) => {
+        const leftIndex = propertyMap.get(normalizeText(left.property))?._sortIndex ?? 0;
+        const rightIndex = propertyMap.get(normalizeText(right.property))?._sortIndex ?? 0;
+        if (leftIndex !== rightIndex) return leftIndex - rightIndex;
+        return left.property.localeCompare(right.property);
+      });
+  }, [tenants, tenantPayments, reportMonthRange]);
   const money = (v) => `${Number(v || 0).toLocaleString()} FCFA`;
 
   const totals = useMemo(() => {
@@ -57,7 +156,7 @@ const StatesTaxesTab = (props) => {
     };
     rows.forEach((r) => {
       t.numberOfTenants += Number(r.numberOfTenants || 0);
-      t.numberOfTenantsWhoPaid += Number(r.numberOfTenantsWhoPaid || r.numberOfTenantsWhoPaid || 0);
+      t.numberOfTenantsWhoPaid += Number(r.numberOfTenantsWhoPaid || 0);
       t.rentAwaited += Number(r.rentAwaited || 0);
       t.rentCollected += Number(r.rentCollected || 0);
       t.remainingRent += Number(r.remainingRent || 0);
@@ -172,11 +271,11 @@ const StatesTaxesTab = (props) => {
                     <tr><th>Indicator</th><th>Amount (FCFA)</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td>Total expected rent (all properties)</td><td>{money(synchronizedSummary.totalExpectedRentAllProperties || summary.totalExpectedRentAllProperties)}</td></tr>
-                    <tr><td>Total expected monthly rents</td><td>{money(synchronizedSummary.totalExpectedMonthlyRents || summary.totalExpectedMonthlyRents)}</td></tr>
-                    <tr><td>Total collected rent for the month</td><td style={{ color: '#059669', fontWeight: 800 }}>{money(synchronizedSummary.totalCollectedRentForTheMonth || summary.totalCollectedRentForTheMonth)}</td></tr>
-                    <tr><td>Total unpaid rent for the month</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(synchronizedSummary.totalUnpaidRentForTheMonth || summary.totalUnpaidRentForTheMonth)}</td></tr>
-                    <tr><td>Total impayés</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(synchronizedSummary.totalImpayes || summary.totalImpayes)}</td></tr>
+                    <tr><td>Total expected rent (all properties)</td><td>{money(synchronizedSummary.totalExpectedRentAllProperties)}</td></tr>
+                    <tr><td>Total expected monthly rents</td><td>{money(synchronizedSummary.totalExpectedMonthlyRents)}</td></tr>
+                    <tr><td>Total collected rent for the month</td><td style={{ color: '#059669', fontWeight: 800 }}>{money(synchronizedSummary.totalCollectedRentForTheMonth)}</td></tr>
+                    <tr><td>Total unpaid rent for the month</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(synchronizedSummary.totalUnpaidRentForTheMonth)}</td></tr>
+                    <tr><td>Total impayés</td><td style={{ color: '#dc2626', fontWeight: 800 }}>{money(synchronizedSummary.totalImpayes)}</td></tr>
                   </tbody>
                 </table>
               </div>
