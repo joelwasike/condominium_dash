@@ -83,6 +83,16 @@ const getPropertyTenantText = (property) => {
   return normalizeText(tenant);
 };
 const getTenantIdFromProperty = (property) => property?.clientId ?? property?.clientID ?? property?.ClientID ?? property?.tenantId ?? property?.tenantID ?? null;
+const isAlreadyLinkedTenant = (tenant) => {
+  const property = normalizeText(tenant?.property || tenant?.Property);
+  const unitNumber = normalizeText(tenant?.unitNumber || tenant?.UnitNumber);
+  return Boolean(property || unitNumber);
+};
+const isOccupiedProperty = (property) => {
+  const status = normalizeType(property?.status || property?.Status || property?.statut);
+  const tenantText = getPropertyTenantText(property);
+  return status === 'occupied' || status === 'active' || Boolean(tenantText);
+};
 
 const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
   const tenants = useMemo(() => (Array.isArray(clients) ? clients : []), [clients]);
@@ -97,6 +107,7 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
 
   const tenantOptions = useMemo(() => {
     return tenants
+      .filter((tenant) => !isAlreadyLinkedTenant(tenant))
       .map((tenant) => {
         const id = tenant.id ?? tenant.ID;
         if (id == null) return null;
@@ -125,6 +136,7 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
     const map = new Map();
     for (const property of props) {
       if (!isForRentProperty(property)) continue;
+      if (isOccupiedProperty(property)) continue;
       const kind = getPropertyKind(property);
       if (!kind) continue;
       if (kind === 'building') continue;
@@ -149,6 +161,7 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
     const tenantText = getUnitTenantText(unit) || getPropertyTenantText(property);
     const existingTenantId = getTenantIdFromProperty(unit) || findTenantIdFromText(tenantText);
     const rentValue = getUnitRent(unit) || property?.rent || property?.Rent || property?.rentPrice || property?.RentPrice || '';
+    const status = getUnitStatus(unit);
     return {
       id: `${propertyId}-${unit?.id ?? unit?.ID ?? index}`,
       propertyId: String(propertyId),
@@ -157,7 +170,7 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
       rent: rentValue,
       currentTenant: tenantText,
       tenantId: existingTenantId ? String(existingTenantId) : '',
-      status: getUnitStatus(unit),
+      status,
     };
   };
 
@@ -173,7 +186,7 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
       rent: property?.rent ?? property?.Rent ?? property?.rentPrice ?? property?.RentPrice ?? '',
       currentTenant: tenantText,
       tenantId: existingTenantId ? String(existingTenantId) : '',
-      status: normalizeType(property?.status || property?.Status || property?.statut),
+      status: normalizeType(property?.status || property?.Status || property?.statut) || 'vacant',
     };
   };
 
@@ -193,7 +206,13 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
 
       const property = props.find((item) => String(getPropertyId(item)) === String(buildingId));
       const units = Array.isArray(detail?.units) ? detail.units : [];
-      const nextRows = units.map((unit, index) => buildRowFromUnit(unit, property || {}, buildingId, index));
+      const nextRows = units
+        .filter((unit) => {
+          const status = getUnitStatus(unit);
+          const tenantText = getUnitTenantText(unit) || getPropertyTenantText(property);
+          return status !== 'occupied' && status !== 'active' && !tenantText;
+        })
+        .map((unit, index) => buildRowFromUnit(unit, property || {}, buildingId, index));
       setRows(nextRows);
     } catch (error) {
       console.error('Failed to load building units:', error);
@@ -220,11 +239,19 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
       modeProperties.forEach((property, index) => {
         const propertyUnits = Array.isArray(property?.units) ? property.units : [];
         if (propertyUnits.length > 0) {
-          propertyUnits.forEach((unit, unitIndex) => {
-            nextRows.push(buildRowFromUnit(unit, property, getPropertyId(property), `${index}-${unitIndex}`));
-          });
+          propertyUnits
+            .filter((unit) => {
+              const status = getUnitStatus(unit);
+              const tenantText = getUnitTenantText(unit) || getPropertyTenantText(property);
+              return status !== 'occupied' && status !== 'active' && !tenantText;
+            })
+            .forEach((unit, unitIndex) => {
+              nextRows.push(buildRowFromUnit(unit, property, getPropertyId(property), `${index}-${unitIndex}`));
+            });
         } else {
-          nextRows.push(buildRowFromProperty(property, index));
+          if (!isOccupiedProperty(property)) {
+            nextRows.push(buildRowFromProperty(property, index));
+          }
         }
       });
       setRows(nextRows);
