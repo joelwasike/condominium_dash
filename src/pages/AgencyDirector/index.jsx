@@ -883,12 +883,14 @@ const AgencyDirectorDashboard = () => {
   // Load pending approvals data
   const loadPendingApprovals = useCallback(async () => {
     try {
-      const [expenses, quotes, quoteHistory] = await Promise.all([
+      const [expenses, approvedExpenses, quotes, quoteHistory] = await Promise.all([
         agencyDirectorService.getPendingExpenses().catch(() => []),
+        agencyDirectorService.getExpenses().catch(() => []),
         agencyDirectorService.getPendingQuotes().catch(() => []),
         agencyDirectorService.getQuoteHistory().catch(() => [])
       ]);
       setPendingExpenses(Array.isArray(expenses) ? expenses : []);
+      setAllExpenses(Array.isArray(approvedExpenses) ? approvedExpenses : []);
       setPendingQuotes(Array.isArray(quotes) ? quotes : []);
       setQuoteRequests(Array.isArray(quoteHistory) ? quoteHistory : []);
     } catch (error) {
@@ -2983,7 +2985,7 @@ const AgencyDirectorDashboard = () => {
                 {filteredAllExpenses.length > 0 ? filteredAllExpenses.map((expense, index) => (
                   <tr key={`expense-${index}`}>
                     <td>{index + 1}</td>
-                    <td>{expense.description || expense.Description || expense.reason || expense.Reason || 'N/A'}</td>
+                    <td>{expense.description || expense.Description || expense.notes || expense.Notes || expense.reason || expense.Reason || 'N/A'}</td>
                     <td>{(expense.amount || expense.Amount || 0).toLocaleString()} FCFA</td>
                     <td>{expense.building || expense.Building || 'N/A'}</td>
                     <td>{expense.owner || expense.Owner || 'N/A'}</td>
@@ -4356,7 +4358,7 @@ const AgencyDirectorDashboard = () => {
   const renderExpensesToApproveContent = () => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <p style={{ color: '#6b7280', margin: 0 }}>All accountant-recorded expenses must be validated before they leave the accounting box.</p>
+        <p style={{ color: '#6b7280', margin: 0 }}>All pending expenses and maintenance requests must be validated before they move into the expenses list.</p>
       </div>
       <div className="sa-table-wrapper">
         <table className="sa-table">
@@ -4380,7 +4382,7 @@ const AgencyDirectorDashboard = () => {
                 <td>{expense.scope || expense.Scope || 'N/A'}</td>
                 <td>{expense.category || expense.Category || 'N/A'}</td>
                 <td className="sa-cell-main">
-                  <span className="sa-cell-title">{expense.description || expense.Description || 'N/A'}</span>
+                  <span className="sa-cell-title">{expense.description || expense.Description || expense.notes || expense.Notes || 'N/A'}</span>
                 </td>
                 <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
                 <td>
@@ -4416,6 +4418,50 @@ const AgencyDirectorDashboard = () => {
             )}
           </tbody>
         </table>
+      </div>
+      <div style={{ marginTop: '28px' }}>
+        <div className="sa-section-header" style={{ marginBottom: '16px' }}>
+          <h3>Approved Expenses</h3>
+          <p>Expenses that have already been validated by the director</p>
+        </div>
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Building</th>
+                <th>Scope</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dedupeRecords(allExpenses).length > 0 ? dedupeRecords(allExpenses).map((expense, index) => (
+                <tr key={`approved-expense-${expense.id || expense.ID || index}`}>
+                  <td>{index + 1}</td>
+                  <td>{expense.building || expense.Building || 'N/A'}</td>
+                  <td>{expense.scope || expense.Scope || 'N/A'}</td>
+                  <td>{expense.category || expense.Category || 'N/A'}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{expense.description || expense.Description || expense.notes || expense.Notes || 'N/A'}</span>
+                  </td>
+                  <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
+                  <td>
+                    {expense.date || expense.Date
+                      ? new Date(expense.date || expense.Date).toLocaleDateString()
+                      : 'N/A'}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={7} className="sa-table-empty">No approved expenses found</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
