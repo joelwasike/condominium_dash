@@ -4155,13 +4155,6 @@ const AdministrativeDashboard = () => {
             </>
           )}
 
-          <div className="form-group" style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
-            <strong>Security deposit</strong>
-            <div style={{ marginTop: '6px', color: '#6b7280', fontSize: '0.875rem' }}>
-              Security deposit status is validated from the accounting dashboard only.
-            </div>
-          </div>
-
           <div className="form-group">
             <label>Property (for document context)</label>
             <select
