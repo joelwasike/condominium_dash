@@ -147,6 +147,8 @@ const SalesManagerDashboard = () => {
   const [approvedClientChecklist, setApprovedClientChecklist] = useState(null);
   const [loadingApprovedDocs, setLoadingApprovedDocs] = useState(false);
   const [selectedMoveInPropertyId, setSelectedMoveInPropertyId] = useState('');
+  const [moveInUnits, setMoveInUnits] = useState([]);
+  const [selectedMoveInUnitNumber, setSelectedMoveInUnitNumber] = useState('');
   const [moveInPropertyLocked, setMoveInPropertyLocked] = useState(false);
 
   // Visits / Requests (schedule visit from Property Management uses properties)
@@ -227,6 +229,69 @@ const SalesManagerDashboard = () => {
     const maxMoveInDate = paidAt ? addMonths(paidAt, 1).toISOString().split('T')[0] : '';
     return { paid, paidAt, maxMoveInDate };
   }, [selectedApprovedClient, approvedClientChecklist, addMonths]);
+
+  useEffect(() => {
+    if (!showTenantCreationModal || !approvedClientChecklist) return;
+    const checklistProperty = (approvedClientChecklist.property || approvedClientChecklist.Property || '').toString().trim();
+    if (!checklistProperty) return;
+    const matchedProperty = properties.find((p) => {
+      const label = (p.Address || p.address || p.name || p.Name || '').toString().trim();
+      return label && label.toLowerCase() === checklistProperty.toLowerCase();
+    });
+    if (matchedProperty && !selectedMoveInPropertyId) {
+      const propertyId = matchedProperty.ID || matchedProperty.id;
+      if (propertyId) {
+        setSelectedMoveInPropertyId(String(propertyId));
+      }
+    }
+    const checklistUnit = (approvedClientChecklist.unitNumber || approvedClientChecklist.UnitNumber || '').toString().trim();
+    if (checklistUnit && (selectedMoveInPropertyId ? matchedProperty && String(selectedMoveInPropertyId) === String(matchedProperty.ID || matchedProperty.id) : true) && !selectedMoveInUnitNumber) {
+      setSelectedMoveInUnitNumber(checklistUnit);
+    }
+  }, [approvedClientChecklist, properties, selectedMoveInPropertyId, showTenantCreationModal]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadUnits = async () => {
+      if (!selectedMoveInPropertyId) {
+        setMoveInUnits([]);
+        return;
+      }
+      try {
+        const detail = await salesManagerService.getPropertyBuildingDetail(selectedMoveInPropertyId);
+        const units = Array.isArray(detail?.units) ? detail.units : [];
+        const vacant = units.filter((u) => {
+          const st = (u.status || u.Status || u.statut || '').toString().toLowerCase();
+          const tenant = (u.tenant || u.Tenant || '').toString().trim();
+          return st !== 'occupied' && tenant === '';
+        });
+        if (cancelled) return;
+        const nextUnits = vacant.length > 0
+          ? vacant
+          : (units.length === 0 ? [{
+              id: selectedMoveInPropertyId,
+              unitNumber: 'Unit 1',
+              status: 'Vacant',
+              tenant: ''
+            }] : []);
+        setMoveInUnits(nextUnits);
+        setSelectedMoveInUnitNumber((prev) => {
+          const saved = (approvedClientChecklist?.unitNumber || approvedClientChecklist?.UnitNumber || prev || '').toString().trim();
+          if (!saved) return '';
+          const match = nextUnits.find((unit) => {
+            const label = (unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || '').toString().trim();
+            return label && label.toLowerCase() === saved.toLowerCase();
+          });
+          return match ? (match.unitNumber || match.UnitNumber || match.name || '') : '';
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setMoveInUnits([]);
+      }
+    };
+    loadUnits();
+    return () => { cancelled = true; };
+  }, [selectedMoveInPropertyId, approvedClientChecklist]);
 
   // Auto-slide carousel for advertisements on overview page
   useEffect(() => {
@@ -1543,6 +1608,11 @@ const SalesManagerDashboard = () => {
       setShowTenantCreationModal(false);
       setExcelFile(null);
       setImportMode('manual');
+      setSelectedApprovedClientId('');
+      setSelectedMoveInPropertyId('');
+      setSelectedMoveInUnitNumber('');
+      setMoveInUnits([]);
+      setMoveInFormPropertyRent(0);
     } catch (error) {
       console.error('Excel import error:', error);
       addNotification(
@@ -1600,7 +1670,7 @@ const SalesManagerDashboard = () => {
       }
     }
     
-    const unitNumber = formData.get('unitNumber')?.trim();
+    const unitNumber = (selectedMoveInUnitNumber || formData.get('unitNumber') || '').trim();
     
     const tenantData = {
       newClientId: Number(approvedClientId),
@@ -1676,6 +1746,10 @@ const SalesManagerDashboard = () => {
       setShowTenantCreationModal(false);
       setUploadedDocuments([]);
       setSelectedApprovedClientId('');
+      setSelectedMoveInPropertyId('');
+      setSelectedMoveInUnitNumber('');
+      setMoveInUnits([]);
+      setMoveInFormPropertyRent(0);
       e.target.reset();
       
       addNotification(`Tenant "${tenantData.name}" created successfully!`, 'success');
@@ -6146,6 +6220,10 @@ const SalesManagerDashboard = () => {
           setExcelFile(null);
           setImportMode('manual');
           setSelectedApprovedClientId('');
+          setSelectedMoveInPropertyId('');
+          setSelectedMoveInUnitNumber('');
+          setMoveInUnits([]);
+          setMoveInFormPropertyRent(0);
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -6156,6 +6234,10 @@ const SalesManagerDashboard = () => {
                 setExcelFile(null);
                 setImportMode('manual');
                 setSelectedApprovedClientId('');
+                setSelectedMoveInPropertyId('');
+                setSelectedMoveInUnitNumber('');
+                setMoveInUnits([]);
+                setMoveInFormPropertyRent(0);
               }}>×</button>
             </div>
             <div className="modal-body">
@@ -6363,61 +6445,20 @@ const SalesManagerDashboard = () => {
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="property">Property</label>
-                      <select name="property" id="property" required onChange={(e) => {
+                      <select name="property" id="property" value={selectedMoveInPropertyId} required onChange={(e) => {
                         const val = e.target.value;
                         const selectedProperty = val ? properties.find(p => String(p.ID || p.id) === val) : null;
+                        setSelectedMoveInPropertyId(val);
+                        setSelectedMoveInUnitNumber('');
+                        setMoveInUnits([]);
                         if (selectedProperty) {
                           const rawRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
                           const propertyRent = Number.isFinite(rawRent) ? Math.round(rawRent) : 0;
                           setMoveInFormPropertyRent(propertyRent);
-                          const unitSelect = document.getElementById('unitNumber');
-                          if (unitSelect) {
-                            unitSelect.innerHTML = '<option value="">Loading units…</option>';
-                          }
                           const rentInput = document.getElementsByName('rent')[0];
                           if (rentInput) {
                             rentInput.value = propertyRent;
                           }
-
-                          // Populate unit dropdown using real unit occupancy (only show vacant units)
-                          (async () => {
-                            try {
-                              const detail = await salesManagerService.getPropertyBuildingDetail(val);
-                              const units = Array.isArray(detail?.units) ? detail.units : [];
-                              const vacant = units.filter((u) => {
-                                const st = (u.status || u.Status || u.statut || '').toString().toLowerCase();
-                                const tenant = (u.tenant || u.Tenant || '').toString().trim();
-                                return st !== 'occupied' && tenant === '';
-                              });
-                              if (unitSelect) {
-                                unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
-                                if (vacant.length === 0) {
-                                  unitSelect.innerHTML = '<option value="" disabled>No vacant units</option>';
-                                  return;
-                                }
-                                for (const u of vacant) {
-                                  const uid = u.id ?? u.ID;
-                                  const label = u.unitNumber ?? u.UnitNumber ?? u.name ?? u.Name ?? `Unit #${uid ?? ''}`;
-                                  const option = document.createElement('option');
-                                  option.value = label || `Unit #${uid ?? ''}`;
-                                  option.textContent = label || `Unit #${uid ?? ''}`;
-                                  unitSelect.appendChild(option);
-                                }
-                              }
-                            } catch (_) {
-                              // Fallback to numeric unit list if unit-detail endpoint fails
-                              const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
-                              if (unitSelect) {
-                                unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
-                                for (let i = 1; i <= numberOfUnits; i++) {
-                                  const option = document.createElement('option');
-                                  option.value = `Unit ${i}`;
-                                  option.textContent = `Unit ${i}`;
-                                  unitSelect.appendChild(option);
-                                }
-                              }
-                            }
-                          })();
                         } else {
                           setMoveInFormPropertyRent(0);
                         }
@@ -6455,8 +6496,25 @@ const SalesManagerDashboard = () => {
                     </div>
                     <div className="form-group">
                       <label htmlFor="unitNumber">Unit Number</label>
-                      <select name="unitNumber" id="unitNumber" required>
+                      <select
+                        name="unitNumber"
+                        id="unitNumber"
+                        value={selectedMoveInUnitNumber}
+                        onChange={(e) => setSelectedMoveInUnitNumber(e.target.value)}
+                        required
+                      >
                         <option value="">Select Property First</option>
+                        {moveInUnits.length > 0 ? moveInUnits.map((unit) => {
+                          const unitId = unit.id ?? unit.ID ?? unit.unitNumber ?? unit.UnitNumber;
+                          const label = unit.unitNumber ?? unit.UnitNumber ?? unit.name ?? unit.Name ?? `Unit #${unitId ?? ''}`;
+                          return (
+                            <option key={unitId || label} value={label}>
+                              {label}
+                            </option>
+                          );
+                        }) : selectedMoveInPropertyId ? (
+                          <option value="" disabled>No vacant units</option>
+                        ) : null}
                       </select>
                       <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                         Select which unit/apartment the tenant will occupy
@@ -6632,6 +6690,11 @@ const SalesManagerDashboard = () => {
                     <button type="button" className="action-button secondary" onClick={() => {
                       setShowTenantCreationModal(false);
                       setUploadedDocuments([]);
+                      setSelectedApprovedClientId('');
+                      setSelectedMoveInPropertyId('');
+                      setSelectedMoveInUnitNumber('');
+                      setMoveInUnits([]);
+                      setMoveInFormPropertyRent(0);
                     }}>
                       Cancel
                     </button>

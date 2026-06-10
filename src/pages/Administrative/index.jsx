@@ -132,6 +132,7 @@ const AdministrativeDashboard = () => {
   const [clientDocForm, setClientDocForm] = useState({
     clientId: '',
     property: '',
+    unitNumber: '',
     depositValue: '',
     applicationFeesAmount: '',
     sodeciAmount: '',
@@ -207,6 +208,7 @@ const AdministrativeDashboard = () => {
     setClientDocForm({
       clientId: String(clientId),
       property: '',
+      unitNumber: '',
       depositValue: '',
       applicationFeesAmount: '',
       sodeciAmount: '',
@@ -2515,6 +2517,7 @@ const AdministrativeDashboard = () => {
               setClientDocForm({
                 clientId: '',
                 property: '',
+                unitNumber: '',
                 depositValue: '',
                 applicationFeesAmount: '',
                 sodeciAmount: '',
@@ -3382,6 +3385,7 @@ const AdministrativeDashboard = () => {
           setClientDocForm({
             clientId: '',
             property: '',
+            unitNumber: '',
             depositValue: '',
             applicationFeesAmount: '',
             sodeciAmount: '',
@@ -3446,6 +3450,7 @@ const AdministrativeDashboard = () => {
                 clientId: client.ID || client.id,
                 tenant: tenantName,
                 property: clientDocForm.property,
+                unitNumber: clientDocForm.unitNumber,
                 depositValue: Number(clientDocForm.depositValue || 0),
                 applicationFeesAmount: Number(clientDocForm.applicationFeesAmount || 0),
                 sodeciAmount: Number(clientDocForm.sodeciAmount || 0),
@@ -3462,6 +3467,7 @@ const AdministrativeDashboard = () => {
               setClientDocForm({
                 clientId: '',
                 property: '',
+                unitNumber: '',
                 depositValue: '',
                 applicationFeesAmount: '',
                 sodeciAmount: '',
@@ -3588,7 +3594,7 @@ const AdministrativeDashboard = () => {
             <select
               id="client-property"
               value={clientDocForm.property}
-              onChange={(e) => setClientDocForm({ ...clientDocForm, property: e.target.value })}
+              onChange={(e) => setClientDocForm({ ...clientDocForm, property: e.target.value, unitNumber: '' })}
               required
             >
               <option value="">Select property</option>
@@ -3624,73 +3630,116 @@ const AdministrativeDashboard = () => {
           </div>
 
           {clientDocForm.property && (
-            <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0' }}>Deposit and Charges</h4>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Deposit Value (FCFA) *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={clientDocForm.depositValue}
-                    onChange={(e) => setClientDocForm({ ...clientDocForm, depositValue: e.target.value })}
-                    placeholder="Enter deposit value"
-                    required
-                  />
-                </div>
-              </div>
-              <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
-                <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
-                <div className="application-fees-list" style={{ display: 'grid', gap: '12px' }}>
-                  <div className="application-fee-item">
-                    <label>Application fees (FCFA) *</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={clientDocForm.applicationFeesAmount}
-                      onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFeesAmount: e.target.value })}
-                      placeholder="Enter application fees amount"
+            (() => {
+              const selectedProp = rentalProperties.find(p => {
+                const label = p.Address || p.address || p.name || p.Name || `Property ${p.ID || p.id}`;
+                return label === clientDocForm.property;
+              });
+              const propUnits = Array.isArray(selectedProp?.units) ? selectedProp.units : [];
+              const vacantUnits = propUnits.filter((u) => {
+                const status = (u.status || u.Status || '').toString().trim().toLowerCase();
+                const tenant = (u.tenant || u.Tenant || '').toString().trim();
+                return status !== 'occupied' && tenant === '';
+              });
+              const displayUnits = vacantUnits.length > 0
+                ? vacantUnits
+                : (propUnits.length === 0 ? [{
+                    id: selectedProp?.ID || selectedProp?.id || clientDocForm.property,
+                    unitNumber: 'Unit 1',
+                    status: 'Vacant',
+                    tenant: ''
+                  }] : []);
+              return (
+                <div style={{ marginBottom: '16px' }}>
+                  <h4 style={{ margin: '0 0 8px 0' }}>Deposit and Charges</h4>
+                  <div className="form-group">
+                    <label>Unit Number *</label>
+                    <select
+                      value={clientDocForm.unitNumber}
+                      onChange={(e) => setClientDocForm({ ...clientDocForm, unitNumber: e.target.value })}
                       required
-                    />
+                    >
+                      <option value="">Select Unit</option>
+                      {displayUnits.length > 0 ? displayUnits.map((unit) => {
+                        const unitId = unit.id || unit.ID || unit.unitNumber;
+                        const unitLabel = unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || `Unit ${unitId || ''}`;
+                        return (
+                          <option key={unitId || unitLabel} value={unitLabel}>
+                            {unitLabel}
+                          </option>
+                        );
+                      }) : (
+                        <option value="" disabled>No vacant units available</option>
+                      )}
+                    </select>
                   </div>
-                  <div className="application-fee-item">
-                    <label>SODECI amount (FCFA)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={clientDocForm.sodeciAmount}
-                      onChange={(e) => setClientDocForm({ ...clientDocForm, sodeciAmount: e.target.value })}
-                      placeholder="Enter SODECI amount"
-                    />
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Deposit Value (FCFA) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={clientDocForm.depositValue}
+                        onChange={(e) => setClientDocForm({ ...clientDocForm, depositValue: e.target.value })}
+                        placeholder="Enter deposit value"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="application-fee-item">
-                    <label>CIE 10A amount (FCFA)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={clientDocForm.cie10Amount}
-                      onChange={(e) => setClientDocForm({ ...clientDocForm, cie10Amount: e.target.value })}
-                      placeholder="Enter CIE 10A amount"
-                    />
-                  </div>
-                  <div className="application-fee-item">
-                    <label>CIE 15A amount (FCFA)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={clientDocForm.cie15Amount}
-                      onChange={(e) => setClientDocForm({ ...clientDocForm, cie15Amount: e.target.value })}
-                      placeholder="Enter CIE 15A amount"
-                    />
+                  <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
+                    <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
+                    <div className="application-fees-list" style={{ display: 'grid', gap: '12px' }}>
+                      <div className="application-fee-item">
+                        <label>Application fees (FCFA) *</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={clientDocForm.applicationFeesAmount}
+                          onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFeesAmount: e.target.value })}
+                          placeholder="Enter application fees amount"
+                          required
+                        />
+                      </div>
+                      <div className="application-fee-item">
+                        <label>SODECI amount (FCFA)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={clientDocForm.sodeciAmount}
+                          onChange={(e) => setClientDocForm({ ...clientDocForm, sodeciAmount: e.target.value })}
+                          placeholder="Enter SODECI amount"
+                        />
+                      </div>
+                      <div className="application-fee-item">
+                        <label>CIE 10A amount (FCFA)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={clientDocForm.cie10Amount}
+                          onChange={(e) => setClientDocForm({ ...clientDocForm, cie10Amount: e.target.value })}
+                          placeholder="Enter CIE 10A amount"
+                        />
+                      </div>
+                      <div className="application-fee-item">
+                        <label>CIE 15A amount (FCFA)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={clientDocForm.cie15Amount}
+                          onChange={(e) => setClientDocForm({ ...clientDocForm, cie15Amount: e.target.value })}
+                          placeholder="Enter CIE 15A amount"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()
           )}
 
           <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
@@ -3794,6 +3843,7 @@ const AdministrativeDashboard = () => {
           ) : selectedChecklist ? (
             <div style={{ display: 'grid', gap: '8px' }}>
               <div><strong>Property:</strong> {selectedChecklist.property || selectedChecklist.Property || 'N/A'}</div>
+              <div><strong>Unit number:</strong> {selectedChecklist.unitNumber || selectedChecklist.UnitNumber || 'N/A'}</div>
               <div><strong>Application fees:</strong> {selectedChecklist.applicationFees ? 'Yes' : 'No'}</div>
               <div><strong>SODECI:</strong> {selectedChecklist.sodeci ? 'Yes' : 'No'}</div>
               <div><strong>CIE 10A:</strong> {selectedChecklist.cie10a ? 'Yes' : 'No'}</div>

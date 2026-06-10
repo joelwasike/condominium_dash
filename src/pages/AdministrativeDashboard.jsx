@@ -121,6 +121,7 @@ const AdministrativeDashboard = () => {
   const [clientDocForm, setClientDocForm] = useState({
     clientId: '',
     property: '',
+    unitNumber: '',
     depositValue: '',
     applicationFeesAmount: '',
     sodeciAmount: '',
@@ -192,6 +193,7 @@ const AdministrativeDashboard = () => {
     setClientDocForm({
       clientId: String(clientId),
       property: '',
+      unitNumber: '',
       depositValue: '',
       applicationFeesAmount: '',
       sodeciAmount: '',
@@ -2684,6 +2686,7 @@ const AdministrativeDashboard = () => {
               setClientDocForm({
                 clientId: '',
                 property: '',
+                unitNumber: '',
                 depositValue: '',
                 applicationFeesAmount: '',
                 sodeciAmount: '',
@@ -3549,6 +3552,7 @@ const AdministrativeDashboard = () => {
           setClientDocForm({
             clientId: '',
             property: '',
+            unitNumber: '',
             depositValue: '',
             applicationFeesAmount: '',
             sodeciAmount: '',
@@ -3619,6 +3623,7 @@ const AdministrativeDashboard = () => {
                 clientId: client.ID || client.id,
                 tenant: tenantName,
                 property: clientDocForm.property,
+                unitNumber: clientDocForm.unitNumber,
                 depositValue: Number(clientDocForm.depositValue || 0),
                 applicationFeesAmount: Number(clientDocForm.applicationFeesAmount || 0),
                 sodeciAmount: Number(clientDocForm.sodeciAmount || 0),
@@ -3635,6 +3640,7 @@ const AdministrativeDashboard = () => {
               setClientDocForm({
                 clientId: '',
                 property: '',
+                unitNumber: '',
                 depositValue: '',
                 applicationFeesAmount: '',
                 sodeciAmount: '',
@@ -3761,7 +3767,7 @@ const AdministrativeDashboard = () => {
             <select
               id="client-property"
               value={clientDocForm.property}
-              onChange={(e) => setClientDocForm({ ...clientDocForm, property: e.target.value })}
+              onChange={(e) => setClientDocForm({ ...clientDocForm, property: e.target.value, unitNumber: '' })}
               required
             >
               <option value="">Select property</option>
@@ -3801,9 +3807,44 @@ const AdministrativeDashboard = () => {
               const label = p.Address || p.address || p.name || p.Name || `Property ${p.ID || p.id}`;
               return label === clientDocForm.property;
             });
+            const propUnits = Array.isArray(selectedProp?.units) ? selectedProp.units : [];
+            const vacantUnits = propUnits.filter((u) => {
+              const status = (u.status || u.Status || '').toString().trim().toLowerCase();
+              const tenant = (u.tenant || u.Tenant || '').toString().trim();
+              return status !== 'occupied' && tenant === '';
+            });
+            const displayUnits = vacantUnits.length > 0
+              ? vacantUnits
+              : (propUnits.length === 0 ? [{
+                  id: selectedProp?.ID || selectedProp?.id || clientDocForm.property,
+                  unitNumber: 'Unit 1',
+                  status: 'Vacant',
+                  tenant: ''
+                }] : []);
             return (
               <div style={{ marginBottom: '16px' }}>
                 <h4 style={{ margin: '0 0 8px 0' }}>Deposit and Charges</h4>
+                <div className="form-group">
+                  <label>Unit Number *</label>
+                  <select
+                    value={clientDocForm.unitNumber}
+                    onChange={(e) => setClientDocForm({ ...clientDocForm, unitNumber: e.target.value })}
+                    required
+                  >
+                    <option value="">Select Unit</option>
+                    {displayUnits.length > 0 ? displayUnits.map((unit) => {
+                      const unitId = unit.id || unit.ID || unit.unitNumber;
+                      const unitLabel = unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || `Unit ${unitId || ''}`;
+                      return (
+                        <option key={unitId || unitLabel} value={unitLabel}>
+                          {unitLabel}
+                        </option>
+                      );
+                    }) : (
+                      <option value="" disabled>No vacant units available</option>
+                    )}
+                  </select>
+                </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Deposit Value (FCFA) *</label>
@@ -3973,6 +4014,7 @@ const AdministrativeDashboard = () => {
           ) : selectedChecklist ? (
             <div style={{ display: 'grid', gap: '8px' }}>
               <div><strong>Property:</strong> {selectedChecklist.property || selectedChecklist.Property || 'N/A'}</div>
+              <div><strong>Unit number:</strong> {selectedChecklist.unitNumber || selectedChecklist.UnitNumber || 'N/A'}</div>
               <div><strong>Deposit value:</strong> {Number(selectedChecklist.depositValue || selectedChecklist.DepositValue || 0).toLocaleString()} FCFA</div>
               <div><strong>Application fees amount:</strong> {Number(selectedChecklist.applicationFeesAmount || selectedChecklist.ApplicationFeesAmount || 0).toLocaleString()} FCFA</div>
               <div><strong>SODECI amount:</strong> {Number(selectedChecklist.sodeciAmount || selectedChecklist.SODECIAmount || 0).toLocaleString()} FCFA</div>
