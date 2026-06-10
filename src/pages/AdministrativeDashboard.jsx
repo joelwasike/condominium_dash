@@ -121,7 +121,12 @@ const AdministrativeDashboard = () => {
   const [clientDocForm, setClientDocForm] = useState({
     clientId: '',
     property: '',
-    applicationFees: true,
+    depositValue: '',
+    applicationFeesAmount: '',
+    sodeciAmount: '',
+    cie10Amount: '',
+    cie15Amount: '',
+    applicationFees: false,
     sodeci: false,
     cie10: false,
     cie15: false
@@ -187,7 +192,12 @@ const AdministrativeDashboard = () => {
     setClientDocForm({
       clientId: String(clientId),
       property: '',
-      applicationFees: true,
+      depositValue: '',
+      applicationFeesAmount: '',
+      sodeciAmount: '',
+      cie10Amount: '',
+      cie15Amount: '',
+      applicationFees: false,
       sodeci: false,
       cie10: false,
       cie15: false
@@ -2674,7 +2684,12 @@ const AdministrativeDashboard = () => {
               setClientDocForm({
                 clientId: '',
                 property: '',
-                applicationFees: true,
+                depositValue: '',
+                applicationFeesAmount: '',
+                sodeciAmount: '',
+                cie10Amount: '',
+                cie15Amount: '',
+                applicationFees: false,
                 sodeci: false,
                 cie10: false,
                 cie15: false
@@ -3534,7 +3549,12 @@ const AdministrativeDashboard = () => {
           setClientDocForm({
             clientId: '',
             property: '',
-            applicationFees: true,
+            depositValue: '',
+            applicationFeesAmount: '',
+            sodeciAmount: '',
+            cie10Amount: '',
+            cie15Amount: '',
+            applicationFees: false,
             sodeci: false,
             cie10: false,
             cie15: false
@@ -3599,10 +3619,15 @@ const AdministrativeDashboard = () => {
                 clientId: client.ID || client.id,
                 tenant: tenantName,
                 property: clientDocForm.property,
-                applicationFees: clientDocForm.applicationFees,
-                sodeci: clientDocForm.sodeci,
-                cie10a: clientDocForm.cie10,
-                cie15a: clientDocForm.cie15,
+                depositValue: Number(clientDocForm.depositValue || 0),
+                applicationFeesAmount: Number(clientDocForm.applicationFeesAmount || 0),
+                sodeciAmount: Number(clientDocForm.sodeciAmount || 0),
+                cie10aAmount: Number(clientDocForm.cie10Amount || 0),
+                cie15aAmount: Number(clientDocForm.cie15Amount || 0),
+                applicationFees: Number(clientDocForm.applicationFeesAmount || 0) > 0,
+                sodeci: Number(clientDocForm.sodeciAmount || 0) > 0,
+                cie10a: Number(clientDocForm.cie10Amount || 0) > 0,
+                cie15a: Number(clientDocForm.cie15Amount || 0) > 0,
               });
 
               addNotification('Client documents uploaded successfully', 'success');
@@ -3610,7 +3635,12 @@ const AdministrativeDashboard = () => {
               setClientDocForm({
                 clientId: '',
                 property: '',
-                applicationFees: true,
+                depositValue: '',
+                applicationFeesAmount: '',
+                sodeciAmount: '',
+                cie10Amount: '',
+                cie15Amount: '',
+                applicationFees: false,
                 sodeci: false,
                 cie10: false,
                 cie15: false
@@ -3767,68 +3797,80 @@ const AdministrativeDashboard = () => {
           </div>
 
           {clientDocForm.property && (() => {
-            const selectedProp = properties.find(p => {
+            const selectedProp = rentalProperties.find(p => {
               const label = p.Address || p.address || p.name || p.Name || `Property ${p.ID || p.id}`;
               return label === clientDocForm.property;
             });
-            const monthlyRent = selectedProp ? (Number(selectedProp.rent) || Number(selectedProp.Rent) || 0) : 0;
-            const securityDeposit = monthlyRent * 2;
             return (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ padding: '12px', background: '#f0fdf4', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#166534', marginBottom: '4px' }}>Monthly Rent</div>
-                  <div style={{ fontWeight: 600, color: '#15803d' }}>{monthlyRent ? `${Number(monthlyRent).toLocaleString()} FCFA` : '—'}</div>
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 8px 0' }}>Deposit and Charges</h4>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Deposit Value (FCFA) *</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={clientDocForm.depositValue}
+                      onChange={(e) => setClientDocForm({ ...clientDocForm, depositValue: e.target.value })}
+                      placeholder="Enter deposit value"
+                      required
+                    />
+                  </div>
                 </div>
-                <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#1e40af', marginBottom: '4px' }}>Security Deposit (2× monthly rent)</div>
-                  <div style={{ fontWeight: 600, color: '#1d4ed8' }}>{securityDeposit ? `${Number(securityDeposit).toLocaleString()} FCFA` : '—'}</div>
+                <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
+                  <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
+                  <div className="application-fees-list" style={{ display: 'grid', gap: '12px' }}>
+                    <div className="application-fee-item">
+                      <label>Application fees (FCFA) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={clientDocForm.applicationFeesAmount}
+                        onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFeesAmount: e.target.value })}
+                        placeholder="Enter application fees amount"
+                        required
+                      />
+                    </div>
+                    <div className="application-fee-item">
+                      <label>SODECI amount (FCFA)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={clientDocForm.sodeciAmount}
+                        onChange={(e) => setClientDocForm({ ...clientDocForm, sodeciAmount: e.target.value })}
+                        placeholder="Enter SODECI amount"
+                      />
+                    </div>
+                    <div className="application-fee-item">
+                      <label>CIE 10A amount (FCFA)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={clientDocForm.cie10Amount}
+                        onChange={(e) => setClientDocForm({ ...clientDocForm, cie10Amount: e.target.value })}
+                        placeholder="Enter CIE 10A amount"
+                      />
+                    </div>
+                    <div className="application-fee-item">
+                      <label>CIE 15A amount (FCFA)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={clientDocForm.cie15Amount}
+                        onChange={(e) => setClientDocForm({ ...clientDocForm, cie15Amount: e.target.value })}
+                        placeholder="Enter CIE 15A amount"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             );
           })()}
-
-        <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
-          <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
-          <div className="application-fees-list">
-            <label className="application-fee-item" style={{ cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={clientDocForm.applicationFees}
-                disabled
-              />
-              <span>Application fees (37,000 FCFA - obligation to pay)</span>
-            </label>
-            <label className="application-fee-item">
-              <input
-                type="checkbox"
-                checked={clientDocForm.sodeci}
-                onChange={(e) => setClientDocForm({ ...clientDocForm, sodeci: e.target.checked })}
-              />
-              <span>SODECI: 35,000 FCFA</span>
-            </label>
-            <div className="application-fee-item" style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <span style={{ marginRight: '8px', fontWeight: '500' }}>CIE:</span>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="cieChoice"
-                  checked={clientDocForm.cie10}
-                  onChange={() => setClientDocForm({ ...clientDocForm, cie10: true, cie15: false })}
-                />
-                <span>10A – 37 375 FCFA</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="cieChoice"
-                  checked={clientDocForm.cie15}
-                  onChange={() => setClientDocForm({ ...clientDocForm, cie10: false, cie15: true })}
-                />
-                <span>15A + 60 420 FCFA</span>
-              </label>
-            </div>
-          </div>
-          </div>
 
           <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
             <h4 style={{ margin: '0 0 8px 0' }}>
@@ -3879,21 +3921,26 @@ const AdministrativeDashboard = () => {
           </div>
 
           <div className="modal-footer">
-            <button
-              type="button"
-              className="action-button secondary"
-              onClick={() => {
-                setShowNewClientModal(false);
-                setClientDocForm({
-                  clientId: '',
-                  property: '',
-                applicationFees: true,
-                  sodeci: false,
-                  cie10: false,
-                  cie15: false
-                });
-                setClientDocFiles({});
-              }}
+              <button
+                type="button"
+                className="action-button secondary"
+                onClick={() => {
+                  setShowNewClientModal(false);
+                  setClientDocForm({
+                    clientId: '',
+                    property: '',
+                    depositValue: '',
+                    applicationFeesAmount: '',
+                    sodeciAmount: '',
+                    cie10Amount: '',
+                    cie15Amount: '',
+                    applicationFees: false,
+                    sodeci: false,
+                    cie10: false,
+                    cie15: false
+                  });
+                  setClientDocFiles({});
+                }}
             >
               Cancel
             </button>
@@ -3926,6 +3973,11 @@ const AdministrativeDashboard = () => {
           ) : selectedChecklist ? (
             <div style={{ display: 'grid', gap: '8px' }}>
               <div><strong>Property:</strong> {selectedChecklist.property || selectedChecklist.Property || 'N/A'}</div>
+              <div><strong>Deposit value:</strong> {Number(selectedChecklist.depositValue || selectedChecklist.DepositValue || 0).toLocaleString()} FCFA</div>
+              <div><strong>Application fees amount:</strong> {Number(selectedChecklist.applicationFeesAmount || selectedChecklist.ApplicationFeesAmount || 0).toLocaleString()} FCFA</div>
+              <div><strong>SODECI amount:</strong> {Number(selectedChecklist.sodeciAmount || selectedChecklist.SODECIAmount || 0).toLocaleString()} FCFA</div>
+              <div><strong>CIE 10A amount:</strong> {Number(selectedChecklist.cie10aAmount || selectedChecklist.CIE10AAmount || 0).toLocaleString()} FCFA</div>
+              <div><strong>CIE 15A amount:</strong> {Number(selectedChecklist.cie15aAmount || selectedChecklist.CIE15AAmount || 0).toLocaleString()} FCFA</div>
               <div><strong>Application fees:</strong> {selectedChecklist.applicationFees ? 'Yes' : 'No'}</div>
               <div><strong>SODECI:</strong> {selectedChecklist.sodeci ? 'Yes' : 'No'}</div>
               <div><strong>CIE 10A:</strong> {selectedChecklist.cie10a ? 'Yes' : 'No'}</div>
