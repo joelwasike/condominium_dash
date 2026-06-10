@@ -345,6 +345,26 @@ const LandlordDashboard = () => {
     }
     return 0;
   };
+  const parseQuoteDocuments = (quote) => {
+    const raw = quote?.Documents ?? quote?.documents ?? [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string' && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+    return [];
+  };
+  const getQuotePropertyDisplay = (quote) => {
+    const property = readValue(quote?.Property, quote?.property);
+    const unit = readValue(quote?.UnitNumber, quote?.unitNumber);
+    if (property && unit) return `${property} - ${unit}`;
+    return property || unit || 'N/A';
+  };
+  const getQuoteTenantDisplay = (quote) => readValue(quote?.Tenant, quote?.tenant) || 'N/A';
   const isAgencyAdminRole = (role) => {
     const normalized = normalizeText(role);
     return normalized === 'agency admin'
@@ -2515,35 +2535,26 @@ const LandlordDashboard = () => {
   };
 
   const renderQuoteDetail = () => {
-    const q = selectedQuote;
-    if (!q) return null;
+    const quote = selectedQuote;
+    if (!quote) return null;
 
-    // Photos come from: 1) quote.maintenance (API now includes it), 2) linked maintenance from maintenances list
-    let photos = [];
-    const maint = q.maintenance ?? q.Maintenance;
-    if (maint) {
-      const raw = maint.Photos ?? maint.photos ?? maint.PhotoURLs ?? maint.photoURLs;
-      if (Array.isArray(raw)) photos = raw;
-      else if (typeof raw === 'string' && raw.trim()) {
-        try { photos = JSON.parse(raw) || []; } catch (_) { photos = []; }
-      }
-    }
-    if (photos.length === 0) {
-      const maintenanceId = q.MaintenanceID ?? q.maintenanceId ?? q.MaintenanceId;
-      const linkedMaintenance = maintenanceId && Array.isArray(maintenances)
-        ? maintenances.find((m) => String(m.ID ?? m.id) === String(maintenanceId))
-        : null;
-      if (linkedMaintenance) {
-        const raw = linkedMaintenance.Photos ?? linkedMaintenance.photos ?? linkedMaintenance.PhotoURLs ?? linkedMaintenance.photoURLs;
-        if (Array.isArray(raw)) photos = raw;
-        else if (typeof raw === 'string' && raw.trim()) {
-          try { photos = JSON.parse(raw) || []; } catch (_) { photos = []; }
-        }
-      }
-    }
+    const maintenance = quote.maintenance || quote.Maintenance || {};
+    const documents = parseQuoteDocuments(quote);
+    const maintenanceDocuments = Array.isArray(maintenance.Documents)
+      ? maintenance.Documents
+      : parseQuoteDocuments(maintenance);
+    const displayDocuments = documents.length > 0 ? documents : maintenanceDocuments;
 
-    const status = (q.Status || q.status || '').toLowerCase();
+    const photosRaw = maintenance.Photos ?? maintenance.photos ?? [];
+    const photos = Array.isArray(photosRaw)
+      ? photosRaw
+      : (typeof photosRaw === 'string' && photosRaw.trim()
+        ? (() => { try { const parsed = JSON.parse(photosRaw); return Array.isArray(parsed) ? parsed : []; } catch (_) { return []; } })()
+        : []);
+
+    const status = normalizeText(quote.Status || quote.status || '');
     const canApprove = status !== 'approved' && status !== 'rejected';
+    const problem = quote.Problem || quote.problem || quote.Issue || quote.issue || maintenance.Issue || maintenance.issue || 'N/A';
 
     return (
       <div className="sa-clients-page">
@@ -2561,7 +2572,7 @@ const LandlordDashboard = () => {
           <div className="sa-section-header" style={{ marginBottom: '24px' }}>
             <div>
               <h2>Maintenance Quote Details</h2>
-              <p>Review quote details and approve or reject</p>
+              <p>Review the property, tenant, problem, documents and images before deciding.</p>
             </div>
             {canApprove && (
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -2571,7 +2582,7 @@ const LandlordDashboard = () => {
                   disabled={loading}
                   onClick={async () => {
                     try {
-                      await landlordService.approveMaintenanceQuote(q.ID || q.id);
+                      await landlordService.approveMaintenanceQuote(quote.ID || quote.id);
                       addNotification('Quote approved successfully', 'success');
                       setSelectedQuote(null);
                       loadData();
@@ -2591,7 +2602,7 @@ const LandlordDashboard = () => {
                   onClick={async () => {
                     if (!window.confirm('Are you sure you want to reject this quote?')) return;
                     try {
-                      await landlordService.rejectMaintenanceQuote(q.ID || q.id);
+                      await landlordService.rejectMaintenanceQuote(quote.ID || quote.id);
                       addNotification('Quote rejected successfully', 'success');
                       setSelectedQuote(null);
                       loadData();
@@ -2607,97 +2618,104 @@ const LandlordDashboard = () => {
             )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
             <div>
-              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Issue / Description</label>
-              <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap', fontSize: '1rem' }}>
-                {q.Issue || q.issue || 'N/A'}
-              </p>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Property / Apartment</label>
+              <p style={{ margin: 0, color: '#1f2937' }}>{getQuotePropertyDisplay(quote)}</p>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
-              <div>
-                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Property</label>
-                <p style={{ margin: 0, color: '#1f2937' }}>{q.Property || q.property || '—'}</p>
-              </div>
-              <div>
-                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Amount</label>
-                <p style={{ margin: 0, color: '#1f2937' }}>{((q.Amount ?? q.amount) || 0).toLocaleString()} XOF</p>
-              </div>
-              <div>
-                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Recipient</label>
-                <p style={{ margin: 0, color: '#1f2937' }}>{q.Recipient || q.recipient || '—'}</p>
-              </div>
-              <div>
-                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label>
-                <span className={`sa-status-pill ${status || 'pending'}`}>
-                  {q.Status || q.status || 'Pending'}
-                </span>
-              </div>
-              <div>
-                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
-                <p style={{ margin: 0, color: '#1f2937' }}>
-                  {q.Date || q.date || q.CreatedAt || q.createdAt
-                    ? new Date(q.Date || q.date || q.CreatedAt || q.createdAt).toLocaleDateString()
-                    : 'N/A'}
-                </p>
-              </div>
-              {(q.ValidatedBy || q.validatedBy) && (
-                <div>
-                  <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Validated By</label>
-                  <p style={{ margin: 0, color: '#1f2937' }}>{q.ValidatedBy || q.validatedBy}</p>
-                </div>
-              )}
+            <div>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Tenant</label>
+              <p style={{ margin: 0, color: '#1f2937' }}>{getQuoteTenantDisplay(quote)}</p>
             </div>
+            <div>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Problem</label>
+              <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{problem}</p>
+            </div>
+            <div>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Cost of Repairs</label>
+              <p style={{ margin: 0, color: '#1f2937' }}>{((quote.Amount ?? quote.amount) || 0).toLocaleString()} XOF</p>
+            </div>
+            <div>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label>
+              <span className={`sa-status-pill ${status || 'pending'}`}>
+                {quote.Status || quote.status || 'Pending'}
+              </span>
+            </div>
+            <div>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Validated By</label>
+              <p style={{ margin: 0, color: '#1f2937' }}>{quote.ValidatedBy || quote.validatedBy || '—'}</p>
+            </div>
+          </div>
 
-            {photos.length > 0 && (
-              <div>
-                <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Photos from maintenance ({photos.length})</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
-                  {photos.map((photoUrl, index) => {
-                    const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
-                    if (!url) return null;
-                    return (
-                      <div
-                        key={index}
-                        style={{
-                          position: 'relative',
-                          borderRadius: '12px',
-                          overflow: 'hidden',
-                          aspectRatio: '1',
-                          backgroundColor: '#f3f4f6',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                        }}
-                      >
-                        <img
-                          src={url}
-                          alt={`Quote maintenance ${index + 1}`}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => window.open(url, '_blank')}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            const parent = e.target.parentElement;
-                            if (parent && !parent.querySelector('.sa-photo-fallback')) {
-                              const fallback = document.createElement('div');
-                              fallback.className = 'sa-photo-fallback';
-                              fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
-                              fallback.textContent = 'Image not available';
-                              parent.appendChild(fallback);
-                            }
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            {displayDocuments.map((doc, index) => {
+              const url = typeof doc === 'string' ? doc : (doc?.url || doc?.URL || '');
+              if (!url) return null;
+              return (
+                <a
+                  key={`${doc?.name || 'document'}-${index}`}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="sa-outline-button"
+                  style={{ justifyContent: 'center', textDecoration: 'none' }}
+                >
+                  {doc?.name || `Document ${index + 1}`}
+                </a>
+              );
+            })}
+            {displayDocuments.length === 0 && (
+              <p style={{ margin: 0, color: '#6b7280' }}>No downloadable documents attached.</p>
             )}
           </div>
+
+          {photos.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Images ({photos.length})</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
+                {photos.map((photoUrl, index) => {
+                  const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
+                  if (!url) return null;
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        position: 'relative',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        aspectRatio: '1',
+                        backgroundColor: '#f3f4f6',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      <img
+                        src={url}
+                        alt={`Quote maintenance ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => window.open(url, '_blank')}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const parent = e.target.parentElement;
+                          if (parent && !parent.querySelector('.sa-photo-fallback')) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'sa-photo-fallback';
+                            fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
+                            fallback.textContent = 'Image not available';
+                            parent.appendChild(fallback);
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

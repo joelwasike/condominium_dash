@@ -94,7 +94,11 @@ const TechnicianDashboard = () => {
     status: '',
     estimatedHours: 0,
     estimatedCost: 0,
-    photos: []
+    photos: [],
+    quotation: null,
+    invoice: null,
+    supportingDocument: null,
+    requireDirectorApproval: false,
   });
   const [showPhotoUploadModal, setShowPhotoUploadModal] = useState(false);
   const [selectedInspectionForPhoto, setSelectedInspectionForPhoto] = useState(null);
@@ -479,8 +483,12 @@ const TechnicianDashboard = () => {
       property: task.Property || task.property || '',
       issue: task.Issue || task.issue || '',
       priority: task.Priority || task.priority || 'normal',
-        assigned: task.Assigned || task.assigned || '',
-        photos: []
+      assigned: task.Assigned || task.assigned || '',
+      photos: [],
+      quotation: null,
+      invoice: null,
+      supportingDocument: null,
+      requireDirectorApproval: false,
     });
     setShowTaskModal(true);
   };
@@ -516,6 +524,7 @@ const TechnicianDashboard = () => {
             photos: taskForm.photos || [],
             quotation: taskForm.quotation || null,
             invoice: taskForm.invoice || null,
+            supportingDocument: taskForm.supportingDocument || null,
             requireDirectorApproval: taskForm.requireDirectorApproval || false,
           };
           await technicianService.createMaintenanceRequest(maintenanceData);
@@ -546,7 +555,7 @@ const TechnicianDashboard = () => {
       setShowTaskModal(false);
       setSelectedTask(null);
       setTaskContext('task');
-      setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
+      setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
       loadData(); // Reload data to show updated/created task
     } catch (error) {
       console.error('Error updating/creating task:', error);
@@ -1377,7 +1386,10 @@ const TechnicianDashboard = () => {
         const quoteData = {
           maintenanceId: maintenance.id || maintenance.ID,
           property: maintenance.property || maintenance.Property,
+          tenant: maintenance.tenant || maintenance.Tenant || '',
+          unitNumber: maintenance.unitNumber || maintenance.UnitNumber || '',
           issue: maintenance.issue || maintenance.Issue,
+          problem: maintenance.problem || maintenance.Problem || maintenance.issue || maintenance.Issue,
           amount: estimatedCost,
           recipient: 'management@example.com',
         };
@@ -1435,6 +1447,7 @@ const TechnicianDashboard = () => {
                 existingPhotoURLs: [],
                 quotation: null,
                 invoice: null,
+                supportingDocument: null,
                 requireDirectorApproval: false,
               });
               setShowTaskModal(true);
@@ -1829,7 +1842,7 @@ const TechnicianDashboard = () => {
           className="sa-primary-cta"
           onClick={() => {
             setSelectedTask(null);
-            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
+            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
             setShowTaskModal(true);
           }}
         >
@@ -3506,7 +3519,7 @@ const TechnicianDashboard = () => {
           setShowTaskModal(false);
           setSelectedTask(null);
           setTaskContext('task');
-          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
+          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -3517,7 +3530,7 @@ const TechnicianDashboard = () => {
                   setShowTaskModal(false);
                   setSelectedTask(null);
                   setTaskContext('task');
-                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
+                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
                 }}
               >
                 ×
@@ -3789,6 +3802,25 @@ const TechnicianDashboard = () => {
                 )}
               </div>
               <div className="form-group">
+                <label htmlFor="task-supporting-document">Upload Supporting Document (optional)</label>
+                <input
+                  type="file"
+                  id="task-supporting-document"
+                  accept=".pdf,.doc,.docx,image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    setTaskForm(prev => ({ ...prev, supportingDocument: f || null }));
+                    e.target.value = '';
+                  }}
+                />
+                {taskForm.supportingDocument && (
+                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{taskForm.supportingDocument.name}</span>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, supportingDocument: null }))}>Remove</button>
+                  </div>
+                )}
+              </div>
+              <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
@@ -3808,7 +3840,7 @@ const TechnicianDashboard = () => {
                     setShowTaskModal(false);
                     setSelectedTask(null);
                     setTaskContext('task');
-                    setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
+                    setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
                   }}
                 >
                     Cancel

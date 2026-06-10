@@ -106,10 +106,12 @@ export const technicianService = {
     const photos = requestData?.photos;
     const quotation = requestData?.quotation;
     const invoice = requestData?.invoice;
+    const supportingDocument = requestData?.supportingDocument;
     const hasPhotos = Array.isArray(photos) && photos.length > 0;
     const hasQuotation = quotation && typeof quotation === 'object' && quotation instanceof File;
     const hasInvoice = invoice && typeof invoice === 'object' && invoice instanceof File;
-    const hasFiles = hasPhotos || hasQuotation || hasInvoice;
+    const hasSupportingDocument = supportingDocument && typeof supportingDocument === 'object' && supportingDocument instanceof File;
+    const hasFiles = hasPhotos || hasQuotation || hasInvoice || hasSupportingDocument;
 
     if (hasFiles) {
       const formData = new FormData();
@@ -129,6 +131,7 @@ export const technicianService = {
       }
       if (hasQuotation) formData.append('quotation', quotation);
       if (hasInvoice) formData.append('invoice', invoice);
+      if (hasSupportingDocument) formData.append('supportingDocument', supportingDocument);
       return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
         method: 'POST',
         body: formData,
@@ -142,6 +145,7 @@ export const technicianService = {
       status: String(requestData?.status ?? 'Pending'),
       estimatedCost: numCost,
       assigned: String(requestData?.assigned ?? ''),
+      supportingDocument: undefined,
       requireDirectorApproval: !!requestData?.requireDirectorApproval,
     };
     return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {

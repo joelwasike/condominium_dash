@@ -184,6 +184,7 @@ const AgencyDirectorDashboard = () => {
   // Tenants state
   const [tenants, setTenants] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState(null);
+  const [selectedQuote, setSelectedQuote] = useState(null);
   const [tenantProfile, setTenantProfile] = useState(null);
   const [showTenantProfileModal, setShowTenantProfileModal] = useState(false);
   const [tenantStatusFilter, setTenantStatusFilter] = useState('');
@@ -380,6 +381,29 @@ const AgencyDirectorDashboard = () => {
       return true;
     });
   };
+
+  const parseQuoteDocuments = (quote) => {
+    const raw = quote?.Documents ?? quote?.documents ?? [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string' && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const getQuotePropertyDisplay = (quote) => {
+    const property = getValue(quote?.Property, quote?.property);
+    const unit = getValue(quote?.UnitNumber, quote?.unitNumber);
+    if (property && unit) return `${property} - ${unit}`;
+    return property || unit || 'N/A';
+  };
+
+  const getQuoteTenantDisplay = (quote) => getValue(quote?.Tenant, quote?.tenant) || 'N/A';
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -4467,78 +4491,234 @@ const AgencyDirectorDashboard = () => {
     </div>
   );
 
-  // Render Quotes to Validate content
-  const renderQuotesToValidateContent = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <p style={{ color: '#6b7280', margin: 0 }}>{pendingQuotes.length} pending quotes found</p>
-      </div>
+  const renderQuoteDetail = () => {
+    const quote = selectedQuote;
+    if (!quote) return null;
 
-      <div className="sa-table-wrapper">
-        <table className="sa-table">
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Property</th>
-              <th>Issue</th>
-              <th>Recipient</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingQuotes.map((quote, index) => (
-              <tr key={`quote-${quote.id || quote.ID || index}`}>
-                <td>{index + 1}</td>
-                <td>{quote.property || quote.Property || 'N/A'}</td>
-                <td className="sa-cell-main">
-                  <span className="sa-cell-title">{quote.issue || quote.Issue || 'N/A'}</span>
-                </td>
-                <td>{quote.recipient || quote.Recipient || 'N/A'}</td>
-                <td>{(quote.amount || quote.Amount || 0).toLocaleString()} XOF</td>
-                <td>
-                  {quote.date || quote.Date
-                    ? new Date(quote.date || quote.Date).toLocaleDateString()
-                    : 'N/A'}
-                </td>
-                <td>
-                  <span className={`sa-status-pill ${(quote.status || quote.Status || 'pending').toLowerCase().replace(/_/g, '-')}`}>
-                    {quote.status || quote.Status || 'Pending'}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      className="table-action-button edit"
-                      onClick={() => handleApproveQuote(quote.id || quote.ID)}
-                      disabled={loading}
-                      style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      className="table-action-button delete"
-                      onClick={() => handleRejectQuote(quote.id || quote.ID)}
-                      disabled={loading}
-                    >
-                      Reject
-                    </button>
+    const maintenance = quote.maintenance || quote.Maintenance || {};
+    const documents = parseQuoteDocuments(quote);
+    const maintenanceDocuments = Array.isArray(maintenance.Documents)
+      ? maintenance.Documents
+      : parseQuoteDocuments(maintenance);
+    const displayDocuments = documents.length > 0 ? documents : maintenanceDocuments;
+    const photosRaw = maintenance.Photos ?? maintenance.photos ?? [];
+    const photos = Array.isArray(photosRaw)
+      ? photosRaw
+      : (typeof photosRaw === 'string' && photosRaw.trim()
+        ? (() => { try { const parsed = JSON.parse(photosRaw); return Array.isArray(parsed) ? parsed : []; } catch (_) { return []; } })()
+        : []);
+    const status = normalizeText(quote.status || quote.Status || '');
+    const canApprove = status !== 'approved' && status !== 'rejected';
+    const problem = quote.problem || quote.Problem || quote.issue || quote.Issue || 'N/A';
+
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header" style={{ marginBottom: '20px' }}>
+          <div>
+            <h3>Quote Review</h3>
+            <p>Review property, tenant, problem, images and documents before approving.</p>
+          </div>
+          <button
+            type="button"
+            className="sa-outline-button"
+            onClick={() => setSelectedQuote(null)}
+          >
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '18px', marginBottom: '24px' }}>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Property / Apartment</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{getQuotePropertyDisplay(quote)}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Tenant</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{getQuoteTenantDisplay(quote)}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Problem</label>
+            <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{problem}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Cost of Repairs</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{(quote.amount || quote.Amount || 0).toLocaleString()} XOF</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label>
+            <span className={`sa-status-pill ${status || 'pending'}`}>{quote.status || quote.Status || 'Pending'}</span>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Validated By</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{quote.validatedBy || quote.ValidatedBy || '—'}</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            {displayDocuments.map((doc, index) => {
+              const url = typeof doc === 'string' ? doc : (doc?.url || doc?.URL || doc?.path || '');
+              if (!url) return null;
+              return (
+              <a
+                key={`${doc?.name || 'document'}-${index}`}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="sa-outline-button"
+                style={{ justifyContent: 'center', textDecoration: 'none' }}
+              >
+                {doc?.name || `Document ${index + 1}`}
+              </a>
+            );
+          })}
+          {displayDocuments.length === 0 && (
+            <p style={{ margin: 0, color: '#6b7280' }}>No downloadable documents attached.</p>
+          )}
+        </div>
+
+        {photos.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <h4 style={{ margin: '0 0 12px', color: '#111827' }}>Images ({photos.length})</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px' }}>
+              {photos.map((photoUrl, index) => {
+                const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
+                if (!url) return null;
+                return (
+                  <div key={`${url}-${index}`} style={{ borderRadius: '12px', overflow: 'hidden', background: '#f3f4f6', minHeight: '150px' }}>
+                    <img
+                      src={url}
+                      alt={`Maintenance ${index + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                      onClick={() => window.open(url, '_blank')}
+                    />
                   </div>
-                </td>
-              </tr>
-            ))}
-            {pendingQuotes.length === 0 && (
-              <tr>
-                <td colSpan={8} className="sa-table-empty">No pending quotes to validate</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {canApprove && (
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              className="table-action-button edit"
+              onClick={async () => {
+                try {
+                  await handleApproveQuote(quote.id || quote.ID);
+                  setSelectedQuote(null);
+                } catch (_) {
+                  // handled by handler
+                }
+              }}
+              disabled={loading}
+              style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+            >
+              Approve
+            </button>
+            <button
+              className="table-action-button delete"
+              onClick={async () => {
+                try {
+                  await handleRejectQuote(quote.id || quote.ID);
+                  setSelectedQuote(null);
+                } catch (_) {
+                  // handled by handler
+                }
+              }}
+              disabled={loading}
+            >
+              Reject
+            </button>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
+
+  // Render Quotes to Validate content
+  const renderQuotesToValidateContent = () => {
+    if (selectedQuote) {
+      return renderQuoteDetail();
+    }
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <p style={{ color: '#6b7280', margin: 0 }}>{pendingQuotes.length} pending quotes found</p>
+        </div>
+
+        <div className="sa-table-wrapper">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Property / Apartment</th>
+                <th>Tenant</th>
+                <th>Issue</th>
+                <th>Cost</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingQuotes.map((quote, index) => (
+                <tr
+                  key={`quote-${quote.id || quote.ID || index}`}
+                  className="clickable-row"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setSelectedQuote(quote)}
+                >
+                  <td>{index + 1}</td>
+                  <td>{getQuotePropertyDisplay(quote)}</td>
+                  <td>{getQuoteTenantDisplay(quote)}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{quote.problem || quote.Problem || quote.issue || quote.Issue || 'N/A'}</span>
+                  </td>
+                  <td>{(quote.amount || quote.Amount || 0).toLocaleString()} XOF</td>
+                  <td>
+                    {quote.date || quote.Date
+                      ? new Date(quote.date || quote.Date).toLocaleDateString()
+                      : 'N/A'}
+                  </td>
+                  <td>
+                    <span className={`sa-status-pill ${(quote.status || quote.Status || 'pending').toLowerCase().replace(/_/g, '-')}`}>
+                      {quote.status || quote.Status || 'Pending'}
+                    </span>
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="table-action-button edit"
+                        onClick={() => handleApproveQuote(quote.id || quote.ID)}
+                        disabled={loading}
+                        style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="table-action-button delete"
+                        onClick={() => handleRejectQuote(quote.id || quote.ID)}
+                        disabled={loading}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {pendingQuotes.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="sa-table-empty">No pending quotes to validate</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   const renderSubscription = () => {
     return (
