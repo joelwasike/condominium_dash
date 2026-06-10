@@ -1186,9 +1186,102 @@ const TenantDashboard = () => {
       openMaintenanceTickets: 0,
       tenant: ''
     };
-    const nextRentDueAmount = Number(data.nextRentDue?.amount ?? 0);
-    const leaseRentAmount = Number(data.lease?.rent ?? 0);
-    const displayNextRentDueAmount = nextRentDueAmount > 0 ? nextRentDueAmount : leaseRentAmount;
+    const leaseSource = leaseInfo || data.lease || {};
+    const leaseStartRaw = leaseSource.startDate || leaseSource.StartDate || data.lease?.startDate || data.lease?.StartDate || '';
+    const leaseRentAmount = Number(
+      data.nextRentDue?.amount ??
+      leaseSource.rent ??
+      leaseSource.Rent ??
+      data.lease?.rent ??
+      data.lease?.Rent ??
+      0
+    );
+
+    const parseValidDate = (value) => {
+      if (!value) return null;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+
+    const computeFallbackNextRentDue = () => {
+      const startDate = parseValidDate(leaseStartRaw);
+      if (!startDate || leaseRentAmount <= 0) {
+        return { date: '', amount: null, status: 'unknown', aheadAmount: 0 };
+      }
+
+      const now = new Date();
+      const anchorDay = startDate.getDate();
+
+      const makeDueDate = (year, month) => {
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        const day = Math.min(anchorDay, lastDay);
+        return new Date(year, month, day, 0, 0, 0, 0);
+      };
+
+      let due = makeDueDate(now.getFullYear(), now.getMonth());
+      if (due.getTime() <= now.getTime()) {
+        const next = new Date(now);
+        next.setMonth(next.getMonth() + 1);
+        due = makeDueDate(next.getFullYear(), next.getMonth());
+      }
+
+      const monthsBetween = (start, end) => {
+        if (!start || !end || end.getTime() <= start.getTime()) return 0;
+        const y1 = start.getFullYear();
+        const m1 = start.getMonth();
+        const d1 = start.getDate();
+        const y2 = end.getFullYear();
+        const m2 = end.getMonth();
+        const d2 = end.getDate();
+        let months = (y2 - y1) * 12 + (m2 - m1);
+        if (d2 < d1) months -= 1;
+        return Math.max(0, months);
+      };
+
+      const owedMonths = monthsBetween(startDate, due);
+      const totalOwed = owedMonths * leaseRentAmount;
+      const paidTotal = payments
+        .filter((p) => {
+          const status = String(p.Status || p.status || '').toLowerCase();
+          const chargeType = String(p.chargeType || p.ChargeType || '').toLowerCase();
+          return (status === 'approved' || status === 'completed' || status === 'paid') &&
+            (chargeType === 'rent' || chargeType === 'loyer' || chargeType.includes('rent'));
+        })
+        .reduce((sum, p) => sum + Number(p.Amount || p.amount || 0), 0);
+
+      const balance = paidTotal - totalOwed;
+      if (balance > 0) {
+        const monthsAhead = leaseRentAmount > 0 ? Math.floor(balance / leaseRentAmount) : 0;
+        if (monthsAhead > 0) {
+          due.setMonth(due.getMonth() + monthsAhead);
+        }
+        return {
+          date: due.toISOString().split('T')[0],
+          amount: 0,
+          status: 'ahead',
+          aheadAmount: balance
+        };
+      }
+      if (balance === 0) {
+        return {
+          date: due.toISOString().split('T')[0],
+          amount: 0,
+          status: 'up_to_date',
+          aheadAmount: 0
+        };
+      }
+      return {
+        date: due.toISOString().split('T')[0],
+        amount: Math.abs(balance),
+        status: 'in_arrears',
+        aheadAmount: 0
+      };
+    };
+
+    const effectiveNextRentDue = (data.nextRentDue?.date || data.nextRentDue?.amount != null)
+      ? data.nextRentDue
+      : computeFallbackNextRentDue();
+    const displayNextRentDueAmount = Number(effectiveNextRentDue?.amount ?? leaseRentAmount ?? 0);
 
     // Calculate open maintenance from actual requests (filter by status)
     const openMaintenanceCount = maintenanceRequests.filter(m => {
@@ -1326,14 +1419,16 @@ const TenantDashboard = () => {
             <div className="sa-overview-metrics">
             <div className="sa-metric-card sa-metric-primary">
               <p className="sa-metric-label">Next Rent Due</p>
-              <p className="sa-metric-period">Due: {data.nextRentDue?.date || 'N/A'}</p>
+              <p className="sa-metric-period">Due: {effectiveNextRentDue?.date || 'N/A'}</p>
               <p className="sa-metric-value">
-                {displayNextRentDueAmount > 0
+                {effectiveNextRentDue?.date
+                  ? `${Math.max(0, displayNextRentDueAmount).toLocaleString()} XOF`
+                  : displayNextRentDueAmount > 0
                   ? `${displayNextRentDueAmount.toLocaleString()} XOF`
                   : 'N/A'}
               </p>
-              {data.nextRentDue?.status === 'ahead' && Number(data.nextRentDue?.aheadAmount || 0) > 0 && (
-                <p className="sa-metric-period">Ahead by: {Number(data.nextRentDue.aheadAmount).toLocaleString()} XOF</p>
+              {effectiveNextRentDue?.status === 'ahead' && Number(effectiveNextRentDue?.aheadAmount || 0) > 0 && (
+                <p className="sa-metric-period">Ahead by: {Number(effectiveNextRentDue.aheadAmount).toLocaleString()} XOF</p>
               )}
             </div>
             <div className="sa-metric-card">
