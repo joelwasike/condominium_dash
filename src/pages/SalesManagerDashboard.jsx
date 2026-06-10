@@ -6421,11 +6421,11 @@ const SalesManagerDashboard = () => {
                       <label>Security Deposit</label>
                       <input
                         type="text"
-                        value={
+                      value={
                           selectedApprovedClient
                             ? (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid') +
                               (approvedClientDepositInfo.depositValue > 0
-                                ? ` - ${Math.round(approvedClientDepositInfo.depositValue).toLocaleString()} XOF`
+                                ? ` - ${Number(approvedClientDepositInfo.depositValue).toLocaleString(undefined, { maximumFractionDigits: 2 })} XOF`
                                 : '')
                             : ''
                         }

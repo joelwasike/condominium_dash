@@ -1281,7 +1281,9 @@ const TenantDashboard = () => {
     const effectiveNextRentDue = (data.nextRentDue?.date || data.nextRentDue?.amount != null)
       ? data.nextRentDue
       : computeFallbackNextRentDue();
-    const displayNextRentDueAmount = Number(effectiveNextRentDue?.amount ?? leaseRentAmount ?? 0);
+    const nextRentDueDisplayAmount = leaseRentAmount > 0
+      ? leaseRentAmount
+      : Number(effectiveNextRentDue?.amount ?? 0);
 
     // Calculate open maintenance from actual requests (filter by status)
     const openMaintenanceCount = maintenanceRequests.filter(m => {
@@ -1422,9 +1424,9 @@ const TenantDashboard = () => {
               <p className="sa-metric-period">Due: {effectiveNextRentDue?.date || 'N/A'}</p>
               <p className="sa-metric-value">
                 {effectiveNextRentDue?.date
-                  ? `${Math.max(0, displayNextRentDueAmount).toLocaleString()} XOF`
-                  : displayNextRentDueAmount > 0
-                  ? `${displayNextRentDueAmount.toLocaleString()} XOF`
+                  ? `${Math.max(0, nextRentDueDisplayAmount).toLocaleString()} XOF`
+                  : nextRentDueDisplayAmount > 0
+                  ? `${nextRentDueDisplayAmount.toLocaleString()} XOF`
                   : 'N/A'}
               </p>
               {effectiveNextRentDue?.status === 'ahead' && Number(effectiveNextRentDue?.aheadAmount || 0) > 0 && (

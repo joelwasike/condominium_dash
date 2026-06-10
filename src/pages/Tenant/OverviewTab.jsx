@@ -23,7 +23,7 @@ const OverviewTab = ({ loading, overviewData, payments, maintenanceRequests }) =
   };
   const nextRentDueAmount = Number(data.nextRentDue?.amount ?? 0);
   const leaseRentAmount = Number(data.lease?.rent ?? 0);
-  const displayNextRentDueAmount = nextRentDueAmount > 0 ? nextRentDueAmount : leaseRentAmount;
+  const displayNextRentDueAmount = leaseRentAmount > 0 ? leaseRentAmount : nextRentDueAmount;
 
   const openMaintenanceCount = maintenanceRequests.filter(m => {
     const status = (m.Status || m.status || '').toLowerCase();

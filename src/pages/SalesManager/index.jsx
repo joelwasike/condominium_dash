@@ -148,7 +148,7 @@ const SalesManagerDashboard = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState(null); // { type: 'single' | 'bulk', user: {...} | users: [...] }
   const [selectedApprovedClientId, setSelectedApprovedClientId] = useState('');
-  const [moveInFormPropertyRent, setMoveInFormPropertyRent] = useState(0);
+  const [moveInFormPropertyRent, setMoveInFormPropertyRent] = useState(null);
   const [approvedClientDocuments, setApprovedClientDocuments] = useState([]);
   const [approvedClientChecklist, setApprovedClientChecklist] = useState(null);
   const [loadingApprovedDocs, setLoadingApprovedDocs] = useState(false);
@@ -156,6 +156,28 @@ const SalesManagerDashboard = () => {
   const [moveInPropertyLocked, setMoveInPropertyLocked] = useState(false);
   const [selectedMoveInUnitNumber, setSelectedMoveInUnitNumber] = useState('');
   const [moveInUnits, setMoveInUnits] = useState([]);
+
+  const readMoneyAmount = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    const normalized = String(value).replace(/,/g, '').trim();
+    if (!normalized) return null;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const getUnitRentAmount = (unit) => {
+    if (!unit) return null;
+    const rentValue =
+      unit.rentPrice ??
+      unit.RentPrice ??
+      unit.rent ??
+      unit.Rent ??
+      unit.amount ??
+      unit.Amount ??
+      unit.monthlyRent ??
+      unit.MonthlyRent;
+    return readMoneyAmount(rentValue);
+  };
 
   // Visits / Requests (schedule visit from Property Management uses properties)
   const [showScheduleVisitModal, setShowScheduleVisitModal] = useState(false);
@@ -666,7 +688,7 @@ const SalesManagerDashboard = () => {
     if (!selectedApprovedClientId) {
       setApprovedClientDocuments([]);
       setApprovedClientChecklist(null);
-      setMoveInFormPropertyRent(0);
+      setMoveInFormPropertyRent(null);
       setSelectedMoveInPropertyId('');
       setMoveInPropertyLocked(false);
       setSelectedMoveInUnitNumber('');
@@ -719,14 +741,9 @@ const SalesManagerDashboard = () => {
 
     const selectedProperty = val ? properties.find((p) => String(p.ID || p.id) === String(val)) : null;
     if (!selectedProperty) {
-      setMoveInFormPropertyRent(0);
+      setMoveInFormPropertyRent(null);
       return;
     }
-
-    // Avoid floating-point artifacts (e.g., 99999.90000000001) by rounding to an integer amount.
-    const rawRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
-    const propertyRent = Number.isFinite(rawRent) ? Math.round(rawRent) : 0;
-    setMoveInFormPropertyRent(propertyRent);
 
     // Populate unit dropdown using real unit occupancy (only show vacant units)
     try {
@@ -741,12 +758,29 @@ const SalesManagerDashboard = () => {
         _label: (u.unitNumber ?? u.UnitNumber ?? u.name ?? u.Name ?? `Unit #${u.id ?? u.ID ?? ''}`).toString().trim(),
       }));
       setMoveInUnits(vacant);
+
+      const savedUnit = (approvedClientChecklist?.unitNumber || approvedClientChecklist?.UnitNumber || '').toString().trim().toLowerCase();
+      const preselectedUnit = vacant.find((unit) => {
+        const label = (unit._label || unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || '').toString().trim().toLowerCase();
+        const unitId = (unit.id ?? unit.ID ?? '').toString().trim().toLowerCase();
+        return (savedUnit && label === savedUnit) || (savedUnit && unitId === savedUnit);
+      }) || null;
+
+      const nextRent = getUnitRentAmount(preselectedUnit);
+      if (nextRent !== null) {
+        setMoveInFormPropertyRent(nextRent);
+      } else {
+        const propertyRent = readMoneyAmount(selectedProperty.Rent || selectedProperty.rent || 0);
+        setMoveInFormPropertyRent(propertyRent);
+      }
     } catch (_) {
       // Fallback to numeric unit list if unit-detail endpoint fails
       const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
       setMoveInUnits(Array.from({ length: numberOfUnits }, (_, i) => ({ _label: `Unit ${i + 1}` })));
+      const propertyRent = readMoneyAmount(selectedProperty.Rent || selectedProperty.rent || 0);
+      setMoveInFormPropertyRent(propertyRent);
     }
-  }, [properties]);
+  }, [approvedClientChecklist, properties]);
 
   // Prefill property from admin checklist (property is stored as address string on the checklist).
   useEffect(() => {
@@ -796,6 +830,35 @@ const SalesManagerDashboard = () => {
       setSelectedMoveInUnitNumber(checklistUnit);
     }
   }, [approvedClientChecklist, moveInUnits, selectedApprovedClientId, selectedMoveInUnitNumber, showTenantCreationModal]);
+
+  useEffect(() => {
+    if (!showTenantCreationModal) return;
+
+    const normalizedSelectedUnit = selectedMoveInUnitNumber.toString().trim().toLowerCase();
+    const normalizedChecklistUnit = (approvedClientChecklist?.unitNumber || approvedClientChecklist?.UnitNumber || '').toString().trim().toLowerCase();
+
+    const matchedUnit = moveInUnits.find((unit) => {
+      const label = (unit._label || unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || '').toString().trim().toLowerCase();
+      const unitId = (unit.id ?? unit.ID ?? '').toString().trim().toLowerCase();
+      return (normalizedSelectedUnit && label === normalizedSelectedUnit) ||
+        (normalizedSelectedUnit && unitId === normalizedSelectedUnit) ||
+        (normalizedChecklistUnit && label === normalizedChecklistUnit) ||
+        (normalizedChecklistUnit && unitId === normalizedChecklistUnit);
+    });
+
+    const rentAmount = getUnitRentAmount(matchedUnit);
+    if (rentAmount !== null) {
+      setMoveInFormPropertyRent(rentAmount);
+      return;
+    }
+
+    const selectedProperty = selectedMoveInPropertyId
+      ? properties.find((p) => String(p.ID || p.id) === String(selectedMoveInPropertyId))
+      : null;
+    if (selectedProperty) {
+      setMoveInFormPropertyRent(readMoneyAmount(selectedProperty.Rent || selectedProperty.rent || 0));
+    }
+  }, [approvedClientChecklist, moveInUnits, properties, selectedMoveInPropertyId, selectedMoveInUnitNumber, showTenantCreationModal]);
 
   // Fetch full tenant details when a tenant is selected for detail view
   useEffect(() => {
@@ -3381,11 +3444,11 @@ const SalesManagerDashboard = () => {
                       <label>Security Deposit</label>
                       <input
                         type="text"
-                        value={
+                      value={
                           selectedApprovedClient
                             ? (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid') +
                               (approvedClientDepositInfo.depositValue > 0
-                                ? ` - ${Math.round(approvedClientDepositInfo.depositValue).toLocaleString()} XOF`
+                                ? ` - ${Number(approvedClientDepositInfo.depositValue).toLocaleString(undefined, { maximumFractionDigits: 2 })} XOF`
                                 : '')
                             : ''
                         }
@@ -3487,7 +3550,15 @@ const SalesManagerDashboard = () => {
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="rent">Monthly Rent</label>
-                      <input type="number" name="rent" step="0.01" required placeholder="0.00" />
+                      <input
+                        type="number"
+                        name="rent"
+                        step="0.01"
+                        required
+                        placeholder="0.00"
+                        value={moveInFormPropertyRent ?? ''}
+                        onChange={(e) => setMoveInFormPropertyRent(e.target.value === '' ? null : readMoneyAmount(e.target.value))}
+                      />
                     </div>
                     <div className="form-group">
                       <label htmlFor="moveInDate">Move-in Date</label>

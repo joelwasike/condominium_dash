@@ -3207,10 +3207,11 @@ const AccountingDashboard = () => {
                   e.preventDefault();
                   try {
                     setLoading(true);
+                    const depositAmount = Number(depositPaymentForm.depositAmount || 0);
                     await accountingService.recordDepositPayment({
                       ...depositPaymentForm,
                       monthlyRent: parseFloat(depositPaymentForm.monthlyRent),
-                      amount: parseFloat(depositPaymentForm.monthlyRent) * 4.5,
+                      amount: depositAmount > 0 ? depositAmount : parseFloat(depositPaymentForm.monthlyRent) * 4.5,
                       monthsMultiplier: 4.5
                     });
                     addNotification('Security deposit payment recorded successfully!', 'success');
@@ -3422,6 +3423,7 @@ const AccountingDashboard = () => {
                                 property: processDepositItem.property,
                                 tenantType: 'individual',
                                 monthlyRent,
+                                amount: depositAmt,
                                 paymentMethod: 'mobile_money',
                                 reference: '',
                                 notes: 'Recorded via Process deposit refund'
@@ -6900,12 +6902,13 @@ const AccountingDashboard = () => {
                   try {
                     setLoading(true);
                     const monthlyRent = parseFloat(collectionPaymentForm.monthlyRent || '0');
+                    const depositAmount = Number(collectionPaymentForm.depositAmount || 0);
                     const depositData = {
                       tenant: collectionPaymentForm.tenant,
                       property: collectionPaymentForm.property,
                       tenantType: collectionPaymentForm.tenantType,
                       monthlyRent,
-                      amount: monthlyRent * 4.5,
+                      amount: depositAmount > 0 ? depositAmount : monthlyRent * 4.5,
                       monthsMultiplier: 4.5,
                       paymentMethod: collectionPaymentForm.paymentMethod,
                     };
@@ -6918,7 +6921,7 @@ const AccountingDashboard = () => {
                       await accountingService.recordCollection({
                         building: collectionPaymentForm.property,
                         landlord: collectionPaymentForm.landlord || 'N/A',
-                        amount: deposit.deposit?.Amount || deposit.amount || parseFloat(collectionPaymentForm.monthlyRent || '0') * 4.5,
+                        amount: deposit.deposit?.Amount || deposit.amount || depositAmount || parseFloat(collectionPaymentForm.monthlyRent || '0') * 4.5,
                         chargeType: 'Deposit',
                         status: 'Collected',
                       });
