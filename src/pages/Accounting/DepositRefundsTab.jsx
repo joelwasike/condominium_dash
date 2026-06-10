@@ -77,7 +77,6 @@ const DepositRefundsTab = (props) => {
 DepositRefundsTab.Modals = (props) => {
   const { loading, setLoading, addNotification, showDepositPaymentModal, setShowDepositPaymentModal, showDepositRefundModal, setShowDepositRefundModal, showProcessDepositModal, setShowProcessDepositModal, depositPaymentForm, setDepositPaymentForm, depositRefundForm, setDepositRefundForm, processDepositItem, setProcessDepositItem, processDepositManualAmount, setProcessDepositManualAmount, depositEligibleTenants, setDepositEligibleTenants, deposits, loadDeposits, loadDepositRefundsPending, setOverviewData } = props;
   const tenantList = Array.isArray(depositEligibleTenants) ? depositEligibleTenants : [];
-  const depositTenantListId = 'deposit-eligible-tenant-options';
 
   return (
     <>
@@ -86,7 +85,32 @@ DepositRefundsTab.Modals = (props) => {
           <div className="modal-header"><h3>{t('accounting.recordSecurityDepositPayment')}</h3><button className="modal-close" onClick={() => setShowDepositPaymentModal(false)}>x</button></div>
           <div className="modal-body">
             <form onSubmit={async (e) => { e.preventDefault(); try { setLoading(true); if (!depositPaymentForm.tenantId) { throw new Error('Please select a validated client from the list'); } await accountingService.recordDepositPayment({...depositPaymentForm, tenantId: Number(depositPaymentForm.tenantId), monthlyRent: parseFloat(depositPaymentForm.monthlyRent), amount: parseFloat(depositPaymentForm.monthlyRent) * 4.5 + (depositPaymentForm.applicationFees ? 37000 : 0), monthsMultiplier: 4.5}); addNotification('Security deposit payment recorded successfully!', 'success'); setShowDepositPaymentModal(false); setDepositPaymentForm({tenant:'',tenantId:'',property:'',tenantType:'individual',monthlyRent:'',applicationFees:false,paymentMethod:'mobile_money',paymentProvider:'',reference:'',notes:''}); try { const eligibleClients = await accountingService.getDepositEligibleTenants(); setDepositEligibleTenants(Array.isArray(eligibleClients) ? eligibleClients : []); } catch (refreshError) { console.error('Error refreshing deposit eligible clients:', refreshError); } await loadDeposits(); loadDepositRefundsPending(); } catch (error) { console.error('Error recording deposit payment:', error); addNotification(error.message || 'Failed to record deposit payment', 'error'); } finally { setLoading(false); } }}>
-              <div className="form-group"><label>Validated Client *</label><input list={depositTenantListId} value={depositPaymentForm.tenant} onChange={(e) => { const name = e.target.value; const t2 = tenantList.find(x => (x.tenantName || x.TenantName || x.name || x.Name || '').toLowerCase() === name.toLowerCase()); const appFees = t2 ? !!(t2.applicationFees ?? t2.ApplicationFees) : false; setDepositPaymentForm({...depositPaymentForm, tenant: name, tenantId: t2 ? String(t2.tenantId ?? t2.TenantID ?? t2.id ?? '') : '', property: t2 ? (t2.property || t2.Property || '') : '', applicationFees: appFees}); }} required placeholder="Type to search validated client" /><datalist id={depositTenantListId}>{tenantList.filter(t2 => (t2.property || t2.Property)).map((t2) => { const name = t2.tenantName || t2.TenantName || t2.name || t2.Name || ''; return <option key={t2.tenantId ?? t2.TenantID ?? name} value={name}>{name} - {t2.property || t2.Property}</option>; })}</datalist></div>
+              <div className="form-group">
+                <label>Validated Client *</label>
+                <select
+                  value={depositPaymentForm.tenantId || ''}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const t2 = tenantList.find(x => String(x.tenantId ?? x.TenantID ?? x.id ?? '') === String(selectedId));
+                    const appFees = t2 ? !!(t2.applicationFees ?? t2.ApplicationFees) : false;
+                    setDepositPaymentForm({
+                      ...depositPaymentForm,
+                      tenant: t2 ? (t2.tenantName || t2.TenantName || t2.name || t2.Name || '') : '',
+                      tenantId: t2 ? String(t2.tenantId ?? t2.TenantID ?? t2.id ?? '') : '',
+                      property: t2 ? (t2.property || t2.Property || '') : '',
+                      applicationFees: appFees
+                    });
+                  }}
+                  required
+                >
+                  <option value="">Select validated client</option>
+                  {tenantList.filter(t2 => (t2.property || t2.Property)).map((t2) => {
+                    const id = t2.tenantId ?? t2.TenantID ?? t2.id ?? '';
+                    const name = t2.tenantName || t2.TenantName || t2.name || t2.Name || '';
+                    return <option key={id || name} value={id}>{name} - {t2.property || t2.Property}</option>;
+                  })}
+                </select>
+              </div>
               <div className="form-group"><label>Property *</label><input type="text" value={depositPaymentForm.property} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, property: e.target.value})} required placeholder="Auto-filled when selecting tenant" /></div>
               <div className="form-group"><label>Tenant Type *</label><select value={depositPaymentForm.tenantType} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, tenantType: e.target.value})} required><option value="individual">Individual</option><option value="company">Company</option></select><small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>4.5 months deposit for all properties</small></div>
               <div className="form-group"><label>Monthly Rent (XOF) *</label><input type="number" step="0.01" value={depositPaymentForm.monthlyRent} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, monthlyRent: e.target.value})} required placeholder="0.00" />{depositPaymentForm.monthlyRent && <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>Deposit Amount: {(parseFloat(depositPaymentForm.monthlyRent) * 4.5 + (depositPaymentForm.applicationFees ? 37000 : 0)).toFixed(2)} XOF</small>}</div>
