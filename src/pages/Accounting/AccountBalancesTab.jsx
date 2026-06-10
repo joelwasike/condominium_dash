@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Wallet, Smartphone, Banknote, Building2, Users, ArrowLeft } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
 import { t } from '../../utils/i18n';
@@ -6,6 +6,8 @@ import { t } from '../../utils/i18n';
 const AccountBalancesTab = (props) => {
   const { loading, overviewData, cashierAccounts, cashierTransactions, agencyBalance, ownerBalancesOwners, ownerBalancesLoading, selectedOwnerForBalance, setSelectedOwnerForBalance, collections, landlordPayments, expenses, setShowCashierAccountModal, setCashierAccountForm, setShowCashierTransactionModal, setCashierTransactionForm } = props;
   const [showMobileMoneyDetails, setShowMobileMoneyDetails] = useState(false);
+  const [ownerSummaryRows, setOwnerSummaryRows] = useState([]);
+  const [ownerSummaryLoading, setOwnerSummaryLoading] = useState(false);
 
   const totalBalance = cashierAccounts.filter(acc => acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
   const cashBalance = cashierAccounts.filter(acc => (acc.Type || acc.type) === 'cash_register' && acc.IsActive !== false && acc.isActive !== false).reduce((sum, acc) => sum + (acc.Balance || acc.balance || 0), 0);
@@ -31,6 +33,49 @@ const AccountBalancesTab = (props) => {
     });
   }, [activeAccounts]);
   const mobileMoneyTotal = mobileMoneySummary.reduce((sum, item) => sum + item.balance, 0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOwnerSummary = async () => {
+      setOwnerSummaryLoading(true);
+      try {
+        const data = await accountingService.getOwnersSummary();
+        if (!cancelled) {
+          setOwnerSummaryRows(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error('Error loading owner summary:', error);
+        if (!cancelled) {
+          setOwnerSummaryRows([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setOwnerSummaryLoading(false);
+        }
+      }
+    };
+
+    loadOwnerSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const normalizedOwnerSummaryRows = useMemo(() => {
+    return ownerSummaryRows.map((summary, index) => {
+      const ownerId = summary.ownerId ?? summary.OwnerID ?? summary.ownerID ?? summary.id ?? index;
+      const ownerName = summary.ownerName || summary.OwnerName || summary.landlord || summary.Landlord || 'N/A';
+      const expectedRents = Number(summary.expectedRents ?? summary.ExpectedRents ?? 0);
+      const collectedRents = Number(summary.collectedRents ?? summary.CollectedRents ?? 0);
+      const expensesAmount = Number(summary.expensesAmount ?? summary.ExpensesAmount ?? 0);
+      const agencyCommission = Number(summary.agencyCommission ?? summary.AgencyCommission ?? 0);
+      const amountToBePaid = Number(summary.amountToBePaid ?? summary.AmountToBePaid ?? summary.amountToBeRepaid ?? summary.AmountToBeRepaid ?? 0);
+      const period = summary.period || summary.Period || 'This month';
+      return { key: ownerId, ownerId, ownerName, expectedRents, collectedRents, expensesAmount, agencyCommission, amountToBePaid, period };
+    });
+  }, [ownerSummaryRows]);
 
   const renderAccountGroup = (accounts, icon, title, iconColor) => accounts.length > 0 && (
     <div className="sa-section-card" style={{ padding: '16px' }}>
@@ -104,21 +149,9 @@ const AccountBalancesTab = (props) => {
 
         {/* Owner Balances */}
         <div className="sa-section-card" style={{ marginTop: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}><Users size={24} style={{ color: '#6366f1' }} /><div><h3 style={{ margin: 0 }}>Owner Balances</h3><p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Balance per owner (collections minus payments)</p></div></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}><Users size={24} style={{ color: '#6366f1' }} /><div><h3 style={{ margin: 0 }}>Owner Balances</h3><p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Monthly owner summary from approved rent collections, expenses, and payouts</p></div></div>
           {!selectedOwnerForBalance ? (
-            ownerBalancesLoading ? <div className="loading">Loading owners...</div> : ownerBalancesOwners.length === 0 ? <div className="no-data">No owners found</div> : (() => {
-              const ownerBalances = ownerBalancesOwners.map(ownerObj => {
-                const ownerName = ownerObj.Name || ownerObj.name || ownerObj.Landlord || ownerObj.landlord || 'N/A';
-                const totalCollected = collections.filter(c => { const cL = (c.Landlord || c.landlord || '').trim(); return cL && (cL === ownerName || cL.toLowerCase() === ownerName.toLowerCase()); }).reduce((sum, c) => sum + (c.Amount || c.amount || 0), 0);
-                const ownerPaymentsList = landlordPayments.filter(p => { const pL = (p.Landlord || p.landlord || '').trim(); return pL && (pL === ownerName || pL.toLowerCase() === ownerName.toLowerCase()); });
-                const totalPaid = ownerPaymentsList.reduce((sum, p) => sum + (p.NetAmount || p.netAmount || 0), 0);
-                const totalExpense = expenses.filter(exp => { const eO = (exp.Owner || exp.owner || exp.Landlord || exp.landlord || '').trim(); return eO && (eO === ownerName || eO.toLowerCase() === ownerName.toLowerCase()); }).reduce((sum, e) => sum + (e.Amount || e.amount || 0), 0);
-                const balance = totalCollected - totalPaid;
-                const urgencyCommission = ownerPaymentsList.filter(p => ['pending', 'pending approval', 'pending director approval'].includes((p.Status || '').toLowerCase())).reduce((sum, p) => sum + (p.Commission || p.commission || 0), 0);
-                return { owner: ownerName, totalCollected, totalPaid, totalExpense, balance, totalExpected: totalCollected, urgencyCommission };
-              });
-              return (<div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Owner</th><th>Total Collected</th><th>Total Paid</th><th>Total Expense</th><th>Total Expected</th><th>Urgency Commission</th><th>Balance (Owed)</th></tr></thead><tbody>{ownerBalances.map((row, idx) => (<tr key={row.owner || idx} onClick={() => setSelectedOwnerForBalance(row.owner)} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForBalance(row.owner); } }}><td><span className="sa-cell-title">{row.owner}</span></td><td>{row.totalCollected.toFixed(2)} XOF</td><td>{row.totalPaid.toFixed(2)} XOF</td><td>{(row.totalExpense || 0).toFixed(2)} XOF</td><td>{(row.totalExpected ?? row.totalCollected).toFixed(2)} XOF</td><td style={row.urgencyCommission > 0 ? { color: '#dc2626', fontWeight: '600' } : {}}>{(row.urgencyCommission || 0).toFixed(2)} XOF</td><td style={{ color: row.balance >= 0 ? '#059669' : '#dc2626', fontWeight: '600' }}>{row.balance.toFixed(2)} XOF</td></tr>))}</tbody></table></div>);
-            })()
+            ownerSummaryLoading ? <div className="loading">Loading owners...</div> : normalizedOwnerSummaryRows.length === 0 ? <div className="no-data">No owners found</div> : (<div className="sa-table-wrapper"><table className="sa-table"><thead><tr><th>Owner</th><th>Expected rents</th><th>Collected rents</th><th>Amount of expenses</th><th>Agency commission</th><th>Amount to be paid</th><th>Period</th></tr></thead><tbody>{normalizedOwnerSummaryRows.map((row) => (<tr key={row.key} onClick={() => setSelectedOwnerForBalance(row.ownerName)} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForBalance(row.ownerName); } }}><td><span className="sa-cell-title">{row.ownerName}</span></td><td>{row.expectedRents.toFixed(2)} XOF</td><td>{row.collectedRents.toFixed(2)} XOF</td><td>{row.expensesAmount.toFixed(2)} XOF</td><td>{row.agencyCommission.toFixed(2)} XOF</td><td style={{ color: row.amountToBePaid >= 0 ? '#059669' : '#dc2626', fontWeight: '600' }}>{row.amountToBePaid.toFixed(2)} XOF</td><td>{row.period}</td></tr>))}</tbody></table></div>)
           ) : (<>
             <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}><button type="button" className="sa-outline-button" onClick={() => setSelectedOwnerForBalance(null)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><ArrowLeft size={16} /> Back to owners</button><h4 style={{ margin: 0 }}>{selectedOwnerForBalance} - Recent Transactions</h4></div>
             {(() => {
