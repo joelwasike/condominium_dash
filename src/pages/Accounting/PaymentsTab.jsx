@@ -486,7 +486,7 @@ PaymentsTab.CollectionModal = (props) => {
                   placeholder="Type to search validated client"
                 />
                 <datalist id={tenantNameListId}>
-                  {tenantList.filter((item) => (item.property || item.Property)).map((item) => {
+                  {tenantList.map((item) => {
                     const name = item.tenantName || item.TenantName || item.name || item.Name || '';
                     return (
                       <option key={item.tenantId ?? item.TenantID ?? item.id ?? name} value={name}>
@@ -609,7 +609,7 @@ PaymentsTab.CollectionModal = (props) => {
                   required
                 >
                   <option value="">Select validated client</option>
-                  {tenantList.filter((item) => (item.property || item.Property)).map((item) => {
+                  {tenantList.map((item) => {
                     const id = item.tenantId ?? item.TenantID ?? item.id ?? '';
                     const name = item.tenantName || item.TenantName || item.name || item.Name || '';
                     const property = item.property || item.Property || '';

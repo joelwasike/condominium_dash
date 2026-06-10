@@ -154,6 +154,8 @@ const SalesManagerDashboard = () => {
   const [loadingApprovedDocs, setLoadingApprovedDocs] = useState(false);
   const [selectedMoveInPropertyId, setSelectedMoveInPropertyId] = useState('');
   const [moveInPropertyLocked, setMoveInPropertyLocked] = useState(false);
+  const [selectedMoveInUnitNumber, setSelectedMoveInUnitNumber] = useState('');
+  const [moveInUnits, setMoveInUnits] = useState([]);
 
   // Visits / Requests (schedule visit from Property Management uses properties)
   const [showScheduleVisitModal, setShowScheduleVisitModal] = useState(false);
@@ -662,11 +664,15 @@ const SalesManagerDashboard = () => {
       setMoveInFormPropertyRent(0);
       setSelectedMoveInPropertyId('');
       setMoveInPropertyLocked(false);
+      setSelectedMoveInUnitNumber('');
+      setMoveInUnits([]);
       return;
     }
     // Reset move-in property selection when switching approved clients; it will be auto-filled after checklist loads.
     setSelectedMoveInPropertyId('');
     setMoveInPropertyLocked(false);
+    setSelectedMoveInUnitNumber('');
+    setMoveInUnits([]);
     const loadApprovedClientDocs = async () => {
       try {
         setLoadingApprovedDocs(true);
@@ -688,9 +694,23 @@ const SalesManagerDashboard = () => {
     loadApprovedClientDocs();
   }, [selectedApprovedClientId, addNotification]);
 
+  useEffect(() => {
+    if (showTenantCreationModal) return;
+    setSelectedApprovedClientId('');
+    setApprovedClientDocuments([]);
+    setApprovedClientChecklist(null);
+    setSelectedMoveInPropertyId('');
+    setSelectedMoveInUnitNumber('');
+    setMoveInUnits([]);
+    setMoveInFormPropertyRent(0);
+    setMoveInPropertyLocked(false);
+  }, [showTenantCreationModal]);
+
   const applyMoveInPropertySelection = useCallback(async (propertyIdValue) => {
     const val = propertyIdValue || '';
     setSelectedMoveInPropertyId(val);
+    setSelectedMoveInUnitNumber('');
+    setMoveInUnits([]);
 
     const selectedProperty = val ? properties.find((p) => String(p.ID || p.id) === String(val)) : null;
     if (!selectedProperty) {
@@ -703,16 +723,6 @@ const SalesManagerDashboard = () => {
     const propertyRent = Number.isFinite(rawRent) ? Math.round(rawRent) : 0;
     setMoveInFormPropertyRent(propertyRent);
 
-    const unitSelect = document.getElementById('unitNumber');
-    if (unitSelect) {
-      unitSelect.innerHTML = '<option value="">Loading units…</option>';
-    }
-
-    const rentInput = document.getElementsByName('rent')[0];
-    if (rentInput) {
-      rentInput.value = propertyRent;
-    }
-
     // Populate unit dropdown using real unit occupancy (only show vacant units)
     try {
       const detail = await salesManagerService.getPropertyBuildingDetail(val);
@@ -721,35 +731,15 @@ const SalesManagerDashboard = () => {
         const st = (u.status || u.Status || u.statut || '').toString().toLowerCase();
         const tenant = (u.tenant || u.Tenant || '').toString().trim();
         return st !== 'occupied' && tenant === '';
-      });
-
-      if (unitSelect) {
-        unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
-        if (vacant.length === 0) {
-          unitSelect.innerHTML = '<option value="" disabled>No vacant units</option>';
-          return;
-        }
-        for (const u of vacant) {
-          const uid = u.id ?? u.ID;
-          const label = u.unitNumber ?? u.UnitNumber ?? u.name ?? u.Name ?? `Unit #${uid ?? ''}`;
-          const option = document.createElement('option');
-          option.value = label || `Unit #${uid ?? ''}`;
-          option.textContent = label || `Unit #${uid ?? ''}`;
-          unitSelect.appendChild(option);
-        }
-      }
+      }).map((u) => ({
+        ...u,
+        _label: (u.unitNumber ?? u.UnitNumber ?? u.name ?? u.Name ?? `Unit #${u.id ?? u.ID ?? ''}`).toString().trim(),
+      }));
+      setMoveInUnits(vacant);
     } catch (_) {
       // Fallback to numeric unit list if unit-detail endpoint fails
       const numberOfUnits = selectedProperty.NumberOfUnits || selectedProperty.numberOfUnits || 1;
-      if (unitSelect) {
-        unitSelect.innerHTML = '<option value="">Select Unit Number</option>';
-        for (let i = 1; i <= numberOfUnits; i++) {
-          const option = document.createElement('option');
-          option.value = `Unit ${i}`;
-          option.textContent = `Unit ${i}`;
-          unitSelect.appendChild(option);
-        }
-      }
+      setMoveInUnits(Array.from({ length: numberOfUnits }, (_, i) => ({ _label: `Unit ${i + 1}` })));
     }
   }, [properties]);
 
@@ -775,6 +765,32 @@ const SalesManagerDashboard = () => {
       setMoveInPropertyLocked(false);
     }
   }, [approvedClientChecklist, selectedApprovedClientId, properties, applyMoveInPropertySelection]);
+
+  useEffect(() => {
+    if (!selectedApprovedClientId || !showTenantCreationModal) return;
+
+    const checklistUnit = (approvedClientChecklist?.unitNumber || approvedClientChecklist?.UnitNumber || '').toString().trim();
+    if (!checklistUnit) return;
+
+    const current = selectedMoveInUnitNumber.toString().trim();
+    const currentLower = current.toLowerCase();
+    const checklistLower = checklistUnit.toLowerCase();
+
+    const match = moveInUnits.find((unit) => {
+      const label = (unit._label || unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || '').toString().trim();
+      const unitId = (unit.id ?? unit.ID ?? '').toString().trim();
+      return label.toLowerCase() === checklistLower || unitId === checklistUnit || unitId.toLowerCase() === checklistLower;
+    });
+
+    if (match) {
+      const label = (match._label || match.unitNumber || match.UnitNumber || match.name || match.Name || '').toString().trim();
+      if (label && label.toLowerCase() !== currentLower) {
+        setSelectedMoveInUnitNumber(label);
+      }
+    } else if (!current) {
+      setSelectedMoveInUnitNumber(checklistUnit);
+    }
+  }, [approvedClientChecklist, moveInUnits, selectedApprovedClientId, selectedMoveInUnitNumber, showTenantCreationModal]);
 
   // Fetch full tenant details when a tenant is selected for detail view
   useEffect(() => {
@@ -1702,7 +1718,13 @@ const SalesManagerDashboard = () => {
       }
     }
     
-    const unitNumber = formData.get('unitNumber')?.trim();
+    const unitNumber = (
+      formData.get('unitNumber')?.trim() ||
+      approvedClientChecklist?.unitNumber ||
+      approvedClientChecklist?.UnitNumber ||
+      selectedMoveInUnitNumber ||
+      ''
+    ).trim();
     
     const tenantData = {
       newClientId: Number(approvedClientId),
@@ -3429,8 +3451,25 @@ const SalesManagerDashboard = () => {
                     </div>
                     <div className="form-group">
                       <label htmlFor="unitNumber">Unit Number</label>
-                      <select name="unitNumber" id="unitNumber" required>
+                      <select
+                        name="unitNumber"
+                        id="unitNumber"
+                        value={selectedMoveInUnitNumber}
+                        onChange={(e) => setSelectedMoveInUnitNumber(e.target.value)}
+                        required
+                      >
                         <option value="">Select Property First</option>
+                        {moveInUnits.length > 0 ? moveInUnits.map((unit) => {
+                          const unitId = unit.id ?? unit.ID ?? unit.unitNumber ?? unit.UnitNumber;
+                          const label = unit._label || unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || `Unit #${unitId ?? ''}`;
+                          return (
+                            <option key={unitId || label} value={label}>
+                              {label}
+                            </option>
+                          );
+                        }) : selectedMoveInPropertyId ? (
+                          <option value="" disabled>No vacant units</option>
+                        ) : null}
                       </select>
                       <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                         Select which unit/apartment the tenant will occupy

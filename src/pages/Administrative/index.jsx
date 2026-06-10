@@ -85,7 +85,6 @@ const AdministrativeDashboard = () => {
     address: '',
     registrationNumber: '',
     contactPerson: '',
-    securityDepositPaid: false,
     property: ''
   });
   const [editClientDocFiles, setEditClientDocFiles] = useState({});
@@ -249,7 +248,6 @@ const AdministrativeDashboard = () => {
       address: client.Address || client.address || '',
       registrationNumber: client.RegistrationNumber || client.registrationNumber || '',
       contactPerson: client.ContactPerson || client.contactPerson || '',
-      securityDepositPaid: Boolean(client.SecurityDepositPaid || client.securityDepositPaid),
       property: client.Property || client.property || ''
     });
     setEditClientDocFiles({});
@@ -291,7 +289,6 @@ const AdministrativeDashboard = () => {
         address: editClientForm.address,
         registrationNumber: editClientForm.registrationNumber,
         contactPerson: editClientForm.contactPerson,
-        securityDepositPaid: editClientForm.securityDepositPaid,
       });
       const tenantName = editClientForm.type === 'company' ? editClientForm.companyName : editClientForm.name;
       const docList = editClientForm.type === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS;
@@ -3981,32 +3978,6 @@ const AdministrativeDashboard = () => {
               </div>
             </>
           )}
-
-          <div className="form-group">
-            <label>Security Deposit Paid</label>
-            <select
-              value={editClientForm.securityDepositPaid ? 'yes' : 'no'}
-              onChange={(e) => setEditClientForm(prev => ({ ...prev, securityDepositPaid: e.target.value === 'yes' }))}
-            >
-              <option value="no">Not Paid</option>
-              <option value="yes">Paid</option>
-            </select>
-            {(() => {
-              const storedAmount = editingClient?.SecurityDeposit || editingClient?.securityDeposit;
-              const selectedProp = editClientForm.property ? properties.find(p => {
-                const label = p.Address || p.address || p.name || p.Name || `Property ${p.ID || p.id}`;
-                return label === editClientForm.property;
-              }) : null;
-              const monthlyRent = selectedProp ? (Number(selectedProp.rent) || Number(selectedProp.Rent) || 0) : 0;
-              const computedAmount = monthlyRent * 4.5;
-              const securityDepositAmount = storedAmount ?? computedAmount;
-              return securityDepositAmount > 0 ? (
-                <div style={{ marginTop: '8px', padding: '8px 12px', background: '#eff6ff', borderRadius: '6px', fontSize: '0.875rem' }}>
-                  <strong>Security Deposit:</strong> {Number(securityDepositAmount).toLocaleString()} FCFA
-                </div>
-              ) : null;
-            })()}
-          </div>
 
           <div className="form-group">
             <label>Property (for document context)</label>

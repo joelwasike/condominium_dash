@@ -104,7 +104,7 @@ DepositRefundsTab.Modals = (props) => {
                   required
                 >
                   <option value="">Select validated client</option>
-                  {tenantList.filter(t2 => (t2.property || t2.Property)).map((t2) => {
+                  {tenantList.map((t2) => {
                     const id = t2.tenantId ?? t2.TenantID ?? t2.id ?? '';
                     const name = t2.tenantName || t2.TenantName || t2.name || t2.Name || '';
                     return <option key={id || name} value={id}>{name} - {t2.property || t2.Property}</option>;
