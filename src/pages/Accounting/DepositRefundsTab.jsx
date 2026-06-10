@@ -163,7 +163,7 @@ DepositRefundsTab.Modals = (props) => {
               </div>
               <div className="form-group"><label>Tenant Type *</label><select value={depositPaymentForm.tenantType} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, tenantType: e.target.value})} required><option value="individual">Individual</option><option value="company">Company</option></select><small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>Deposit is prefilled from the validated client record</small></div>
               <div className="form-group">
-                <label>Deposit Amount (XOF) *</label>
+                <label>Security Deposit (XOF) *</label>
                 <input
                   type="number"
                   step="0.01"

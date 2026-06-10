@@ -648,7 +648,7 @@ PaymentsTab.CollectionModal = (props) => {
               </div>
               <div className="form-group"><label>Tenant Type *</label><select value={collectionPaymentForm.tenantType} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, tenantType: e.target.value})} required><option value="individual">Individual</option><option value="company">Company</option></select><small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>Deposit amount is prefilled from the validated client record</small></div>
               <div className="form-group">
-                <label>Deposit Amount (XOF) *</label>
+                <label>Security Deposit (XOF) *</label>
                 <input
                   type="number"
                   min="0"

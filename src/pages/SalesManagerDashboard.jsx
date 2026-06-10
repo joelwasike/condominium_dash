@@ -205,11 +205,16 @@ const SalesManagerDashboard = () => {
   }, []);
 
   const approvedClientDepositInfo = useMemo(() => {
-    if (!selectedApprovedClient) return { paid: false, paidAt: null, maxMoveInDate: '' };
+    if (!selectedApprovedClient) return { paid: false, paidAt: null, maxMoveInDate: '', depositValue: 0 };
     const paid = Boolean(
       selectedApprovedClient.SecurityDepositPaid ||
       selectedApprovedClient.securityDepositPaid
     );
+    const depositValue = Number(
+      approvedClientChecklist?.DepositValue ??
+      approvedClientChecklist?.depositValue ??
+      0
+    ) || 0;
     const paidAtRaw =
       selectedApprovedClient.SecurityDepositPaidAt ||
       selectedApprovedClient.securityDepositPaidAt ||
@@ -227,7 +232,7 @@ const SalesManagerDashboard = () => {
     const paidAtCandidate = paidAtRaw || (paid ? checklistCreatedAt : null);
     const paidAt = paidAtCandidate ? new Date(paidAtCandidate) : null;
     const maxMoveInDate = paidAt ? addMonths(paidAt, 1).toISOString().split('T')[0] : '';
-    return { paid, paidAt, maxMoveInDate };
+    return { paid, paidAt, maxMoveInDate, depositValue };
   }, [selectedApprovedClient, approvedClientChecklist, addMonths]);
 
   useEffect(() => {
@@ -6419,7 +6424,9 @@ const SalesManagerDashboard = () => {
                         value={
                           selectedApprovedClient
                             ? (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid') +
-                              (moveInFormPropertyRent > 0 ? ` - ${Math.round(moveInFormPropertyRent * 4.5).toLocaleString()} XOF` : '')
+                              (approvedClientDepositInfo.depositValue > 0
+                                ? ` - ${Math.round(approvedClientDepositInfo.depositValue).toLocaleString()} XOF`
+                                : '')
                             : ''
                         }
                         disabled
