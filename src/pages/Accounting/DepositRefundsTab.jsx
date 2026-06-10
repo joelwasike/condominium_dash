@@ -84,7 +84,43 @@ DepositRefundsTab.Modals = (props) => {
         <div className="modal-overlay" onClick={() => setShowDepositPaymentModal(false)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header"><h3>{t('accounting.recordSecurityDepositPayment')}</h3><button className="modal-close" onClick={() => setShowDepositPaymentModal(false)}>x</button></div>
           <div className="modal-body">
-            <form onSubmit={async (e) => { e.preventDefault(); try { setLoading(true); if (!depositPaymentForm.tenantId) { throw new Error('Please select a validated client from the list'); } await accountingService.recordDepositPayment({...depositPaymentForm, tenantId: Number(depositPaymentForm.tenantId), monthlyRent: parseFloat(depositPaymentForm.monthlyRent), amount: parseFloat(depositPaymentForm.monthlyRent) * 4.5 + (depositPaymentForm.applicationFees ? 37000 : 0), monthsMultiplier: 4.5}); addNotification('Security deposit payment recorded successfully!', 'success'); setShowDepositPaymentModal(false); setDepositPaymentForm({tenant:'',tenantId:'',property:'',tenantType:'individual',monthlyRent:'',applicationFees:false,paymentMethod:'mobile_money',paymentProvider:'',reference:'',notes:''}); try { const eligibleClients = await accountingService.getDepositEligibleTenants(); setDepositEligibleTenants(Array.isArray(eligibleClients) ? eligibleClients : []); } catch (refreshError) { console.error('Error refreshing deposit eligible clients:', refreshError); } await loadDeposits(); loadDepositRefundsPending(); } catch (error) { console.error('Error recording deposit payment:', error); addNotification(error.message || 'Failed to record deposit payment', 'error'); } finally { setLoading(false); } }}>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setLoading(true);
+                if (!depositPaymentForm.tenantId) {
+                  throw new Error('Please select a validated client from the list');
+                }
+                const depositAmount = parseFloat(depositPaymentForm.depositAmount || '0');
+                if (!(depositAmount > 0)) {
+                  throw new Error('Selected client does not have a valid deposit amount');
+                }
+                const monthlyRent = depositAmount / 4.5;
+                await accountingService.recordDepositPayment({
+                  ...depositPaymentForm,
+                  tenantId: Number(depositPaymentForm.tenantId),
+                  monthlyRent,
+                  amount: depositAmount,
+                  monthsMultiplier: 4.5
+                });
+                addNotification('Security deposit payment recorded successfully!', 'success');
+                setShowDepositPaymentModal(false);
+                setDepositPaymentForm({tenant:'',tenantId:'',property:'',tenantType:'individual',monthlyRent:'',depositAmount:'',applicationFees:false,paymentMethod:'mobile_money',paymentProvider:'',reference:'',notes:''});
+                try {
+                  const eligibleClients = await accountingService.getDepositEligibleTenants();
+                  setDepositEligibleTenants(Array.isArray(eligibleClients) ? eligibleClients : []);
+                } catch (refreshError) {
+                  console.error('Error refreshing deposit eligible clients:', refreshError);
+                }
+                await loadDeposits();
+                loadDepositRefundsPending();
+              } catch (error) {
+                console.error('Error recording deposit payment:', error);
+                addNotification(error.message || 'Failed to record deposit payment', 'error');
+              } finally {
+                setLoading(false);
+              }
+            }}>
               <div className="form-group">
                 <label>Validated Client *</label>
                 <select
@@ -93,11 +129,13 @@ DepositRefundsTab.Modals = (props) => {
                     const selectedId = e.target.value;
                     const t2 = tenantList.find(x => String(x.tenantId ?? x.TenantID ?? x.id ?? '') === String(selectedId));
                     const appFees = t2 ? !!(t2.applicationFees ?? t2.ApplicationFees) : false;
+                    const depositValue = t2 ? Number(t2.depositValue ?? t2.DepositValue ?? 0) : 0;
                     setDepositPaymentForm({
                       ...depositPaymentForm,
                       tenant: t2 ? (t2.tenantName || t2.TenantName || t2.name || t2.Name || '') : '',
                       tenantId: t2 ? String(t2.tenantId ?? t2.TenantID ?? t2.id ?? '') : '',
                       property: t2 ? (t2.property || t2.Property || '') : '',
+                      depositAmount: depositValue > 0 ? String(depositValue) : '',
                       applicationFees: appFees
                     });
                   }}
@@ -111,9 +149,34 @@ DepositRefundsTab.Modals = (props) => {
                   })}
                 </select>
               </div>
-              <div className="form-group"><label>Property *</label><input type="text" value={depositPaymentForm.property} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, property: e.target.value})} required placeholder="Auto-filled when selecting tenant" /></div>
-              <div className="form-group"><label>Tenant Type *</label><select value={depositPaymentForm.tenantType} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, tenantType: e.target.value})} required><option value="individual">Individual</option><option value="company">Company</option></select><small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>4.5 months deposit for all properties</small></div>
-              <div className="form-group"><label>Monthly Rent (XOF) *</label><input type="number" step="0.01" value={depositPaymentForm.monthlyRent} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, monthlyRent: e.target.value})} required placeholder="0.00" />{depositPaymentForm.monthlyRent && <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>Deposit Amount: {(parseFloat(depositPaymentForm.monthlyRent) * 4.5 + (depositPaymentForm.applicationFees ? 37000 : 0)).toFixed(2)} XOF</small>}</div>
+              <div className="form-group">
+                <label>Property *</label>
+                <input
+                  type="text"
+                  value={depositPaymentForm.property}
+                  onChange={(e) => setDepositPaymentForm({...depositPaymentForm, property: e.target.value})}
+                  required
+                  placeholder="Auto-filled when selecting tenant"
+                  readOnly={!!depositPaymentForm.property}
+                  style={depositPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}}
+                />
+              </div>
+              <div className="form-group"><label>Tenant Type *</label><select value={depositPaymentForm.tenantType} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, tenantType: e.target.value})} required><option value="individual">Individual</option><option value="company">Company</option></select><small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>Deposit is prefilled from the validated client record</small></div>
+              <div className="form-group">
+                <label>Deposit Amount (XOF) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={depositPaymentForm.depositAmount}
+                  onChange={(e) => setDepositPaymentForm({...depositPaymentForm, depositAmount: e.target.value})}
+                  required
+                  placeholder="Auto-filled from client record"
+                  readOnly={!!depositPaymentForm.depositAmount}
+                  style={depositPaymentForm.depositAmount ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}}
+                />
+                {depositPaymentForm.depositAmount && <small style={{ color: '#059669', marginTop: '4px', display: 'block', fontWeight: '600' }}>This amount comes from the client setup record.</small>}
+              </div>
               <div className="form-group"><label>Payment Method *</label><select value={depositPaymentForm.paymentMethod} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, paymentMethod: e.target.value, paymentProvider: e.target.value === 'mobile_money' ? depositPaymentForm.paymentProvider : ''})} required><option value="mobile_money">Mobile Money</option><option value="bank_transfer">Bank Transfer</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select></div>
               {depositPaymentForm.paymentMethod === 'mobile_money' && (
                 <div className="form-group"><label>Mobile Money Provider *</label><select value={depositPaymentForm.paymentProvider} onChange={(e) => setDepositPaymentForm({...depositPaymentForm, paymentProvider: e.target.value})} required><option value="">Select provider</option><option value="orange_money">Orange Money</option><option value="wave">Wave</option><option value="orange_business">Orange Business</option></select></div>
