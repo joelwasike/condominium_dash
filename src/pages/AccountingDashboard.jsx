@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { DollarSign, TrendingUp, Building, Receipt, Download, Search, CreditCard, User, FileText, Plus, MessageCircle, Settings, Megaphone, Wallet, Smartphone, Banknote, Building2, Clock, ArrowLeftRight, Scale, ShieldCheck, Users, History, FileBarChart, ArrowLeft, Mail, Phone, MapPin, Wrench, FileCheck, AlertTriangle } from 'lucide-react';
 import { accountingService } from '../services/accountingService';
+import { salesManagerService } from '../services/salesManagerService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getAccountingDemoData } from '../utils/demoData';
@@ -122,6 +123,8 @@ const AccountingDashboard = () => {
   
   // Deposits state
   const [deposits, setDeposits] = useState([]);
+  const [validatedClients, setValidatedClients] = useState([]);
+  const [selectedValidatedClientId, setSelectedValidatedClientId] = useState('');
   const [depositFilter, setDepositFilter] = useState('all'); // 'all', 'payment', 'refund'
   const [depositStartDateFilter, setDepositStartDateFilter] = useState('');
   const [depositEndDateFilter, setDepositEndDateFilter] = useState('');
@@ -373,7 +376,7 @@ const AccountingDashboard = () => {
         return;
       }
       
-      const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary, landlordsData, tenantsData, adsData] = await Promise.all([
+      const [overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary, landlordsData, tenantsData, adsData, validatedClientsData] = await Promise.all([
         accountingService.getOverview(),
         accountingService.getTenantPayments(),
         accountingService.getLandlordPayments(),
@@ -382,7 +385,8 @@ const AccountingDashboard = () => {
         accountingService.getMonthlySummary(),
         accountingService.getOwners().catch(() => []),
         accountingService.getTenantsWithPaymentStatus().catch(() => []),
-        accountingService.getAdvertisements().catch(() => [])
+        accountingService.getAdvertisements().catch(() => []),
+        salesManagerService.getApprovedClients().catch(() => [])
       ]);
 
       setOverviewData(overview);
@@ -394,6 +398,7 @@ const AccountingDashboard = () => {
       setLandlords(Array.isArray(landlordsData) ? landlordsData : (landlordsData?.landlords ?? landlordsData?.data ?? []));
       setTenants(Array.isArray(tenantsData) ? tenantsData : (tenantsData?.tenants ?? tenantsData?.data ?? []));
       setAdvertisements(Array.isArray(adsData) ? adsData : (adsData?.advertisements ?? adsData?.data ?? []));
+      setValidatedClients(Array.isArray(validatedClientsData) ? validatedClientsData : (validatedClientsData?.clients ?? validatedClientsData?.data ?? []));
       
       console.log('Accounting data loaded successfully:', { overview, tenantPaymentsData, landlordPaymentsData, collectionsData, expensesData, summary });
     } catch (error) {
@@ -488,6 +493,17 @@ const AccountingDashboard = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // addNotification is stable, no need to include
+
+  const validatedDepositClients = useMemo(() => {
+    return validatedClients.filter(client => {
+      const paid =
+        client.SecurityDepositPaid ||
+        client.securityDepositPaid ||
+        client.depositPaid ||
+        client.DepositPaid;
+      return !paid;
+    });
+  }, [validatedClients]);
 
   useEffect(() => {
     if (activeTab === 'tenant-management') {
@@ -6728,6 +6744,7 @@ const AccountingDashboard = () => {
                       saleAmount: '',
                       agencyCommission: '',
                     });
+                    setSelectedValidatedClientId('');
                     setCollectionPaymentType(null);
                     setShowCollectionPaymentModal(false);
                     e.target.reset();
@@ -6946,18 +6963,19 @@ const AccountingDashboard = () => {
                   } finally {
                     setLoading(false);
                   }
-                }}>
+                  }}>
                   <div className="form-group">
-                    <label htmlFor="depositTenant">Tenant *</label>
+                    <label htmlFor="depositTenant">Validated Client *</label>
                     <select
                       id="depositTenant"
-                      value={collectionPaymentForm.tenant}
+                      value={selectedValidatedClientId}
                       onChange={(e) => {
                         const val = e.target.value;
-                        const t = tenants.find(x => (x.tenantName || x.TenantName) === val);
+                        setSelectedValidatedClientId(val);
+                        const t = validatedDepositClients.find(x => String(x.ID || x.id) === String(val));
                         if (t) {
-                          const name = t.tenantName || t.TenantName || '';
-                          const prop = t.property || t.Property || t.building || t.Building || '';
+                          const name = t.name || t.Name || t.tenantName || t.TenantName || '';
+                          const prop = t.property || t.Property || t.building || t.Building || t.address || t.Address || '';
                           const rent = t.monthlyRent ?? t.MonthlyRent ?? t.rent ?? t.Rent ?? '';
                           setCollectionPaymentForm({
                             ...collectionPaymentForm,
@@ -6966,15 +6984,17 @@ const AccountingDashboard = () => {
                             monthlyRent: rent,
                           });
                         } else {
-                          setCollectionPaymentForm({...collectionPaymentForm, tenant: val || ''});
+                          setCollectionPaymentForm({...collectionPaymentForm, tenant: '', property: '', monthlyRent: ''});
                         }
                       }}
                       required
                     >
-                      <option value="">Select tenant</option>
-                      {tenants.filter(t => (t.property || t.Property)).map((t) => {
-                        const name = t.tenantName || t.TenantName || '';
-                        return <option key={name} value={name}>{name} {t.property || t.Property ? ` (${t.property || t.Property})` : ''}</option>;
+                      <option value="">Select validated client</option>
+                      {validatedDepositClients.map((t) => {
+                        const id = t.ID || t.id;
+                        const name = t.name || t.Name || t.tenantName || t.TenantName || `Client ${id}`;
+                        const property = t.property || t.Property || t.building || t.Building || t.address || t.Address || '';
+                        return <option key={id} value={id}>{name} {property ? ` (${property})` : ''}</option>;
                       })}
                     </select>
                   </div>
@@ -6985,10 +7005,10 @@ const AccountingDashboard = () => {
                       type="text"
                       value={collectionPaymentForm.property}
                       onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})}
-                      readOnly={!!(collectionPaymentForm.tenant && collectionPaymentForm.property)}
+                      readOnly={!!(selectedValidatedClientId && collectionPaymentForm.property)}
                       required
-                      placeholder="Select a tenant to auto-fill"
-                      style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}}
+                      placeholder="Select a validated client to auto-fill"
+                      style={selectedValidatedClientId && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}}
                     />
                   </div>
                   <div className="form-group">
