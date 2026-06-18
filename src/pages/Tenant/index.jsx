@@ -106,7 +106,11 @@ const TenantDashboard = () => {
     contractRef: '',
     amount: '',
     phone: '',
+    provider: '',
+    otp: '',
   });
+  const [billsPaymentStatus, setBillsPaymentStatus] = useState(null); // null | 'initiated' | 'success' | 'failed'
+  const [billsPaymentTxId, setBillsPaymentTxId] = useState(null);
   const [billsConsultation, setBillsConsultation] = useState(null);
   const [billsConsultationLoading, setBillsConsultationLoading] = useState(false);
   const [selectedBillInvoice, setSelectedBillInvoice] = useState(null);
@@ -1073,10 +1077,12 @@ const TenantDashboard = () => {
 
   const resetBillsModal = () => {
     setShowBillsModal(false);
-    setBillsForm({ billType: 'water', contractRef: '', amount: '', phone: '' });
+    setBillsForm({ billType: 'water', contractRef: '', amount: '', phone: '', provider: '', otp: '' });
     setBillsConsultation(null);
     setSelectedBillInvoice(null);
     setBillsConsultationLoading(false);
+    setBillsPaymentStatus(null);
+    setBillsPaymentTxId(null);
   };
 
   const handleConsultUtilityBills = async () => {
@@ -1123,28 +1129,76 @@ const TenantDashboard = () => {
     e.preventDefault();
     const contractRef = String(billsForm.contractRef || '').trim();
     const phone = String(billsForm.phone || '').trim();
+    const provider = String(billsForm.provider || '').trim();
+    const otp = String(billsForm.otp || '').trim();
     const invoiceNumber = String(selectedBillInvoice?.NUM_FAC || selectedBillInvoice?.num_facture || selectedBillInvoice?.numFacture || '').trim();
     const amountValue = Number(String(billsForm.amount || '').replace(/[^0-9.-]/g, '')) || Number(selectedBillInvoice?.SOLDE_FACTURE || selectedBillInvoice?.MONTANT_TOTAL || 0) || 0;
 
-    if (!contractRef || !phone || !amountValue) {
-      addNotification('Please fill in all required fields', 'error');
+    if (!contractRef || !phone || !provider || !amountValue) {
+      addNotification('Please fill in all required fields including payment provider', 'error');
+      return;
+    }
+    if (provider === 'om' && !otp) {
+      addNotification('OTP is required for Orange Money payments', 'error');
       return;
     }
     try {
       setLoading(true);
-      const chargeType = billsForm.billType === 'water' ? 'Water' : 'Electricity';
+      setBillsPaymentStatus('initiated');
+      setBillsPaymentTxId(null);
+
       const result = await tenantService.payUtilityBill({
         billType: billsForm.billType,
-        phoneNumber: phone,
+        provider,
+        phone,
+        otp,
         amount: amountValue,
         refContrat: contractRef,
         numFacture: invoiceNumber,
       });
-      addNotification(`${chargeType} bill payment sent successfully.`, 'success');
-      resetBillsModal();
-      await loadPayments();
+
+      const txId = result?.transaction_id || result?.partner_transaction_id || '';
+      setBillsPaymentTxId(txId);
+
+      const paymentUrl = result?.response?.payment_url;
+      if (provider === 'wave' && paymentUrl) {
+        const popup = window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        if (!popup) window.location.assign(paymentUrl);
+        addNotification('Redirecting to Wave payment page…', 'info');
+      } else {
+        addNotification('Payment initiated! Please confirm on your phone.', 'info');
+      }
+
+      if (txId) {
+        // Poll for status (same pattern as rent payment)
+        const maxAttempts = 24;
+        for (let i = 0; i < maxAttempts; i++) {
+          await new Promise(res => setTimeout(res, 5000));
+          try {
+            const statusRes = await tenantService.checkMoMoStatus(txId);
+            const s = String(statusRes?.status || '').toUpperCase();
+            if (s === 'SUCCESSFUL') {
+              setBillsPaymentStatus('success');
+              addNotification('Bill payment successful!', 'success');
+              await loadPayments();
+              resetBillsModal();
+              return;
+            }
+            if (s === 'FAILED' || s === 'BILL PAYMENT FAILED') {
+              setBillsPaymentStatus('failed');
+              addNotification('Payment failed. Please try again.', 'error');
+              return;
+            }
+          } catch (err) {
+            console.error('Status check error:', err);
+          }
+        }
+        setBillsPaymentStatus('failed');
+        addNotification('Payment timed out. Check your phone and try again.', 'error');
+      }
     } catch (error) {
       console.error('Error submitting bill payment:', error);
+      setBillsPaymentStatus('failed');
       addNotification(error.message || 'Failed to submit bill payment', 'error');
     } finally {
       setLoading(false);
@@ -2563,7 +2617,22 @@ const TenantDashboard = () => {
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="billsPhone">Phone Number</label>
+                    <label htmlFor="billsProvider">Payment Provider</label>
+                    <select
+                      id="billsProvider"
+                      value={billsForm.provider}
+                      onChange={(e) => setBillsForm(prev => ({ ...prev, provider: e.target.value, otp: '' }))}
+                      required
+                    >
+                      <option value="">Select provider</option>
+                      <option value="wave">Wave</option>
+                      <option value="om">Orange Money</option>
+                      <option value="mtn">MTN MoMo</option>
+                      <option value="moov">Moov Money</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="billsPhone">Mobile Money Phone</label>
                     <input
                       type="tel"
                       id="billsPhone"
@@ -2573,19 +2642,37 @@ const TenantDashboard = () => {
                       required
                     />
                   </div>
+                </div>
+                {billsForm.provider === 'om' && (
                   <div className="form-group">
-                    <label htmlFor="billsAmount">Amount (XOF)</label>
+                    <label htmlFor="billsOtp">Orange Money OTP</label>
                     <input
-                      type="number"
-                      id="billsAmount"
-                      value={billsForm.amount}
-                      onChange={(e) => setBillsForm(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="Amount from selected invoice"
+                      type="text"
+                      id="billsOtp"
+                      value={billsForm.otp}
+                      onChange={(e) => setBillsForm(prev => ({ ...prev, otp: e.target.value }))}
+                      placeholder="Enter OTP sent to your phone"
                       required
-                      min="1"
                     />
                   </div>
+                )}
+                <div className="form-group">
+                  <label htmlFor="billsAmount">Amount (XOF)</label>
+                  <input
+                    type="number"
+                    id="billsAmount"
+                    value={billsForm.amount}
+                    onChange={(e) => setBillsForm(prev => ({ ...prev, amount: e.target.value }))}
+                    placeholder="Amount from selected invoice"
+                    required
+                    min="1"
+                  />
                 </div>
+                {billsPaymentStatus === 'initiated' && (
+                  <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '10px', fontSize: '0.85rem', color: '#1d4ed8', textAlign: 'center' }}>
+                    {billsForm.provider === 'wave' ? 'Complete payment on the Wave page, then wait here…' : 'Waiting for confirmation on your phone…'}
+                  </div>
+                )}
 
                 {billsConsultation && Array.isArray(billsConsultation.factures) && billsConsultation.factures.length > 0 && (
                   <div className="form-group">

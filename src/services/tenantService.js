@@ -53,16 +53,18 @@ export const tenantService = {
     });
   },
 
-  payUtilityBill: async ({ billType, phoneNumber, amount, refContrat, numFacture }) => {
+  payUtilityBill: async ({ billType, provider, phone, otp, amount, refContrat, numFacture }) => {
     const url = buildApiUrl('/api/tenant/bills/payment');
     return await apiRequest(url, {
       method: 'POST',
       body: JSON.stringify({
         billType,
-        phoneNumber,
+        provider,
+        phone,
+        otp: otp || '',
         amount,
         refContrat,
-        numFacture,
+        numFacture: numFacture || '',
       }),
     });
   },
