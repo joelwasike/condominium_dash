@@ -99,6 +99,10 @@ const TechnicianDashboard = () => {
   const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState('');
   const [maintenancePropertyFilter, setMaintenancePropertyFilter] = useState('');
   const [technicianContacts, setTechnicianContacts] = useState([]);
+  // Multi-worker quote rows: [{id, workerName, quoteFile}]
+  const [workerQuoteRows, setWorkerQuoteRows] = useState([]);
+  // Worker quotes fetched for a selected maintenance in detail view
+  const [maintenanceWorkerQuotes, setMaintenanceWorkerQuotes] = useState([]);
   const [showContactModal, setShowContactModal] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
   const [contactForm, setContactForm] = useState({
@@ -512,11 +516,27 @@ const TechnicianDashboard = () => {
             invoice: taskForm.invoice || null,
             requireDirectorApproval: taskForm.requireDirectorApproval || false,
           };
-          await technicianService.createMaintenanceRequest(maintenanceData);
+          const createdMaintenance = await technicianService.createMaintenanceRequest(maintenanceData);
           const hadPhotos = (maintenanceData.photos && maintenanceData.photos.length) > 0;
           const needsApproval = maintenanceData.requireDirectorApproval;
           let msg = hadPhotos ? 'Maintenance created. To add photos, edit this request and attach images.' : 'Maintenance created successfully';
           if (needsApproval) msg += ' Task sent to director for approval.';
+
+          // Upload per-worker quotes if any were provided
+          const newMaintenanceId = createdMaintenance?.ID || createdMaintenance?.id;
+          if (newMaintenanceId) {
+            const rowsToUpload = workerQuoteRows.filter(r => r.workerName.trim());
+            for (const row of rowsToUpload) {
+              try {
+                await technicianService.addWorkerQuote(newMaintenanceId, row.workerName.trim(), row.quoteFile);
+              } catch (wqErr) {
+                console.error('Failed to upload worker quote for', row.workerName, wqErr);
+              }
+            }
+            if (rowsToUpload.length > 0) msg += ` ${rowsToUpload.length} worker quote(s) submitted.`;
+          }
+
+          setWorkerQuoteRows([]);
           addNotification(msg, 'success');
         }
       } else if (taskId) {
@@ -1521,6 +1541,7 @@ const TechnicianDashboard = () => {
                 invoice: null,
                 requireDirectorApproval: false,
               });
+              setWorkerQuoteRows([{ id: Date.now(), workerName: '', quoteFile: null }]);
               setShowTaskModal(true);
             }}
             disabled={loading}
@@ -3890,13 +3911,21 @@ const TechnicianDashboard = () => {
                   <option value="Scheduled">Scheduled</option>
                 </select>
               </div>
-                  {taskContext === 'maintenance' ? (
-              <div className="form-group">
-                      <label htmlFor="task-assigned">Assigned To (Worker)</label>
+                  {taskContext === 'maintenance' && !selectedTask ? (
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                  Workers &amp; Quotes
+                </label>
+                {workerQuoteRows.map((row, idx) => (
+                  <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'start', marginBottom: '10px', padding: '10px', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                    <div>
+                      <label style={{ fontSize: '0.8rem', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Worker *</label>
                       <select
-                        id="task-assigned"
-                        value={taskForm.assigned || ''}
-                        onChange={(e) => setTaskForm({...taskForm, assigned: e.target.value})}
+                        value={row.workerName}
+                        onChange={(e) => {
+                          const updated = workerQuoteRows.map(r => r.id === row.id ? { ...r, workerName: e.target.value } : r);
+                          setWorkerQuoteRows(updated);
+                        }}
                       >
                         <option value="">Select worker...</option>
                         {technicianContacts.map((contact) => {
@@ -3908,14 +3937,44 @@ const TechnicianDashboard = () => {
                             </option>
                           );
                         })}
-                        {taskForm.assigned && !technicianContacts.some(c => (c.Name || c.name) === taskForm.assigned) && (
-                          <option value={taskForm.assigned}>{taskForm.assigned} (current)</option>
-                        )}
-                        {technicianContacts.length === 0 && !taskForm.assigned && (
-                          <option value="" disabled>No workers in Contact of Workers</option>
+                        {technicianContacts.length === 0 && (
+                          <option value="" disabled>No workers — add via Contact of Workers</option>
                         )}
                       </select>
                     </div>
+                    <div>
+                      <label style={{ fontSize: '0.8rem', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Quote document</label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,image/*"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] || null;
+                          const updated = workerQuoteRows.map(r => r.id === row.id ? { ...r, quoteFile: f } : r);
+                          setWorkerQuoteRows(updated);
+                          e.target.value = '';
+                        }}
+                      />
+                      {row.quoteFile && (
+                        <span style={{ fontSize: '0.75rem', color: '#374151' }}>{row.quoteFile.name}</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      style={{ marginTop: '20px', padding: '6px 10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                      onClick={() => setWorkerQuoteRows(workerQuoteRows.filter(r => r.id !== row.id))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  style={{ padding: '6px 14px', background: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}
+                  onClick={() => setWorkerQuoteRows([...workerQuoteRows, { id: Date.now(), workerName: '', quoteFile: null }])}
+                >
+                  + Add Worker
+                </button>
+              </div>
                   ) : !selectedTask ? (
               <div className="form-group">
                       <label htmlFor="task-assigned">Assigned To</label>

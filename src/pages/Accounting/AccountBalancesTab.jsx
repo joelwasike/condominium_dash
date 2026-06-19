@@ -98,9 +98,9 @@ const AccountBalancesTab = (props) => {
         <div style={{ padding: '16px 20px', marginBottom: '20px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Global Balance (from payments)</p>
-              <p style={{ margin: '6px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#166534' }}>{Number(globalBalance || 0).toFixed(2)} XOF</p>
-              <p style={{ margin: '6px 0 0 0', color: '#6b7280', fontSize: '0.8rem' }}>Cashier accounts total: {totalBalance.toFixed(2)} XOF</p>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Global Balance</p>
+              <p style={{ margin: '6px 0 0 0', fontSize: '1.5rem', fontWeight: '600', color: '#166534' }}>{totalBalance.toFixed(2)} XOF</p>
+              <p style={{ margin: '6px 0 0 0', color: '#6b7280', fontSize: '0.8rem' }}>Sum of all cashier accounts (bank + mobile + agency + cash)</p>
             </div>
             <Wallet size={36} style={{ color: '#22c55e' }} />
           </div>

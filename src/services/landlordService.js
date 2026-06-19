@@ -179,6 +179,27 @@ export const landlordService = {
     });
   },
 
+  // Maintenance Worker Quotes — view and approve/reject per-worker quotes
+  getMaintenanceWorkerQuotes: async () => {
+    return await apiRequest(buildApiUrl('/api/landlord/maintenance-worker-quotes'));
+  },
+
+  approveMaintenanceWorkerQuote: async (id, note = '') => {
+    return await apiRequest(buildApiUrl(`/api/landlord/maintenance-worker-quotes/${id}/approve`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note }),
+    });
+  },
+
+  rejectMaintenanceWorkerQuote: async (id, note = '') => {
+    return await apiRequest(buildApiUrl(`/api/landlord/maintenance-worker-quotes/${id}/reject`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note }),
+    });
+  },
+
   // Reports
   downloadReport: async (filters = {}) => {
     let url = buildApiUrl('/api/landlord/reports/download');

@@ -176,6 +176,25 @@ export const technicianService = {
     });
   },
 
+  // Worker Quotes — attach a worker + quote document to a maintenance request
+  addWorkerQuote: async (maintenanceId, workerName, quoteFile) => {
+    const formData = new FormData();
+    formData.append('workerName', workerName);
+    if (quoteFile instanceof File) {
+      formData.append('quoteFile', quoteFile);
+    }
+    return apiRequest(buildApiUrl(`/api/technician/maintenance-requests/${maintenanceId}/worker-quotes`), {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  getWorkerQuotes: async (maintenanceId) => {
+    return apiRequest(buildApiUrl(`/api/technician/maintenance-requests/${maintenanceId}/worker-quotes`), {
+      method: 'GET',
+    });
+  },
+
   // Properties
   getProperties: async () => {
     return apiRequest(buildApiUrl('/api/technician/properties'), {

@@ -543,6 +543,39 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
+  // Maintenance Worker Quotes — validate per-worker quotes
+  getMaintenanceWorkerQuotes: async () => {
+    const headers = getAuthHeaders(false);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/maintenance-worker-quotes`, {
+      method: 'GET',
+      headers,
+    });
+    if (!response.ok) throw new Error('Failed to fetch maintenance worker quotes');
+    return parseJson(response);
+  },
+
+  approveMaintenanceWorkerQuote: async (id, note = '') => {
+    const headers = getAuthHeaders(true);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/maintenance-worker-quotes/${id}/approve`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ note }),
+    });
+    if (!response.ok) throw new Error('Failed to approve worker quote');
+    return parseJson(response);
+  },
+
+  rejectMaintenanceWorkerQuote: async (id, note = '') => {
+    const headers = getAuthHeaders(true);
+    const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/maintenance-worker-quotes/${id}/reject`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ note }),
+    });
+    if (!response.ok) throw new Error('Failed to reject worker quote');
+    return parseJson(response);
+  },
+
   getOwners: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners`, {
