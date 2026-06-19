@@ -1098,18 +1098,19 @@ const TenantDashboard = () => {
         billType: billsForm.billType,
         refContrat: contractRef,
       });
-      const payload = response?.result || response || {};
-      const invoices = Array.isArray(payload.factures) ? payload.factures : [];
-      setBillsConsultation(payload);
+      // Response is: { result: { ..., result: { factures: [...] } } }
+      const outerResult = response?.result || response || {};
+      const innerResult = outerResult?.result || outerResult || {};
+      const invoices = Array.isArray(innerResult.factures) ? innerResult.factures
+        : Array.isArray(outerResult.factures) ? outerResult.factures
+        : [];
+      setBillsConsultation({ factures: invoices });
 
       if (invoices.length === 1) {
         const invoice = invoices[0];
         setSelectedBillInvoice(invoice);
-        const amountValue = Number(invoice.SOLDE_FACTURE || invoice.MONTANT_TOTAL || invoice.amount || 0) || 0;
-        setBillsForm(prev => ({
-          ...prev,
-          amount: amountValue > 0 ? String(amountValue) : prev.amount,
-        }));
+        const amountValue = Number(invoice.SOLDE_FACTURE || invoice.MONTANT_TOTAL || 0) || 0;
+        setBillsForm(prev => ({ ...prev, amount: amountValue > 0 ? String(amountValue) : prev.amount }));
       } else {
         setSelectedBillInvoice(null);
       }
@@ -2676,64 +2677,37 @@ const TenantDashboard = () => {
 
                 {billsConsultation && Array.isArray(billsConsultation.factures) && billsConsultation.factures.length > 0 && (
                   <div className="form-group">
-                    <label>Available Invoices</label>
-                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden' }}>
-                      <div style={{ maxHeight: '240px', overflow: 'auto' }}>
-                        <table className="sa-table" style={{ margin: 0 }}>
-                          <thead>
-                            <tr>
-                              <th />
-                              <th>Period</th>
-                              <th>Invoice No.</th>
-                              <th>Total</th>
-                              <th>Balance</th>
-                              <th>Penalty</th>
-                              <th>Due Date</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {billsConsultation.factures.map((invoice, idx) => {
-                              const invoiceNumber = invoice.NUM_FAC || invoice.num_facture || invoice.numFacture || '';
-                              const amountTotal = invoice.MONTANT_TOTAL || invoice.SOLDE_FACTURE || invoice.amount || '0';
-                              const isSelected = selectedBillInvoice && String(selectedBillInvoice.NUM_FAC || selectedBillInvoice.num_facture || selectedBillInvoice.numFacture || '') === String(invoiceNumber);
-                              return (
-                                <tr
-                                  key={`${invoiceNumber || idx}`}
-                                  style={{ cursor: 'pointer', background: isSelected ? '#eff6ff' : 'transparent' }}
-                                  onClick={() => {
-                                    setSelectedBillInvoice(invoice);
-                                    const amountValue = Number(invoice.SOLDE_FACTURE || invoice.MONTANT_TOTAL || invoice.amount || 0) || 0;
-                                    setBillsForm(prev => ({ ...prev, amount: amountValue > 0 ? String(amountValue) : prev.amount }));
-                                  }}
-                                >
-                                  <td>
-                                    <input
-                                      type="radio"
-                                      name="selectedBillInvoice"
-                                      checked={isSelected}
-                                      onChange={() => {
-                                        setSelectedBillInvoice(invoice);
-                                        const amountValue = Number(invoice.SOLDE_FACTURE || invoice.MONTANT_TOTAL || invoice.amount || 0) || 0;
-                                        setBillsForm(prev => ({ ...prev, amount: amountValue > 0 ? String(amountValue) : prev.amount }));
-                                      }}
-                                    />
-                                  </td>
-                                  <td>{invoice.PER_FAC || invoice.per_fac || 'N/A'}</td>
-                                  <td>{invoiceNumber || 'N/A'}</td>
-                                  <td>{Number(amountTotal || 0).toLocaleString()} XOF</td>
-                                  <td>{Number(invoice.SOLDE_FACTURE || 0).toLocaleString()} XOF</td>
-                                  <td>{Number(invoice.MONTANT_PENALITE || 0).toLocaleString()} XOF</td>
-                                  <td>{invoice.DATE_LIMIT || invoice.date_limit || 'N/A'}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                    <label>Select Invoice (NUM_FAC)</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                      {billsConsultation.factures.map((invoice, idx) => {
+                        const numFac = invoice.NUM_FAC || invoice.num_facture || '';
+                        const isSelected = selectedBillInvoice && (selectedBillInvoice.NUM_FAC || selectedBillInvoice.num_facture || '') === numFac;
+                        return (
+                          <button
+                            key={numFac || idx}
+                            type="button"
+                            onClick={() => {
+                              setSelectedBillInvoice(invoice);
+                              const amount = Number(invoice.SOLDE_FACTURE || invoice.MONTANT_TOTAL || 0) || 0;
+                              setBillsForm(prev => ({ ...prev, amount: amount > 0 ? String(amount) : prev.amount }));
+                            }}
+                            style={{
+                              padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+                              border: isSelected ? '2px solid #3b82f6' : '2px solid #e2e8f0',
+                              background: isSelected ? '#eff6ff' : '#f8fafc',
+                              color: isSelected ? '#1d4ed8' : '#475569',
+                            }}
+                          >
+                            {numFac}
+                          </button>
+                        );
+                      })}
                     </div>
-                    <small style={{ color: '#6b7280', fontSize: '0.75rem', display: 'block', marginTop: '6px' }}>
-                      Click an invoice to prefill the payment amount. You can still adjust the amount if partial payment is allowed.
-                    </small>
+                    {selectedBillInvoice && (
+                      <small style={{ color: '#6b7280', fontSize: '0.75rem', display: 'block', marginTop: '6px' }}>
+                        Selected: {selectedBillInvoice.NUM_FAC} — Balance: {Number(selectedBillInvoice.SOLDE_FACTURE || 0).toLocaleString()} XOF · Due: {selectedBillInvoice.DATE_LIMIT || 'N/A'}
+                      </small>
+                    )}
                   </div>
                 )}
 
