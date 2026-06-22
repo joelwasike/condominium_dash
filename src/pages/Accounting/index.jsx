@@ -436,7 +436,8 @@ const AccountingDashboard = () => {
     }
   };
 
-  // Reload expenses when filters change
+  // Reload expenses when filters change; also ensure cashier accounts are loaded
+  // so the "Add Expense" modal's deduction dropdown is populated.
   useEffect(() => {
     if (activeTab === 'expenses') {
       loadExpensesSummary();
@@ -446,6 +447,9 @@ const AccountingDashboard = () => {
         loadExpenses();
       }
       loadWorkingDisbursements();
+      if (cashierAccounts.length === 0) {
+        loadCashierData();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, expenseBuildingFilter, expenseStartDateFilter, expenseEndDateFilter, expenseCategoryFilter, expenseViewCard]);
@@ -937,14 +941,25 @@ const AccountingDashboard = () => {
   // Print payment/collection receipt as PDF
   const printPaymentReceipt = async (item, isCollectionParam) => {
     if (!item) return;
-    const isCollection = isCollectionParam ?? (item.Building !== undefined);
+    const isCollection = isCollectionParam ?? (item.Building !== undefined && item.Tenant === undefined);
+    // Enrich TenantPayment with outstanding rent data from loaded tenants list
+    let enrichedItem = { ...item };
+    if (!isCollection && item.Tenant && Array.isArray(tenants) && tenants.length > 0) {
+      const tenantRecord = tenants.find(t =>
+        (t.tenantName || t.TenantName || '').toLowerCase().trim() === (item.Tenant || '').toLowerCase().trim()
+      );
+      if (tenantRecord) {
+        enrichedItem.RentDue = tenantRecord.outstandingAmount ?? tenantRecord.OutstandingAmount ?? 0;
+        enrichedItem.RentPaidAdvance = tenantRecord.rentPaidInAdvance ?? tenantRecord.RentPaidInAdvance ?? 0;
+      }
+    }
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f0f0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;';
     document.body.appendChild(overlay);
     const container = document.createElement('div');
     overlay.appendChild(container);
     const root = ReactDOM.createRoot(container);
-    root.render(<RentReceiptTemplate data={item} isCollection={isCollection} />);
+    root.render(<RentReceiptTemplate data={enrichedItem} isCollection={isCollection} />);
     try {
       await new Promise(r => setTimeout(r, 800));
       const receiptEl = container.querySelector('.receipt-container') || container.firstChild;

@@ -493,6 +493,11 @@ export const accountingService = {
     return unwrapList(data);
   },
 
+  // Get full tenant detail (same rich structure as sales manager getClient)
+  getAccountingTenantDetail: async (tenantId) => {
+    return apiRequest(buildApiUrl(`/api/accounting/tenants/${tenantId}`));
+  },
+
   // Security Deposits
   getDepositRefundsPending: async () => {
     const url = buildApiUrl('/api/accounting/deposit-refunds/pending');

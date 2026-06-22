@@ -217,6 +217,24 @@ export const technicianService = {
     });
   },
 
+  // Submit a quote with optional document uploads (invoice, quotation, supporting doc)
+  submitQuoteWithFiles: async ({ maintenanceId, property, issue, amount, problem, invoice, quotation, supportingDocument }) => {
+    const fd = new FormData();
+    fd.append('maintenanceId', String(maintenanceId));
+    fd.append('property', property || '');
+    fd.append('issue', issue || '');
+    fd.append('amount', String(amount || 0));
+    fd.append('problem', problem || '');
+    fd.append('recipient', 'management@example.com');
+    if (invoice) fd.append('invoice', invoice);
+    if (quotation) fd.append('quotation', quotation);
+    if (supportingDocument) fd.append('supportingDocument', supportingDocument);
+    return apiRequest(buildApiUrl('/api/technician/quotes'), {
+      method: 'POST',
+      body: fd,
+    });
+  },
+
   // Progress APIs
   getWorkProgress: async (filters = {}) => {
     const queryParams = new URLSearchParams();

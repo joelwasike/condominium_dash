@@ -103,6 +103,11 @@ const TechnicianDashboard = () => {
   const [workerQuoteRows, setWorkerQuoteRows] = useState([]);
   // Worker quotes fetched for a selected maintenance in detail view
   const [maintenanceWorkerQuotes, setMaintenanceWorkerQuotes] = useState([]);
+  // Quote document upload modal (opened by the 💰 button on a maintenance row)
+  const [showQuoteDocModal, setShowQuoteDocModal] = useState(false);
+  const [quoteDocMaintenance, setQuoteDocMaintenance] = useState(null);
+  const [quoteDocForm, setQuoteDocForm] = useState({ amount: '', problem: '', invoice: null, quotation: null, supportingDocument: null });
+  const [quoteDocSubmitting, setQuoteDocSubmitting] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
   const [contactForm, setContactForm] = useState({
@@ -1414,6 +1419,36 @@ const TechnicianDashboard = () => {
     </div>
   );
 
+  const handleQuoteDocSubmit = async (e) => {
+    e.preventDefault();
+    if (!quoteDocMaintenance) return;
+    const amount = Number(quoteDocForm.amount);
+    if (!amount || amount <= 0) { addNotification('Enter a valid amount', 'error'); return; }
+    setQuoteDocSubmitting(true);
+    try {
+      await technicianService.submitQuoteWithFiles({
+        maintenanceId: quoteDocMaintenance.id || quoteDocMaintenance.ID,
+        property: quoteDocMaintenance.property || quoteDocMaintenance.Property,
+        issue: quoteDocMaintenance.issue || quoteDocMaintenance.Issue,
+        amount,
+        problem: quoteDocForm.problem,
+        invoice: quoteDocForm.invoice,
+        quotation: quoteDocForm.quotation,
+        supportingDocument: quoteDocForm.supportingDocument,
+      });
+      addNotification('Quote submitted successfully', 'success');
+      setShowQuoteDocModal(false);
+      setQuoteDocMaintenance(null);
+      setQuoteDocForm({ amount: '', problem: '', invoice: null, quotation: null, supportingDocument: null });
+      loadData();
+    } catch (error) {
+      console.error('Error submitting quote:', error);
+      addNotification(error?.message || 'Failed to submit quote', 'error');
+    } finally {
+      setQuoteDocSubmitting(false);
+    }
+  };
+
   const renderMaintenance = () => {
     const handleProcessRequest = async (maintenance) => {
       try {
@@ -1469,29 +1504,13 @@ const TechnicianDashboard = () => {
       });
     };
 
-    const handleSubmitQuote = async (maintenance) => {
-      try {
-        const estimatedCostRaw =
-          maintenance.estimatedCost ??
-          maintenance.EstimatedCost ??
-          maintenance.estimated_cost ??
-          maintenance.Estimated_Cost ??
-          0;
-        const estimatedCost = Number(estimatedCostRaw) || 0;
-        const quoteData = {
-          maintenanceId: maintenance.id || maintenance.ID,
-          property: maintenance.property || maintenance.Property,
-          issue: maintenance.issue || maintenance.Issue,
-          amount: estimatedCost,
-          recipient: 'management@example.com',
-        };
-        await technicianService.submitQuote(quoteData);
-        addNotification('Quote submitted successfully', 'success');
-        loadData();
-      } catch (error) {
-        console.error('Error submitting quote:', error);
-        addNotification('Failed to submit quote', 'error');
-      }
+    const handleSubmitQuote = (maintenance) => {
+      const estimatedCost = Number(
+        maintenance.estimatedCost ?? maintenance.EstimatedCost ?? maintenance.estimated_cost ?? maintenance.Estimated_Cost ?? 0
+      ) || 0;
+      setQuoteDocMaintenance(maintenance);
+      setQuoteDocForm({ amount: estimatedCost > 0 ? String(estimatedCost) : '', problem: '', invoice: null, quotation: null, supportingDocument: null });
+      setShowQuoteDocModal(true);
     };
 
     // Only show non-completed maintenance in this table, then apply filters.
@@ -4157,6 +4176,133 @@ const TechnicianDashboard = () => {
               </div>
             </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quote Document Upload Modal */}
+      {showQuoteDocModal && quoteDocMaintenance && (
+        <div
+          className="modal-overlay"
+          onClick={() => { if (!quoteDocSubmitting) { setShowQuoteDocModal(false); setQuoteDocMaintenance(null); } }}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px' }}>
+            <div className="modal-header">
+              <h3>Generate Quote</h3>
+              <button
+                className="modal-close"
+                onClick={() => { if (!quoteDocSubmitting) { setShowQuoteDocModal(false); setQuoteDocMaintenance(null); } }}
+              >×</button>
+            </div>
+
+            <form onSubmit={handleQuoteDocSubmit} className="modal-form">
+              {/* Context info */}
+              <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.875rem', color: '#374151' }}>
+                <strong>{quoteDocMaintenance.property || quoteDocMaintenance.Property}</strong>
+                <br />
+                <span style={{ color: '#6b7280' }}>{quoteDocMaintenance.issue || quoteDocMaintenance.Issue}</span>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="qdoc-amount">Quote Amount (XOF) *</label>
+                <input
+                  type="number"
+                  id="qdoc-amount"
+                  required
+                  min="1"
+                  step="any"
+                  placeholder="e.g. 150000"
+                  value={quoteDocForm.amount}
+                  onChange={(e) => setQuoteDocForm(prev => ({ ...prev, amount: e.target.value }))}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="qdoc-problem">Description / Notes (optional)</label>
+                <textarea
+                  id="qdoc-problem"
+                  rows={3}
+                  placeholder="Describe the work, scope, or any additional notes…"
+                  value={quoteDocForm.problem}
+                  onChange={(e) => setQuoteDocForm(prev => ({ ...prev, problem: e.target.value }))}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="qdoc-quotation">Upload Quotation (optional)</label>
+                <input
+                  type="file"
+                  id="qdoc-quotation"
+                  accept=".pdf,.doc,.docx,image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] || null;
+                    setQuoteDocForm(prev => ({ ...prev, quotation: f }));
+                    e.target.value = '';
+                  }}
+                />
+                {quoteDocForm.quotation && (
+                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{quoteDocForm.quotation.name}</span>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, quotation: null }))}>Remove</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="qdoc-invoice">Upload Invoice (optional)</label>
+                <input
+                  type="file"
+                  id="qdoc-invoice"
+                  accept=".pdf,.doc,.docx,image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] || null;
+                    setQuoteDocForm(prev => ({ ...prev, invoice: f }));
+                    e.target.value = '';
+                  }}
+                />
+                {quoteDocForm.invoice && (
+                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{quoteDocForm.invoice.name}</span>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, invoice: null }))}>Remove</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="qdoc-supporting">Upload Supporting Documents (optional)</label>
+                <input
+                  type="file"
+                  id="qdoc-supporting"
+                  accept=".pdf,.doc,.docx,image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] || null;
+                    setQuoteDocForm(prev => ({ ...prev, supportingDocument: f }));
+                    e.target.value = '';
+                  }}
+                />
+                {quoteDocForm.supportingDocument && (
+                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{quoteDocForm.supportingDocument.name}</span>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, supportingDocument: null }))}>Remove</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="action-button secondary"
+                  disabled={quoteDocSubmitting}
+                  onClick={() => { setShowQuoteDocModal(false); setQuoteDocMaintenance(null); }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="action-button primary" disabled={quoteDocSubmitting}>
+                  {quoteDocSubmitting ? 'Submitting…' : 'Submit Quote'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

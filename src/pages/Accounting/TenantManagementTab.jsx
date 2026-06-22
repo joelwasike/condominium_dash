@@ -1,74 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Search,
-  Download,
-  ArrowLeft,
-  Users,
-  Mail,
-  Phone,
-  MapPin,
-  DollarSign,
-  Building,
-  AlertTriangle,
-  Wrench,
-  FileCheck,
-  StickyNote,
-  Receipt,
-  MessageSquare,
-  AlertCircle,
+  Search, Download, ArrowLeft, Users, Mail, Phone, MapPin,
+  DollarSign, Building, AlertTriangle, Wrench, FileCheck,
+  StickyNote, Receipt, MessageSquare, AlertCircle,
 } from 'lucide-react';
-import { salesManagerService } from '../../services/salesManagerService';
-import { useEffect } from 'react';
+import { accountingService } from '../../services/accountingService';
 
-/* ── helpers ── */
-
-const getTenantId = (t) => t?.TenantID ?? t?.tenantId ?? t?.id ?? t?.ID ?? null;
-
-const statusPill = (status) => {
-  const s = (status || '').toLowerCase().replace(/\s+/g, '-');
-  const map = {
-    active:              { bg: '#dcfce7', c: '#166534' },
-    'up-to-date':        { bg: '#dcfce7', c: '#166534' },
-    overdue:             { bg: '#fee2e2', c: '#991b1b' },
-    '1-month':           { bg: '#fef3c7', c: '#92400e' },
-    '2-months':          { bg: '#fee2e2', c: '#991b1b' },
-    '3+months':          { bg: '#fee2e2', c: '#991b1b' },
-    inactive:            { bg: '#f1f5f9', c: '#475569' },
-    'waiting-list':      { bg: '#e0f2fe', c: '#075985' },
-  };
-  const { bg, c } = map[s] || { bg: '#f1f5f9', c: '#475569' };
-  return {
-    display: 'inline-block', padding: '4px 12px', borderRadius: '999px',
-    fontSize: '0.75rem', fontWeight: 600, background: bg, color: c,
-  };
-};
-
-// Map accounting paymentStatus to a human label matching sales manager vocabulary
-const statusLabel = (paymentStatus) => {
-  switch ((paymentStatus || '').toLowerCase()) {
-    case 'up-to-date': return 'Active';
-    case '1-month':    return 'Overdue';
-    case '2-months':   return 'Overdue';
-    case '3+months':   return 'Overdue';
-    default:           return paymentStatus || 'Unknown';
-  }
-};
-
-// Map accounting paymentStatus to the pill key used by statusPill
-const statusKey = (paymentStatus) => {
-  switch ((paymentStatus || '').toLowerCase()) {
-    case 'up-to-date': return 'active';
-    case '1-month':    return '1-month';
-    case '2-months':   return '2-months';
-    case '3+months':   return '3+months';
-    default:           return paymentStatus || 'unknown';
-  }
-};
-
-const card = {
-  background: '#fff', borderRadius: '16px', padding: '20px',
-  boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9',
-};
+/* ── shared style tokens ── */
+const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
 const dlItem    = { marginBottom: '12px' };
 const dtStyle   = { fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px', fontWeight: 500 };
 const ddStyle   = { margin: 0, fontSize: '0.9rem', color: '#1e293b' };
@@ -81,17 +20,397 @@ const backBtn   = { display: 'flex', alignItems: 'center', gap: '6px', padding: 
 const btnPrimary = { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' };
 const btnOutline = { padding: '8px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 500, fontSize: '0.85rem', cursor: 'pointer' };
 
-/* ════════════════════════════════════════════════════════════
-   Main list view
-════════════════════════════════════════════════════════════ */
-const TenantManagementTab = (props) => {
-  const { loading, addNotification, tenants = [], tenantPayments = [] } = props;
+/* mirrors ClientsTab statusPill exactly */
+const statusPill = (s) => {
+  const sl = (s || '').toLowerCase().replace(/\s+/g, '-');
+  const m = {
+    occupied: { bg: '#dcfce7', c: '#166534' }, vacant: { bg: '#fef3c7', c: '#92400e' },
+    active: { bg: '#dcfce7', c: '#166534' }, inactive: { bg: '#fee2e2', c: '#991b1b' },
+    pending: { bg: '#fef3c7', c: '#92400e' }, completed: { bg: '#dcfce7', c: '#166534' },
+    available: { bg: '#dbeafe', c: '#1d4ed8' }, sold: { bg: '#f3e8ff', c: '#7c3aed' },
+    rented: { bg: '#d1fae5', c: '#065f46' },
+    'up-to-date': { bg: '#dcfce7', c: '#166534' },
+    '1-month': { bg: '#fef3c7', c: '#92400e' },
+    '2-months': { bg: '#fee2e2', c: '#991b1b' },
+    '3+months': { bg: '#fee2e2', c: '#991b1b' },
+    overdue: { bg: '#fee2e2', c: '#991b1b' },
+  };
+  const { bg, c } = m[sl] || { bg: '#f1f5f9', c: '#475569' };
+  return { display: 'inline-block', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 600, background: bg, color: c };
+};
 
-  const [selectedTenant, setSelectedTenant]   = useState(null);
-  const [statusFilter, setStatusFilter]         = useState('');
-  const [searchText, setSearchText]             = useState('');
-  const [propertyFilter, setPropertyFilter]     = useState('');
-  const [showAllPayments, setShowAllPayments]   = useState(false);
+/* map accounting paymentStatus → display label */
+const statusLabel = (ps) => {
+  switch ((ps || '').toLowerCase()) {
+    case 'up-to-date': return 'Active';
+    case '1-month': case '2-months': case '3+months': return 'Overdue';
+    default: return ps || 'Unknown';
+  }
+};
+
+const getTenantId = (t) => t?.TenantID ?? t?.tenantId ?? t?.id ?? t?.ID ?? null;
+
+/* ════════════════════════════════════════════════════════════
+   DETAIL VIEW — identical layout to sales manager ClientsTab
+════════════════════════════════════════════════════════════ */
+const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
+  const [tenantDetail, setTenantDetail]   = useState(null);
+  const [loading, setLoading]             = useState(false);
+  const [maintenanceDetail, setMaintenanceDetail]         = useState(null);
+  const [maintenanceDetailLoading, setMaintenanceDetailLoading] = useState(false);
+  const [showAllPayments, setShowAllPayments] = useState(false);
+
+  const tenantId = getTenantId(selectedTenant);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    setLoading(true);
+    accountingService.getAccountingTenantDetail(tenantId)
+      .then((data) => { if (!cancelled) setTenantDetail(data); })
+      .catch(() => { if (!cancelled) setTenantDetail({ client: selectedTenant }); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tenantId]);
+
+  if (loading) {
+    return (
+      <div style={{ ...card, padding: '48px', textAlign: 'center' }}>
+        <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Loading tenant details...</p>
+      </div>
+    );
+  }
+
+  const c = tenantDetail?.client || selectedTenant;
+  if (!c) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <button type="button" style={{ ...backBtn, marginBottom: '16px' }} onClick={onBack}>
+          <ArrowLeft size={16} /> Back to list
+        </button>
+        <div style={card}><p style={subText}>Tenant not found or failed to load.</p></div>
+      </div>
+    );
+  }
+
+  const prop = tenantDetail?.property;
+  const alertList        = Array.isArray(tenantDetail?.alerts)       ? tenantDetail.alerts        : [];
+  const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances  : [];
+  const paymentsList     = Array.isArray(tenantDetail?.payments)     ? tenantDetail.payments      : [];
+  const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes  : [];
+
+  const depositPaidAmount    = tenantDetail?.deposit?.paidAmount ?? null;
+  const depositStatus        = tenantDetail?.deposit?.status     ?? null;
+  const accounting           = tenantDetail?.accounting || {};
+  const rentPaidInAdvance    = accounting.rentPaidInAdvance    ?? null;
+  const unpaidRentAmount     = accounting.unpaidRentAmount     ?? null;
+  const numberOfMonthsUnpaid = accounting.numberOfMonthsUnpaid ?? null;
+  const penaltyToPay         = accounting.penaltyToPay         ?? null;
+  const balanceToPayEstimate = accounting.balanceToPayEstimate ?? null;
+
+  const name        = c.Name        || c.name        || c.TenantName  || c.tenantName  || 'N/A';
+  const email       = c.Email       || c.email       || '';
+  const phone       = c.Phone       || c.phone       || '';
+  const rawStatus   = c.Status      || c.status      || c.PaymentStatus || c.paymentStatus || 'Unknown';
+  const displayStatus = statusLabel(rawStatus) !== 'Unknown' ? statusLabel(rawStatus) : rawStatus;
+  const propertyAddr = c.Property   || c.property    || '—';
+  const unitNumber  = c.UnitNumber  ?? c.unitNumber  ?? '—';
+  const amount      = c.Amount      ?? c.amount      ?? c.MonthlyRent ?? c.monthlyRent ?? 0;
+  const lastPayment = c.LastPayment ?? c.lastPayment ?? c.LastPaymentDate ?? c.lastPaymentDate;
+  const createdAt   = c.CreatedAt   ?? c.createdAt;
+  const updatedAt   = c.UpdatedAt   ?? c.updatedAt;
+
+  const openMaintenanceDetail = (mid) => {
+    if (mid == null) return;
+    setMaintenanceDetailLoading(true);
+    setMaintenanceDetail(null);
+    // re-use the same accounting tenant detail which has maintenances embedded;
+    // for a richer view, fetch from accounting tenant detail or show inline
+    const found = maintenancesList.find(m => (m.ID ?? m.id) === mid);
+    if (found) { setMaintenanceDetail(found); setMaintenanceDetailLoading(false); }
+    else setMaintenanceDetailLoading(false);
+  };
+
+  const visiblePayments = showAllPayments ? paymentsList : paymentsList.slice(0, 5);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <div style={{ marginBottom: '20px' }}>
+        <button type="button" style={backBtn} onClick={onBack}>
+          <ArrowLeft size={16} /> Back to list
+        </button>
+      </div>
+
+      {/* Header banner */}
+      <div style={{ ...card, marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 700, flexShrink: 0 }}>
+            {(name || 'T').charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b' }}>{name}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '6px' }}>
+              <span style={statusPill(rawStatus)}>{displayStatus}</span>
+              {propertyAddr && propertyAddr !== '—' && (
+                <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <MapPin size={14} />{propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+
+        {/* Personal information */}
+        <div style={card}>
+          <h3 style={sectionTitle}><Users size={18} /> Personal information</h3>
+          <div style={{ marginTop: '16px' }}>
+            <div style={dlItem}><div style={dtStyle}>Name</div><div style={ddStyle}>{name}</div></div>
+            {email && <div style={dlItem}><div style={dtStyle}>Email</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {email}</div></div>}
+            {phone && <div style={dlItem}><div style={dtStyle}>Phone</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {phone}</div></div>}
+            <div style={dlItem}><div style={dtStyle}>Status</div><div style={ddStyle}><span style={statusPill(rawStatus)}>{displayStatus}</span></div></div>
+            {createdAt && <div style={dlItem}><div style={dtStyle}>Member since</div><div style={ddStyle}>{new Date(createdAt).toLocaleDateString()}</div></div>}
+          </div>
+          <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FileCheck size={16} /> Files &amp; documents
+          </h4>
+          <p style={subText}>No files uploaded yet. ID and other tenant documents can be added here for viewing.</p>
+        </div>
+
+        {/* Rent & payment */}
+        <div style={card}>
+          <h3 style={sectionTitle}><DollarSign size={18} /> Rent &amp; payment</h3>
+          <div style={{ marginTop: '16px' }}>
+            <div style={dlItem}><div style={dtStyle}>Property</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</div></div>
+            {unitNumber && unitNumber !== '—' && <div style={dlItem}><div style={dtStyle}>Unit</div><div style={ddStyle}>{unitNumber}</div></div>}
+            <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={{ ...ddStyle, fontWeight: 700, fontSize: '1.1rem' }}>{Number(amount).toLocaleString()} XOF</div></div>
+            {depositPaidAmount != null && (
+              <div style={dlItem}>
+                <div style={dtStyle}>Deposit paid amount{depositStatus ? ` (${depositStatus})` : ''}</div>
+                <div style={ddStyle}>{Number(depositPaidAmount).toLocaleString()} XOF</div>
+              </div>
+            )}
+            {rentPaidInAdvance != null && Number(rentPaidInAdvance) > 0 && (
+              <div style={dlItem}><div style={dtStyle}>Rent paid in advance</div><div style={ddStyle}>{Number(rentPaidInAdvance).toLocaleString()} XOF</div></div>
+            )}
+            {unpaidRentAmount != null && Number(unpaidRentAmount) > 0 && (
+              <div style={dlItem}><div style={dtStyle}>Unpaid rent</div><div style={ddStyle}>{Number(unpaidRentAmount).toLocaleString()} XOF</div></div>
+            )}
+            {numberOfMonthsUnpaid != null && Number(numberOfMonthsUnpaid) > 0 && (
+              <div style={dlItem}><div style={dtStyle}>Months unpaid</div><div style={ddStyle}>{Number(numberOfMonthsUnpaid)}</div></div>
+            )}
+            {penaltyToPay != null && Number(penaltyToPay) > 0 && (
+              <div style={dlItem}><div style={dtStyle}>Penalty to pay</div><div style={ddStyle}>{Number(penaltyToPay).toLocaleString()} XOF</div></div>
+            )}
+            {balanceToPayEstimate != null && Number(balanceToPayEstimate) > 0 && (
+              <div style={dlItem}><div style={dtStyle}>Balance to pay</div><div style={{ ...ddStyle, fontWeight: 700 }}>{Number(balanceToPayEstimate).toLocaleString()} XOF</div></div>
+            )}
+            <div style={dlItem}><div style={dtStyle}>Last payment</div><div style={ddStyle}>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</div></div>
+          </div>
+        </div>
+
+        {/* Property details (only when property data is returned) */}
+        {prop && (
+          <div style={card}>
+            <h3 style={sectionTitle}><Building size={18} /> Property details</h3>
+            <div style={{ marginTop: '16px' }}>
+              <div style={dlItem}><div style={dtStyle}>Address</div><div style={ddStyle}>{prop.address || prop.Address || propertyAddr}</div></div>
+              <div style={dlItem}><div style={dtStyle}>Type</div><div style={ddStyle}>{prop.type || prop.Type || '—'}</div></div>
+              {(prop.bedrooms ?? prop.Bedrooms) != null && <div style={dlItem}><div style={dtStyle}>Bedrooms</div><div style={ddStyle}>{prop.bedrooms ?? prop.Bedrooms}</div></div>}
+              {(prop.bathrooms ?? prop.Bathrooms) != null && <div style={dlItem}><div style={dtStyle}>Bathrooms</div><div style={ddStyle}>{prop.bathrooms ?? prop.Bathrooms}</div></div>}
+              <div style={dlItem}>
+                <div style={dtStyle}>Property status</div>
+                <div style={ddStyle}><span style={statusPill((prop.status || prop.Status || '').toLowerCase())}>{prop.status || prop.Status || '—'}</span></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Alerts & activity */}
+        <div style={{ ...card, ...(alertList.length ? {} : { gridColumn: '1 / -1' }) }}>
+          <h3 style={sectionTitle}><AlertTriangle size={18} /> Alerts &amp; activity</h3>
+          {alertList.length > 0 ? (
+            <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {alertList.map((alert, idx) => (
+                <li key={alert.ID || alert.id || idx} style={alertItem}>
+                  <div style={alertTitle}>{alert.Title || alert.title || 'Alert'}</div>
+                  {alert.Message && <div style={{ ...subText, marginBottom: '4px' }}>{alert.Message}</div>}
+                  <div style={alertMeta}>
+                    {(alert.Urgency || alert.urgency || '').toLowerCase()} · {alert.Status || alert.status || 'Open'}
+                    {alert.Amount != null && ` · ${Number(alert.Amount).toLocaleString()} XOF`}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ ...subText, marginTop: '12px' }}>No alerts for this tenant.</p>
+          )}
+        </div>
+
+        {/* Maintenances */}
+        <div style={card}>
+          <h3 style={sectionTitle}><Wrench size={18} /> Maintenances requested</h3>
+          {maintenancesList.length > 0 ? (
+            <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {maintenancesList.map((m, idx) => {
+                const mid = m.ID ?? m.id;
+                return (
+                  <li
+                    key={mid ?? idx}
+                    style={{ ...alertItem, cursor: mid != null ? 'pointer' : 'default' }}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openMaintenanceDetail(mid)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMaintenanceDetail(mid); } }}
+                  >
+                    <div style={alertTitle}>{m.Issue || m.issue || 'Maintenance'}</div>
+                    <div style={alertMeta}>
+                      {(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}
+                      {m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p style={{ ...subText, marginTop: '12px' }}>No maintenance requests for this tenant.</p>
+          )}
+        </div>
+
+        {/* Payment history */}
+        <div style={card}>
+          <h3 style={sectionTitle}><Receipt size={18} /> Recent payment history</h3>
+          {paymentsList.length > 0 ? (
+            <>
+              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {visiblePayments.map((p, idx) => (
+                  <li key={p.ID || p.id || idx} style={{ ...alertItem, borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+                    <div style={alertTitle}>
+                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
+                    </div>
+                    <div style={alertMeta}>
+                      {p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}
+                      {(p.Method || p.method) && ` · ${p.Method || p.method}`}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {paymentsList.length > 5 && (
+                <button type="button" style={{ ...btnOutline, marginTop: '12px' }} onClick={() => setShowAllPayments(v => !v)}>
+                  {showAllPayments ? 'Show less' : `Show all (${paymentsList.length})`}
+                </button>
+              )}
+            </>
+          ) : (
+            <p style={{ ...subText, marginTop: '12px' }}>No payment history for this tenant.</p>
+          )}
+        </div>
+
+        {/* Private notes (read-only in accounting) */}
+        <div style={card}>
+          <h3 style={sectionTitle}><StickyNote size={18} /> Private notes</h3>
+          {privateNotesList.length > 0 ? (
+            <ul style={{ margin: '12px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {privateNotesList.map((n) => (
+                <li key={n.id ?? n.ID} style={{ ...alertItem, borderLeftColor: '#6366f1' }}>
+                  <div style={alertTitle}>{n.note ?? n.Note}</div>
+                  <div style={alertMeta}>
+                    {n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ ...subText, marginTop: '12px' }}>No private notes yet.</p>
+          )}
+        </div>
+
+        {/* Quick actions */}
+        <div style={card}>
+          <h3 style={sectionTitle}><AlertCircle size={18} /> Quick actions</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
+            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => addNotification('Generate Receipt – coming soon', 'info')}>
+              <Receipt size={16} /> Generate Receipt
+            </button>
+            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => addNotification('Send Reminder SMS – coming soon', 'info')}>
+              <MessageSquare size={16} /> Send Reminder SMS
+            </button>
+            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => addNotification('Report Incident – coming soon', 'info')}>
+              <AlertCircle size={16} /> Report Incident
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ ...card, marginTop: '20px' }}>
+        <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+          Last updated: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}
+        </span>
+      </div>
+
+      {/* Maintenance detail modal */}
+      {(maintenanceDetail != null || maintenanceDetailLoading) && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+          onClick={() => { if (!maintenanceDetailLoading) setMaintenanceDetail(null); }}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Maintenance request details</h3>
+              <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8', padding: '4px' }} onClick={() => setMaintenanceDetail(null)} disabled={maintenanceDetailLoading}>×</button>
+            </div>
+            <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              {maintenanceDetailLoading ? (
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Loading...</p>
+              ) : maintenanceDetail ? (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <div><div style={dtStyle}>Property</div><div style={ddStyle}>{maintenanceDetail.property ?? maintenanceDetail.Property ?? '—'}</div></div>
+                  <div><div style={dtStyle}>Tenant</div><div style={ddStyle}>{maintenanceDetail.tenant ?? maintenanceDetail.Tenant ?? '—'}</div></div>
+                  <div><div style={dtStyle}>Title</div><div style={ddStyle}>{maintenanceDetail.title ?? maintenanceDetail.Title ?? maintenanceDetail.issue ?? maintenanceDetail.Issue ?? '—'}</div></div>
+                  {(maintenanceDetail.description ?? maintenanceDetail.Description) && <div><div style={dtStyle}>Description</div><div style={ddStyle}>{maintenanceDetail.description ?? maintenanceDetail.Description}</div></div>}
+                  <div><div style={dtStyle}>Priority</div><div style={ddStyle}><span style={statusPill((maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '').toLowerCase())}>{maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '—'}</span></div></div>
+                  <div><div style={dtStyle}>Status</div><div style={ddStyle}><span style={statusPill((maintenanceDetail.status ?? maintenanceDetail.Status ?? '').toLowerCase().replace(/\s+/g, '-'))}>{maintenanceDetail.status ?? maintenanceDetail.Status ?? '—'}</span></div></div>
+                  {(maintenanceDetail.assigned ?? maintenanceDetail.Assigned) && <div><div style={dtStyle}>Assigned to</div><div style={ddStyle}>{maintenanceDetail.assigned ?? maintenanceDetail.Assigned}</div></div>}
+                  <div><div style={dtStyle}>Date reported</div><div style={ddStyle}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : (maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—')}</div></div>
+                  <div><div style={dtStyle}>Created</div><div style={ddStyle}>{maintenanceDetail.createdAt ? new Date(maintenanceDetail.createdAt).toLocaleString() : (maintenanceDetail.CreatedAt ? new Date(maintenanceDetail.CreatedAt).toLocaleString() : '—')}</div></div>
+                  {(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost) != null && <div><div style={dtStyle}>Estimated cost</div><div style={ddStyle}>{(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost).toLocaleString()} XOF</div></div>}
+                  <div><div style={dtStyle}>Quote generated</div><div style={ddStyle}>{(maintenanceDetail.quoteGenerated ?? maintenanceDetail.QuoteGenerated) ? 'Yes' : 'No'}</div></div>
+                  {Array.isArray(maintenanceDetail.photos ?? maintenanceDetail.Photos) && (maintenanceDetail.photos ?? maintenanceDetail.Photos).length > 0 && (
+                    <div>
+                      <div style={{ ...dtStyle, marginBottom: '8px' }}>Photos</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {(maintenanceDetail.photos ?? maintenanceDetail.Photos).map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                            <img src={url} alt={`Photo ${i + 1}`} style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════════════════
+   LIST VIEW
+════════════════════════════════════════════════════════════ */
+const TenantManagementTab = ({ loading, addNotification, tenants = [] }) => {
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [statusFilter, setStatusFilter]     = useState('');
+  const [searchText, setSearchText]         = useState('');
+  const [propertyFilter, setPropertyFilter] = useState('');
 
   const getName  = (t) => t.TenantName  || t.tenantName  || t.Name  || t.name  || '';
   const getEmail = (t) => t.Email       || t.email       || '';
@@ -103,20 +422,18 @@ const TenantManagementTab = (props) => {
 
   const filtered = tenants.filter((t) => {
     const ps = getPS(t).toLowerCase();
-    if (statusFilter === 'Active'   && ps !== 'up-to-date') return false;
-    if (statusFilter === 'Overdue'  && !['1-month','2-months','3+months'].includes(ps)) return false;
+    if (statusFilter === 'Active'  && ps !== 'up-to-date') return false;
+    if (statusFilter === 'Overdue' && !['1-month', '2-months', '3+months'].includes(ps)) return false;
     if (propertyFilter.trim() && !getProp(t).toLowerCase().includes(propertyFilter.trim().toLowerCase())) return false;
     if (searchText.trim()) {
       const q = searchText.trim().toLowerCase();
-      if (!getName(t).toLowerCase().includes(q) &&
-          !getEmail(t).toLowerCase().includes(q) &&
-          !getPhone(t).toLowerCase().includes(q)) return false;
+      if (!getName(t).toLowerCase().includes(q) && !getEmail(t).toLowerCase().includes(q) && !getPhone(t).toLowerCase().includes(q)) return false;
     }
     return true;
   });
 
   const activeCount  = tenants.filter(t => getPS(t).toLowerCase() === 'up-to-date').length;
-  const overdueCount = tenants.filter(t => ['1-month','2-months','3+months'].includes(getPS(t).toLowerCase())).length;
+  const overdueCount = tenants.filter(t => ['1-month', '2-months', '3+months'].includes(getPS(t).toLowerCase())).length;
   const totalRevenue = tenants.reduce((s, t) => s + getAmt(t), 0);
 
   const exportCSV = () => {
@@ -141,11 +458,8 @@ const TenantManagementTab = (props) => {
     return (
       <TenantDetailView
         selectedTenant={selectedTenant}
-        setSelectedTenant={setSelectedTenant}
-        tenantPayments={tenantPayments}
+        onBack={() => setSelectedTenant(null)}
         addNotification={addNotification}
-        showAllPayments={showAllPayments}
-        setShowAllPayments={setShowAllPayments}
       />
     );
   }
@@ -186,7 +500,7 @@ const TenantManagementTab = (props) => {
       </div>
 
       {/* Filters */}
-      <div className="sa-transactions-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
         <Search size={16} style={{ color: '#6b7280' }} />
         <input
           type="text"
@@ -266,11 +580,7 @@ const TenantManagementTab = (props) => {
                       </div>
                     </td>
                     <td>{getProp(tenant) || 'N/A'}</td>
-                    <td>
-                      <span style={statusPill(statusKey(ps))}>
-                        {statusLabel(ps)}
-                      </span>
-                    </td>
+                    <td><span style={statusPill(ps)}>{statusLabel(ps)}</span></td>
                     <td>{lp ? new Date(lp).toLocaleDateString() : 'N/A'}</td>
                     <td>{getAmt(tenant).toLocaleString()} XOF</td>
                     <td>
@@ -286,312 +596,6 @@ const TenantManagementTab = (props) => {
           </table>
         </div>
       </div>
-    </div>
-  );
-};
-
-/* ════════════════════════════════════════════════════════════
-   Detail view (same rich view as before)
-════════════════════════════════════════════════════════════ */
-const TenantDetailView = ({ selectedTenant, setSelectedTenant, tenantPayments, addNotification, showAllPayments, setShowAllPayments }) => {
-  const [tenantDetail, setTenantDetail]             = useState(null);
-  const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
-  const [privateNoteInput, setPrivateNoteInput]     = useState('');
-  const [addingNote, setAddingNote]                 = useState(false);
-  const [maintenanceDetail, setMaintenanceDetail]   = useState(null);
-  const [maintenanceDetailLoading, setMaintenanceDetailLoading] = useState(false);
-
-  const selectedTenantId = getTenantId(selectedTenant);
-
-  useEffect(() => {
-    if (!selectedTenantId) { setTenantDetail({ client: selectedTenant }); return; }
-    let cancelled = false;
-    setTenantDetailLoading(true);
-    salesManagerService.getClient(selectedTenantId)
-      .then((data) => { if (!cancelled) setTenantDetail(data); })
-      .catch(() => { if (!cancelled) setTenantDetail({ client: selectedTenant }); })
-      .finally(() => { if (!cancelled) setTenantDetailLoading(false); });
-    return () => { cancelled = true; };
-  }, [selectedTenant, selectedTenantId]);
-
-  const handleAddPrivateNote = async () => {
-    const note = (privateNoteInput || '').trim();
-    if (!note || !selectedTenantId) return;
-    setAddingNote(true);
-    try {
-      await salesManagerService.addClientNote(selectedTenantId, { note });
-      setPrivateNoteInput('');
-      const data = await salesManagerService.getClient(selectedTenantId);
-      setTenantDetail(data);
-      addNotification('Note added', 'success');
-    } catch (err) {
-      addNotification(err?.message || 'Failed to add note', 'error');
-    } finally {
-      setAddingNote(false);
-    }
-  };
-
-  const tenant = tenantDetail?.client || selectedTenant || {};
-
-  if (tenantDetailLoading) {
-    return <div style={{ ...card, padding: '48px', textAlign: 'center' }}><p style={subText}>Loading tenant details…</p></div>;
-  }
-
-  const alertList        = Array.isArray(tenantDetail?.alerts)       ? tenantDetail.alerts        : [];
-  const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances  : [];
-  const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes  : [];
-  const paymentsList = Array.isArray(tenantDetail?.payments)
-    ? tenantDetail.payments
-    : (Array.isArray(tenantPayments)
-        ? tenantPayments.filter(p => {
-            const pt  = (p.Tenant || p.tenant || '').toLowerCase();
-            const tn  = (tenant.TenantName || tenant.tenantName || tenant.Name || tenant.name || '').toLowerCase();
-            return pt.includes(tn) || tn.includes(pt);
-          })
-        : []);
-
-  const accounting           = tenantDetail?.accounting || {};
-  const depositPaidAmount    = tenantDetail?.deposit?.paidAmount ?? null;
-  const depositStatus        = tenantDetail?.deposit?.status ?? null;
-  const rentPaidInAdvance    = accounting.rentPaidInAdvance ?? null;
-  const unpaidRentAmount     = accounting.unpaidRentAmount ?? null;
-  const numberOfMonthsUnpaid = accounting.numberOfMonthsUnpaid ?? null;
-  const penaltyToPay         = accounting.penaltyToPay ?? null;
-  const balanceToPayEstimate = accounting.balanceToPayEstimate ?? null;
-
-  const name        = tenant.TenantName || tenant.tenantName || tenant.Name || tenant.name || 'N/A';
-  const email       = tenant.Email || tenant.email || '';
-  const phone       = tenant.Phone || tenant.phone || '';
-  const status      = tenant.Status || tenant.status || tenant.PaymentStatus || tenant.paymentStatus || 'Unknown';
-  const propertyAddr = tenant.Property || tenant.property || '—';
-  const unitNumber  = tenant.UnitNumber ?? tenant.unitNumber ?? '—';
-  const amount      = tenant.MonthlyRent ?? tenant.monthlyRent ?? tenant.Amount ?? tenant.amount ?? 0;
-  const lastPayment = tenant.LastPaymentDate ?? tenant.lastPaymentDate ?? tenant.LastPayment ?? tenant.lastPayment;
-  const updatedAt   = tenant.UpdatedAt ?? tenant.updatedAt;
-
-  const visiblePayments = showAllPayments ? paymentsList : paymentsList.slice(0, 5);
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-      <div style={{ marginBottom: '20px' }}>
-        <button
-          type="button"
-          style={backBtn}
-          onClick={() => { setSelectedTenant(null); setTenantDetail(null); setShowAllPayments(false); }}
-        >
-          <ArrowLeft size={16} /> Back to list
-        </button>
-      </div>
-
-      {/* Header */}
-      <div style={{ ...card, marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 700, flexShrink: 0 }}>
-            {(name || 'T').charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b' }}>{name}</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '6px' }}>
-              <span style={statusPill(statusKey(status))}>{statusLabel(status)}</span>
-              {propertyAddr && propertyAddr !== '—' && (
-                <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <MapPin size={14} />{propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-        {/* Personal info */}
-        <div style={card}>
-          <h3 style={sectionTitle}><Users size={18} /> Personal information</h3>
-          <div style={{ marginTop: '16px' }}>
-            <div style={dlItem}><div style={dtStyle}>Name</div><div style={ddStyle}>{name}</div></div>
-            {email && <div style={dlItem}><div style={dtStyle}>Email</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} />{email}</div></div>}
-            {phone && <div style={dlItem}><div style={dtStyle}>Phone</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} />{phone}</div></div>}
-            <div style={dlItem}><div style={dtStyle}>Status</div><div style={ddStyle}><span style={statusPill(statusKey(status))}>{statusLabel(status)}</span></div></div>
-          </div>
-          <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <FileCheck size={16} /> Files &amp; documents
-          </h4>
-          <p style={subText}>No files uploaded yet.</p>
-        </div>
-
-        {/* Rent & payment */}
-        <div style={card}>
-          <h3 style={sectionTitle}><DollarSign size={18} /> Rent &amp; payment</h3>
-          <div style={{ marginTop: '16px' }}>
-            <div style={dlItem}><div style={dtStyle}>Property</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} />{propertyAddr}</div></div>
-            {unitNumber && unitNumber !== '—' && <div style={dlItem}><div style={dtStyle}>Unit</div><div style={ddStyle}>{unitNumber}</div></div>}
-            <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={{ ...ddStyle, fontWeight: 700, fontSize: '1.1rem' }}>{Number(amount).toLocaleString()} XOF</div></div>
-            {depositPaidAmount != null && <div style={dlItem}><div style={dtStyle}>Deposit paid{depositStatus ? ` (${depositStatus})` : ''}</div><div style={ddStyle}>{Number(depositPaidAmount).toLocaleString()} XOF</div></div>}
-            {rentPaidInAdvance != null && Number(rentPaidInAdvance) > 0 && <div style={dlItem}><div style={dtStyle}>Rent paid in advance</div><div style={ddStyle}>{Number(rentPaidInAdvance).toLocaleString()} XOF</div></div>}
-            {unpaidRentAmount != null && Number(unpaidRentAmount) > 0 && <div style={dlItem}><div style={dtStyle}>Unpaid rent</div><div style={ddStyle}>{Number(unpaidRentAmount).toLocaleString()} XOF</div></div>}
-            {numberOfMonthsUnpaid != null && Number(numberOfMonthsUnpaid) > 0 && <div style={dlItem}><div style={dtStyle}>Months unpaid</div><div style={ddStyle}>{Number(numberOfMonthsUnpaid)}</div></div>}
-            {penaltyToPay != null && Number(penaltyToPay) > 0 && <div style={dlItem}><div style={dtStyle}>Penalty</div><div style={ddStyle}>{Number(penaltyToPay).toLocaleString()} XOF</div></div>}
-            {balanceToPayEstimate != null && Number(balanceToPayEstimate) > 0 && <div style={dlItem}><div style={dtStyle}>Balance to pay</div><div style={{ ...ddStyle, fontWeight: 700 }}>{Number(balanceToPayEstimate).toLocaleString()} XOF</div></div>}
-            <div style={dlItem}><div style={dtStyle}>Last payment</div><div style={ddStyle}>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</div></div>
-          </div>
-        </div>
-
-        {/* Property details */}
-        <div style={card}>
-          <h3 style={sectionTitle}><Building size={18} /> Property details</h3>
-          <div style={{ marginTop: '16px' }}>
-            <div style={dlItem}><div style={dtStyle}>Address</div><div style={ddStyle}>{propertyAddr}</div></div>
-            {unitNumber && unitNumber !== '—' && <div style={dlItem}><div style={dtStyle}>Unit</div><div style={ddStyle}>{unitNumber}</div></div>}
-          </div>
-        </div>
-
-        {/* Alerts */}
-        <div style={card}>
-          <h3 style={sectionTitle}><AlertTriangle size={18} /> Alerts &amp; activity</h3>
-          {alertList.length > 0 ? (
-            <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {alertList.map((alert, idx) => (
-                <li key={alert.ID || idx} style={alertItem}>
-                  <div style={alertTitle}>{alert.Title || alert.title || 'Alert'}</div>
-                  {alert.Message && <div style={{ ...subText, marginBottom: '4px' }}>{alert.Message}</div>}
-                  <div style={alertMeta}>{(alert.Urgency || '').toLowerCase()} · {alert.Status || 'Open'}{alert.Amount != null ? ` · ${Number(alert.Amount).toLocaleString()} XOF` : ''}</div>
-                </li>
-              ))}
-            </ul>
-          ) : <p style={{ ...subText, marginTop: '12px' }}>No alerts for this tenant.</p>}
-        </div>
-
-        {/* Maintenance */}
-        <div style={card}>
-          <h3 style={sectionTitle}><Wrench size={18} /> Maintenance requests</h3>
-          {maintenancesList.length > 0 ? (
-            <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {maintenancesList.map((m, idx) => {
-                const mid = m.ID ?? m.id;
-                const open = () => {
-                  if (mid == null) return;
-                  setMaintenanceDetailLoading(true);
-                  setMaintenanceDetail(null);
-                  salesManagerService.getMaintenance(mid)
-                    .then((data) => setMaintenanceDetail(data))
-                    .catch((err) => addNotification(err?.message || 'Failed to load', 'error'))
-                    .finally(() => setMaintenanceDetailLoading(false));
-                };
-                return (
-                  <li key={mid ?? idx} style={{ ...alertItem, cursor: 'pointer' }} role="button" tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } }}>
-                    <div style={alertTitle}>{m.Issue || m.issue || 'Maintenance'}</div>
-                    <div style={alertMeta}>{m.Status || m.status || '—'} · {m.Priority || m.priority || '—'}{m.CreatedAt ? ` · ${new Date(m.CreatedAt).toLocaleDateString()}` : ''}</div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : <p style={{ ...subText, marginTop: '12px' }}>No maintenance requests.</p>}
-        </div>
-
-        {/* Payment history */}
-        <div style={card}>
-          <h3 style={sectionTitle}><Receipt size={18} /> Recent payment history</h3>
-          {paymentsList.length > 0 ? (
-            <>
-              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {visiblePayments.map((p, idx) => (
-                  <li key={p.ID || idx} style={{ ...alertItem, borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
-                    <div style={alertTitle}>{Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {p.Status || p.status || '—'}</div>
-                    <div style={alertMeta}>{p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}{(p.Method || p.method) ? ` · ${p.Method || p.method}` : ''}</div>
-                  </li>
-                ))}
-              </ul>
-              {paymentsList.length > 5 && (
-                <div style={{ marginTop: '12px' }}>
-                  <button type="button" className="sa-outline-button" onClick={() => setShowAllPayments(v => !v)}>
-                    {showAllPayments ? 'Show less' : 'See more'}
-                  </button>
-                </div>
-              )}
-            </>
-          ) : <p style={{ ...subText, marginTop: '12px' }}>No payment history.</p>}
-        </div>
-
-        {/* Private notes */}
-        <div style={card}>
-          <h3 style={sectionTitle}><StickyNote size={18} /> Private notes</h3>
-          <textarea
-            value={privateNoteInput}
-            onChange={(e) => setPrivateNoteInput(e.target.value)}
-            placeholder="Add a note (visible to internal staff only)…"
-            rows={2}
-            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginTop: '12px', marginBottom: '10px', boxSizing: 'border-box' }}
-          />
-          <button type="button" style={{ ...btnPrimary, marginBottom: '16px' }} onClick={handleAddPrivateNote} disabled={!privateNoteInput.trim() || addingNote}>
-            {addingNote ? 'Adding…' : 'Add note'}
-          </button>
-          {privateNotesList.length > 0 ? (
-            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {privateNotesList.map((n) => (
-                <li key={n.id ?? n.ID} style={{ ...alertItem, borderLeftColor: '#6366f1' }}>
-                  <div style={alertTitle}>{n.note ?? n.Note}</div>
-                  <div style={alertMeta}>{n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}</div>
-                </li>
-              ))}
-            </ul>
-          ) : <p style={{ ...subText, marginTop: '0' }}>No private notes yet.</p>}
-        </div>
-
-        {/* Quick actions */}
-        <div style={card}>
-          <h3 style={sectionTitle}><AlertCircle size={18} /> Quick actions</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
-            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => addNotification('Generate Receipt – coming soon', 'info')}>
-              <Receipt size={16} /> Generate Receipt
-            </button>
-            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => addNotification('Send Reminder SMS – coming soon', 'info')}>
-              <MessageSquare size={16} /> Send Reminder SMS
-            </button>
-            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => addNotification('Report Incident – coming soon', 'info')}>
-              <AlertCircle size={16} /> Report Incident
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ ...card, marginTop: '20px' }}>
-        <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-          Last updated: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}
-        </span>
-      </div>
-
-      {/* Maintenance detail modal */}
-      {(maintenanceDetail != null || maintenanceDetailLoading) && (
-        <div
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
-          onClick={() => { if (!maintenanceDetailLoading) setMaintenanceDetail(null); }}
-        >
-          <div
-            style={{ background: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Maintenance details</h3>
-              <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => setMaintenanceDetail(null)}>×</button>
-            </div>
-            {maintenanceDetailLoading
-              ? <p style={subText}>Loading…</p>
-              : maintenanceDetail
-                ? (
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    <div><div style={dtStyle}>Property</div><div style={ddStyle}>{maintenanceDetail.property ?? maintenanceDetail.Property ?? '—'}</div></div>
-                    <div><div style={dtStyle}>Issue</div><div style={ddStyle}>{maintenanceDetail.issue ?? maintenanceDetail.Issue ?? '—'}</div></div>
-                    <div><div style={dtStyle}>Priority</div><div style={ddStyle}><span style={statusPill((maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '').toLowerCase())}>{maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '—'}</span></div></div>
-                    <div><div style={dtStyle}>Status</div><div style={ddStyle}><span style={statusPill((maintenanceDetail.status ?? maintenanceDetail.Status ?? '').toLowerCase())}>{maintenanceDetail.status ?? maintenanceDetail.Status ?? '—'}</span></div></div>
-                    {(maintenanceDetail.assigned ?? maintenanceDetail.Assigned) && <div><div style={dtStyle}>Assigned to</div><div style={ddStyle}>{maintenanceDetail.assigned ?? maintenanceDetail.Assigned}</div></div>}
-                    <div><div style={dtStyle}>Date</div><div style={ddStyle}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : (maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—')}</div></div>
-                    {(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost) != null && <div><div style={dtStyle}>Estimated cost</div><div style={ddStyle}>{Number(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost).toLocaleString()} XOF</div></div>}
-                  </div>
-                )
-                : null}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

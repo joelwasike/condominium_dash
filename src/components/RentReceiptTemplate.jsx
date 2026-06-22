@@ -7,12 +7,15 @@ const PAYMENT_METHODS = ['Link', 'Transfer', 'Check', 'OM', 'Wave', 'Cash'];
 
 const RentReceiptTemplate = ({ data, isCollection = false }) => {
   const amount = data?.Amount ?? data?.amount ?? 0;
-  const owner = data?.Owner ?? data?.owner ?? data?.OwnerName ?? data?.ownerName ?? data?.Landlord ?? data?.landlord;
+  const rawOwner = data?.Owner ?? data?.owner ?? data?.OwnerName ?? data?.ownerName ?? data?.Landlord ?? data?.landlord;
+  const owner = rawOwner && rawOwner !== 'N/A' ? rawOwner : null;
   const tenant = data?.Tenant ?? data?.tenant ?? (isCollection ? owner : null);
-  const property = data?.Property ?? data?.property ?? '—';
-  const building = data?.Building ?? data?.building ?? '';
-  const locative = data?.Unit ?? data?.unit ?? data?.Locative ?? data?.locative ?? '—';
-  const method = data?.Method ?? data?.method ?? '—';
+  const rawProperty = data?.Property ?? data?.property ?? null;
+  const rawBuilding = data?.Building ?? data?.building ?? null;
+  const property = rawProperty ?? rawBuilding ?? null;
+  const building = rawBuilding;
+  const locative = data?.Unit ?? data?.unit ?? data?.Locative ?? data?.locative ?? null;
+  const method = data?.Method ?? data?.method ?? data?.PaymentMethod ?? data?.paymentMethod ?? null;
   const dateVal = data?.Date ?? data?.date;
   const dateStr = dateVal
     ? new Date(dateVal).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -56,7 +59,7 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
       <div className="info-section">
         <div className="tenant-details">
           <div>Tenant: {tenant || '................................................................'}</div>
-          <div>Property / Building: {property !== '—' ? property : '.............................................................'}{building ? ` / ${building}` : ''}</div>
+          <div>Property / Building: {property ? property : '.............................................................'}{building && building !== property ? ` / ${building}` : ''}</div>
           <div>Locative: {locative || '.............................................................'}</div>
         </div>
         <div className="ref-date-details">
@@ -110,8 +113,8 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
       </div>
 
       <div className="signature-section">
-        <div>VISA AGENCY</div>
-        <div>VISA CLIENT</div>
+        <div></div>
+        <div></div>
       </div>
 
       <div className="footer">

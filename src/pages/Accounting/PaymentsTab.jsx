@@ -444,9 +444,11 @@ PaymentsTab.CollectionModal = (props) => {
                 await accountingService.recordTenantPayment(paymentData);
                 addNotification('Tenant payment recorded successfully!', 'success');
                 try {
+                  const propKey = (collectionPaymentForm.property || '').toLowerCase().trim();
+                  const resolvedLandlord = collectionPaymentForm.landlord || (propKey && ownerNameByProperty.get(propKey)) || '';
                   await accountingService.recordCollection({
                     building: collectionPaymentForm.property,
-                    landlord: collectionPaymentForm.landlord || 'N/A',
+                    landlord: resolvedLandlord,
                     amount: parseFloat(collectionPaymentForm.amount || '0'),
                     chargeType: collectionPaymentForm.chargeType,
                     status: 'Collected',

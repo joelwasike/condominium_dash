@@ -9,6 +9,8 @@ const tdStyle = { padding: '14px 16px', fontSize: '0.88rem', color: '#334155', b
 const emptyState = { textAlign: 'center', padding: '48px 24px', color: '#94a3b8', fontSize: '0.95rem' };
 const btnPrimary = { padding: '8px 14px', borderRadius: '12px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, cursor: 'pointer' };
 const btnOutline = { padding: '8px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' };
+const btnActive  = { padding: '8px 14px', borderRadius: '12px', border: '2px solid #3b82f6', background: '#eff6ff', color: '#2563eb', fontWeight: 700, cursor: 'pointer' };
+const btnAllActive = { padding: '8px 14px', borderRadius: '12px', border: '2px solid #16a34a', background: '#f0fdf4', color: '#15803d', fontWeight: 700, cursor: 'pointer' };
 const pill = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '4px 12px', borderRadius: '999px', border: '2px solid #86efac', color: '#16a34a', fontWeight: 700, fontSize: '0.82rem', background: '#f0fdf4', cursor: 'pointer' };
 
 const AlertsTab = () => {
@@ -365,13 +367,13 @@ const AlertsTab = () => {
 
         <div style={card}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
-            <button type="button" style={btnOutline} onClick={toggleAll} disabled={bulkTenantsLoading || bulkSending || bulkTenants.length === 0}>
+            <button type="button" style={allSelected ? btnAllActive : btnOutline} onClick={toggleAll} disabled={bulkTenantsLoading || bulkSending || bulkTenants.length === 0}>
               {allSelected ? 'Unselect all' : 'Select all'}
             </button>
-            <button type="button" style={btnOutline} onClick={() => setBulkChannel('sms')} disabled={bulkSending} aria-pressed={bulkChannel === 'sms'}>
+            <button type="button" style={bulkChannel === 'sms' ? btnActive : btnOutline} onClick={() => setBulkChannel('sms')} disabled={bulkSending} aria-pressed={bulkChannel === 'sms'}>
               SMS
             </button>
-            <button type="button" style={btnOutline} onClick={() => setBulkChannel('email')} disabled={bulkSending} aria-pressed={bulkChannel === 'email'}>
+            <button type="button" style={bulkChannel === 'email' ? btnActive : btnOutline} onClick={() => setBulkChannel('email')} disabled={bulkSending} aria-pressed={bulkChannel === 'email'}>
               Email
             </button>
             <div style={{ marginLeft: 'auto', color: '#64748b', fontWeight: 700 }}>
@@ -521,13 +523,13 @@ const AlertsTab = () => {
 
         <div style={card}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
-            <button type="button" style={btnOutline} onClick={toggleAll} disabled={bulkSending || allTenantIds.length === 0}>
+            <button type="button" style={allSelected ? btnAllActive : btnOutline} onClick={toggleAll} disabled={bulkSending || allTenantIds.length === 0}>
               {allSelected ? 'Unselect all' : 'Select all'}
             </button>
-            <button type="button" style={btnOutline} onClick={() => setBulkChannel('sms')} disabled={bulkSending} aria-pressed={bulkChannel === 'sms'}>
+            <button type="button" style={bulkChannel === 'sms' ? btnActive : btnOutline} onClick={() => setBulkChannel('sms')} disabled={bulkSending} aria-pressed={bulkChannel === 'sms'}>
               SMS
             </button>
-            <button type="button" style={btnOutline} onClick={() => setBulkChannel('email')} disabled={bulkSending} aria-pressed={bulkChannel === 'email'}>
+            <button type="button" style={bulkChannel === 'email' ? btnActive : btnOutline} onClick={() => setBulkChannel('email')} disabled={bulkSending} aria-pressed={bulkChannel === 'email'}>
               Email
             </button>
             <div style={{ marginLeft: 'auto', color: '#64748b', fontWeight: 700 }}>
@@ -686,13 +688,13 @@ const AlertsTab = () => {
 
         <div style={card}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
-            <button type="button" style={btnOutline} onClick={toggleAll} disabled={bulkSending || allTenantIds.length === 0}>
+            <button type="button" style={allSelected ? btnAllActive : btnOutline} onClick={toggleAll} disabled={bulkSending || allTenantIds.length === 0}>
               {allSelected ? 'Unselect all' : 'Select all'}
             </button>
-            <button type="button" style={btnOutline} onClick={() => setBulkChannel('sms')} disabled={bulkSending} aria-pressed={bulkChannel === 'sms'}>
+            <button type="button" style={bulkChannel === 'sms' ? btnActive : btnOutline} onClick={() => setBulkChannel('sms')} disabled={bulkSending} aria-pressed={bulkChannel === 'sms'}>
               SMS
             </button>
-            <button type="button" style={btnOutline} onClick={() => setBulkChannel('email')} disabled={bulkSending} aria-pressed={bulkChannel === 'email'}>
+            <button type="button" style={bulkChannel === 'email' ? btnActive : btnOutline} onClick={() => setBulkChannel('email')} disabled={bulkSending} aria-pressed={bulkChannel === 'email'}>
               Email
             </button>
             <div style={{ marginLeft: 'auto', color: '#64748b', fontWeight: 700 }}>
