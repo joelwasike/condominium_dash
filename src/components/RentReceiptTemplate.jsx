@@ -21,12 +21,31 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
     ? new Date(dateVal).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const refNum = data?.ReceiptNumber ?? data?.receiptNumber ?? data?.Reference ?? data?.reference ?? `SAAF/${data?.ID ?? data?.id ?? '000'}/000`;
+
+  // Rent due = past arrears (unpaid amounts from previous periods)
   const rentDue = data?.RentDue ?? data?.rentDue ?? 0;
-  const rentPaidAdvance = data?.RentPaidAdvance ?? data?.rentPaidAdvance ?? 0;
-  const rentPrice = amount;
-  const totalToPay = rentDue + rentPrice - rentPaidAdvance;
+  // Fixed monthly rent of the property (not the payment amount)
+  const monthlyRent = data?.MonthlyRent ?? data?.monthlyRent ?? 0;
+  // For collections, just use the payment amount as the price; for tenant payments use fixed rent
+  const rentPrice = isCollection ? amount : (monthlyRent || amount);
   const paymentAmount = amount;
-  const balanceAfter = (totalToPay - paymentAmount) || 0;
+
+  // Rent paid in advance = excess payment above what was owed (arrears + monthly rent)
+  // Only calculated for tenant payments, not collections
+  const rentPaidAdvance = isCollection
+    ? 0
+    : Math.max(0, paymentAmount - (rentDue + rentPrice));
+
+  // Total to be paid = arrears + monthly rent + any advance being created
+  // This always equals max(payment, arrears + monthlyRent) — i.e. = payment when overpaid, = debt when underpaid
+  const totalToPay = isCollection
+    ? amount
+    : (rentDue + rentPrice + rentPaidAdvance);
+
+  // Balance = what is still owed after this payment (0 when fully paid or overpaid)
+  const balanceAfter = isCollection
+    ? 0
+    : Math.max(0, rentDue + rentPrice - paymentAmount);
 
   const formatAmount = (val) => (Number(val) || 0).toLocaleString('fr-FR');
 

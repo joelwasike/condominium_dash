@@ -951,6 +951,7 @@ const AccountingDashboard = () => {
       if (tenantRecord) {
         enrichedItem.RentDue = tenantRecord.outstandingAmount ?? tenantRecord.OutstandingAmount ?? 0;
         enrichedItem.RentPaidAdvance = tenantRecord.rentPaidInAdvance ?? tenantRecord.RentPaidInAdvance ?? 0;
+        enrichedItem.MonthlyRent = tenantRecord.MonthlyRent ?? tenantRecord.monthlyRent ?? tenantRecord.Amount ?? tenantRecord.amount ?? 0;
       }
     }
     const overlay = document.createElement('div');

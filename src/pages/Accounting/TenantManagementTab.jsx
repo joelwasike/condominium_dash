@@ -5,6 +5,7 @@ import {
   StickyNote, Receipt, MessageSquare, AlertCircle,
 } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
+import { salesManagerService } from '../../services/salesManagerService';
 
 /* ── shared style tokens ── */
 const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
@@ -58,7 +59,15 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
   const [loading, setLoading]             = useState(false);
   const [maintenanceDetail, setMaintenanceDetail]         = useState(null);
   const [maintenanceDetailLoading, setMaintenanceDetailLoading] = useState(false);
-  const [showAllPayments, setShowAllPayments] = useState(false);
+  const [privateNoteInput, setPrivateNoteInput] = useState('');
+  const [addingNote, setAddingNote]       = useState(false);
+  const [resolvedProperty, setResolvedProperty] = useState(null);
+  const [resolvedUnit, setResolvedUnit]   = useState(null);
+  const [resolvedOccupancy, setResolvedOccupancy] = useState(null);
+  const [resolvingProperty, setResolvingProperty] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm]           = useState({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   const tenantId = getTenantId(selectedTenant);
 
@@ -72,6 +81,62 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [tenantId]);
+
+  // Resolve enriched property data (same logic as Sales Manager ClientsTab)
+  useEffect(() => {
+    const tenant = tenantDetail?.client;
+    const propertyAddr = (tenant?.Property || tenant?.property || '').toString().trim();
+    const unitNumber = (tenant?.UnitNumber ?? tenant?.unitNumber ?? '').toString().trim();
+    if (!tenantId || !propertyAddr) {
+      setResolvedProperty(null); setResolvedUnit(null); setResolvedOccupancy(null);
+      return;
+    }
+    const normalize = (v) => v.toString().toLowerCase().trim().replace(/[.,#]/g, ' ').replace(/\s+/g, ' ');
+    let cancelled = false;
+    setResolvingProperty(true);
+    (async () => {
+      try {
+        const list = await salesManagerService.getProperties();
+        const props = Array.isArray(list) ? list : (list?.items || list?.data || []);
+        const wanted = normalize(propertyAddr);
+        const matchExact = props.find(p => normalize(p.address ?? p.Address ?? '') === wanted);
+        const matchLoose = matchExact ? null : props.find(p => { const a = normalize(p.address ?? p.Address ?? ''); return a && (a.includes(wanted) || wanted.includes(a)); });
+        const match = matchExact || matchLoose;
+        if (cancelled) return;
+        if (!match) { setResolvedProperty(null); setResolvedUnit(null); setResolvedOccupancy(null); return; }
+        const propertyId = match.id ?? match.ID;
+        setResolvedProperty(match);
+        if (!propertyId) { setResolvedUnit(null); setResolvedOccupancy(null); return; }
+        const detail = await salesManagerService.getPropertyBuildingDetail(propertyId);
+        if (cancelled) return;
+        const units = Array.isArray(detail?.units) ? detail.units : [];
+        const occupiedFromUnits = units.filter(u => {
+          const st = (u.status || u.Status || '').toString().toLowerCase();
+          return st === 'occupied' || (u.tenant || u.Tenant || '').toString().trim() !== '';
+        }).length;
+        if (units.length === 0) {
+          const total = Number(match.NumberOfUnits ?? match.numberOfUnits ?? match.totalUnits ?? 1) || 1;
+          const st = (match.status ?? match.Status ?? '').toString().trim().toLowerCase();
+          const propTenant = (match.tenant ?? match.Tenant ?? '').toString().trim();
+          const tName = (tenant?.Name || tenant?.name || '').toString().trim();
+          setResolvedOccupancy({ occupied: st === 'occupied' || propTenant !== '' || tName !== '' ? 1 : 0, total });
+        } else {
+          setResolvedOccupancy({ occupied: occupiedFromUnits, total: units.length });
+        }
+        const unitNorm = unitNumber.toLowerCase();
+        const cmp = (v) => v.toString().trim().toLowerCase().replace(/^unit\s+/i, '').replace(/\s+/g, '');
+        const foundUnit = unitNorm
+          ? units.find(u => { const un = (u.unitNumber ?? u.UnitNumber ?? u.name ?? u.Name ?? '').toString().trim(); return un && cmp(un) === cmp(unitNorm); })
+          : units.find(u => (u.tenant || u.Tenant || '').toString().trim().toLowerCase() === (tenant?.Name || tenant?.name || '').toString().trim().toLowerCase()) || null;
+        setResolvedUnit(foundUnit || null);
+      } catch (_) {
+        if (!cancelled) { setResolvedProperty(null); setResolvedUnit(null); setResolvedOccupancy(null); }
+      } finally {
+        if (!cancelled) setResolvingProperty(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tenantId, tenantDetail]);
 
   if (loading) {
     return (
@@ -94,6 +159,7 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
   }
 
   const prop = tenantDetail?.property;
+  const displayProp = resolvedProperty || prop;
   const alertList        = Array.isArray(tenantDetail?.alerts)       ? tenantDetail.alerts        : [];
   const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances  : [];
   const paymentsList     = Array.isArray(tenantDetail?.payments)     ? tenantDetail.payments      : [];
@@ -124,14 +190,55 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
     if (mid == null) return;
     setMaintenanceDetailLoading(true);
     setMaintenanceDetail(null);
-    // re-use the same accounting tenant detail which has maintenances embedded;
-    // for a richer view, fetch from accounting tenant detail or show inline
-    const found = maintenancesList.find(m => (m.ID ?? m.id) === mid);
-    if (found) { setMaintenanceDetail(found); setMaintenanceDetailLoading(false); }
-    else setMaintenanceDetailLoading(false);
+    salesManagerService.getMaintenance(mid)
+      .then((data) => setMaintenanceDetail(data))
+      .catch((err) => addNotification(err?.message || 'Failed to load maintenance details', 'error'))
+      .finally(() => setMaintenanceDetailLoading(false));
   };
 
-  const visiblePayments = showAllPayments ? paymentsList : paymentsList.slice(0, 5);
+  const handleAddPrivateNote = async () => {
+    const note = (privateNoteInput || '').trim();
+    if (!note || !tenantId) return;
+    setAddingNote(true);
+    try {
+      await salesManagerService.addClientNote(tenantId, { note });
+      setPrivateNoteInput('');
+      const data = await salesManagerService.getClient(tenantId);
+      setTenantDetail(data);
+      addNotification('Note added', 'success');
+    } catch (err) {
+      addNotification(err?.message || 'Failed to add note', 'error');
+    } finally {
+      setAddingNote(false);
+    }
+  };
+
+  const openEditModal = () => {
+    setEditForm({ name, email, phone, status: rawStatus });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!tenantId) return;
+    setEditSubmitting(true);
+    try {
+      await salesManagerService.updateClient(tenantId, {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        status: editForm.status,
+      });
+      addNotification('Tenant updated successfully', 'success');
+      setShowEditModal(false);
+      const data = await accountingService.getAccountingTenantDetail(tenantId);
+      setTenantDetail(data);
+    } catch (err) {
+      addNotification(err?.message || 'Failed to update tenant', 'error');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -211,19 +318,43 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
           </div>
         </div>
 
-        {/* Property details (only when property data is returned) */}
-        {prop && (
+        {/* Property details */}
+        {displayProp && (
           <div style={card}>
             <h3 style={sectionTitle}><Building size={18} /> Property details</h3>
             <div style={{ marginTop: '16px' }}>
-              <div style={dlItem}><div style={dtStyle}>Address</div><div style={ddStyle}>{prop.address || prop.Address || propertyAddr}</div></div>
-              <div style={dlItem}><div style={dtStyle}>Type</div><div style={ddStyle}>{prop.type || prop.Type || '—'}</div></div>
-              {(prop.bedrooms ?? prop.Bedrooms) != null && <div style={dlItem}><div style={dtStyle}>Bedrooms</div><div style={ddStyle}>{prop.bedrooms ?? prop.Bedrooms}</div></div>}
-              {(prop.bathrooms ?? prop.Bathrooms) != null && <div style={dlItem}><div style={dtStyle}>Bathrooms</div><div style={ddStyle}>{prop.bathrooms ?? prop.Bathrooms}</div></div>}
-              <div style={dlItem}>
-                <div style={dtStyle}>Property status</div>
-                <div style={ddStyle}><span style={statusPill((prop.status || prop.Status || '').toLowerCase())}>{prop.status || prop.Status || '—'}</span></div>
-              </div>
+              <div style={dlItem}><div style={dtStyle}>Type</div><div style={ddStyle}>{displayProp.type || displayProp.Type || '—'}</div></div>
+              {resolvedOccupancy && (
+                <div style={dlItem}>
+                  <div style={dtStyle}>Occupancy</div>
+                  <div style={ddStyle}>{resolvedOccupancy.occupied}/{resolvedOccupancy.total}</div>
+                </div>
+              )}
+              {resolvedUnit && (
+                <div style={dlItem}>
+                  <div style={dtStyle}>Unit status</div>
+                  <div style={ddStyle}><span style={statusPill((resolvedUnit.status || resolvedUnit.Status || '').toLowerCase())}>{resolvedUnit.status || resolvedUnit.Status || '—'}</span></div>
+                </div>
+              )}
+              {(() => {
+                const bedrooms = resolvedUnit?.bedrooms ?? resolvedUnit?.Bedrooms ?? displayProp.bedrooms ?? displayProp.Bedrooms;
+                const bathrooms = resolvedUnit?.bathrooms ?? resolvedUnit?.Bathrooms ?? displayProp.bathrooms ?? displayProp.Bathrooms;
+                const occupancyStatus = resolvedOccupancy
+                  ? (resolvedOccupancy.total > 0 && resolvedOccupancy.occupied >= resolvedOccupancy.total ? 'Occupied'
+                    : resolvedOccupancy.occupied === 0 ? 'Vacant' : 'Partially occupied')
+                  : (displayProp.status || displayProp.Status || '');
+                return (
+                  <>
+                    {bedrooms != null && <div style={dlItem}><div style={dtStyle}>Bedrooms</div><div style={ddStyle}>{bedrooms}</div></div>}
+                    {bathrooms != null && <div style={dlItem}><div style={dtStyle}>Bathrooms</div><div style={ddStyle}>{bathrooms}</div></div>}
+                    <div style={dlItem}>
+                      <div style={dtStyle}>Property status</div>
+                      <div style={ddStyle}><span style={statusPill((occupancyStatus || '').toLowerCase())}>{occupancyStatus || '—'}</span></div>
+                    </div>
+                    {resolvingProperty && <div style={{ ...subText, marginTop: '6px' }}>Refreshing property details…</div>}
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -283,36 +414,44 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
         <div style={card}>
           <h3 style={sectionTitle}><Receipt size={18} /> Recent payment history</h3>
           {paymentsList.length > 0 ? (
-            <>
-              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {visiblePayments.map((p, idx) => (
-                  <li key={p.ID || p.id || idx} style={{ ...alertItem, borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
-                    <div style={alertTitle}>
-                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
-                    </div>
-                    <div style={alertMeta}>
-                      {p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}
-                      {(p.Method || p.method) && ` · ${p.Method || p.method}`}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              {paymentsList.length > 5 && (
-                <button type="button" style={{ ...btnOutline, marginTop: '12px' }} onClick={() => setShowAllPayments(v => !v)}>
-                  {showAllPayments ? 'Show less' : `Show all (${paymentsList.length})`}
-                </button>
-              )}
-            </>
+            <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {paymentsList.slice(0, 5).map((p, idx) => (
+                <li key={p.ID || p.id || idx} style={{ ...alertItem, borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+                  <div style={alertTitle}>
+                    {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
+                  </div>
+                  <div style={alertMeta}>
+                    {p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}
+                    {(p.Method || p.method) && ` · ${p.Method || p.method}`}
+                  </div>
+                </li>
+              ))}
+            </ul>
           ) : (
             <p style={{ ...subText, marginTop: '12px' }}>No payment history for this tenant.</p>
           )}
         </div>
 
-        {/* Private notes (read-only in accounting) */}
+        {/* Private notes */}
         <div style={card}>
           <h3 style={sectionTitle}><StickyNote size={18} /> Private notes</h3>
+          <textarea
+            value={privateNoteInput}
+            onChange={(e) => setPrivateNoteInput(e.target.value)}
+            placeholder="Add a note for future reference..."
+            rows={2}
+            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginTop: '12px', marginBottom: '10px', boxSizing: 'border-box' }}
+          />
+          <button
+            type="button"
+            style={{ ...btnPrimary, marginBottom: '16px' }}
+            onClick={handleAddPrivateNote}
+            disabled={!privateNoteInput.trim() || addingNote}
+          >
+            {addingNote ? 'Adding...' : 'Add note'}
+          </button>
           {privateNotesList.length > 0 ? (
-            <ul style={{ margin: '12px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {privateNotesList.map((n) => (
                 <li key={n.id ?? n.ID} style={{ ...alertItem, borderLeftColor: '#6366f1' }}>
                   <div style={alertTitle}>{n.note ?? n.Note}</div>
@@ -323,7 +462,7 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
               ))}
             </ul>
           ) : (
-            <p style={{ ...subText, marginTop: '12px' }}>No private notes yet.</p>
+            <p style={{ ...subText, marginTop: 0 }}>No private notes yet.</p>
           )}
         </div>
 
@@ -346,10 +485,60 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
 
       {/* Footer */}
       <div style={{ ...card, marginTop: '20px' }}>
-        <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-          Last updated: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+            Last updated: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}
+          </span>
+          <button type="button" style={btnPrimary} onClick={openEditModal}>
+            Edit tenant
+          </button>
+        </div>
       </div>
+
+      {/* Edit tenant modal */}
+      {showEditModal && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+          onClick={() => { if (!editSubmitting) setShowEditModal(false); }}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Edit tenant</h3>
+              <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8', padding: '4px' }} onClick={() => setShowEditModal(false)} disabled={editSubmitting}>×</button>
+            </div>
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <div style={dtStyle}>Name</div>
+                <input value={editForm.name || ''} onChange={(e) => setEditForm(p => ({ ...p, name: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.9rem', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <div style={dtStyle}>Email</div>
+                <input type="email" value={editForm.email || ''} onChange={(e) => setEditForm(p => ({ ...p, email: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.9rem', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <div style={dtStyle}>Phone</div>
+                <input value={editForm.phone || ''} onChange={(e) => setEditForm(p => ({ ...p, phone: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.9rem', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <div style={dtStyle}>Status</div>
+                <select value={editForm.status || ''} onChange={(e) => setEditForm(p => ({ ...p, status: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.9rem', background: '#fff', boxSizing: 'border-box' }}>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Overdue">Overdue</option>
+                  <option value="Waiting List">Waiting List</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                <button type="button" style={btnOutline} onClick={() => setShowEditModal(false)} disabled={editSubmitting}>Cancel</button>
+                <button type="submit" style={btnPrimary} disabled={editSubmitting}>{editSubmitting ? 'Saving...' : 'Save changes'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Maintenance detail modal */}
       {(maintenanceDetail != null || maintenanceDetailLoading) && (
@@ -379,8 +568,13 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
                   {(maintenanceDetail.assigned ?? maintenanceDetail.Assigned) && <div><div style={dtStyle}>Assigned to</div><div style={ddStyle}>{maintenanceDetail.assigned ?? maintenanceDetail.Assigned}</div></div>}
                   <div><div style={dtStyle}>Date reported</div><div style={ddStyle}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : (maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—')}</div></div>
                   <div><div style={dtStyle}>Created</div><div style={ddStyle}>{maintenanceDetail.createdAt ? new Date(maintenanceDetail.createdAt).toLocaleString() : (maintenanceDetail.CreatedAt ? new Date(maintenanceDetail.CreatedAt).toLocaleString() : '—')}</div></div>
+                  {(maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours) != null && <div><div style={dtStyle}>Estimated hours</div><div style={ddStyle}>{maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours}</div></div>}
                   {(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost) != null && <div><div style={dtStyle}>Estimated cost</div><div style={ddStyle}>{(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost).toLocaleString()} XOF</div></div>}
                   <div><div style={dtStyle}>Quote generated</div><div style={ddStyle}>{(maintenanceDetail.quoteGenerated ?? maintenanceDetail.QuoteGenerated) ? 'Yes' : 'No'}</div></div>
+                  {(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate) && <div><div style={dtStyle}>Work start date</div><div style={ddStyle}>{new Date(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate).toLocaleDateString()}</div></div>}
+                  {(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate) && <div><div style={dtStyle}>Work end date</div><div style={ddStyle}>{new Date(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate).toLocaleDateString()}</div></div>}
+                  {(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt) && <div><div style={dtStyle}>Completed at</div><div style={ddStyle}>{new Date(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt).toLocaleString()}</div></div>}
+                  <div><div style={dtStyle}>Archived</div><div style={ddStyle}>{(maintenanceDetail.archived ?? maintenanceDetail.Archived) ? 'Yes' : 'No'}</div></div>
                   {Array.isArray(maintenanceDetail.photos ?? maintenanceDetail.Photos) && (maintenanceDetail.photos ?? maintenanceDetail.Photos).length > 0 && (
                     <div>
                       <div style={{ ...dtStyle, marginBottom: '8px' }}>Photos</div>
