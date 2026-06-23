@@ -75,15 +75,19 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
     ? 0
     : Math.max(0, paymentAmount - (rentDue + rentPrice));
 
-  // Total to be paid = arrears + monthly rent + any advance being created.
-  const totalToPay = isCollection
+  // Total due before this payment = arrears + the fixed monthly rent.
+  const totalDueBeforePayment = isCollection
     ? amount
-    : (rentDue + rentPrice + rentPaidAdvance);
+    : (
+      data?.TotalDueBeforePayment != null || data?.totalDueBeforePayment != null
+        ? readMoney(data?.TotalDueBeforePayment, data?.totalDueBeforePayment)
+        : (rentDue + rentPrice)
+    );
 
   // Balance = what is still owed after this payment (0 when fully paid or overpaid).
   const balanceAfter = isCollection
     ? 0
-    : Math.max(0, rentDue + rentPrice - paymentAmount);
+    : Math.max(0, totalDueBeforePayment - paymentAmount);
 
   const formatAmount = (val) => toMoney(val).toLocaleString('fr-FR');
 
@@ -148,7 +152,7 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
           </tr>
           <tr className="total-row">
             <td style={{ textAlign: 'center' }}>TOTAL TO BE PAID</td>
-            <td>{formatAmount(totalToPay)} F-CFA</td>
+            <td>{formatAmount(totalDueBeforePayment)} F-CFA</td>
           </tr>
           <tr className="payment-row">
             <td style={{ textAlign: 'center' }}>payment</td>

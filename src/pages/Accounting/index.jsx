@@ -6,6 +6,7 @@ import { isDemoMode, getAccountingDemoData } from '../../utils/demoData';
 import ReactDOM from 'react-dom/client';
 import RoleLayout from '../../components/RoleLayout';
 import RentReceiptTemplate from '../../components/RentReceiptTemplate';
+import { buildReceiptData } from '../../utils/rentReceiptData';
 import SettingsPage from '../SettingsPage';
 import { t, getLanguage } from '../../utils/i18n';
 import '../../components/RoleLayout.css';
@@ -942,27 +943,7 @@ const AccountingDashboard = () => {
   const printPaymentReceipt = async (item, isCollectionParam) => {
     if (!item) return;
     const isCollection = isCollectionParam ?? (item.Building !== undefined && item.Tenant === undefined);
-    // Enrich TenantPayment with outstanding rent data from loaded tenants list
-    let enrichedItem = { ...item };
-    if (!isCollection && item.Tenant && Array.isArray(tenants) && tenants.length > 0) {
-      const tenantRecord = tenants.find(t =>
-        (t.tenantName || t.TenantName || '').toLowerCase().trim() === (item.Tenant || '').toLowerCase().trim()
-      );
-      if (tenantRecord) {
-        if (enrichedItem.RentDue == null && enrichedItem.rentDue == null) {
-          enrichedItem.RentDue = tenantRecord.unpaidRentAmount ?? tenantRecord.UnpaidRentAmount ?? tenantRecord.outstandingAmount ?? tenantRecord.OutstandingAmount ?? 0;
-        }
-        if (enrichedItem.RentPaidAdvance == null && enrichedItem.rentPaidAdvance == null) {
-          enrichedItem.RentPaidAdvance = tenantRecord.rentPaidInAdvance ?? tenantRecord.RentPaidInAdvance ?? 0;
-        }
-        if (enrichedItem.MonthlyRent == null && enrichedItem.monthlyRent == null) {
-          enrichedItem.MonthlyRent = tenantRecord.MonthlyRent ?? tenantRecord.monthlyRent ?? tenantRecord.rent ?? tenantRecord.Rent ?? tenantRecord.Amount ?? tenantRecord.amount ?? 0;
-        }
-        if (enrichedItem.MonthsInArrears == null && enrichedItem.monthsInArrears == null) {
-          enrichedItem.MonthsInArrears = tenantRecord.MonthsInArrears ?? tenantRecord.monthsInArrears ?? 0;
-        }
-      }
-    }
+    const enrichedItem = buildReceiptData(item, tenants, isCollection);
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f0f0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;';
     document.body.appendChild(overlay);

@@ -4,6 +4,7 @@ import { Receipt } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
 import RentReceiptTemplate from '../../components/RentReceiptTemplate';
 import { t } from '../../utils/i18n';
+import { buildReceiptData, buildRentReceiptContext, findTenantByName } from '../../utils/rentReceiptData';
 import {
   dedupeBySignature,
   formatPropertyBuilding,
@@ -18,61 +19,6 @@ const MOBILE_MONEY_PROVIDERS = [
   { value: 'wave', label: 'Wave' },
   { value: 'orange_business', label: 'Orange Business' },
 ];
-
-const normalizeName = (value) => (value || '').trim().toLowerCase();
-const toMoney = (value) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const findTenantByName = (tenantList, name) => {
-  const normalized = normalizeName(name);
-  if (!normalized) return null;
-  return (Array.isArray(tenantList) ? tenantList : []).find((tenant) => {
-    const tenantName = normalizeName(tenant?.tenantName || tenant?.TenantName || tenant?.name || tenant?.Name);
-    return tenantName === normalized;
-  }) || null;
-};
-
-const buildRentReceiptContext = (tenant, paymentAmount) => {
-  const monthlyRent = toMoney(tenant?.monthlyRent ?? tenant?.MonthlyRent ?? tenant?.rent ?? tenant?.Rent);
-  const monthsInArrears = toMoney(tenant?.monthsInArrears ?? tenant?.MonthsInArrears);
-  const priorAdvance = toMoney(
-    tenant?.rentPaidInAdvance ??
-    tenant?.RentPaidInAdvance ??
-    tenant?.advanceRent ??
-    tenant?.AdvanceRent ??
-    tenant?.rentInAdvance ??
-    tenant?.RentInAdvance
-  );
-  const directDue = toMoney(
-    tenant?.unpaidRentAmount ??
-    tenant?.UnpaidRentAmount ??
-    tenant?.outstandingAmount ??
-    tenant?.OutstandingAmount ??
-    tenant?.balanceToPayEstimate ??
-    tenant?.BalanceToPayEstimate
-  );
-  const arrearsDue = directDue > 0 ? directDue : Math.max(0, (monthlyRent * monthsInArrears) - priorAdvance);
-  const totalDueBeforePayment = arrearsDue + monthlyRent;
-  const rentPaidAdvance = Math.max(0, paymentAmount - totalDueBeforePayment);
-  const balanceAfterPayment = Math.max(0, totalDueBeforePayment - paymentAmount);
-
-  return {
-    RentDue: arrearsDue,
-    rentDue: arrearsDue,
-    MonthlyRent: monthlyRent,
-    monthlyRent,
-    RentPaidAdvance: rentPaidAdvance,
-    rentPaidAdvance,
-    MonthsInArrears: monthsInArrears,
-    monthsInArrears,
-    BalanceAfterPayment: balanceAfterPayment,
-    balanceAfterPayment,
-    TotalDueBeforePayment: totalDueBeforePayment,
-    totalDueBeforePayment,
-  };
-};
 
 const PaymentsTab = (props) => {
   const {
@@ -832,6 +778,7 @@ PaymentsTab.CollectionModal = (props) => {
 // View Payment/Collection Modal
 PaymentsTab.ViewModal = (props) => {
   const { setShowPaymentViewModal, selectedItemForView, printPaymentReceipt } = props;
+  const receiptData = buildReceiptData(selectedItemForView?.data, props.tenants || [], selectedItemForView?.type === 'collection');
   return (
     <div className="modal-overlay" onClick={() => setShowPaymentViewModal(false)}>
       <div className="modal-content modal-content-receipt" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', overflow: 'auto' }}>
@@ -840,7 +787,7 @@ PaymentsTab.ViewModal = (props) => {
           <button className="modal-close" onClick={() => setShowPaymentViewModal(false)}>x</button>
         </div>
         <div className="modal-body" style={{ padding: '20px', overflow: 'auto', maxHeight: '85vh', backgroundColor: '#f0f0f0' }}>
-          <RentReceiptTemplate data={selectedItemForView.data} isCollection={selectedItemForView.type === 'collection'} />
+          <RentReceiptTemplate data={receiptData} isCollection={selectedItemForView.type === 'collection'} />
           <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb' }}>
             <button type="button" className="action-button secondary" onClick={() => setShowPaymentViewModal(false)}>Close</button>
             <button type="button" className="action-button primary" onClick={() => { printPaymentReceipt(selectedItemForView.data, selectedItemForView.type === 'collection'); setShowPaymentViewModal(false); }}>

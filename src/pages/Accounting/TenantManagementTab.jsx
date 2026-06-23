@@ -164,6 +164,14 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
   const maintenancesList = Array.isArray(tenantDetail?.maintenances) ? tenantDetail.maintenances  : [];
   const paymentsList     = Array.isArray(tenantDetail?.payments)     ? tenantDetail.payments      : [];
   const privateNotesList = Array.isArray(tenantDetail?.privateNotes) ? tenantDetail.privateNotes  : [];
+  const documentsList    = Array.isArray(tenantDetail?.documents)
+    ? tenantDetail.documents
+    : Array.isArray(tenantDetail?.files)
+      ? tenantDetail.files
+      : Array.isArray(tenantDetail?.attachments)
+        ? tenantDetail.attachments
+        : [];
+  const contractDetail   = tenantDetail?.contract || tenantDetail?.lease || tenantDetail?.agreement || null;
 
   const depositPaidAmount    = tenantDetail?.deposit?.paidAmount ?? null;
   const depositStatus        = tenantDetail?.deposit?.status     ?? null;
@@ -283,7 +291,31 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
           <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <FileCheck size={16} /> Files &amp; documents
           </h4>
-          <p style={subText}>No files uploaded yet. ID and other tenant documents can be added here for viewing.</p>
+          {documentsList.length > 0 ? (
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {documentsList.map((doc, idx) => {
+                const docName = doc?.name || doc?.title || doc?.fileName || doc?.filename || `Document ${idx + 1}`;
+                const docType = doc?.type || doc?.docType || doc?.documentType || '';
+                const docUrl = doc?.url || doc?.link || doc?.path || '';
+                return (
+                  <li key={doc?.id || doc?.ID || idx} style={{ ...alertItem, borderLeftColor: '#0ea5e9' }}>
+                    <div style={alertTitle}>{docName}</div>
+                    <div style={alertMeta}>
+                      {docType || 'Document'}
+                      {doc?.createdAt && ` · ${new Date(doc.createdAt).toLocaleDateString()}`}
+                    </div>
+                    {docUrl && (
+                      <a href={docUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.82rem', color: '#2563eb', textDecoration: 'none' }}>
+                        Open document
+                      </a>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p style={subText}>No files uploaded yet. ID and other tenant documents can be added here for viewing.</p>
+          )}
         </div>
 
         {/* Rent & payment */}
@@ -355,6 +387,22 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
                   </>
                 );
               })()}
+            </div>
+          </div>
+        )}
+
+        {contractDetail && (
+          <div style={card}>
+            <h3 style={sectionTitle}><FileCheck size={18} /> Contract info</h3>
+            <div style={{ marginTop: '16px' }}>
+              <div style={dlItem}><div style={dtStyle}>Type</div><div style={ddStyle}>{contractDetail.type || contractDetail.contractType || contractDetail.ContractType || '—'}</div></div>
+              <div style={dlItem}><div style={dtStyle}>Start date</div><div style={ddStyle}>{contractDetail.startDate || contractDetail.StartDate ? new Date(contractDetail.startDate || contractDetail.StartDate).toLocaleDateString() : '—'}</div></div>
+              <div style={dlItem}><div style={dtStyle}>End date</div><div style={ddStyle}>{contractDetail.endDate || contractDetail.EndDate ? new Date(contractDetail.endDate || contractDetail.EndDate).toLocaleDateString() : '—'}</div></div>
+              <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={ddStyle}>{Number(contractDetail.monthlyRent || contractDetail.MonthlyRent || amount || 0).toLocaleString()} XOF</div></div>
+              <div style={dlItem}><div style={dtStyle}>Deposit</div><div style={ddStyle}>{Number(contractDetail.deposit || contractDetail.Deposit || depositPaidAmount || 0).toLocaleString()} XOF</div></div>
+              <div style={dlItem}><div style={dtStyle}>Landlord</div><div style={ddStyle}>{contractDetail.landlordName || contractDetail.LandlordName || '—'}</div></div>
+              <div style={dlItem}><div style={dtStyle}>Tenant</div><div style={ddStyle}>{contractDetail.tenantName || contractDetail.TenantName || name}</div></div>
+              <div style={dlItem}><div style={dtStyle}>Status</div><div style={ddStyle}>{contractDetail.status || contractDetail.Status || '—'}</div></div>
             </div>
           </div>
         )}
