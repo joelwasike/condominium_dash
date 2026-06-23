@@ -20,6 +20,59 @@ const MOBILE_MONEY_PROVIDERS = [
 ];
 
 const normalizeName = (value) => (value || '').trim().toLowerCase();
+const toMoney = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const findTenantByName = (tenantList, name) => {
+  const normalized = normalizeName(name);
+  if (!normalized) return null;
+  return (Array.isArray(tenantList) ? tenantList : []).find((tenant) => {
+    const tenantName = normalizeName(tenant?.tenantName || tenant?.TenantName || tenant?.name || tenant?.Name);
+    return tenantName === normalized;
+  }) || null;
+};
+
+const buildRentReceiptContext = (tenant, paymentAmount) => {
+  const monthlyRent = toMoney(tenant?.monthlyRent ?? tenant?.MonthlyRent ?? tenant?.rent ?? tenant?.Rent);
+  const monthsInArrears = toMoney(tenant?.monthsInArrears ?? tenant?.MonthsInArrears);
+  const priorAdvance = toMoney(
+    tenant?.rentPaidInAdvance ??
+    tenant?.RentPaidInAdvance ??
+    tenant?.advanceRent ??
+    tenant?.AdvanceRent ??
+    tenant?.rentInAdvance ??
+    tenant?.RentInAdvance
+  );
+  const directDue = toMoney(
+    tenant?.unpaidRentAmount ??
+    tenant?.UnpaidRentAmount ??
+    tenant?.outstandingAmount ??
+    tenant?.OutstandingAmount ??
+    tenant?.balanceToPayEstimate ??
+    tenant?.BalanceToPayEstimate
+  );
+  const arrearsDue = directDue > 0 ? directDue : Math.max(0, (monthlyRent * monthsInArrears) - priorAdvance);
+  const totalDueBeforePayment = arrearsDue + monthlyRent;
+  const rentPaidAdvance = Math.max(0, paymentAmount - totalDueBeforePayment);
+  const balanceAfterPayment = Math.max(0, totalDueBeforePayment - paymentAmount);
+
+  return {
+    RentDue: arrearsDue,
+    rentDue: arrearsDue,
+    MonthlyRent: monthlyRent,
+    monthlyRent,
+    RentPaidAdvance: rentPaidAdvance,
+    rentPaidAdvance,
+    MonthsInArrears: monthsInArrears,
+    monthsInArrears,
+    BalanceAfterPayment: balanceAfterPayment,
+    balanceAfterPayment,
+    TotalDueBeforePayment: totalDueBeforePayment,
+    totalDueBeforePayment,
+  };
+};
 
 const PaymentsTab = (props) => {
   const {
@@ -431,17 +484,23 @@ PaymentsTab.CollectionModal = (props) => {
               e.preventDefault();
               try {
                 setLoading(true);
+                const paymentAmount = parseFloat(collectionPaymentForm.amount || '0');
+                const selectedTenant = findTenantByName(tenantList, collectionPaymentForm.tenant);
+                const rentReceiptContext = collectionPaymentForm.chargeType === 'Rent' && selectedTenant
+                  ? buildRentReceiptContext(selectedTenant, paymentAmount)
+                  : {};
                 const paymentData = {
                   tenant: collectionPaymentForm.tenant,
                   property: collectionPaymentForm.property,
-                  amount: parseFloat(collectionPaymentForm.amount || '0'),
+                  amount: paymentAmount,
                   method: collectionPaymentForm.method,
                   paymentProvider: collectionPaymentForm.paymentProvider,
                   chargeType: collectionPaymentForm.chargeType,
                   reference: collectionPaymentForm.reference,
-                  status: 'Approved'
+                  status: 'Approved',
+                  ...rentReceiptContext,
                 };
-                await accountingService.recordTenantPayment(paymentData);
+                const createdPayment = await accountingService.recordTenantPayment(paymentData);
                 addNotification('Tenant payment recorded successfully!', 'success');
                 try {
                   const propKey = (collectionPaymentForm.property || '').toLowerCase().trim();
@@ -457,7 +516,19 @@ PaymentsTab.CollectionModal = (props) => {
                   });
                 } catch (collError) { console.error('Error creating collection record:', collError); }
                 const [overview, tenantPaymentsData, collectionsData] = await Promise.all([accountingService.getOverview(), accountingService.getTenantPayments(), accountingService.getCollections()]);
-                setOverviewData(overview); setTenantPayments(Array.isArray(tenantPaymentsData) ? tenantPaymentsData : []); setCollections(Array.isArray(collectionsData) ? collectionsData : []);
+                const createdPaymentId = createdPayment?.id ?? createdPayment?.ID ?? createdPayment?.Id ?? null;
+                const enrichedPayment = {
+                  ...(createdPayment || paymentData),
+                  ...paymentData,
+                };
+                const refreshedPayments = Array.isArray(tenantPaymentsData) ? tenantPaymentsData : [];
+                setOverviewData(overview);
+                setCollections(Array.isArray(collectionsData) ? collectionsData : []);
+                setTenantPayments(
+                  createdPaymentId != null
+                    ? [enrichedPayment, ...refreshedPayments.filter((payment) => String(payment?.id ?? payment?.ID ?? payment?.Id ?? '') !== String(createdPaymentId))]
+                    : [enrichedPayment, ...refreshedPayments]
+                );
                 setCollectionPaymentForm({ building: '', landlord: '', amount: '', paymentType: 'rent', status: 'Collected', tenant: '', tenantId: '', property: '', method: 'Cash', chargeType: 'Rent', reference: '', tenantType: 'individual', monthlyRent: '', depositAmount: '', applicationFees: false, paymentMethod: 'cash', paymentProvider: '', notes: '', buyer: '', saleAmount: '', agencyCommission: '' });
                 setCollectionPaymentType(null); setShowCollectionPaymentModal(false);
               } catch (error) { console.error('Error recording tenant payment:', error); addNotification(error.message || 'Failed to record tenant payment', 'error'); } finally { setLoading(false); }

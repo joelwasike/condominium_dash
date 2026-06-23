@@ -6,7 +6,22 @@ import logoRight from '../Screenshot 2026-03-09 at 11.34.25.png';
 const PAYMENT_METHODS = ['Link', 'Transfer', 'Check', 'OM', 'Wave', 'Cash'];
 
 const RentReceiptTemplate = ({ data, isCollection = false }) => {
-  const amount = data?.Amount ?? data?.amount ?? 0;
+  const toMoney = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const readMoney = (...values) => {
+    for (const value of values) {
+      if (value !== undefined && value !== null && value !== '') {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+    }
+    return 0;
+  };
+
+  const amount = readMoney(data?.Amount, data?.amount);
   const rawOwner = data?.Owner ?? data?.owner ?? data?.OwnerName ?? data?.ownerName ?? data?.Landlord ?? data?.landlord;
   const owner = rawOwner && rawOwner !== 'N/A' ? rawOwner : null;
   const tenant = data?.Tenant ?? data?.tenant ?? (isCollection ? owner : null);
@@ -22,32 +37,55 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
     : new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const refNum = data?.ReceiptNumber ?? data?.receiptNumber ?? data?.Reference ?? data?.reference ?? `SAAF/${data?.ID ?? data?.id ?? '000'}/000`;
 
-  // Rent due = past arrears (unpaid amounts from previous periods)
-  const rentDue = data?.RentDue ?? data?.rentDue ?? 0;
-  // Fixed monthly rent of the property (not the payment amount)
-  const monthlyRent = data?.MonthlyRent ?? data?.monthlyRent ?? 0;
-  // For collections, just use the payment amount as the price; for tenant payments use fixed rent
-  const rentPrice = isCollection ? amount : (monthlyRent || amount);
-  const paymentAmount = amount;
+  // Rent due = unpaid arrears before this payment.
+  const storedRentDue = readMoney(
+    data?.RentDue,
+    data?.rentDue,
+    data?.UnpaidRentAmount,
+    data?.unpaidRentAmount,
+    data?.OutstandingAmount,
+    data?.outstandingAmount,
+    data?.Arrears,
+    data?.arrears
+  );
 
-  // Rent paid in advance = excess payment above what was owed (arrears + monthly rent)
-  // Only calculated for tenant payments, not collections
+  // Fixed monthly rent of the property.
+  const monthlyRent = readMoney(
+    data?.MonthlyRent,
+    data?.monthlyRent,
+    data?.Rent,
+    data?.rent,
+    data?.RentPrice,
+    data?.rentPrice,
+    data?.BaseRent,
+    data?.baseRent
+  );
+
+  const paymentAmount = amount;
+  const rentDue = isCollection
+    ? 0
+    : (storedRentDue > 0
+      ? storedRentDue
+      : Math.max(0, (readMoney(data?.MonthsInArrears, data?.monthsInArrears) * monthlyRent) - readMoney(data?.RentPaidAdvance, data?.rentPaidAdvance)));
+
+  const rentPrice = isCollection ? amount : (monthlyRent > 0 ? monthlyRent : amount);
+
+  // Excess payment above arrears + the fixed monthly rent becomes advance rent.
   const rentPaidAdvance = isCollection
     ? 0
     : Math.max(0, paymentAmount - (rentDue + rentPrice));
 
-  // Total to be paid = arrears + monthly rent + any advance being created
-  // This always equals max(payment, arrears + monthlyRent) — i.e. = payment when overpaid, = debt when underpaid
+  // Total to be paid = arrears + monthly rent + any advance being created.
   const totalToPay = isCollection
     ? amount
     : (rentDue + rentPrice + rentPaidAdvance);
 
-  // Balance = what is still owed after this payment (0 when fully paid or overpaid)
+  // Balance = what is still owed after this payment (0 when fully paid or overpaid).
   const balanceAfter = isCollection
     ? 0
     : Math.max(0, rentDue + rentPrice - paymentAmount);
 
-  const formatAmount = (val) => (Number(val) || 0).toLocaleString('fr-FR');
+  const formatAmount = (val) => toMoney(val).toLocaleString('fr-FR');
 
   const getMethodSpans = () => {
     const methodLower = (method || '').toLowerCase();

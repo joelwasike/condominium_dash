@@ -949,9 +949,18 @@ const AccountingDashboard = () => {
         (t.tenantName || t.TenantName || '').toLowerCase().trim() === (item.Tenant || '').toLowerCase().trim()
       );
       if (tenantRecord) {
-        enrichedItem.RentDue = tenantRecord.outstandingAmount ?? tenantRecord.OutstandingAmount ?? 0;
-        enrichedItem.RentPaidAdvance = tenantRecord.rentPaidInAdvance ?? tenantRecord.RentPaidInAdvance ?? 0;
-        enrichedItem.MonthlyRent = tenantRecord.MonthlyRent ?? tenantRecord.monthlyRent ?? tenantRecord.Amount ?? tenantRecord.amount ?? 0;
+        if (enrichedItem.RentDue == null && enrichedItem.rentDue == null) {
+          enrichedItem.RentDue = tenantRecord.unpaidRentAmount ?? tenantRecord.UnpaidRentAmount ?? tenantRecord.outstandingAmount ?? tenantRecord.OutstandingAmount ?? 0;
+        }
+        if (enrichedItem.RentPaidAdvance == null && enrichedItem.rentPaidAdvance == null) {
+          enrichedItem.RentPaidAdvance = tenantRecord.rentPaidInAdvance ?? tenantRecord.RentPaidInAdvance ?? 0;
+        }
+        if (enrichedItem.MonthlyRent == null && enrichedItem.monthlyRent == null) {
+          enrichedItem.MonthlyRent = tenantRecord.MonthlyRent ?? tenantRecord.monthlyRent ?? tenantRecord.rent ?? tenantRecord.Rent ?? tenantRecord.Amount ?? tenantRecord.amount ?? 0;
+        }
+        if (enrichedItem.MonthsInArrears == null && enrichedItem.monthsInArrears == null) {
+          enrichedItem.MonthsInArrears = tenantRecord.MonthsInArrears ?? tenantRecord.monthsInArrears ?? 0;
+        }
       }
     }
     const overlay = document.createElement('div');
