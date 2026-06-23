@@ -95,9 +95,9 @@ const TechnicianDashboard = () => {
     estimatedHours: 0,
     estimatedCost: 0,
     photos: [],
-    quotation: null,
-    invoice: null,
-    supportingDocument: null,
+    quotation: [],
+    invoice: [],
+    supportingDocument: [],
     requireDirectorApproval: false,
   });
   const [showPhotoUploadModal, setShowPhotoUploadModal] = useState(false);
@@ -259,7 +259,7 @@ const TechnicianDashboard = () => {
   // Quote document upload modal
   const [showQuoteDocModal, setShowQuoteDocModal] = useState(false);
   const [quoteDocMaintenance, setQuoteDocMaintenance] = useState(null);
-  const [quoteDocForm, setQuoteDocForm] = useState({ amount: '', problem: '', invoice: null, quotation: null, supportingDocument: null });
+  const [quoteDocForm, setQuoteDocForm] = useState({ amount: '', problem: '', invoice: [], quotation: [], supportingDocument: [] });
   const [quoteDocSubmitting, setQuoteDocSubmitting] = useState(false);
 
   // Cost of Work: owners -> properties -> works
@@ -491,9 +491,9 @@ const TechnicianDashboard = () => {
       priority: task.Priority || task.priority || 'normal',
       assigned: task.Assigned || task.assigned || '',
       photos: [],
-      quotation: null,
-      invoice: null,
-      supportingDocument: null,
+      quotation: [],
+      invoice: [],
+      supportingDocument: [],
       requireDirectorApproval: false,
     });
     setShowTaskModal(true);
@@ -528,9 +528,9 @@ const TechnicianDashboard = () => {
             estimatedCost,
             assigned: taskForm.assigned || '',
             photos: taskForm.photos || [],
-            quotation: taskForm.quotation || null,
-            invoice: taskForm.invoice || null,
-            supportingDocument: taskForm.supportingDocument || null,
+            quotation: taskForm.quotation || [],
+            invoice: taskForm.invoice || [],
+            supportingDocument: taskForm.supportingDocument || [],
             requireDirectorApproval: taskForm.requireDirectorApproval || false,
           };
           await technicianService.createMaintenanceRequest(maintenanceData);
@@ -561,7 +561,7 @@ const TechnicianDashboard = () => {
       setShowTaskModal(false);
       setSelectedTask(null);
       setTaskContext('task');
-      setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
+      setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: [], invoice: [], supportingDocument: [], requireDirectorApproval: false });
       loadData(); // Reload data to show updated/created task
     } catch (error) {
       console.error('Error updating/creating task:', error);
@@ -1331,7 +1331,7 @@ const TechnicianDashboard = () => {
       addNotification('Quote submitted successfully', 'success');
       setShowQuoteDocModal(false);
       setQuoteDocMaintenance(null);
-      setQuoteDocForm({ amount: '', problem: '', invoice: null, quotation: null, supportingDocument: null });
+      setQuoteDocForm({ amount: '', problem: '', invoice: [], quotation: [], supportingDocument: [] });
       loadData();
     } catch (error) {
       console.error('Error submitting quote:', error);
@@ -1401,7 +1401,7 @@ const TechnicianDashboard = () => {
         maintenance.estimatedCost ?? maintenance.EstimatedCost ?? maintenance.estimated_cost ?? maintenance.Estimated_Cost ?? 0
       ) || 0;
       setQuoteDocMaintenance(maintenance);
-      setQuoteDocForm({ amount: estimatedCost > 0 ? String(estimatedCost) : '', problem: '', invoice: null, quotation: null, supportingDocument: null });
+      setQuoteDocForm({ amount: estimatedCost > 0 ? String(estimatedCost) : '', problem: '', invoice: [], quotation: [], supportingDocument: [] });
       setShowQuoteDocModal(true);
     };
 
@@ -1448,9 +1448,9 @@ const TechnicianDashboard = () => {
                 assigned: '',
                 photos: [],
                 existingPhotoURLs: [],
-                quotation: null,
-                invoice: null,
-                supportingDocument: null,
+                quotation: [],
+                invoice: [],
+                supportingDocument: [],
                 requireDirectorApproval: false,
               });
               setShowTaskModal(true);
@@ -1845,7 +1845,7 @@ const TechnicianDashboard = () => {
           className="sa-primary-cta"
           onClick={() => {
             setSelectedTask(null);
-            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
+            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: [], invoice: [], supportingDocument: [], requireDirectorApproval: false });
             setShowTaskModal(true);
           }}
         >
@@ -3522,7 +3522,7 @@ const TechnicianDashboard = () => {
           setShowTaskModal(false);
           setSelectedTask(null);
           setTaskContext('task');
-          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
+          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: [], invoice: [], supportingDocument: [], requireDirectorApproval: false });
         }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -3533,7 +3533,7 @@ const TechnicianDashboard = () => {
                   setShowTaskModal(false);
                   setSelectedTask(null);
                   setTaskContext('task');
-                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
+                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: [], invoice: [], supportingDocument: [], requireDirectorApproval: false });
                 }}
               >
                 ×
@@ -3772,17 +3772,22 @@ const TechnicianDashboard = () => {
                   type="file"
                   id="task-quotation"
                   accept=".pdf,.doc,.docx,image/*"
+                  multiple
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    setTaskForm(prev => ({ ...prev, quotation: f || null }));
+                    const newFiles = Array.from(e.target.files || []);
+                    setTaskForm(prev => ({ ...prev, quotation: [...(prev.quotation || []), ...newFiles] }));
                     e.target.value = '';
                   }}
                 />
-                {taskForm.quotation && (
-                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{taskForm.quotation.name}</span>
-                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, quotation: null }))}>Remove</button>
-                  </div>
+                {taskForm.quotation && taskForm.quotation.length > 0 && (
+                  <ul style={{ margin: '6px 0 0', paddingLeft: '18px', fontSize: '0.85rem', color: '#374151' }}>
+                    {taskForm.quotation.map((f, idx) => (
+                      <li key={`${f.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ flex: 1 }}>{f.name}</span>
+                        <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, quotation: prev.quotation.filter((_, i) => i !== idx) }))}>Remove</button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
               <div className="form-group">
@@ -3791,36 +3796,46 @@ const TechnicianDashboard = () => {
                   type="file"
                   id="task-invoice"
                   accept=".pdf,.doc,.docx,image/*"
+                  multiple
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    setTaskForm(prev => ({ ...prev, invoice: f || null }));
+                    const newFiles = Array.from(e.target.files || []);
+                    setTaskForm(prev => ({ ...prev, invoice: [...(prev.invoice || []), ...newFiles] }));
                     e.target.value = '';
                   }}
                 />
-                {taskForm.invoice && (
-                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{taskForm.invoice.name}</span>
-                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, invoice: null }))}>Remove</button>
-                  </div>
+                {taskForm.invoice && taskForm.invoice.length > 0 && (
+                  <ul style={{ margin: '6px 0 0', paddingLeft: '18px', fontSize: '0.85rem', color: '#374151' }}>
+                    {taskForm.invoice.map((f, idx) => (
+                      <li key={`${f.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ flex: 1 }}>{f.name}</span>
+                        <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, invoice: prev.invoice.filter((_, i) => i !== idx) }))}>Remove</button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
               <div className="form-group">
-                <label htmlFor="task-supporting-document">Upload Supporting Document (optional)</label>
+                <label htmlFor="task-supporting-document">Upload Supporting Documents (optional)</label>
                 <input
                   type="file"
                   id="task-supporting-document"
                   accept=".pdf,.doc,.docx,image/*"
+                  multiple
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    setTaskForm(prev => ({ ...prev, supportingDocument: f || null }));
+                    const newFiles = Array.from(e.target.files || []);
+                    setTaskForm(prev => ({ ...prev, supportingDocument: [...(prev.supportingDocument || []), ...newFiles] }));
                     e.target.value = '';
                   }}
                 />
-                {taskForm.supportingDocument && (
-                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{taskForm.supportingDocument.name}</span>
-                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, supportingDocument: null }))}>Remove</button>
-                  </div>
+                {taskForm.supportingDocument && taskForm.supportingDocument.length > 0 && (
+                  <ul style={{ margin: '6px 0 0', paddingLeft: '18px', fontSize: '0.85rem', color: '#374151' }}>
+                    {taskForm.supportingDocument.map((f, idx) => (
+                      <li key={`${f.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ flex: 1 }}>{f.name}</span>
+                        <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, supportingDocument: prev.supportingDocument.filter((_, i) => i !== idx) }))}>Remove</button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
               <div className="form-group">
@@ -3843,7 +3858,7 @@ const TechnicianDashboard = () => {
                     setShowTaskModal(false);
                     setSelectedTask(null);
                     setTaskContext('task');
-                    setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: null, invoice: null, supportingDocument: null, requireDirectorApproval: false });
+                    setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [], quotation: [], invoice: [], supportingDocument: [], requireDirectorApproval: false });
                   }}
                 >
                     Cancel
@@ -5141,18 +5156,23 @@ const TechnicianDashboard = () => {
                     type="file"
                     id="qdoc-quotation"
                     accept=".pdf,.doc,.docx,image/*"
+                    multiple
                     onChange={(e) => {
-                      const f = e.target.files?.[0] || null;
-                      setQuoteDocForm(prev => ({ ...prev, quotation: f }));
+                      const newFiles = Array.from(e.target.files || []);
+                      setQuoteDocForm(prev => ({ ...prev, quotation: [...(prev.quotation || []), ...newFiles] }));
                       e.target.value = '';
                     }}
                     style={{ width: '100%' }}
                   />
-                  {quoteDocForm.quotation && (
-                    <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>📄 {quoteDocForm.quotation.name}</span>
-                      <button type="button" className="action-button secondary" style={{ padding: '2px 10px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, quotation: null }))}>Remove</button>
-                    </div>
+                  {quoteDocForm.quotation && quoteDocForm.quotation.length > 0 && (
+                    <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '0.85rem', color: '#374151' }}>
+                      {quoteDocForm.quotation.map((f, idx) => (
+                        <li key={`${f.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{ flex: 1 }}>📄 {f.name}</span>
+                          <button type="button" className="action-button secondary" style={{ padding: '2px 10px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, quotation: prev.quotation.filter((_, i) => i !== idx) }))}>Remove</button>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               </div>
@@ -5164,18 +5184,23 @@ const TechnicianDashboard = () => {
                     type="file"
                     id="qdoc-invoice"
                     accept=".pdf,.doc,.docx,image/*"
+                    multiple
                     onChange={(e) => {
-                      const f = e.target.files?.[0] || null;
-                      setQuoteDocForm(prev => ({ ...prev, invoice: f }));
+                      const newFiles = Array.from(e.target.files || []);
+                      setQuoteDocForm(prev => ({ ...prev, invoice: [...(prev.invoice || []), ...newFiles] }));
                       e.target.value = '';
                     }}
                     style={{ width: '100%' }}
                   />
-                  {quoteDocForm.invoice && (
-                    <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>📄 {quoteDocForm.invoice.name}</span>
-                      <button type="button" className="action-button secondary" style={{ padding: '2px 10px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, invoice: null }))}>Remove</button>
-                    </div>
+                  {quoteDocForm.invoice && quoteDocForm.invoice.length > 0 && (
+                    <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '0.85rem', color: '#374151' }}>
+                      {quoteDocForm.invoice.map((f, idx) => (
+                        <li key={`${f.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{ flex: 1 }}>📄 {f.name}</span>
+                          <button type="button" className="action-button secondary" style={{ padding: '2px 10px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, invoice: prev.invoice.filter((_, i) => i !== idx) }))}>Remove</button>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               </div>
@@ -5187,18 +5212,23 @@ const TechnicianDashboard = () => {
                     type="file"
                     id="qdoc-supporting"
                     accept=".pdf,.doc,.docx,image/*"
+                    multiple
                     onChange={(e) => {
-                      const f = e.target.files?.[0] || null;
-                      setQuoteDocForm(prev => ({ ...prev, supportingDocument: f }));
+                      const newFiles = Array.from(e.target.files || []);
+                      setQuoteDocForm(prev => ({ ...prev, supportingDocument: [...(prev.supportingDocument || []), ...newFiles] }));
                       e.target.value = '';
                     }}
                     style={{ width: '100%' }}
                   />
-                  {quoteDocForm.supportingDocument && (
-                    <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>📄 {quoteDocForm.supportingDocument.name}</span>
-                      <button type="button" className="action-button secondary" style={{ padding: '2px 10px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, supportingDocument: null }))}>Remove</button>
-                    </div>
+                  {quoteDocForm.supportingDocument && quoteDocForm.supportingDocument.length > 0 && (
+                    <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '0.85rem', color: '#374151' }}>
+                      {quoteDocForm.supportingDocument.map((f, idx) => (
+                        <li key={`${f.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{ flex: 1 }}>📄 {f.name}</span>
+                          <button type="button" className="action-button secondary" style={{ padding: '2px 10px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, supportingDocument: prev.supportingDocument.filter((_, i) => i !== idx) }))}>Remove</button>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               </div>

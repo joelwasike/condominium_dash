@@ -108,9 +108,9 @@ export const technicianService = {
     const invoice = requestData?.invoice;
     const supportingDocument = requestData?.supportingDocument;
     const hasPhotos = Array.isArray(photos) && photos.length > 0;
-    const hasQuotation = quotation && typeof quotation === 'object' && quotation instanceof File;
-    const hasInvoice = invoice && typeof invoice === 'object' && invoice instanceof File;
-    const hasSupportingDocument = supportingDocument && typeof supportingDocument === 'object' && supportingDocument instanceof File;
+    const hasQuotation = Array.isArray(quotation) ? quotation.length > 0 : (quotation && quotation instanceof File);
+    const hasInvoice = Array.isArray(invoice) ? invoice.length > 0 : (invoice && invoice instanceof File);
+    const hasSupportingDocument = Array.isArray(supportingDocument) ? supportingDocument.length > 0 : (supportingDocument && supportingDocument instanceof File);
     const hasFiles = hasPhotos || hasQuotation || hasInvoice || hasSupportingDocument;
 
     if (hasFiles) {
@@ -129,9 +129,9 @@ export const technicianService = {
           }
         });
       }
-      if (hasQuotation) formData.append('quotation', quotation);
-      if (hasInvoice) formData.append('invoice', invoice);
-      if (hasSupportingDocument) formData.append('supportingDocument', supportingDocument);
+      if (hasQuotation) (Array.isArray(quotation) ? quotation : [quotation]).forEach(f => formData.append('quotation', f));
+      if (hasInvoice) (Array.isArray(invoice) ? invoice : [invoice]).forEach(f => formData.append('invoice', f));
+      if (hasSupportingDocument) (Array.isArray(supportingDocument) ? supportingDocument : [supportingDocument]).forEach(f => formData.append('supportingDocument', f));
       return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
         method: 'POST',
         body: formData,
@@ -226,9 +226,9 @@ export const technicianService = {
     fd.append('amount', String(amount || 0));
     fd.append('problem', problem || '');
     fd.append('recipient', 'management@example.com');
-    if (invoice) fd.append('invoice', invoice);
-    if (quotation) fd.append('quotation', quotation);
-    if (supportingDocument) fd.append('supportingDocument', supportingDocument);
+    (Array.isArray(invoice) ? invoice : (invoice ? [invoice] : [])).forEach(f => fd.append('invoice', f));
+    (Array.isArray(quotation) ? quotation : (quotation ? [quotation] : [])).forEach(f => fd.append('quotation', f));
+    (Array.isArray(supportingDocument) ? supportingDocument : (supportingDocument ? [supportingDocument] : [])).forEach(f => fd.append('supportingDocument', f));
     return apiRequest(buildApiUrl('/api/technician/quotes'), {
       method: 'POST',
       body: fd,
