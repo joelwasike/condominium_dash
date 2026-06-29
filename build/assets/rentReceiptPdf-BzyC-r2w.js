@@ -1,7 +1,0 @@
-import{c as d,e as l,R as p}from"./index-DuxDN4c6.js";import{R as m,h as f}from"./RentReceiptTemplate-Dlqg_aIx.js";/**
- * @license lucide-react v0.545.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const u=[["rect",{width:"14",height:"14",x:"8",y:"8",rx:"2",ry:"2",key:"17jyea"}],["path",{d:"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2",key:"zix9uf"}]],g=d("copy",u);async function x({item:o,isCollection:i=!1,filename:r="rent-receipt.pdf"}){if(!o)return;const e=document.createElement("div");e.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f0f0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;",document.body.appendChild(e);const t=document.createElement("div");e.appendChild(t);const n=l.createRoot(t);n.render(p.createElement(m,{data:o,isCollection:i}));try{await new Promise(s=>setTimeout(s,800));const a=t.querySelector(".receipt-container")||t.firstChild;if(!a)throw new Error("Receipt element not found");const c={margin:0,filename:r,image:{type:"jpeg",quality:.98},html2canvas:{scale:2,useCORS:!0,logging:!1},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"}};await f().set(c).from(a).save()}finally{n.unmount(),document.body.removeChild(e)}}export{g as C,x as s};
-//# sourceMappingURL=rentReceiptPdf-BzyC-r2w.js.map

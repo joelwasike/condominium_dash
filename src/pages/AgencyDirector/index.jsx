@@ -60,7 +60,7 @@ const AgencyDirectorDashboard = () => {
   const [accountingData, setAccountingData] = useState(null);
   const [landlordPayments, setLandlordPayments] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
-  const [selectedAccountingView, setSelectedAccountingView] = useState('landlord-payments'); // 'landlord-payments', 'expenses', 'revenue', etc.
+  const [selectedAccountingView, setSelectedAccountingView] = useState('owner-payments');
 
   // Auto-slide carousel for advertisements on overview page
   useEffect(() => {
@@ -2792,355 +2792,265 @@ const AgencyDirectorDashboard = () => {
       const date = getTransactionDate(item);
       if (!date) return true;
       if (!accountingDateFilterValue) return true;
-      if (accountingDateFilterMode === 'day') {
-        return date.toISOString().slice(0, 10) === accountingDateFilterValue;
-      }
-      if (accountingDateFilterMode === 'month') {
-        return date.toISOString().slice(0, 7) === accountingDateFilterValue.slice(0, 7);
-      }
-      if (accountingDateFilterMode === 'year') {
-        return String(date.getFullYear()) === String(accountingDateFilterValue).slice(0, 4);
-      }
+      if (accountingDateFilterMode === 'day') return date.toISOString().slice(0, 10) === accountingDateFilterValue;
+      if (accountingDateFilterMode === 'month') return date.toISOString().slice(0, 7) === accountingDateFilterValue.slice(0, 7);
+      if (accountingDateFilterMode === 'year') return String(date.getFullYear()) === String(accountingDateFilterValue).slice(0, 4);
       return true;
     };
 
     const filteredAllExpenses = dedupeRecords(allExpenses).filter(matchesAccountingDate);
     const filteredRevenueData = dedupeRecords(revenueData).filter(matchesAccountingDate);
     const filteredLandlordPayments = dedupeRecords(landlordPayments).filter(matchesAccountingDate);
+    const pendingCount = filteredLandlordPayments.filter(p => {
+      const s = (p.status || p.Status || '').toLowerCase();
+      return s === 'pending' || s === 'pending_approval' || s === 'pending approval';
+    }).length;
+
+    const ACCT_TABS = [
+      { id: 'owner-payments', label: 'Owner Payments' },
+      { id: 'overview', label: 'Overview' },
+      { id: 'expenses', label: 'Expenses' },
+      { id: 'revenue', label: 'Revenue' },
+    ];
+
+    const acctTab = ['owner-payments', 'overview', 'expenses', 'revenue'].includes(selectedAccountingView)
+      ? selectedAccountingView
+      : 'owner-payments';
+
+    const dateFilterBar = (
+      <div className="sa-filters-section" style={{ margin: '0 0 20px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <select className="sa-filter-select" value={accountingDateFilterMode} onChange={(e) => setAccountingDateFilterMode(e.target.value)}>
+          <option value="day">By day</option>
+          <option value="month">By month</option>
+          <option value="year">By year</option>
+        </select>
+        {accountingDateFilterMode === 'day' && <input type="date" className="sa-filter-select" value={accountingDateFilterValue} onChange={(e) => setAccountingDateFilterValue(e.target.value)} />}
+        {accountingDateFilterMode === 'month' && <input type="month" className="sa-filter-select" value={accountingDateFilterValue.slice(0, 7)} onChange={(e) => setAccountingDateFilterValue(e.target.value)} />}
+        {accountingDateFilterMode === 'year' && <input type="number" min="2000" max="2100" className="sa-filter-select" value={String(accountingDateFilterValue).slice(0, 4)} onChange={(e) => setAccountingDateFilterValue(e.target.value)} />}
+        <button type="button" className="sa-outline-button" onClick={() => setAccountingDateFilterValue(accountingDateFilterMode === 'month' ? new Date().toISOString().slice(0, 7) : accountingDateFilterMode === 'year' ? String(new Date().getFullYear()) : new Date().toISOString().slice(0, 10))}>Reset</button>
+      </div>
+    );
 
     return (
-    <div className="sa-overview-page">
-      <div className="sa-section-card">
-        <div className="sa-section-header">
-          <h3>Financial Overview</h3>
-          <p>Revenue, expenses, and profit metrics</p>
-        </div>
-        <div className="sa-filters-section" style={{ margin: '0 0 20px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select
-            className="sa-filter-select"
-            value={accountingDateFilterMode}
-            onChange={(e) => setAccountingDateFilterMode(e.target.value)}
-          >
-            <option value="day">Filter by day</option>
-            <option value="month">Filter by month</option>
-            <option value="year">Filter by year</option>
-          </select>
-          {accountingDateFilterMode === 'day' && (
-            <input
-              type="date"
-              className="sa-filter-select"
-              value={accountingDateFilterValue}
-              onChange={(e) => setAccountingDateFilterValue(e.target.value)}
-            />
-          )}
-          {accountingDateFilterMode === 'month' && (
-            <input
-              type="month"
-              className="sa-filter-select"
-              value={accountingDateFilterValue.slice(0, 7)}
-              onChange={(e) => setAccountingDateFilterValue(e.target.value)}
-            />
-          )}
-          {accountingDateFilterMode === 'year' && (
-            <input
-              type="number"
-              min="2000"
-              max="2100"
-              className="sa-filter-select"
-              value={String(accountingDateFilterValue).slice(0, 4)}
-              onChange={(e) => setAccountingDateFilterValue(e.target.value)}
-            />
-          )}
-          <button
-            type="button"
-            className="sa-outline-button"
-            onClick={() => setAccountingDateFilterValue(
-              accountingDateFilterMode === 'month'
-                ? new Date().toISOString().slice(0, 7)
-                : accountingDateFilterMode === 'year'
-                  ? String(new Date().getFullYear())
-                  : new Date().toISOString().slice(0, 10)
-            )}
-          >
-            Reset
-          </button>
-        </div>
-        <div className="sa-overview-metrics" style={{ width: '100%' }}>
-          <div 
-            className="sa-metric-card sa-metric-primary" 
-            style={{ cursor: 'pointer', border: selectedAccountingView === 'total-revenue' ? '2px solid #3b82f6' : '1px solid #e5e7eb' }}
-            onClick={() => setSelectedAccountingView('total-revenue')}
-          >
-            <p className="sa-metric-label">Total Revenue</p>
-            <p className="sa-metric-value">
-              {(financialData?.totalRevenue || 0).toLocaleString()} FCFA
-            </p>
+      <div className="sa-overview-page">
+        <div className="sa-section-card">
+          <div className="sa-section-header" style={{ marginBottom: '4px' }}>
+            <div><h2>Accounting</h2><p>Financial overview, owner payments, expenses and revenue</p></div>
           </div>
-          <div 
-            className="sa-metric-card" 
-            style={{ cursor: 'pointer', border: selectedAccountingView === 'total-expenses' ? '2px solid #3b82f6' : '1px solid #e5e7eb' }}
-            onClick={() => setSelectedAccountingView('total-expenses')}
-          >
-            <p className="sa-metric-label">Total Expenses</p>
-            <p className="sa-metric-value">
-              {(financialData?.totalExpenses || 0).toLocaleString()} FCFA
-            </p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Net Profit</p>
-            <p className="sa-metric-value">
-              {(financialData?.netProfit || 0).toLocaleString()} FCFA
-            </p>
-          </div>
-          <div 
-            className="sa-metric-card" 
-            style={{ cursor: 'pointer', border: selectedAccountingView === 'total-collections' ? '2px solid #3b82f6' : '1px solid #e5e7eb' }}
-            onClick={() => setSelectedAccountingView('total-collections')}
-          >
-            <p className="sa-metric-label">Total Collections</p>
-            <p className="sa-metric-value">
-              {(financialData?.totalCollections || 0).toLocaleString()} FCFA
-            </p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Commission</p>
-            <p className="sa-metric-value">
-              {(financialData?.commission || 0).toLocaleString()} FCFA
-            </p>
-          </div>
-          <div className="sa-metric-card">
-            <p className="sa-metric-label">Pending Payments</p>
-            <p className="sa-metric-value">
-              {(financialData?.pendingPayments || 0).toLocaleString()} FCFA
-            </p>
-          </div>
-        </div>
-      </div>
 
-      <div className="sa-section-card" style={{ marginTop: '20px' }}>
-        <div className="sa-section-header">
-          <h3>Total Revenue by Owner</h3>
-          <p>Revenue attributed to each property owner</p>
-        </div>
-        <div className="sa-table-wrapper">
-          <table className="sa-table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Owner</th>
-                <th>Total Revenue (FCFA)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {revenueByOwner.length > 0 ? revenueByOwner.map((row, index) => (
-                <tr key={`owner-rev-${index}`}>
-                  <td>{index + 1}</td>
-                  <td className="sa-cell-main">
-                    <span className="sa-cell-title">{row.ownerName || row.owner || 'N/A'}</span>
-                  </td>
-                  <td style={{ fontWeight: 600 }}>
-                    {(row.totalRevenue || 0).toLocaleString()} FCFA
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={3} className="sa-table-empty">No revenue by owner data available</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="sa-section-card" style={{ marginTop: '20px' }}>
-        <div className="sa-section-header">
-          <h3>Total Revenue by Agency</h3>
-          <p>Revenue breakdown by agency or company</p>
-        </div>
-        <div className="sa-table-wrapper">
-          <table className="sa-table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Agency / Company</th>
-                <th>Total Revenue (FCFA)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {revenueByAgency.length > 0 ? revenueByAgency.map((row, index) => (
-                <tr key={`agency-rev-${index}`}>
-                  <td>{index + 1}</td>
-                  <td className="sa-cell-main">
-                    <span className="sa-cell-title">{row.agencyName || row.agency || row.company || 'N/A'}</span>
-                  </td>
-                  <td style={{ fontWeight: 600 }}>
-                    {(row.totalRevenue || 0).toLocaleString()} FCFA
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={3} className="sa-table-empty">No revenue by agency data available</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="sa-section-card" style={{ marginTop: '20px' }}>
-        <div className="sa-section-header">
-          <h3>Landlord Payments</h3>
-          <p>Manage landlord payment approvals</p>
-        </div>
-        <div className="sa-table-wrapper">
-          {selectedAccountingView === 'total-expenses' ? (
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Description</th>
-                  <th>Amount</th>
-                  <th>Building</th>
-                  <th>Owner</th>
-                  <th>Date</th>
-                  <th>Category</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAllExpenses.length > 0 ? filteredAllExpenses.map((expense, index) => (
-                  <tr key={`expense-${index}`}>
-                    <td>{index + 1}</td>
-                    <td>{expense.description || expense.Description || expense.notes || expense.Notes || expense.reason || expense.Reason || 'N/A'}</td>
-                    <td>{(expense.amount || expense.Amount || 0).toLocaleString()} FCFA</td>
-                    <td>{expense.building || expense.Building || 'N/A'}</td>
-                    <td>{expense.owner || expense.Owner || 'N/A'}</td>
-                    <td>
-                      {expense.date || expense.Date
-                        ? new Date(expense.date || expense.Date).toLocaleDateString()
-                        : 'N/A'}
-                    </td>
-                    <td>{expense.category || expense.Category || 'General'}</td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={7} className="sa-table-empty">No expenses found</td>
-                  </tr>
+          {/* Tab bar */}
+          <div style={{ display: 'flex', gap: '0', borderBottom: '2px solid #e5e7eb', marginBottom: '24px' }}>
+            {ACCT_TABS.map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSelectedAccountingView(tab.id)}
+                style={{
+                  padding: '10px 22px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: acctTab === tab.id ? '#2563eb' : '#6b7280',
+                  fontWeight: acctTab === tab.id ? 700 : 500,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  borderBottom: acctTab === tab.id ? '3px solid #2563eb' : '3px solid transparent',
+                  marginBottom: '-2px',
+                  position: 'relative',
+                }}
+              >
+                {tab.label}
+                {tab.id === 'owner-payments' && pendingCount > 0 && (
+                  <span style={{ marginLeft: '6px', background: '#dc2626', color: '#fff', borderRadius: '9999px', padding: '1px 7px', fontSize: '0.75rem', fontWeight: 700 }}>
+                    {pendingCount}
+                  </span>
                 )}
-              </tbody>
-            </table>
-          ) : selectedAccountingView === 'revenue' || selectedAccountingView === 'collections' ? (
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Source</th>
-                  <th>Amount</th>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.isArray(filteredRevenueData) && filteredRevenueData.length > 0 ? filteredRevenueData.map((item, index) => (
-                  <tr key={`revenue-${index}`}>
-                    <td>{index + 1}</td>
-                    <td>{item.source || item.Source || item.tenant || item.Tenant || 'N/A'}</td>
-                    <td>{(item.amount || item.Amount || 0).toLocaleString()} FCFA</td>
-                    <td>
-                      {item.date || item.Date
-                        ? new Date(item.date || item.Date).toLocaleDateString()
-                        : 'N/A'}
-                    </td>
-                    <td>{item.type || item.Type || 'Rent'}</td>
-                    <td>
-                      <span className={`sa-status-pill ${(item.status || item.Status || 'completed').toLowerCase()}`}>
-                        {item.status || item.Status || 'Completed'}
-                      </span>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={6} className="sa-table-empty">No revenue/collection records found</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          ) : selectedAccountingView === 'landlord-payments' ? (
-          <table className="sa-table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Landlord</th>
-                <th>Building</th>
-                <th>Net Amount</th>
-                <th>Commission</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLandlordPayments.map((payment, index) => (
-                <tr key={`landlord-payment-${payment.id || payment.ID || index}`}>
-                  <td>{index + 1}</td>
-                  <td className="sa-cell-main">
-                    <span className="sa-cell-title">{payment.landlord || payment.Landlord}</span>
-                  </td>
-                  <td>{payment.building || payment.Building}</td>
-                  <td>{(payment.netAmount || payment.NetAmount || 0).toLocaleString()} FCFA</td>
-                  <td>{(payment.commission || payment.Commission || 0).toLocaleString()} FCFA</td>
-                  <td>
-                    {payment.date || payment.Date
-                      ? new Date(payment.date || payment.Date).toLocaleDateString()
-                      : 'N/A'}
-                  </td>
-                  <td>
-                    <span className={`sa-status-pill ${(payment.status || payment.Status || 'pending').toLowerCase()}`}>
-                      {payment.status || payment.Status || 'Pending'}
-                    </span>
-                  </td>
-                  <td className="sa-row-actions">
-                    {(payment.status || payment.Status || '').toLowerCase() !== 'approved' && (
-                      <button
-                        className="sa-icon-button"
-                        onClick={() => handleApproveLandlordPayment(payment.id || payment.ID)}
-                        title="Approve"
-                        style={{ color: '#16a34a', marginRight: '8px' }}
-                      >
-                        ✓
-                      </button>
-                    )}
-                    {(payment.status || payment.Status || '').toLowerCase() !== 'revoked' && (
-                      <button
-                        className="sa-icon-button"
-                        onClick={() => handleRevokeLandlordPayment(payment.id || payment.ID)}
-                        title="Revoke"
-                        style={{ color: '#dc2626' }}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {filteredLandlordPayments.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="sa-table-empty">No landlord payments found</td>
-                </tr>
+              </button>
+            ))}
+          </div>
+
+          {/* Overview tab */}
+          {acctTab === 'overview' && (
+            <div>
+              {dateFilterBar}
+              <div className="sa-overview-metrics" style={{ width: '100%', marginBottom: '24px' }}>
+                <div className="sa-metric-card sa-metric-primary">
+                  <p className="sa-metric-label">Total Revenue</p>
+                  <p className="sa-metric-value">{(financialData?.totalRevenue || 0).toLocaleString()} FCFA</p>
+                </div>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Total Expenses</p>
+                  <p className="sa-metric-value">{(financialData?.totalExpenses || 0).toLocaleString()} FCFA</p>
+                </div>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Net Profit</p>
+                  <p className="sa-metric-value">{(financialData?.netProfit || 0).toLocaleString()} FCFA</p>
+                </div>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Total Collections</p>
+                  <p className="sa-metric-value">{(financialData?.totalCollections || 0).toLocaleString()} FCFA</p>
+                </div>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Commission</p>
+                  <p className="sa-metric-value">{(financialData?.commission || 0).toLocaleString()} FCFA</p>
+                </div>
+                <div className="sa-metric-card">
+                  <p className="sa-metric-label">Pending Payments</p>
+                  <p className="sa-metric-value">{(financialData?.pendingPayments || 0).toLocaleString()} FCFA</p>
+                </div>
+              </div>
+
+              <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>Revenue by Owner</h3>
+              <div className="sa-table-wrapper" style={{ marginBottom: '24px' }}>
+                <table className="sa-table">
+                  <thead><tr><th>No</th><th>Owner</th><th>Total Revenue (FCFA)</th></tr></thead>
+                  <tbody>
+                    {revenueByOwner.length > 0 ? revenueByOwner.map((row, i) => (
+                      <tr key={`owner-rev-${i}`}>
+                        <td>{i + 1}</td>
+                        <td className="sa-cell-main"><span className="sa-cell-title">{row.ownerName || row.owner || 'N/A'}</span></td>
+                        <td style={{ fontWeight: 600 }}>{(row.totalRevenue || 0).toLocaleString()} FCFA</td>
+                      </tr>
+                    )) : <tr><td colSpan={3} className="sa-table-empty">No data</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+
+              <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>Revenue by Agency</h3>
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead><tr><th>No</th><th>Agency / Company</th><th>Total Revenue (FCFA)</th></tr></thead>
+                  <tbody>
+                    {revenueByAgency.length > 0 ? revenueByAgency.map((row, i) => (
+                      <tr key={`agency-rev-${i}`}>
+                        <td>{i + 1}</td>
+                        <td className="sa-cell-main"><span className="sa-cell-title">{row.agencyName || row.agency || row.company || 'N/A'}</span></td>
+                        <td style={{ fontWeight: 600 }}>{(row.totalRevenue || 0).toLocaleString()} FCFA</td>
+                      </tr>
+                    )) : <tr><td colSpan={3} className="sa-table-empty">No data</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Owner Payments tab */}
+          {acctTab === 'owner-payments' && (
+            <div>
+              {dateFilterBar}
+              {pendingCount > 0 && (
+                <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontWeight: 700, color: '#92400e' }}>⚠ {pendingCount} payment{pendingCount > 1 ? 's' : ''} awaiting your approval</span>
+                </div>
               )}
-            </tbody>
-          </table>
-          ) : (
-            <div className="sa-table-empty">
-              {selectedAccountingView === 'profit' && 'Profit is calculated as Revenue minus Expenses. View Revenue and Expenses for detailed breakdown.'}
-              {selectedAccountingView === 'commission' && 'No commission records available. Commission is calculated from landlord payments.'}
-              {selectedAccountingView === 'pending' && 'No pending payment records available.'}
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>No</th><th>Owner</th><th>Building</th><th>Net Amount</th><th>Commission</th><th>Date</th><th>Status</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLandlordPayments.length > 0 ? filteredLandlordPayments.map((payment, i) => {
+                      const status = (payment.status || payment.Status || 'pending').toLowerCase();
+                      const isPending = status === 'pending' || status === 'pending_approval' || status === 'pending approval';
+                      const isApproved = status === 'approved';
+                      const isRevoked = status === 'revoked';
+                      return (
+                        <tr key={`lp-${payment.id || payment.ID || i}`}>
+                          <td>{i + 1}</td>
+                          <td className="sa-cell-main"><span className="sa-cell-title">{payment.landlord || payment.Landlord || '—'}</span></td>
+                          <td>{payment.building || payment.Building || '—'}</td>
+                          <td style={{ fontWeight: 600 }}>{(payment.netAmount || payment.NetAmount || 0).toLocaleString()} FCFA</td>
+                          <td>{(payment.commission || payment.Commission || 0).toLocaleString()} FCFA</td>
+                          <td>{payment.date || payment.Date ? new Date(payment.date || payment.Date).toLocaleDateString() : '—'}</td>
+                          <td>
+                            <span className={`sa-status-pill ${isApproved ? 'approved' : isRevoked ? 'rejected' : 'pending'}`}>
+                              {payment.status || payment.Status || 'Pending'}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {isPending && (
+                                <button
+                                  className="table-action-button edit"
+                                  style={{ background: '#16a34a', color: '#fff', border: 'none' }}
+                                  onClick={() => handleApproveLandlordPayment(payment.id || payment.ID)}
+                                >
+                                  Approve
+                                </button>
+                              )}
+                              {!isRevoked && !isApproved && (
+                                <button
+                                  className="table-action-button"
+                                  style={{ background: '#dc2626', color: '#fff', border: 'none' }}
+                                  onClick={() => handleRevokeLandlordPayment(payment.id || payment.ID)}
+                                >
+                                  Reject
+                                </button>
+                              )}
+                              {isApproved && <span className="sa-status-pill approved" style={{ padding: '4px 10px' }}>Approved</span>}
+                              {isRevoked && <span className="sa-status-pill rejected" style={{ padding: '4px 10px' }}>Rejected</span>}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }) : <tr><td colSpan={8} className="sa-table-empty">No owner payments found</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Expenses tab */}
+          {acctTab === 'expenses' && (
+            <div>
+              {dateFilterBar}
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead><tr><th>No</th><th>Description</th><th>Amount</th><th>Building</th><th>Category</th><th>Date</th></tr></thead>
+                  <tbody>
+                    {filteredAllExpenses.length > 0 ? filteredAllExpenses.map((expense, i) => (
+                      <tr key={`exp-${i}`}>
+                        <td>{i + 1}</td>
+                        <td>{expense.description || expense.Description || expense.notes || expense.reason || 'N/A'}</td>
+                        <td style={{ fontWeight: 600 }}>{(expense.amount || expense.Amount || 0).toLocaleString()} FCFA</td>
+                        <td>{expense.building || expense.Building || '—'}</td>
+                        <td>{expense.category || expense.Category || 'General'}</td>
+                        <td>{expense.date || expense.Date ? new Date(expense.date || expense.Date).toLocaleDateString() : '—'}</td>
+                      </tr>
+                    )) : <tr><td colSpan={6} className="sa-table-empty">No expenses found</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Revenue tab */}
+          {acctTab === 'revenue' && (
+            <div>
+              {dateFilterBar}
+              <div className="sa-table-wrapper">
+                <table className="sa-table">
+                  <thead><tr><th>No</th><th>Source</th><th>Amount</th><th>Type</th><th>Date</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {filteredRevenueData.length > 0 ? filteredRevenueData.map((item, i) => (
+                      <tr key={`rev-${i}`}>
+                        <td>{i + 1}</td>
+                        <td>{item.source || item.Source || item.tenant || item.Tenant || 'N/A'}</td>
+                        <td style={{ fontWeight: 600 }}>{(item.amount || item.Amount || 0).toLocaleString()} FCFA</td>
+                        <td>{item.type || item.Type || 'Rent'}</td>
+                        <td>{item.date || item.Date ? new Date(item.date || item.Date).toLocaleDateString() : '—'}</td>
+                        <td><span className={`sa-status-pill ${(item.status || item.Status || 'completed').toLowerCase()}`}>{item.status || item.Status || 'Completed'}</span></td>
+                      </tr>
+                    )) : <tr><td colSpan={6} className="sa-table-empty">No revenue records found</td></tr>}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
       </div>
-    </div>
-  );
+    );
   };
 
 
