@@ -394,13 +394,6 @@ PaymentsTab.CollectionModal = (props) => {
   const tenantList = collectionPaymentType === 'deposit'
     ? (Array.isArray(depositEligibleTenants) ? depositEligibleTenants : [])
     : tenants;
-  const tenantNameListId = collectionPaymentType ? `tenant-options-${collectionPaymentType}` : 'tenant-options';
-
-  const syncTenantSelection = (selectedName, list = tenantList) => {
-    const selectedTenant = list.find((item) => normalizeName(item.tenantName || item.TenantName || item.name || item.Name) === normalizeName(selectedName));
-    if (!selectedTenant) return null;
-    return selectedTenant;
-  };
 
   return (
     <div className="modal-overlay" onClick={() => { setShowCollectionPaymentModal(false); setCollectionPaymentType(null); }}>
@@ -481,39 +474,41 @@ PaymentsTab.CollectionModal = (props) => {
             }}>
               <div className="form-group">
                 <label htmlFor="tenantName">Tenant *</label>
-                <input
+                <select
                   id="tenantName"
-                  list={tenantNameListId}
-                  value={collectionPaymentForm.tenant}
+                  value={collectionPaymentForm.tenantId || ''}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    const selectedTenant = syncTenantSelection(val);
+                    const selectedId = e.target.value;
+                    const selectedTenant = tenantList.find(
+                      (item) => String(item.tenantId ?? item.TenantID ?? item.id ?? '') === String(selectedId)
+                    );
                     if (selectedTenant) {
                       setCollectionPaymentForm({
                         ...collectionPaymentForm,
-                        tenant: selectedTenant.tenantName || selectedTenant.TenantName || '',
+                        tenant: selectedTenant.tenantName || selectedTenant.TenantName || selectedTenant.name || selectedTenant.Name || '',
                         tenantId: selectedTenant.tenantId ?? selectedTenant.TenantID ?? selectedTenant.id ?? '',
                         property: selectedTenant.property || selectedTenant.Property || '',
-                        amount: selectedTenant.monthlyRent ?? selectedTenant.MonthlyRent ?? '',
+                        amount: String(selectedTenant.monthlyRent ?? selectedTenant.MonthlyRent ?? ''),
                         applicationFees: !!(selectedTenant.applicationFees ?? selectedTenant.ApplicationFees),
                       });
                     } else {
-                      setCollectionPaymentForm({ ...collectionPaymentForm, tenant: val || '', tenantId: '' });
+                      setCollectionPaymentForm({ ...collectionPaymentForm, tenant: '', tenantId: '', property: '', amount: '' });
                     }
                   }}
                   required
-                  placeholder="Type to search validated client"
-                />
-                <datalist id={tenantNameListId}>
+                >
+                  <option value="">Select tenant</option>
                   {tenantList.map((item) => {
+                    const id = item.tenantId ?? item.TenantID ?? item.id ?? '';
                     const name = item.tenantName || item.TenantName || item.name || item.Name || '';
+                    const property = item.property || item.Property || '';
                     return (
-                      <option key={item.tenantId ?? item.TenantID ?? item.id ?? name} value={name}>
-                        {name} {item.property || item.Property ? ` (${item.property || item.Property})` : ''}
+                      <option key={id || name} value={id}>
+                        {name}{property ? ` — ${property}` : ''}
                       </option>
                     );
                   })}
-                </datalist>
+                </select>
               </div>
               <div className="form-group">
                 <label htmlFor="tenantProperty">Property *</label>
@@ -805,7 +800,7 @@ PaymentsTab.CollectionModal = (props) => {
                 setCollectionPaymentType(null); setShowCollectionPaymentModal(false);
               } catch (error) { console.error('Error recording property sale:', error); addNotification(error.message || 'Failed to record property sale', 'error'); } finally { setLoading(false); }
             }}>
-              <div className="form-group"><label>Property / Building *</label><select value={collectionPaymentForm.property} onChange={(e) => { const addr = e.target.value; const p = propertiesForSale.find(x => (x.address || x.Address) === addr); if (p) { setCollectionPaymentForm({...collectionPaymentForm, property: addr, landlord: p.landlord || p.Landlord || '' }); } else { setCollectionPaymentForm({...collectionPaymentForm, property: addr}); } }} required><option value="">Select property</option>{propertiesForSale.map((p) => { const addr = p.address || p.Address || ''; return <option key={addr} value={addr}>{addr} {p.landlord || p.Landlord ? ` (${p.landlord || p.Landlord})` : ''}</option>; })}</select></div>
+              <div className="form-group"><label>Property / Building *</label><select value={collectionPaymentForm.property} onChange={(e) => { const addr = e.target.value; const p = propertiesForSale.find(x => (x.address || x.Address) === addr); if (p) { setCollectionPaymentForm({...collectionPaymentForm, property: addr, landlord: p.landlord || p.Landlord || '' }); } else { setCollectionPaymentForm({...collectionPaymentForm, property: addr}); } }} required><option value="">Select property</option>{propertiesForSale.filter(p => { const pt = (p.propertyType || p.PropertyType || '').toLowerCase(); return pt === 'for sale' || pt === 'sale'; }).map((p) => { const addr = p.address || p.Address || ''; return <option key={addr} value={addr}>{addr} {p.landlord || p.Landlord ? ` (${p.landlord || p.Landlord})` : ''}</option>; })}</select></div>
               <div className="form-group"><label>Landlord / Seller *</label><input type="text" value={collectionPaymentForm.landlord} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, landlord: e.target.value})} required placeholder="Enter landlord/seller name" /></div>
               <div className="form-group"><label>Buyer Name (optional)</label><input type="text" value={collectionPaymentForm.buyer} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, buyer: e.target.value})} placeholder="Enter buyer name" /></div>
               <div className="form-group">

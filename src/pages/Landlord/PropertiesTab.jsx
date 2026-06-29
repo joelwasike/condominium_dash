@@ -106,7 +106,7 @@ const PropertiesTab = ({
       <div className="sa-section-card" style={{ marginTop: '20px' }}>
         <div className="sa-table-wrapper">
           <table className="sa-table">
-            <thead><tr><th>Name</th><th>Type</th><th>Apartments</th><th>Rent</th><th>Income</th><th>Location</th><th>Occupancy</th><th>Status</th><th /></tr></thead>
+            <thead><tr><th>Name</th><th>Type</th><th>Apartments</th><th>Expected Rent</th><th>Rent Paid</th><th>Location</th><th>Occupancy</th><th>Status</th><th /></tr></thead>
             <tbody>
               {[...buildings, ...villas, ...others].map((property, index) => {
                 const type = propType(property);
@@ -118,8 +118,8 @@ const PropertiesTab = ({
                     <td className="sa-cell-main"><span className="sa-cell-title">{property.Address || property.address || property.name || property.building || 'Unknown'}</span></td>
                     <td>{property.Type || property.type || 'N/A'}</td>
                     <td>{apartmentsDisplay}</td>
-                    <td>{typeof property.rentPrice === 'number' ? property.rentPrice.toLocaleString() : property.Rent?.toLocaleString() || property.rent?.toLocaleString() || '\u2014'}</td>
-                    <td>{(property.income ?? property.Income ?? 0).toLocaleString()} XOF</td>
+                    <td>{(property.expectedRent ?? property.ExpectedRent ?? property.income ?? property.Income ?? 0).toLocaleString()} XOF</td>
+                    <td>{(property.rentPaid ?? property.RentPaid ?? 0).toLocaleString()} XOF</td>
                     <td>{property.location || property.localisation || property.Address || property.address || '\u2014'}</td>
                     <td>{property.occupancy ?? '\u2014'}</td>
                     <td>{property.statut || property.Status || property.status || '\u2014'}</td>

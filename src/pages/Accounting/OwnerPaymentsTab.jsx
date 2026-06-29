@@ -422,6 +422,29 @@ const OwnerPaymentsTab = (props) => {
 
 OwnerPaymentsTab.LandlordModal = (props) => {
   const { loading, setLoading, addNotification, setShowLandlordPaymentModal, selectedLandlord, setSelectedLandlord, ownerBalancesOwners, landlords, setLandlordPayments } = props;
+  const [ownerProperties, setOwnerProperties] = useState([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(false);
+
+  const fetchOwnerProperties = async (ownerId) => {
+    if (!ownerId) { setOwnerProperties([]); return; }
+    try {
+      setPropertiesLoading(true);
+      const data = await accountingService.getLandlordProperties(ownerId);
+      const list = Array.isArray(data) ? data : (data?.properties ?? []);
+      setOwnerProperties(list);
+    } catch {
+      setOwnerProperties([]);
+    } finally {
+      setPropertiesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const id = selectedLandlord ? (selectedLandlord.id || selectedLandlord.ID) : null;
+    fetchOwnerProperties(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLandlord?.id, selectedLandlord?.ID]);
+
   return (
     <div className="modal-overlay" onClick={() => setShowLandlordPaymentModal(false)}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -469,7 +492,9 @@ OwnerPaymentsTab.LandlordModal = (props) => {
                 onChange={(e) => {
                   const id = e.target.value;
                   const ownersForModal = ownerBalancesOwners.length > 0 ? ownerBalancesOwners : landlords;
-                  setSelectedLandlord(ownersForModal.find((o) => String(o.id || o.ID) === id) || null);
+                  const owner = ownersForModal.find((o) => String(o.id || o.ID) === id) || null;
+                  setSelectedLandlord(owner);
+                  fetchOwnerProperties(id);
                 }}
               >
                 <option value="">Select Owner</option>
@@ -482,7 +507,25 @@ OwnerPaymentsTab.LandlordModal = (props) => {
             </div>
             <div className="form-group">
               <label>Building / Property *</label>
-              <input type="text" name="building" required placeholder="e.g. Résidence Les Fleurs" />
+              {propertiesLoading ? (
+                <select name="building" required disabled><option value="">Loading properties…</option></select>
+              ) : ownerProperties.length > 0 ? (
+                <select name="building" required defaultValue="">
+                  <option value="">Select property</option>
+                  {ownerProperties.map((item, idx) => {
+                    const prop = item.property ?? item.Property ?? item;
+                    const addr = prop.Address ?? prop.address ?? prop.Name ?? prop.name ?? '';
+                    const propId = prop.ID ?? prop.id ?? idx;
+                    return <option key={propId} value={addr}>{addr}</option>;
+                  })}
+                </select>
+              ) : (
+                <select name="building" required defaultValue="">
+                  <option value="">
+                    {selectedLandlord ? 'No properties connected to this owner' : 'Select an owner first'}
+                  </option>
+                </select>
+              )}
             </div>
             <div className="form-group">
               <label>Net Amount (XOF) *</label>

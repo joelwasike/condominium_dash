@@ -138,23 +138,25 @@ const TenantsTab = ({
       <div className="sa-section-card" style={{ marginTop: '20px' }}>
         <div className="sa-table-wrapper">
           <table className="sa-table">
-            <thead><tr><th>No</th><th>Tenant Name</th><th>Property</th><th>Rent Amount</th><th>Status</th><th /></tr></thead>
+            <thead><tr><th>No</th><th>Tenant Name</th><th>Property</th><th>Rent Amount</th><th>Deposit Paid</th><th>Status</th><th /></tr></thead>
             <tbody>
               {filteredTenants.map((tenant, index) => {
                 const tenantId = tenant.id ?? tenant.ID;
                 const tenantName = tenant.name ?? tenant.Name ?? 'N/A';
+                const depositPaid = tenant.depositPaid ?? tenant.DepositPaid ?? 0;
                 return (
                   <tr key={tenantId ?? index} style={{ cursor: 'pointer' }} onClick={() => tenantId && setSelectedTenantId(String(tenantId))} className="clickable-row">
                     <td>{index + 1}</td>
                     <td className="sa-cell-main"><span className="sa-cell-title">{tenantName}</span></td>
                     <td>{tenant.property ?? tenant.Property ?? 'N/A'}</td>
                     <td>{(tenant.amount ?? tenant.Amount ?? 0).toLocaleString()} XOF</td>
+                    <td>{depositPaid > 0 ? `${depositPaid.toLocaleString()} XOF` : '\u2014'}</td>
                     <td><span className={`sa-status-pill ${(tenant.status ?? tenant.Status ?? 'active').toLowerCase().replace(/\s+/g, '-')}`}>{tenant.status ?? tenant.Status ?? 'Active'}</span></td>
                     <td onClick={(e) => e.stopPropagation()}><button type="button" className="sa-icon-button" title="View" onClick={() => tenantId && setSelectedTenantId(String(tenantId))}>\ud83d\udc41\ufe0f</button></td>
                   </tr>
                 );
               })}
-              {filteredTenants.length === 0 && (<tr><td colSpan={6} className="sa-table-empty">No tenants found</td></tr>)}
+              {filteredTenants.length === 0 && (<tr><td colSpan={7} className="sa-table-empty">No tenants found</td></tr>)}
             </tbody>
           </table>
         </div>
