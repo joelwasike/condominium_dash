@@ -435,8 +435,17 @@ OwnerPaymentsTab.LandlordModal = (props) => {
             try {
               setLoading(true);
               const formData = new FormData(e.target);
+              const ownersForModal = ownerBalancesOwners.length > 0 ? ownerBalancesOwners : landlords;
+              const ownerObj = ownersForModal.find((o) => String(o.id || o.ID) === String(formData.get('landlord')));
+              const landlordName = ownerObj ? (ownerObj.Name || ownerObj.name || ownerObj.Landlord || ownerObj.landlord || '') : '';
+              if (!landlordName) {
+                addNotification('Please select an owner', 'error');
+                setLoading(false);
+                return;
+              }
               const newPayment = await accountingService.recordLandlordPayment({
-                landlord: formData.get('landlord'),
+                landlord: landlordName,
+                building: formData.get('building'),
                 netAmount: parseFloat(formData.get('netAmount')),
               });
               setLandlordPayments((prev) => [newPayment, ...prev]);
@@ -472,9 +481,12 @@ OwnerPaymentsTab.LandlordModal = (props) => {
               </select>
             </div>
             <div className="form-group">
+              <label>Building / Property *</label>
+              <input type="text" name="building" required placeholder="e.g. Résidence Les Fleurs" />
+            </div>
+            <div className="form-group">
               <label>Net Amount (XOF) *</label>
               <input type="number" name="netAmount" step="0.01" required placeholder="Enter amount" />
-              <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>Commission is automatically calculated and deducted by the backend.</small>
             </div>
             <div className="modal-footer">
               <button type="button" className="action-button secondary" onClick={() => setShowLandlordPaymentModal(false)}>{t('accounting.cancel')}</button>

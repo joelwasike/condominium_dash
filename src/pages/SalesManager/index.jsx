@@ -2402,6 +2402,8 @@ const SalesManagerDashboard = () => {
     const bathroomsVal = parseFloat(formData.get('bathrooms') ?? '');
     if (!isNaN(bathroomsVal)) updateData.bathrooms = bathroomsVal;
     if (formData.get('urgency')) updateData.urgency = formData.get('urgency').trim();
+    const landlordIdVal = parseInt(formData.get('landlordId') ?? '', 10);
+    updateData.landlordId = isNaN(landlordIdVal) ? 0 : landlordIdVal;
     updateData.images = editPropertyImages;
 
     const numUnits = editPropertyNumberOfUnits;
@@ -5032,6 +5034,17 @@ const SalesManagerDashboard = () => {
                       <option value="normal">Normal</option>
                       <option value="high">High</option>
                       <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-owner">Owner</label>
+                    <select name="landlordId" id="edit-owner" defaultValue={editingProperty.LandlordID ?? editingProperty.landlordId ?? editingProperty.landlord_id ?? ''}>
+                      <option value="">— No owner —</option>
+                      {(owners || []).map(o => (
+                        <option key={o.id || o.ID} value={o.id || o.ID}>
+                          {o.name || o.Name || o.email || o.Email}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
