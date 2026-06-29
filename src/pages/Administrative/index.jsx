@@ -3684,52 +3684,54 @@ const AdministrativeDashboard = () => {
                       />
                     </div>
                   </div>
-                  <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
-                    <h4 style={{ margin: '0 0 8px 0' }}>Application Fees & Utilities</h4>
-                    <div className="application-fees-list" style={{ display: 'grid', gap: '12px' }}>
-                      <div className="application-fee-item">
-                        <label>Application fees (FCFA) *</label>
+                  <div style={{ marginBottom: '16px' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#374151', fontWeight: 600 }}>Application Fees & Utilities</h4>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Application Fees (FCFA) *</label>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
                           value={clientDocForm.applicationFeesAmount}
                           onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFeesAmount: e.target.value })}
-                          placeholder="Enter application fees amount"
+                          placeholder="0"
                           required
                         />
                       </div>
-                      <div className="application-fee-item">
-                        <label>SODECI amount (FCFA)</label>
+                      <div className="form-group">
+                        <label>SODECI (FCFA)</label>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
                           value={clientDocForm.sodeciAmount}
                           onChange={(e) => setClientDocForm({ ...clientDocForm, sodeciAmount: e.target.value })}
-                          placeholder="Enter SODECI amount"
+                          placeholder="0"
                         />
                       </div>
-                      <div className="application-fee-item">
-                        <label>CIE 10A amount (FCFA)</label>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>CIE 10A (FCFA)</label>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
                           value={clientDocForm.cie10Amount}
                           onChange={(e) => setClientDocForm({ ...clientDocForm, cie10Amount: e.target.value })}
-                          placeholder="Enter CIE 10A amount"
+                          placeholder="0"
                         />
                       </div>
-                      <div className="application-fee-item">
-                        <label>CIE 15A amount (FCFA)</label>
+                      <div className="form-group">
+                        <label>CIE 15A (FCFA)</label>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
                           value={clientDocForm.cie15Amount}
                           onChange={(e) => setClientDocForm({ ...clientDocForm, cie15Amount: e.target.value })}
-                          placeholder="Enter CIE 15A amount"
+                          placeholder="0"
                         />
                       </div>
                     </div>

@@ -76,6 +76,15 @@ export const salesManagerService = {
     return await apiRequest(url);
   },
 
+  // Create a maintenance/incident report on behalf of a tenant
+  createMaintenance: async (payload) => {
+    const url = buildApiUrl('/api/salesmanager/maintenances');
+    return await apiRequest(url, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // Add private note about a tenant
   addClientNote: async (clientId, { note }) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}/notes`);

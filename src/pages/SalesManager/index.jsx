@@ -2397,8 +2397,10 @@ const SalesManagerDashboard = () => {
       updateData.buildingType = buildingType || null;
     }
     if (formData.get('status')) updateData.status = formData.get('status').trim();
-    if (formData.get('bedrooms')) updateData.bedrooms = parseInt(formData.get('bedrooms'), 10);
-    if (formData.get('bathrooms')) updateData.bathrooms = parseFloat(formData.get('bathrooms'));
+    const bedroomsVal = parseInt(formData.get('bedrooms') ?? '', 10);
+    if (!isNaN(bedroomsVal)) updateData.bedrooms = bedroomsVal;
+    const bathroomsVal = parseFloat(formData.get('bathrooms') ?? '');
+    if (!isNaN(bathroomsVal)) updateData.bathrooms = bathroomsVal;
     if (formData.get('urgency')) updateData.urgency = formData.get('urgency').trim();
     updateData.images = editPropertyImages;
 
@@ -4953,10 +4955,16 @@ const SalesManagerDashboard = () => {
                   </div>
                             <div className="form-group">
                               <label>Bedrooms</label>
-                              <select value={unit.bedrooms} onChange={(e) => updateEditPropertyUnit(index, 'bedrooms', parseInt(e.target.value, 10))}>
-                                {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                              <select value={unit.bedrooms ?? 1} onChange={(e) => updateEditPropertyUnit(index, 'bedrooms', parseInt(e.target.value, 10))}>
+                                {[0, 1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
                               </select>
                 </div>
+                            <div className="form-group">
+                              <label>Bathrooms</label>
+                              <select value={unit.bathrooms ?? 1} onChange={(e) => updateEditPropertyUnit(index, 'bathrooms', parseFloat(e.target.value))}>
+                                {[0, 1, 1.5, 2, 2.5, 3].map(n => <option key={n} value={n}>{n}</option>)}
+                              </select>
+                            </div>
                   <div className="form-group">
                               <label>Rent (XOF) *</label>
                     <input
@@ -5008,12 +5016,12 @@ const SalesManagerDashboard = () => {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="edit-bedrooms">Default Bedrooms</label>
-                    <input type="number" name="bedrooms" id="edit-bedrooms" min="0" defaultValue={editingProperty.Bedrooms || editingProperty.bedrooms || ''} placeholder="2" />
+                    <label htmlFor="edit-bedrooms">Bedrooms</label>
+                    <input type="number" name="bedrooms" id="edit-bedrooms" min="0" defaultValue={editingProperty.Bedrooms ?? editingProperty.bedrooms ?? 0} placeholder="2" />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="edit-bathrooms">Default Bathrooms</label>
-                    <input type="number" name="bathrooms" id="edit-bathrooms" step="0.5" min="0" defaultValue={editingProperty.Bathrooms || editingProperty.bathrooms || ''} placeholder="1.5" />
+                    <label htmlFor="edit-bathrooms">Bathrooms</label>
+                    <input type="number" name="bathrooms" id="edit-bathrooms" step="0.5" min="0" defaultValue={editingProperty.Bathrooms ?? editingProperty.bathrooms ?? 0} placeholder="1.5" />
                   </div>
                 </div>
 
