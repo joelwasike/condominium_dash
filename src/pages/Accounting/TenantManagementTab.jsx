@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Search, Download, ArrowLeft, Users, Mail, Phone, MapPin,
   DollarSign, Building, AlertTriangle, Wrench, FileCheck,
-  StickyNote, Receipt, MessageSquare, AlertCircle,
+  StickyNote, Receipt, MessageSquare, AlertCircle, Send,
 } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
 import { salesManagerService } from '../../services/salesManagerService';
+import { saveRentReceiptPdf } from '../../utils/rentReceiptPdf';
 
 /* ── shared style tokens ── */
 const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
@@ -20,6 +21,7 @@ const subText   = { margin: 0, fontSize: '0.85rem', color: '#94a3b8' };
 const backBtn   = { display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '10px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 500 };
 const btnPrimary = { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' };
 const btnOutline = { padding: '8px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 500, fontSize: '0.85rem', cursor: 'pointer' };
+const selectStyle = { padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#334155', background: '#fff', cursor: 'pointer', outline: 'none' };
 
 /* mirrors ClientsTab statusPill exactly */
 const statusPill = (s) => {
@@ -68,6 +70,12 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm]           = useState({});
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [showSmsComposer, setShowSmsComposer] = useState(false);
+  const [smsText, setSmsText]             = useState('');
+  const [smsSending, setSmsSending]       = useState(false);
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
+  const [incidentForm, setIncidentForm]   = useState({ title: '', description: '', priority: 'Medium' });
+  const [incidentSubmitting, setIncidentSubmitting] = useState(false);
 
   const tenantId = getTenantId(selectedTenant);
 
@@ -219,6 +227,61 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
     } finally {
       setAddingNote(false);
     }
+  };
+
+  const handleGenerateReceipt = async () => {
+    const payments = tenantDetail?.payments || [];
+    const approved = payments.filter(p => (p.Status || p.status || '').toLowerCase() === 'approved');
+    const latest = approved.length > 0 ? approved[0] : payments[0];
+    if (!latest) { addNotification('No payment found to generate a receipt', 'error'); return; }
+    const monthlyRent = tenantDetail?.accounting?.monthlyRent ?? c.Amount ?? c.amount ?? 0;
+    const receiptData = {
+      Tenant: c.Name || c.name || '',
+      Property: c.Property || c.property || '',
+      Unit: c.UnitNumber || c.unitNumber || '',
+      Amount: latest.Amount ?? latest.amount ?? 0,
+      Method: latest.Method || latest.method || '',
+      Date: latest.Date || latest.date || latest.CreatedAt || latest.createdAt,
+      ReceiptNumber: latest.ReceiptNumber || latest.receiptNumber,
+      MonthlyRent: monthlyRent,
+      RentDue: tenantDetail?.accounting?.unpaidRentAmount ?? 0,
+    };
+    try {
+      await saveRentReceiptPdf({ item: receiptData, isCollection: false, filename: `receipt-${c.Name || 'tenant'}.pdf` });
+      addNotification('Receipt downloaded', 'success');
+    } catch { addNotification('Failed to generate receipt', 'error'); }
+  };
+
+  const handleSendSms = async () => {
+    if (!smsText.trim()) return;
+    setSmsSending(true);
+    try {
+      await salesManagerService.sendTenantAlert({ clientId: tenantId, channel: 'sms', message: smsText.trim(), subject: 'Reminder', urgency: 'normal' });
+      addNotification('SMS sent successfully', 'success');
+      setSmsText('');
+      setShowSmsComposer(false);
+    } catch (err) {
+      addNotification(err?.message || 'Failed to send SMS', 'error');
+    } finally { setSmsSending(false); }
+  };
+
+  const handleReportIncident = async () => {
+    if (!incidentForm.title.trim()) return;
+    setIncidentSubmitting(true);
+    try {
+      await salesManagerService.createMaintenance({
+        property: c.Property || c.property || '',
+        tenant: c.Name || c.name || '',
+        title: incidentForm.title.trim(),
+        description: incidentForm.description.trim(),
+        priority: incidentForm.priority,
+      });
+      addNotification('Incident reported successfully', 'success');
+      setShowIncidentModal(false);
+      setIncidentForm({ title: '', description: '', priority: 'Medium' });
+    } catch (err) {
+      addNotification(err?.message || 'Failed to report incident', 'error');
+    } finally { setIncidentSubmitting(false); }
   };
 
   const openEditModal = () => {
@@ -518,16 +581,45 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
         <div style={card}>
           <h3 style={sectionTitle}><AlertCircle size={18} /> Quick actions</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
-            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => addNotification('Generate Receipt – coming soon', 'info')}>
+            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={handleGenerateReceipt}>
               <Receipt size={16} /> Generate Receipt
             </button>
-            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => addNotification('Send Reminder SMS – coming soon', 'info')}>
+            <button
+              type="button"
+              style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px', ...(showSmsComposer ? { borderColor: '#3b82f6', color: '#2563eb', background: '#eff6ff' } : {}) }}
+              onClick={() => { setShowSmsComposer(v => !v); setSmsText(''); }}
+            >
               <MessageSquare size={16} /> Send Reminder SMS
             </button>
-            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => addNotification('Report Incident – coming soon', 'info')}>
+            <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => { setShowIncidentModal(true); setIncidentForm({ title: '', description: '', priority: 'Medium' }); }}>
               <AlertCircle size={16} /> Report Incident
             </button>
           </div>
+          {showSmsComposer && (
+            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                Sending to: <strong>{phone || 'No phone number saved'}</strong>
+              </div>
+              <textarea
+                value={smsText}
+                onChange={e => setSmsText(e.target.value)}
+                placeholder="Type your message here..."
+                rows={3}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.88rem', color: '#334155', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+              />
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button type="button" style={{ ...btnOutline, padding: '8px 14px' }} onClick={() => { setShowSmsComposer(false); setSmsText(''); }}>Cancel</button>
+                <button
+                  type="button"
+                  style={{ ...btnPrimary, padding: '8px 18px', opacity: (!smsText.trim() || smsSending) ? 0.6 : 1 }}
+                  onClick={handleSendSms}
+                  disabled={!smsText.trim() || smsSending}
+                >
+                  <Send size={14} /> {smsSending ? 'Sending…' : 'Send SMS'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -542,6 +634,64 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
           </button>
         </div>
       </div>
+
+      {/* Report Incident modal */}
+      {showIncidentModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => !incidentSubmitting && setShowIncidentModal(false)}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Report Incident</h3>
+              <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowIncidentModal(false)} disabled={incidentSubmitting}>×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Title *</label>
+                <input
+                  type="text"
+                  value={incidentForm.title}
+                  onChange={e => setIncidentForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="Brief description of the issue"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Description</label>
+                <textarea
+                  value={incidentForm.description}
+                  onChange={e => setIncidentForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Provide more details..."
+                  rows={3}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.88rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Priority</label>
+                <select
+                  value={incidentForm.priority}
+                  onChange={e => setIncidentForm(f => ({ ...f, priority: e.target.value }))}
+                  style={{ ...selectStyle, width: '100%' }}
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                <button type="button" style={btnOutline} onClick={() => setShowIncidentModal(false)} disabled={incidentSubmitting}>Cancel</button>
+                <button
+                  type="button"
+                  style={{ ...btnPrimary, opacity: (!incidentForm.title.trim() || incidentSubmitting) ? 0.6 : 1 }}
+                  onClick={handleReportIncident}
+                  disabled={!incidentForm.title.trim() || incidentSubmitting}
+                >
+                  {incidentSubmitting ? 'Submitting…' : 'Submit'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit tenant modal */}
       {showEditModal && (
