@@ -4301,51 +4301,68 @@ const AgencyDirectorDashboard = () => {
             <tr>
               <th>No</th>
               <th>Building</th>
-              <th>Scope</th>
               <th>Category</th>
               <th>Description</th>
               <th>Amount</th>
               <th>Date</th>
+              <th>Documents</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {pendingExpenses.map((expense, index) => (
-              <tr key={`expense-${expense.id || expense.ID || index}`}>
-                <td>{index + 1}</td>
-                <td>{expense.building || expense.Building || 'N/A'}</td>
-                <td>{expense.scope || expense.Scope || 'N/A'}</td>
-                <td>{expense.category || expense.Category || 'N/A'}</td>
-                <td className="sa-cell-main">
-                  <span className="sa-cell-title">{expense.description || expense.Description || expense.notes || expense.Notes || 'N/A'}</span>
-                </td>
-                <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
-                <td>
-                  {expense.date || expense.Date
-                    ? new Date(expense.date || expense.Date).toLocaleDateString()
-                    : 'N/A'}
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      className="table-action-button edit"
-                      onClick={() => handleApproveExpense(expense.id || expense.ID)}
-                      disabled={loading}
-                      style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      className="table-action-button delete"
-                      onClick={() => handleRejectExpense(expense.id || expense.ID)}
-                      disabled={loading}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {pendingExpenses.map((expense, index) => {
+              // Collect all document URLs from both fields
+              const docURLs = (() => {
+                const urls = [];
+                try { const arr = JSON.parse(expense.documentURLs || expense.DocumentURLs || '[]'); if (Array.isArray(arr)) urls.push(...arr); } catch {}
+                const single = expense.documentUrl || expense.DocumentURL || expense.documentURL;
+                if (single && !urls.includes(single)) urls.unshift(single);
+                return urls.filter(Boolean);
+              })();
+              return (
+                <tr key={`expense-${expense.id || expense.ID || index}`}>
+                  <td>{index + 1}</td>
+                  <td>{expense.building || expense.Building || 'N/A'}</td>
+                  <td>{expense.category || expense.Category || 'N/A'}</td>
+                  <td className="sa-cell-main">
+                    <span className="sa-cell-title">{expense.description || expense.Description || expense.notes || expense.Notes || 'N/A'}</span>
+                  </td>
+                  <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
+                  <td>{expense.date || expense.Date ? new Date(expense.date || expense.Date).toLocaleDateString() : 'N/A'}</td>
+                  <td>
+                    {docURLs.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {docURLs.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                            style={{ color: '#2563eb', fontSize: '0.8rem', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+                            Doc {i + 1}
+                          </a>
+                        ))}
+                      </div>
+                    ) : <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>None</span>}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="table-action-button edit"
+                        onClick={() => handleApproveExpense(expense.id || expense.ID)}
+                        disabled={loading}
+                        style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="table-action-button delete"
+                        onClick={() => handleRejectExpense(expense.id || expense.ID)}
+                        disabled={loading}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {pendingExpenses.length === 0 && (
               <tr>
                 <td colSpan={8} className="sa-table-empty">No pending expenses to approve</td>
