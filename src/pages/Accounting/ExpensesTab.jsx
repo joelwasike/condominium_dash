@@ -175,18 +175,22 @@ const ExpensesTab = (props) => {
             </div>
             <div className="sa-table-wrapper">
               <table className="sa-table">
-                <thead><tr><th>Date</th><th>Scope</th><th>Building</th><th>Owner</th><th>Category</th><th>Requested by</th><th>Amount</th><th>Notes</th><th className="table-menu"></th></tr></thead>
+                <thead><tr><th>Date</th><th>Building</th><th>Owner</th><th>Category</th><th>Requested by</th><th>Amount</th><th>Notes</th><th>Status</th><th className="table-menu"></th></tr></thead>
                 <tbody>
-                  {filteredExpenses.map((exp, index) => (
+                  {filteredExpenses.map((exp, index) => {
+                    const expStatus = (exp.Status || exp.status || '').toLowerCase();
+                    const statusLabel = expStatus === 'approved' ? 'Approved' : expStatus === 'rejected' ? 'Rejected' : 'Pending Approval';
+                    const statusClass = expStatus === 'approved' ? 'approved' : expStatus === 'rejected' ? 'rejected' : 'pending';
+                    return (
                     <tr key={exp.ID || exp.id || `expense-${index}`}>
                       <td>{exp.Date ? new Date(exp.Date).toLocaleDateString() : (exp.date ? new Date(exp.date).toLocaleDateString() : 'N/A')}</td>
-                      <td>{exp.Scope || exp.scope || 'N/A'}</td>
                       <td><span className="sa-cell-title">{exp.Building || exp.building || 'N/A'}</span></td>
                       <td>{exp.Owner || exp.owner || exp.Landlord || exp.landlord || '-'}</td>
                       <td>{exp.Category || exp.category || 'N/A'}</td>
                       <td>{exp.RequestedBy || exp.requestedBy || '-'}</td>
                       <td>{(exp.Amount || exp.amount || 0).toFixed(2)} XOF</td>
                       <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exp.Notes || exp.notes || 'N/A'}</td>
+                      <td><span className={`sa-status-pill ${statusClass}`}>{statusLabel}</span></td>
                       <td className="table-menu">
                         <div className="sa-row-actions">
                           <button className="table-action-button view" onClick={() => { setSelectedExpense(exp); setShowViewExpenseModal(true); }}>View</button>
@@ -194,7 +198,7 @@ const ExpensesTab = (props) => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );})}
                 </tbody>
               </table>
             </div>
@@ -209,11 +213,21 @@ const ExpensesTab = (props) => {
 ExpensesTab.AddModal = (props) => {
   const { loading, setLoading, addNotification, setShowExpenseModal, setExpenses, loadExpenses, setOverviewData, landlords, expenseProperties, expenseFormBuilding, setExpenseFormBuilding, expenseFormUnits, setExpenseFormUnits, cashierAccounts, setCashierAccounts, setCashierTransactions } = props;
   const { expenseDate, setExpenseDate } = props;
+  const [selectedOwnerName, setSelectedOwnerName] = React.useState('');
+
+  const filteredProperties = selectedOwnerName
+    ? expenseProperties.filter(p => {
+        const pLandlord = (p.landlord || p.Landlord || '').trim().toLowerCase();
+        return pLandlord === selectedOwnerName.trim().toLowerCase();
+      })
+    : expenseProperties;
+
   const resetExpenseModal = () => {
     setShowExpenseModal(false);
     setExpenseFormBuilding('');
     setExpenseFormUnits([]);
     setExpenseDate(new Date().toISOString().split('T')[0]);
+    setSelectedOwnerName('');
   };
   return (
     <div className="modal-overlay" onClick={resetExpenseModal}>
@@ -262,8 +276,21 @@ ExpensesTab.AddModal = (props) => {
               e.target.reset();
             } catch (error) { console.error('Error adding expense:', error); addNotification('Failed to add expense. Please try again.', 'error'); } finally { setLoading(false); }
           }}>
-            <div className="form-group"><label>Owner</label><select name="owner"><option value="">Select Owner</option>{landlords.map((l) => { const name = l.Name || l.name || l.Landlord || l.landlord || l.Email || l.email || '-'; return <option key={l.ID || l.id} value={name}>{name}</option>; })}</select></div>
-            <div className="form-group"><label>Property *</label><select name="building" required value={expenseFormBuilding} onChange={(e) => setExpenseFormBuilding(e.target.value)}><option value="">Select Property</option>{expenseProperties.map((p) => { const addr = p.address || p.Address || ''; return <option key={addr} value={addr}>{addr}</option>; })}</select></div>
+            <div className="form-group">
+              <label>Owner</label>
+              <select name="owner" value={selectedOwnerName} onChange={(e) => { setSelectedOwnerName(e.target.value); setExpenseFormBuilding(''); setExpenseFormUnits([]); }}>
+                <option value="">Select Owner</option>
+                {landlords.map((l) => { const name = l.Name || l.name || l.Landlord || l.landlord || l.Email || l.email || '-'; return <option key={l.ID || l.id} value={name}>{name}</option>; })}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Property *</label>
+              <select name="building" required value={expenseFormBuilding} onChange={(e) => setExpenseFormBuilding(e.target.value)}>
+                <option value="">{selectedOwnerName ? 'Select property for this owner' : 'Select owner first'}</option>
+                {filteredProperties.map((p) => { const addr = p.address || p.Address || ''; return <option key={addr} value={addr}>{addr}</option>; })}
+              </select>
+              {selectedOwnerName && filteredProperties.length === 0 && <small style={{ color: '#dc2626', marginTop: '4px', display: 'block' }}>No properties linked to this owner</small>}
+            </div>
             {expenseFormBuilding && (<div className="form-group"><label>Apartment / Unit (optional)</label><select name="unit"><option value="">-- Entire property --</option>{expenseFormUnits.map((u) => { const unitNum = u.UnitNumber || u.unitNumber || ''; return <option key={u.ID || u.id || unitNum} value={unitNum}>{unitNum}</option>; })}</select>{expenseFormUnits.length === 0 && <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>No units found for this property</small>}</div>)}
             <div className="form-group"><label>Category</label><select name="category" required><option value="">Select Category</option><option value="Maintenance">Maintenance</option><option value="Utilities">Utilities</option><option value="Taxes">Taxes</option><option value="Software">Software</option><option value="Other">Other</option></select></div>
             <div className="form-group"><label>Requested by (name of person)</label><input type="text" name="requestedBy" placeholder="Enter name of person who requested the payment" /></div>

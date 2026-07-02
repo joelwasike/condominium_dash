@@ -1045,7 +1045,7 @@ const AgencyDirectorDashboard = () => {
   }, [activeTab, loadTenantsData]);
 
   useEffect(() => {
-    if (activeTab === 'management' && (managementSubTab === 'expenses-to-approve' || managementSubTab === 'quotes-to-validate')) {
+    if (activeTab === 'accounting' || (activeTab === 'management' && (managementSubTab === 'expenses-to-approve' || managementSubTab === 'quotes-to-validate'))) {
       loadPendingApprovals();
     }
   }, [activeTab, managementSubTab, loadPendingApprovals]);
@@ -2869,69 +2869,69 @@ const AgencyDirectorDashboard = () => {
           </div>
 
           {/* Overview tab */}
-          {acctTab === 'overview' && (
-            <div>
-              {dateFilterBar}
-              <div className="sa-overview-metrics" style={{ width: '100%', marginBottom: '24px' }}>
-                <div className="sa-metric-card sa-metric-primary">
-                  <p className="sa-metric-label">Total Revenue</p>
-                  <p className="sa-metric-value">{(financialData?.totalRevenue || 0).toLocaleString()} FCFA</p>
-                </div>
-                <div className="sa-metric-card">
-                  <p className="sa-metric-label">Total Expenses</p>
-                  <p className="sa-metric-value">{(financialData?.totalExpenses || 0).toLocaleString()} FCFA</p>
-                </div>
-                <div className="sa-metric-card">
-                  <p className="sa-metric-label">Net Profit</p>
-                  <p className="sa-metric-value">{(financialData?.netProfit || 0).toLocaleString()} FCFA</p>
-                </div>
-                <div className="sa-metric-card">
-                  <p className="sa-metric-label">Total Collections</p>
-                  <p className="sa-metric-value">{(financialData?.totalCollections || 0).toLocaleString()} FCFA</p>
-                </div>
-                <div className="sa-metric-card">
-                  <p className="sa-metric-label">Commission</p>
-                  <p className="sa-metric-value">{(financialData?.commission || 0).toLocaleString()} FCFA</p>
-                </div>
-                <div className="sa-metric-card">
-                  <p className="sa-metric-label">Pending Payments</p>
-                  <p className="sa-metric-value">{(financialData?.pendingPayments || 0).toLocaleString()} FCFA</p>
-                </div>
-              </div>
+          {acctTab === 'overview' && (() => {
+            const ownerPaymentSummary = (() => {
+              const byOwner = {};
+              filteredLandlordPayments.forEach(p => {
+                const name = p.landlord || p.Landlord || 'Unknown';
+                if (!byOwner[name]) byOwner[name] = { net: 0, commission: 0, total: 0 };
+                byOwner[name].net += p.netAmount || p.NetAmount || 0;
+                byOwner[name].commission += p.commission || p.Commission || 0;
+                byOwner[name].total += (p.netAmount || p.NetAmount || 0) + (p.commission || p.Commission || 0);
+              });
+              return Object.entries(byOwner).map(([ownerName, vals]) => ({ ownerName, ...vals }));
+            })();
 
-              <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>Revenue by Owner</h3>
-              <div className="sa-table-wrapper" style={{ marginBottom: '24px' }}>
-                <table className="sa-table">
-                  <thead><tr><th>No</th><th>Owner</th><th>Total Revenue (FCFA)</th></tr></thead>
-                  <tbody>
-                    {revenueByOwner.length > 0 ? revenueByOwner.map((row, i) => (
-                      <tr key={`owner-rev-${i}`}>
-                        <td>{i + 1}</td>
-                        <td className="sa-cell-main"><span className="sa-cell-title">{row.ownerName || row.owner || 'N/A'}</span></td>
-                        <td style={{ fontWeight: 600 }}>{(row.totalRevenue || 0).toLocaleString()} FCFA</td>
-                      </tr>
-                    )) : <tr><td colSpan={3} className="sa-table-empty">No data</td></tr>}
-                  </tbody>
-                </table>
-              </div>
+            return (
+              <div>
+                {dateFilterBar}
+                <div className="sa-overview-metrics" style={{ width: '100%', marginBottom: '24px' }}>
+                  <div className="sa-metric-card sa-metric-primary">
+                    <p className="sa-metric-label">Total Rent Collected</p>
+                    <p className="sa-metric-value">{(accountingData?.totalTenantPayments || 0).toLocaleString()} FCFA</p>
+                  </div>
+                  <div className="sa-metric-card">
+                    <p className="sa-metric-label">Owner Payments Made</p>
+                    <p className="sa-metric-value">{(accountingData?.totalLandlordPayments || 0).toLocaleString()} FCFA</p>
+                  </div>
+                  <div className="sa-metric-card">
+                    <p className="sa-metric-label">Total Expenses</p>
+                    <p className="sa-metric-value">{(accountingData?.totalExpenses || 0).toLocaleString()} FCFA</p>
+                  </div>
+                  <div className="sa-metric-card">
+                    <p className="sa-metric-label">Net Revenue</p>
+                    <p className="sa-metric-value">{(accountingData?.netRevenue || 0).toLocaleString()} FCFA</p>
+                  </div>
+                  <div className="sa-metric-card">
+                    <p className="sa-metric-label">Pending Payments</p>
+                    <p className="sa-metric-value">{pendingCount}</p>
+                  </div>
+                  <div className="sa-metric-card">
+                    <p className="sa-metric-label">Approved Payments</p>
+                    <p className="sa-metric-value">{accountingData?.approvedPayments ?? filteredLandlordPayments.filter(p => (p.status || p.Status || '').toLowerCase() === 'approved').length}</p>
+                  </div>
+                </div>
 
-              <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>Revenue by Agency</h3>
-              <div className="sa-table-wrapper">
-                <table className="sa-table">
-                  <thead><tr><th>No</th><th>Agency / Company</th><th>Total Revenue (FCFA)</th></tr></thead>
-                  <tbody>
-                    {revenueByAgency.length > 0 ? revenueByAgency.map((row, i) => (
-                      <tr key={`agency-rev-${i}`}>
-                        <td>{i + 1}</td>
-                        <td className="sa-cell-main"><span className="sa-cell-title">{row.agencyName || row.agency || row.company || 'N/A'}</span></td>
-                        <td style={{ fontWeight: 600 }}>{(row.totalRevenue || 0).toLocaleString()} FCFA</td>
-                      </tr>
-                    )) : <tr><td colSpan={3} className="sa-table-empty">No data</td></tr>}
-                  </tbody>
-                </table>
+                <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>Owner Payments Summary</h3>
+                <div className="sa-table-wrapper">
+                  <table className="sa-table">
+                    <thead><tr><th>No</th><th>Owner</th><th>Net Paid (FCFA)</th><th>Commission (FCFA)</th><th>Total (FCFA)</th></tr></thead>
+                    <tbody>
+                      {ownerPaymentSummary.length > 0 ? ownerPaymentSummary.map((row, i) => (
+                        <tr key={`owner-sum-${i}`}>
+                          <td>{i + 1}</td>
+                          <td className="sa-cell-main"><span className="sa-cell-title">{row.ownerName}</span></td>
+                          <td>{row.net.toLocaleString()}</td>
+                          <td>{row.commission.toLocaleString()}</td>
+                          <td style={{ fontWeight: 600 }}>{row.total.toLocaleString()}</td>
+                        </tr>
+                      )) : <tr><td colSpan={5} className="sa-table-empty">No owner payments in selected period</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Owner Payments tab */}
           {acctTab === 'owner-payments' && (
@@ -3005,20 +3005,62 @@ const AgencyDirectorDashboard = () => {
           {acctTab === 'expenses' && (
             <div>
               {dateFilterBar}
+              {pendingExpenses.length > 0 && (
+                <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: '8px' }}>
+                  <span style={{ fontWeight: 700, color: '#92400e' }}>⚠ {pendingExpenses.length} expense{pendingExpenses.length > 1 ? 's' : ''} awaiting your approval</span>
+                </div>
+              )}
               <div className="sa-table-wrapper">
                 <table className="sa-table">
-                  <thead><tr><th>No</th><th>Description</th><th>Amount</th><th>Building</th><th>Category</th><th>Date</th></tr></thead>
+                  <thead><tr><th>No</th><th>Description</th><th>Amount</th><th>Building</th><th>Category</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {filteredAllExpenses.length > 0 ? filteredAllExpenses.map((expense, i) => (
-                      <tr key={`exp-${i}`}>
-                        <td>{i + 1}</td>
-                        <td>{expense.description || expense.Description || expense.notes || expense.reason || 'N/A'}</td>
-                        <td style={{ fontWeight: 600 }}>{(expense.amount || expense.Amount || 0).toLocaleString()} FCFA</td>
-                        <td>{expense.building || expense.Building || '—'}</td>
-                        <td>{expense.category || expense.Category || 'General'}</td>
-                        <td>{expense.date || expense.Date ? new Date(expense.date || expense.Date).toLocaleDateString() : '—'}</td>
-                      </tr>
-                    )) : <tr><td colSpan={6} className="sa-table-empty">No expenses found</td></tr>}
+                    {filteredAllExpenses.length > 0 ? filteredAllExpenses.map((expense, i) => {
+                      const expStatus = (expense.status || expense.Status || 'pending').toLowerCase();
+                      const isPending = expStatus === 'pending' || expStatus === 'pending_approval' || expStatus === 'pending approval';
+                      const isApproved = expStatus === 'approved';
+                      const isRejected = expStatus === 'rejected';
+                      const expId = expense.id || expense.ID;
+                      let docUrls = [];
+                      try { docUrls = JSON.parse(expense.documentURLs || expense.DocumentURLs || '[]'); } catch (_) {}
+                      if (!Array.isArray(docUrls)) docUrls = [];
+                      const singleDoc = expense.documentURL || expense.DocumentURL;
+                      if (singleDoc && !docUrls.includes(singleDoc)) docUrls = [singleDoc, ...docUrls];
+                      return (
+                        <tr key={`exp-${expId || i}`}>
+                          <td>{i + 1}</td>
+                          <td>{expense.description || expense.Description || expense.notes || expense.reason || 'N/A'}</td>
+                          <td style={{ fontWeight: 600 }}>{(expense.amount || expense.Amount || 0).toLocaleString()} FCFA</td>
+                          <td>{expense.building || expense.Building || '—'}</td>
+                          <td>{expense.category || expense.Category || 'General'}</td>
+                          <td>{expense.date || expense.Date ? new Date(expense.date || expense.Date).toLocaleDateString() : '—'}</td>
+                          <td>
+                            <span className={`sa-status-pill ${isApproved ? 'approved' : isRejected ? 'rejected' : 'pending'}`}>
+                              {isApproved ? 'Approved' : isRejected ? 'Rejected' : 'Pending'}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                              {docUrls.map((url, di) => (
+                                <a key={di} href={url} target="_blank" rel="noopener noreferrer"
+                                  style={{ fontSize: '0.75rem', color: '#2563eb', textDecoration: 'underline' }}>
+                                  Doc {di + 1}
+                                </a>
+                              ))}
+                              {isPending && (
+                                <>
+                                  <button className="table-action-button edit"
+                                    style={{ background: '#16a34a', color: '#fff', border: 'none' }}
+                                    onClick={() => handleApproveExpense(expId)}>Approve</button>
+                                  <button className="table-action-button"
+                                    style={{ background: '#dc2626', color: '#fff', border: 'none' }}
+                                    onClick={() => handleRejectExpense(expId)}>Reject</button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }) : <tr><td colSpan={8} className="sa-table-empty">No expenses found</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -4373,8 +4415,8 @@ const AgencyDirectorDashboard = () => {
       </div>
       <div style={{ marginTop: '28px' }}>
         <div className="sa-section-header" style={{ marginBottom: '16px' }}>
-          <h3>Approved Expenses</h3>
-          <p>Expenses that have already been validated by the director</p>
+          <h3>Approved &amp; Rejected Expenses</h3>
+          <p>Expenses that have been validated or rejected by the director</p>
         </div>
         <div className="sa-table-wrapper">
           <table className="sa-table">
@@ -4382,35 +4424,42 @@ const AgencyDirectorDashboard = () => {
               <tr>
                 <th>No</th>
                 <th>Building</th>
-                <th>Scope</th>
                 <th>Category</th>
                 <th>Description</th>
                 <th>Amount</th>
                 <th>Date</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {dedupeRecords(allExpenses).length > 0 ? dedupeRecords(allExpenses).map((expense, index) => (
-                <tr key={`approved-expense-${expense.id || expense.ID || index}`}>
-                  <td>{index + 1}</td>
-                  <td>{expense.building || expense.Building || 'N/A'}</td>
-                  <td>{expense.scope || expense.Scope || 'N/A'}</td>
-                  <td>{expense.category || expense.Category || 'N/A'}</td>
-                  <td className="sa-cell-main">
-                    <span className="sa-cell-title">{expense.description || expense.Description || expense.notes || expense.Notes || 'N/A'}</span>
-                  </td>
-                  <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
-                  <td>
-                    {expense.date || expense.Date
-                      ? new Date(expense.date || expense.Date).toLocaleDateString()
-                      : 'N/A'}
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={7} className="sa-table-empty">No approved expenses found</td>
-                </tr>
-              )}
+              {(() => {
+                const decidedExpenses = dedupeRecords(allExpenses).filter(e => {
+                  const s = (e.status || e.Status || '').toLowerCase();
+                  return s === 'approved' || s === 'rejected';
+                });
+                return decidedExpenses.length > 0 ? decidedExpenses.map((expense, index) => {
+                  const status = (expense.status || expense.Status || '').toLowerCase();
+                  return (
+                    <tr key={`decided-expense-${expense.id || expense.ID || index}`}>
+                      <td>{index + 1}</td>
+                      <td>{expense.building || expense.Building || 'N/A'}</td>
+                      <td>{expense.category || expense.Category || 'N/A'}</td>
+                      <td className="sa-cell-main">
+                        <span className="sa-cell-title">{expense.description || expense.Description || expense.notes || expense.Notes || 'N/A'}</span>
+                      </td>
+                      <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
+                      <td>{expense.date || expense.Date ? new Date(expense.date || expense.Date).toLocaleDateString() : 'N/A'}</td>
+                      <td>
+                        <span className={`sa-status-pill ${status === 'approved' ? 'approved' : 'rejected'}`}>
+                          {status === 'approved' ? 'Approved' : 'Rejected'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }) : (
+                  <tr><td colSpan={7} className="sa-table-empty">No approved or rejected expenses yet</td></tr>
+                );
+              })()}
             </tbody>
           </table>
         </div>
