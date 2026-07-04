@@ -299,6 +299,7 @@ const ClientsTab = ({
     const depositStatus = tenantDetail?.deposit?.status ?? null;
     const accounting = tenantDetail?.accounting || {};
     const rentPaidInAdvance = accounting.rentPaidInAdvance ?? null;
+    const totalRentCollected = accounting.totalRentCollected ?? null;
     const unpaidRentAmount = accounting.unpaidRentAmount ?? null;
     const numberOfMonthsUnpaid = accounting.numberOfMonthsUnpaid ?? null;
     const penaltyToPay = accounting.penaltyToPay ?? null;
@@ -392,7 +393,8 @@ const ClientsTab = ({
     const propertyAddr = c.Property || c.property || '—';
     const unitNumber = c.UnitNumber ?? c.unitNumber ?? '—';
     const amount = c.Amount ?? c.amount ?? 0;
-    const lastPayment = c.LastPayment ?? c.lastPayment;
+    const lastPayment = accounting.lastPaymentDate ?? accounting.LastPaymentDate
+      ?? c.LastPayment ?? c.lastPayment ?? c.LastPaymentDate ?? c.lastPaymentDate;
     const createdAt = c.CreatedAt ?? c.createdAt;
     const updatedAt = c.UpdatedAt ?? c.updatedAt;
 
@@ -490,6 +492,12 @@ const ClientsTab = ({
 	                </div>
 	              )}
 	              <div style={dlItem}><div style={dtStyle}>Last payment</div><div style={ddStyle}>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</div></div>
+	              {totalRentCollected != null && (
+	                <div style={dlItem}>
+	                  <div style={dtStyle}>Total rent collected</div>
+	                  <div style={{ ...ddStyle, fontWeight: 700, color: '#16a34a' }}>{Number(totalRentCollected).toLocaleString()} XOF</div>
+	                </div>
+	              )}
 	            </div>
 	          </div>
 

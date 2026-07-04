@@ -185,6 +185,7 @@ const AgencyDirectorDashboard = () => {
   const [tenants, setTenants] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [selectedQuote, setSelectedQuote] = useState(null);
+  const [selectedExpenseForDetail, setSelectedExpenseForDetail] = useState(null);
   const [tenantProfile, setTenantProfile] = useState(null);
   const [showTenantProfileModal, setShowTenantProfileModal] = useState(false);
   const [tenantStatusFilter, setTenantStatusFilter] = useState('');
@@ -4332,7 +4333,98 @@ const AgencyDirectorDashboard = () => {
   };
 
   // Render Expenses to Approve content
-  const renderExpensesToApproveContent = () => (
+  const parseExpenseDocURLs = (expense) => {
+    const urls = [];
+    try { const arr = JSON.parse(expense.documentURLs || expense.DocumentURLs || '[]'); if (Array.isArray(arr)) urls.push(...arr); } catch {}
+    const single = expense.documentUrl || expense.DocumentURL || expense.documentURL;
+    if (single && !urls.includes(single)) urls.unshift(single);
+    return urls.filter(Boolean);
+  };
+
+  const renderExpenseDetail = () => {
+    const expense = selectedExpenseForDetail;
+    if (!expense) return null;
+    const docURLs = parseExpenseDocURLs(expense);
+    const status = (expense.status || expense.Status || '').toLowerCase();
+    const canAct = status === 'pending_director_approval' || status === 'pending';
+    return (
+      <div className="sa-section-card">
+        <div className="sa-section-header" style={{ marginBottom: '20px' }}>
+          <div>
+            <h3>Expense Review</h3>
+            <p>Review the expense details and attached documents before approving.</p>
+          </div>
+          <button type="button" className="sa-outline-button" onClick={() => setSelectedExpenseForDetail(null)}>
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '18px', marginBottom: '24px' }}>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Building / Scope</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{expense.building || expense.Building || expense.scope || expense.Scope || 'N/A'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Category</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{expense.category || expense.Category || 'N/A'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Description</label>
+            <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{expense.description || expense.Description || expense.notes || expense.Notes || 'N/A'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Amount</label>
+            <p style={{ margin: 0, color: '#1f2937', fontWeight: 700 }}>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{(expense.date || expense.Date) ? new Date(expense.date || expense.Date).toLocaleDateString() : 'N/A'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Requested by</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{expense.requestedBy || expense.RequestedBy || '—'}</p>
+          </div>
+        </div>
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ fontWeight: 600, color: '#374151', marginBottom: '12px', display: 'block' }}>Documents</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+            {docURLs.map((url, i) => (
+              <a key={`${url}-${i}`} href={url} target="_blank" rel="noreferrer"
+                className="sa-outline-button"
+                style={{ justifyContent: 'center', textDecoration: 'none' }}>
+                Document {i + 1}
+              </a>
+            ))}
+            {docURLs.length === 0 && <p style={{ margin: 0, color: '#6b7280' }}>No documents attached.</p>}
+          </div>
+        </div>
+        {canAct && (
+          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+            <button
+              className="table-action-button edit"
+              style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: 600 }}
+              disabled={loading}
+              onClick={async () => { await handleApproveExpense(expense.id || expense.ID); setSelectedExpenseForDetail(null); }}
+            >
+              Approve
+            </button>
+            <button
+              className="table-action-button delete"
+              style={{ padding: '10px 24px', borderRadius: '8px', fontWeight: 600 }}
+              disabled={loading}
+              onClick={async () => { await handleRejectExpense(expense.id || expense.ID); setSelectedExpenseForDetail(null); }}
+            >
+              Reject
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderExpensesToApproveContent = () => {
+    if (selectedExpenseForDetail) return renderExpenseDetail();
+    return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <p style={{ color: '#6b7280', margin: 0 }}>All pending expenses and maintenance requests must be validated before they move into the expenses list.</p>
@@ -4353,16 +4445,9 @@ const AgencyDirectorDashboard = () => {
           </thead>
           <tbody>
             {pendingExpenses.map((expense, index) => {
-              // Collect all document URLs from both fields
-              const docURLs = (() => {
-                const urls = [];
-                try { const arr = JSON.parse(expense.documentURLs || expense.DocumentURLs || '[]'); if (Array.isArray(arr)) urls.push(...arr); } catch {}
-                const single = expense.documentUrl || expense.DocumentURL || expense.documentURL;
-                if (single && !urls.includes(single)) urls.unshift(single);
-                return urls.filter(Boolean);
-              })();
+              const docURLs = parseExpenseDocURLs(expense);
               return (
-                <tr key={`expense-${expense.id || expense.ID || index}`}>
+                <tr key={`expense-${expense.id || expense.ID || index}`} style={{ cursor: 'pointer' }} onClick={() => setSelectedExpenseForDetail(expense)}>
                   <td>{index + 1}</td>
                   <td>{expense.building || expense.Building || 'N/A'}</td>
                   <td>{expense.category || expense.Category || 'N/A'}</td>
@@ -4371,7 +4456,7 @@ const AgencyDirectorDashboard = () => {
                   </td>
                   <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
                   <td>{expense.date || expense.Date ? new Date(expense.date || expense.Date).toLocaleDateString() : 'N/A'}</td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     {docURLs.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {docURLs.map((url, i) => (
@@ -4383,7 +4468,7 @@ const AgencyDirectorDashboard = () => {
                       </div>
                     ) : <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>None</span>}
                   </td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         className="table-action-button edit"
@@ -4465,7 +4550,8 @@ const AgencyDirectorDashboard = () => {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderQuoteDetail = () => {
     const quote = selectedQuote;

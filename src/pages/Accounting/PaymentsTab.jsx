@@ -514,7 +514,40 @@ PaymentsTab.CollectionModal = (props) => {
                 <label htmlFor="tenantProperty">Property *</label>
                 <input id="tenantProperty" type="text" value={collectionPaymentForm.property} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, property: e.target.value})} readOnly={!!(collectionPaymentForm.tenant && collectionPaymentForm.property)} required placeholder="Select a tenant to auto-fill" style={collectionPaymentForm.tenant && collectionPaymentForm.property ? { backgroundColor: '#f3f4f6', cursor: 'default' } : {}} />
               </div>
-              {collectionPaymentForm.tenant && (() => { const sel = tenantList.find(t => (t.tenantName || t.TenantName || t.name || t.Name) === collectionPaymentForm.tenant); const due = sel ? (sel.outstandingAmount ?? sel.OutstandingAmount ?? 0) : 0; const months = sel ? (sel.monthsInArrears ?? sel.MonthsInArrears ?? 0) : 0; const hasArrears = due > 0; return (<div className="form-group" style={{ padding: '12px', backgroundColor: hasArrears ? '#fef3c7' : '#f0fdf4', borderRadius: '8px', border: hasArrears ? '1px solid #f59e0b' : '1px solid #22c55e' }}><label style={{ color: hasArrears ? '#92400e' : '#166534', fontWeight: '600' }}>Amount Due (Outstanding)</label><div style={{ fontSize: '1.1rem', fontWeight: '600', color: hasArrears ? '#b45309' : '#15803d' }}>{(due || 0).toLocaleString()} XOF{months > 0 && <span style={{ fontSize: '0.85rem', fontWeight: '500', marginLeft: '8px' }}>({months} month{months > 1 ? 's' : ''} in arrears)</span>}{!hasArrears && <span style={{ fontSize: '0.85rem', fontWeight: '500', marginLeft: '8px' }}>(Up to date)</span>}</div></div>); })()}
+              {collectionPaymentForm.tenant && (() => {
+                const sel = tenantList.find(t =>
+                  (t.tenantName || t.TenantName || t.name || t.Name) === collectionPaymentForm.tenant
+                );
+                const due     = sel ? (sel.outstandingAmount ?? sel.OutstandingAmount ?? 0) : 0;
+                const months  = sel ? (sel.monthsInArrears  ?? sel.MonthsInArrears  ?? 0) : 0;
+                const advance = sel ? (sel.rentPaidAdvance  ?? sel.RentPaidAdvance  ?? 0) : 0;
+                const hasArrears = due > 0;
+                const hasPaidAhead = !hasArrears && advance > 0;
+                const bg     = hasArrears ? '#fef3c7' : hasPaidAhead ? '#eff6ff' : '#f0fdf4';
+                const border = hasArrears ? '1px solid #f59e0b' : hasPaidAhead ? '1px solid #3b82f6' : '1px solid #22c55e';
+                const labelColor = hasArrears ? '#92400e' : hasPaidAhead ? '#1d4ed8' : '#166534';
+                const valueColor = hasArrears ? '#b45309' : hasPaidAhead ? '#1e40af' : '#15803d';
+                return (
+                  <div className="form-group" style={{ padding: '12px', backgroundColor: bg, borderRadius: '8px', border, marginBottom: '12px' }}>
+                    <label style={{ color: labelColor, fontWeight: '600', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {hasArrears ? 'Amount in Arrears' : hasPaidAhead ? 'Balance Paid Ahead' : 'Tenant Balance'}
+                    </label>
+                    <div style={{ marginTop: '4px', fontSize: '1.1rem', fontWeight: '700', color: valueColor }}>
+                      {hasArrears
+                        ? `${Number(due).toLocaleString()} FCFA`
+                        : hasPaidAhead
+                        ? `+${Number(advance).toLocaleString()} FCFA`
+                        : 'Up to date'}
+                    </div>
+                    <div style={{ marginTop: '2px', fontSize: '0.82rem', color: labelColor }}>
+                      {hasArrears && months > 0 && `${months} month${months > 1 ? 's' : ''} in arrears — collect at least this amount to clear the balance`}
+                      {hasArrears && months === 0 && 'Outstanding balance — collect at least this amount to clear'}
+                      {hasPaidAhead && 'Tenant has paid ahead — this will be credited to future months'}
+                      {!hasArrears && !hasPaidAhead && 'No outstanding balance or advance payments'}
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="form-group"><label htmlFor="tenantAmount">Amount (XOF) *</label><input id="tenantAmount" type="number" min="0" step="0.01" value={collectionPaymentForm.amount} onChange={(e) => setCollectionPaymentForm({...collectionPaymentForm, amount: e.target.value})} required placeholder="Enter payment amount" /><small style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>Can include arrears, current month, or months ahead</small></div>
               <div className="form-group">
                 <label htmlFor="tenantMethod">Payment Method *</label>

@@ -3669,6 +3669,20 @@ const AdministrativeDashboard = () => {
                         <option value="" disabled>No vacant units available</option>
                       )}
                     </select>
+                    {(() => {
+                      if (!clientDocForm.unitNumber) return null;
+                      const selectedUnit = displayUnits.find(u => {
+                        const lbl = u.unitNumber || u.UnitNumber || u.name || u.Name || `Unit ${u.id || u.ID || ''}`;
+                        return lbl === clientDocForm.unitNumber;
+                      });
+                      const rent = selectedUnit?.rent ?? selectedUnit?.Rent ?? selectedUnit?.rentPrice ?? selectedUnit?.RentPrice ?? null;
+                      if (!rent && rent !== 0) return null;
+                      return (
+                        <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#374151' }}>
+                          Monthly rent: <strong>{Number(rent).toLocaleString()} FCFA</strong>
+                        </p>
+                      );
+                    })()}
                   </div>
                   <div className="form-row">
                     <div className="form-group">
