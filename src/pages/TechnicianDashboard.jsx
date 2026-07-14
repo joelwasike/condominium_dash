@@ -1450,22 +1450,6 @@ const TechnicianDashboard = () => {
   };
 
   const renderMaintenance = () => {
-    const handleProcessRequest = async (maintenance) => {
-      try {
-        setLoading(true);
-        await technicianService.updateMaintenanceRequest(maintenance.ID || maintenance.id, {
-          status: 'Approved'
-        });
-        addNotification('Maintenance approved successfully', 'success');
-        loadData();
-      } catch (error) {
-        console.error('Error approving maintenance:', error);
-        addNotification(error.message || 'Failed to approve maintenance', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const handleRefuseRequest = async (maintenance) => {
       if (!window.confirm('Are you sure you want to refuse this maintenance request?')) {
         return;
@@ -1705,24 +1689,14 @@ const TechnicianDashboard = () => {
                           👁️
                         </button>
                         {(status === 'Pending' || status === 'In Progress') && (
-                          <>
-                            <button 
-                              className="sa-icon-button" 
-                              onClick={() => handleProcessRequest(maintenance)} 
-                              title="Approve"
-                              style={{ color: '#16a34a', marginLeft: '8px' }}
-                            >
-                              ✓
-                            </button>
-                            <button 
-                              className="sa-icon-button" 
-                              onClick={() => handleRefuseRequest(maintenance)} 
-                              title="Refuse Request"
-                              style={{ color: '#ef4444', marginLeft: '8px' }}
-                            >
-                              ✗
-                            </button>
-                          </>
+                          <button 
+                            className="sa-icon-button" 
+                            onClick={() => handleRefuseRequest(maintenance)} 
+                            title="Refuse Request"
+                            style={{ color: '#ef4444', marginLeft: '8px' }}
+                          >
+                            ✗
+                          </button>
                         )}
                         <button className="sa-icon-button" onClick={() => handleUpdateMaintenance(maintenance)} title="Edit" style={{ marginLeft: '8px' }}>✏️</button>
                         {!quoteGenerated && status !== 'Refused' && (

@@ -265,6 +265,51 @@ export const getAgencyDirectorDemoData = () => {
     { id: ownerOneId, name: 'Owner One', email: 'owner1@example.com', propertiesCount: 2, contractsCount: 3, status: 'Active', totalOfAssets: 2, propertyForSell: 0, propertyForManage: 2, occupancy: '2/2', incomeThisMonth: 125000 },
     { id: ownerTwoId, name: 'Owner Two', email: 'owner2@example.com', propertiesCount: 0, contractsCount: 2, status: 'Active', totalOfAssets: 0, propertyForSell: 0, propertyForManage: 0, occupancy: '0/0', incomeThisMonth: 0 }
   ],
+  pendingQuotes: [
+    {
+      id: generateId(),
+      property: '123 Demo Street, Apartment 4B',
+      tenant: 'John Doe',
+      issue: 'Leaky faucet in kitchen',
+      amount: 15000,
+      date: generateDate(2),
+      status: 'Pending',
+      validatedBy: '—',
+      approvedBy: '—'
+    }
+  ],
+  quoteRequests: [
+    {
+      id: generateId(),
+      property: '456 Sample Avenue, Unit 2A',
+      tenant: 'Jane Smith',
+      issue: 'AC not cooling',
+      amount: 25000,
+      date: generateDate(5),
+      status: 'approved',
+      directorDecision: 'approved',
+      directorDecisionReason: 'Reviewed the scope and confirmed the repair is necessary.',
+      directorDecisionBy: 'Agency Director',
+      directorDecisionAt: generateDate(4),
+      validatedBy: 'Agency Director',
+      approvedBy: '—'
+    },
+    {
+      id: generateId(),
+      property: '789 Test Road, House 5',
+      tenant: 'Paul Brown',
+      issue: 'Broken window lock',
+      amount: 12000,
+      date: generateDate(8),
+      status: 'rejected',
+      directorDecision: 'rejected',
+      directorDecisionReason: 'Quote was above the expected maintenance budget.',
+      directorDecisionBy: 'Agency Director',
+      directorDecisionAt: generateDate(7),
+      validatedBy: '—',
+      approvedBy: '—'
+    }
+  ],
   conversations: []
 };
 };
@@ -373,4 +418,3 @@ export const getDemoDataForRole = (role) => {
       return {};
   }
 };
-

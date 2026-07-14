@@ -451,11 +451,12 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
-  approveQuote: async (quoteId) => {
-    const headers = getAuthHeaders(false);
+  approveQuote: async (quoteId, reason = '') => {
+    const headers = getAuthHeaders(true);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/${quoteId}/approve`, {
       method: 'POST',
       headers: headers,
+      body: JSON.stringify({ reason }),
     });
     if (!response.ok) throw new Error('Failed to approve quote');
     return parseJson(response);
@@ -533,11 +534,12 @@ export const agencyDirectorService = {
     return parseJson(response);
   },
 
-  rejectQuote: async (quoteId) => {
-    const headers = getAuthHeaders(false);
+  rejectQuote: async (quoteId, reason = '') => {
+    const headers = getAuthHeaders(true);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/${quoteId}/reject`, {
       method: 'POST',
       headers: headers,
+      body: JSON.stringify({ reason }),
     });
     if (!response.ok) throw new Error('Failed to reject quote');
     return parseJson(response);

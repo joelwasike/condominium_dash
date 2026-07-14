@@ -2571,7 +2571,7 @@ const SalesManagerDashboard = () => {
   }, [approvedClients]);
 
   // Handle send message
-  const handleSendMessage = async (channel = 'sms') => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
     const storedUser = localStorage.getItem('user');
@@ -2596,7 +2596,6 @@ const SalesManagerDashboard = () => {
       fromUserId: currentUserId,
       toUserId: selectedUserId,
       content: content,
-      channel,
       status: 'Sent',
       createdAt: new Date().toISOString(),
       read: false,
@@ -2605,7 +2604,7 @@ const SalesManagerDashboard = () => {
     setChatMessages(prev => [...prev, optimisticMessage]);
     setChatInput('');
     try {
-      const payload = { toUserId: selectedUserId, content, channel };
+      const payload = { toUserId: selectedUserId, content };
       const sentMessage = await messagingService.sendMessage(payload);
       if (sentMessage && sentMessage.id) {
         setChatMessages(prev => prev.map(msg => msg.id === tempMessageId ? sentMessage : msg));

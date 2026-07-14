@@ -221,6 +221,67 @@ const AgencyDirectorDashboard = () => {
     return 0;
   };
 
+  const getQuoteDecisionMeta = (quote) => {
+    const rawDecision = getValue(
+      quote?.directorDecision,
+      quote?.DirectorDecision,
+      quote?.decision,
+      quote?.Decision
+    );
+    const status = normalizeText(getValue(quote?.status, quote?.Status));
+    const normalizedDecision = normalizeText(rawDecision);
+    const hasApprovalMarker = Boolean(getValue(
+      quote?.validatedBy,
+      quote?.ValidatedBy,
+      quote?.approvedBy,
+      quote?.ApprovedBy
+    ));
+    const decision = normalizedDecision || (
+      status === 'rejected'
+        ? 'rejected'
+        : (status === 'approved' || status === 'pending_owner_approval' || status === 'validated' || hasApprovalMarker)
+          ? 'approved'
+          : ''
+    );
+    const reason = getValue(
+      quote?.directorDecisionReason,
+      quote?.DirectorDecisionReason,
+      quote?.reason,
+      quote?.Reason,
+      quote?.rejectionReason,
+      quote?.RejectionReason,
+      quote?.note,
+      quote?.Note,
+      quote?.comments,
+      quote?.Comments
+    );
+    const decidedBy = getValue(
+      quote?.directorDecisionBy,
+      quote?.DirectorDecisionBy,
+      quote?.validatedBy,
+      quote?.ValidatedBy,
+      quote?.approvedBy,
+      quote?.ApprovedBy
+    );
+    const decidedAt = getValue(
+      quote?.directorDecisionAt,
+      quote?.DirectorDecisionAt,
+      quote?.approvedAt,
+      quote?.ApprovedAt,
+      quote?.updatedAt,
+      quote?.UpdatedAt,
+      quote?.date,
+      quote?.Date
+    );
+    return {
+      decision,
+      reason: reason ? String(reason).trim() : '',
+      decidedBy: decidedBy ? String(decidedBy).trim() : '—',
+      decidedAt: decidedAt || null,
+      status,
+    };
+  };
+
   const getRecordId = (record) => record?.id ?? record?.ID ?? record?.Id ?? null;
 
   const normalizeRole = (role) => normalizeText(role);
@@ -679,7 +740,7 @@ const AgencyDirectorDashboard = () => {
   }, [chatUsers, selectedUserId, loadChatForUser]);
 
   // Handle sending message
-  const handleSendMessage = async (channel = 'sms') => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
     // Group messages handled by MessagingPanel internally
     if (String(selectedUserId).startsWith('group:')) return;
@@ -704,12 +765,11 @@ const AgencyDirectorDashboard = () => {
     const content = chatInput.trim();
     setChatInput('');
     try {
-      const payload = {
-        fromUserId: currentUserId,
-        toUserId: selectedUserId,
-        content,
-        channel,
-      };
+        const payload = {
+          fromUserId: currentUserId,
+          toUserId: selectedUserId,
+          content,
+        };
       await agencyDirectorService.sendMessage(payload);
       
       // Reload chat to get the latest messages from server
@@ -808,11 +868,20 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
-  const handleApproveQuote = async (quoteId) => {
+  const handleApproveQuote = async (quote) => {
     if (!window.confirm('Are you sure you want to approve this quote?')) return;
+    const quoteId = quote?.id || quote?.ID;
+    const reasonPrompt = window.prompt('Add a reason for approving this quote:');
+    if (reasonPrompt === null) return;
+    const reason = reasonPrompt.trim();
+    if (!reason) {
+      addNotification('Approval reason is required', 'error');
+      return;
+    }
     try {
-      await agencyDirectorService.approveQuote(quoteId);
+      await agencyDirectorService.approveQuote(quoteId, reason);
       addNotification('Quote approved successfully!', 'success');
+      await loadPendingApprovals();
       await loadContractsData();
     } catch (error) {
       console.error('Error approving quote:', error);
@@ -820,11 +889,20 @@ const AgencyDirectorDashboard = () => {
     }
   };
 
-  const handleRejectQuote = async (quoteId) => {
+  const handleRejectQuote = async (quote) => {
     if (!window.confirm('Are you sure you want to reject this quote?')) return;
+    const quoteId = quote?.id || quote?.ID;
+    const reasonPrompt = window.prompt('Add a reason for rejecting this quote:');
+    if (reasonPrompt === null) return;
+    const reason = reasonPrompt.trim();
+    if (!reason) {
+      addNotification('Rejection reason is required', 'error');
+      return;
+    }
     try {
-      await agencyDirectorService.rejectQuote(quoteId);
+      await agencyDirectorService.rejectQuote(quoteId, reason);
       addNotification('Quote rejected successfully!', 'success');
+      await loadPendingApprovals();
       await loadContractsData();
     } catch (error) {
       console.error('Error rejecting quote:', error);
@@ -880,7 +958,7 @@ const AgencyDirectorDashboard = () => {
         const demoData = getAgencyDirectorDemoData();
         setLeasesAwaitingSignature([]);
         setOwners(demoData.owners);
-        setQuoteRequests([]);
+        setQuoteRequests(demoData.quoteRequests || []);
         return;
       }
       
@@ -3943,7 +4021,10 @@ const AgencyDirectorDashboard = () => {
       <div style={{ marginTop: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
           <h3 style={{ margin: 0 }}>Quote History</h3>
-          <p style={{ color: '#6b7280', margin: 0 }}>{quoteRequests.length} total quote(s)</p>
+          <p style={{ color: '#6b7280', margin: 0 }}>{quoteRequests.filter((quote) => {
+            const meta = getQuoteDecisionMeta(quote);
+            return meta.decision === 'approved' || meta.decision === 'rejected';
+          }).length} decided quote(s)</p>
         </div>
         <div className="sa-table-wrapper">
           <table className="sa-table">
@@ -3951,32 +4032,41 @@ const AgencyDirectorDashboard = () => {
             <tr>
               <th>No</th>
               <th>Date</th>
-              <th>Property</th>
+              <th>Property / Apartment</th>
               <th>Issue</th>
               <th>Amount</th>
-              <th>Status</th>
-              <th>Validated By</th>
-              <th>Approved By</th>
+              <th>Decision</th>
+              <th>Reason</th>
+              <th>Decided By</th>
             </tr>
           </thead>
           <tbody>
-            {quoteRequests.map((quote, index) => (
-              <tr key={`quote-history-${quote.id || quote.ID || index}`}>
+            {quoteRequests.filter((quote) => {
+              const meta = getQuoteDecisionMeta(quote);
+              return meta.decision === 'approved' || meta.decision === 'rejected';
+            }).map((quote, index) => {
+              const meta = getQuoteDecisionMeta(quote);
+              return (
+                <tr key={`quote-history-${quote.id || quote.ID || index}`}>
                   <td>{index + 1}</td>
-                  <td>{quote.date || quote.Date ? new Date(quote.date || quote.Date).toLocaleDateString() : 'N/A'}</td>
-                  <td>{quote.property || quote.Property || 'N/A'}</td>
-                  <td>{quote.issue || quote.Issue || 'N/A'}</td>
+                  <td>{meta.decidedAt ? new Date(meta.decidedAt).toLocaleDateString() : (quote.date || quote.Date ? new Date(quote.date || quote.Date).toLocaleDateString() : 'N/A')}</td>
+                  <td>{getQuotePropertyDisplay(quote)}</td>
+                  <td>{quote.issue || quote.Issue || quote.problem || quote.Problem || 'N/A'}</td>
                   <td>{(quote.amount || quote.Amount || 0).toLocaleString()} XOF</td>
                   <td>
-                    <span className={`sa-status-pill ${(quote.status || quote.Status || 'pending').toLowerCase().replace(/_/g, '-')}`}>
-                      {quote.status || quote.Status || 'Pending'}
+                    <span className={`sa-status-pill ${meta.decision}`}>
+                      {meta.decision.charAt(0).toUpperCase() + meta.decision.slice(1)}
                     </span>
                   </td>
-                  <td>{quote.validatedBy || quote.ValidatedBy || '—'}</td>
-                  <td>{quote.approvedBy || quote.ApprovedBy || '—'}</td>
+                  <td style={{ maxWidth: '280px', whiteSpace: 'pre-wrap' }}>{meta.reason || '—'}</td>
+                  <td>{meta.decidedBy}</td>
                 </tr>
-              ))}
-              {quoteRequests.length === 0 && (
+              );
+            })}
+              {quoteRequests.filter((quote) => {
+                const meta = getQuoteDecisionMeta(quote);
+                return meta.decision === 'approved' || meta.decision === 'rejected';
+              }).length === 0 && (
                 <tr>
                   <td colSpan={8} className="sa-table-empty">No quote history available yet</td>
                 </tr>
@@ -4569,8 +4659,8 @@ const AgencyDirectorDashboard = () => {
       : (typeof photosRaw === 'string' && photosRaw.trim()
         ? (() => { try { const parsed = JSON.parse(photosRaw); return Array.isArray(parsed) ? parsed : []; } catch (_) { return []; } })()
         : []);
-    const status = normalizeText(quote.status || quote.Status || '');
-    const canApprove = status !== 'approved' && status !== 'rejected';
+    const decisionMeta = getQuoteDecisionMeta(quote);
+    const canApprove = !decisionMeta.decision;
     const problem = quote.problem || quote.Problem || quote.issue || quote.Issue || 'N/A';
 
     return (
@@ -4609,11 +4699,17 @@ const AgencyDirectorDashboard = () => {
           </div>
           <div>
             <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label>
-            <span className={`sa-status-pill ${status || 'pending'}`}>{quote.status || quote.Status || 'Pending'}</span>
+            <span className={`sa-status-pill ${decisionMeta.decision || decisionMeta.status || 'pending'}`}>
+              {decisionMeta.decision ? decisionMeta.decision.charAt(0).toUpperCase() + decisionMeta.decision.slice(1) : (quote.status || quote.Status || 'Pending')}
+            </span>
           </div>
           <div>
             <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Validated By</label>
-            <p style={{ margin: 0, color: '#1f2937' }}>{quote.validatedBy || quote.ValidatedBy || '—'}</p>
+            <p style={{ margin: 0, color: '#1f2937' }}>{decisionMeta.decidedBy}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Decision Reason</label>
+            <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{decisionMeta.reason || '—'}</p>
           </div>
         </div>
 
@@ -4663,11 +4759,11 @@ const AgencyDirectorDashboard = () => {
 
         {canApprove && (
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button
+              <button
               className="table-action-button edit"
               onClick={async () => {
                 try {
-                  await handleApproveQuote(quote.id || quote.ID);
+                  await handleApproveQuote(quote);
                   setSelectedQuote(null);
                 } catch (_) {
                   // handled by handler
@@ -4682,7 +4778,7 @@ const AgencyDirectorDashboard = () => {
               className="table-action-button delete"
               onClick={async () => {
                 try {
-                  await handleRejectQuote(quote.id || quote.ID);
+                  await handleRejectQuote(quote);
                   setSelectedQuote(null);
                 } catch (_) {
                   // handled by handler
@@ -4703,6 +4799,11 @@ const AgencyDirectorDashboard = () => {
     if (selectedQuote) {
       return renderQuoteDetail();
     }
+
+    const decidedQuotes = quoteRequests.filter((quote) => {
+      const meta = getQuoteDecisionMeta(quote);
+      return meta.decision === 'approved' || meta.decision === 'rejected';
+    });
 
     return (
       <div>
@@ -4753,7 +4854,7 @@ const AgencyDirectorDashboard = () => {
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         className="table-action-button edit"
-                        onClick={() => handleApproveQuote(quote.id || quote.ID)}
+                        onClick={() => handleApproveQuote(quote)}
                         disabled={loading}
                         style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
                       >
@@ -4761,7 +4862,7 @@ const AgencyDirectorDashboard = () => {
                       </button>
                       <button
                         className="table-action-button delete"
-                        onClick={() => handleRejectQuote(quote.id || quote.ID)}
+                        onClick={() => handleRejectQuote(quote)}
                         disabled={loading}
                       >
                         Reject
@@ -4777,6 +4878,60 @@ const AgencyDirectorDashboard = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div style={{ marginTop: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <h3 style={{ margin: 0 }}>Approved and Rejected Quote History</h3>
+            <p style={{ color: '#6b7280', margin: 0 }}>{decidedQuotes.length} decided quote(s)</p>
+          </div>
+          <div className="sa-table-wrapper">
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Date</th>
+                  <th>Property / Apartment</th>
+                  <th>Issue</th>
+                  <th>Amount</th>
+                  <th>Decision</th>
+                  <th>Reason</th>
+                  <th>Decided By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {decidedQuotes.map((quote, index) => {
+                  const meta = getQuoteDecisionMeta(quote);
+                  const decidedAt = meta.decidedAt
+                    ? new Date(meta.decidedAt).toLocaleDateString()
+                    : (quote.date || quote.Date ? new Date(quote.date || quote.Date).toLocaleDateString() : 'N/A');
+                  return (
+                    <tr key={`quote-decision-${quote.id || quote.ID || index}`}>
+                      <td>{index + 1}</td>
+                      <td>{decidedAt}</td>
+                      <td>{getQuotePropertyDisplay(quote)}</td>
+                      <td className="sa-cell-main">
+                        <span className="sa-cell-title">{quote.problem || quote.Problem || quote.issue || quote.Issue || 'N/A'}</span>
+                      </td>
+                      <td>{(quote.amount || quote.Amount || 0).toLocaleString()} XOF</td>
+                      <td>
+                        <span className={`sa-status-pill ${meta.decision}`}>
+                          {meta.decision.charAt(0).toUpperCase() + meta.decision.slice(1)}
+                        </span>
+                      </td>
+                      <td style={{ maxWidth: '280px', whiteSpace: 'pre-wrap' }}>{meta.reason || '—'}</td>
+                      <td>{meta.decidedBy}</td>
+                    </tr>
+                  );
+                })}
+                {decidedQuotes.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="sa-table-empty">No approved or rejected quotes yet</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );

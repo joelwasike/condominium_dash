@@ -1068,7 +1068,7 @@ const AccountingDashboard = () => {
   };
 
   // Handle send message
-  const handleSendMessage = async (channel = 'sms') => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
     const storedUser = localStorage.getItem('user');
@@ -1077,11 +1077,11 @@ const AccountingDashboard = () => {
     if (!currentUserId) { addNotification('Unable to identify current user. Please log in again.', 'error'); return; }
     const content = chatInput.trim();
     const tempMessageId = `temp-${Date.now()}`;
-    const optimisticMessage = { id: tempMessageId, ID: tempMessageId, fromUserId: currentUserId, toUserId: selectedUserId, content, channel, status: 'Sent', createdAt: new Date().toISOString(), read: false, type: 'message' };
+    const optimisticMessage = { id: tempMessageId, ID: tempMessageId, fromUserId: currentUserId, toUserId: selectedUserId, content, status: 'Sent', createdAt: new Date().toISOString(), read: false, type: 'message' };
     setChatMessages(prev => [...prev, optimisticMessage]);
     setChatInput('');
     try {
-      const sentMessage = await messagingService.sendMessage({ toUserId: selectedUserId, content, channel });
+      const sentMessage = await messagingService.sendMessage({ toUserId: selectedUserId, content });
       if (sentMessage && sentMessage.id) {
         setChatMessages(prev => prev.map(msg => msg.id === tempMessageId ? sentMessage : msg));
       } else {

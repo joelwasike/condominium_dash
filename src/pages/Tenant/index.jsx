@@ -530,7 +530,7 @@ const TenantDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadChatForUser]); // addNotification is stable, no need to include
 
-  const handleSendMessage = async (channel = 'sms') => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
 
@@ -543,7 +543,6 @@ const TenantDashboard = () => {
       content: content,
       senderId: null, // Will be set by backend
       receiverId: selectedUserId,
-      channel,
       status: 'Sent',
       createdAt: new Date().toISOString(),
       isOptimistic: true
@@ -556,7 +555,6 @@ const TenantDashboard = () => {
       const payload = {
         toUserId: selectedUserId,
         content,
-        channel,
       };
       const sentMessage = await messagingService.sendMessage(payload);
       

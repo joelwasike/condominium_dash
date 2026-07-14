@@ -111,7 +111,7 @@ const WorksTab = ({ maintenances, maintenanceQuotes, workOrders, claims, selecte
   if (selectedQuote) {
     const q = selectedQuote;
     const status = (q.Status || q.status || '').toLowerCase();
-    const canApprove = status !== 'approved' && status !== 'rejected';
+    const canApprove = status === 'pending_owner_approval';
     return (
       <div className="sa-clients-page">
         <div className="sa-clients-header" style={{ marginBottom: '20px' }}>
@@ -145,6 +145,7 @@ const WorksTab = ({ maintenances, maintenanceQuotes, workOrders, claims, selecte
               <div><label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Amount</label><p style={{ margin: 0, fontWeight: 700 }}>{((q.Amount ?? q.amount) || 0).toLocaleString()} XOF</p></div>
               <div><label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Recipient</label><p style={{ margin: 0 }}>{q.Recipient || q.recipient || '—'}</p></div>
               <div><label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label><span className={`sa-status-pill ${status || 'pending'}`}>{q.Status || q.status || 'Pending'}</span></div>
+              <div><label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Director Reason</label><p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{q.DirectorDecisionReason || q.directorDecisionReason || '—'}</p></div>
               <div><label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label><p style={{ margin: 0 }}>{(q.Date || q.date || q.CreatedAt || q.createdAt) ? new Date(q.Date || q.date || q.CreatedAt || q.createdAt).toLocaleDateString() : 'N/A'}</p></div>
             </div>
           </div>
@@ -183,7 +184,7 @@ const WorksTab = ({ maintenances, maintenanceQuotes, workOrders, claims, selecte
       {activeTab === 'maintenance' && (
         <div className="sa-section-card">
           <div className="sa-section-header" style={{ marginBottom: '16px' }}>
-            <div><h3>Maintenance Requests</h3><p>Click a row to view details and approve</p></div>
+            <div><h3>Maintenance Requests</h3><p>Click a row to view details</p></div>
           </div>
           <div className="sa-table-wrapper">
             <table className="sa-table">
@@ -244,7 +245,7 @@ const WorksTab = ({ maintenances, maintenanceQuotes, workOrders, claims, selecte
                       <td><span className={`sa-status-pill ${st || 'pending'}`}>{q.Status || q.status || 'Pending'}</span></td>
                       <td>{q.ValidatedBy || q.validatedBy || '—'}</td>
                       <td className="sa-row-actions" onClick={(e) => e.stopPropagation()}>
-                        {st !== 'approved' && st !== 'rejected' && (
+                        {st === 'pending_owner_approval' && (
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button className="table-action-button edit" style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none', padding: '6px 12px' }} disabled={loading}
                               onClick={async () => { try { await landlordService.approveMaintenanceQuote(q.ID || q.id); addNotification('Quote approved', 'success'); loadData(); } catch (err) { addNotification('Failed', 'error'); } }}>

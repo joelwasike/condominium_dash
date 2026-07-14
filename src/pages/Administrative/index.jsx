@@ -696,7 +696,7 @@ const AdministrativeDashboard = () => {
     []
   );
 
-  const handleSendMessage = async (channel = 'sms') => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
 
@@ -725,7 +725,6 @@ const AdministrativeDashboard = () => {
       fromUserId: currentUserId,
       toUserId: selectedUserId,
       content: content,
-      channel,
       status: 'Sent',
       createdAt: new Date().toISOString(),
       Content: content,
@@ -741,7 +740,6 @@ const AdministrativeDashboard = () => {
       const response = await messagingService.sendMessage({
         toUserId: selectedUserId,
         content: content,
-        channel,
       });
       
       setChatMessages(prev => {

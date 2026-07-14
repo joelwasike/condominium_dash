@@ -460,7 +460,7 @@ const LandlordDashboard = () => {
           startDate: expenseStartDate || undefined,
           endDate: expenseEndDate || undefined,
         }).catch(() => []),
-        landlordService.getMaintenanceQuotes().catch(() => []),
+        landlordService.getMaintenanceQuotes({ status: 'pending_owner_approval' }).catch(() => []),
         landlordService.getNetPayments().catch(() => null),
         landlordService.getPaymentHistory().catch(() => null),
       ]);
@@ -862,7 +862,7 @@ const LandlordDashboard = () => {
   }, [loadChatForUser]); // addNotification is stable, no need to include
 
   // Send message
-  const handleSendMessage = async (channel = 'sms') => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
 
@@ -886,7 +886,6 @@ const LandlordDashboard = () => {
       fromUserId: currentUserId,
       toUserId: selectedUserId,
       content: content,
-      channel,
       status: 'Sent',
       read: false,
       createdAt: new Date().toISOString(),
@@ -905,7 +904,6 @@ const LandlordDashboard = () => {
       const message = await messagingService.sendMessage({
         toUserId: selectedUserId,
         content: content,
-        channel,
       });
       
       // Replace temp message with actual message
@@ -2381,8 +2379,6 @@ const LandlordDashboard = () => {
     }
 
     const status = (m.Status || m.status || '').toLowerCase();
-    const canApprove = status !== 'approved' && status !== 'completed';
-
     return (
       <div className="sa-clients-page">
         <div className="sa-clients-header" style={{ marginBottom: '20px' }}>
@@ -2399,29 +2395,8 @@ const LandlordDashboard = () => {
           <div className="sa-section-header" style={{ marginBottom: '24px' }}>
             <div>
               <h2>Maintenance Request Details</h2>
-              <p>Review all details and approve to authorize work</p>
+              <p>Review the maintenance request and wait for the quoted approval flow</p>
             </div>
-            {canApprove && (
-              <button
-                className="sa-primary-cta"
-                style={{ backgroundColor: '#16a34a' }}
-                disabled={loading}
-                onClick={async () => {
-                  try {
-                    await landlordService.approveMaintenance(m.ID || m.id);
-                    addNotification('Maintenance approved successfully', 'success');
-                    setSelectedMaintenance(null);
-                    loadData();
-                  } catch (err) {
-                    console.error('Error approving maintenance:', err);
-                    addNotification(err?.message || 'Failed to approve maintenance', 'error');
-                  }
-                }}
-              >
-                <FileCheck size={18} />
-                Approve Maintenance
-              </button>
-            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -2553,7 +2528,7 @@ const LandlordDashboard = () => {
         : []);
 
     const status = normalizeText(quote.Status || quote.status || '');
-    const canApprove = status !== 'approved' && status !== 'rejected';
+    const canApprove = status === 'pending_owner_approval';
     const problem = quote.Problem || quote.problem || quote.Issue || quote.issue || maintenance.Issue || maintenance.issue || 'N/A';
 
     return (
@@ -2644,6 +2619,10 @@ const LandlordDashboard = () => {
             <div>
               <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Validated By</label>
               <p style={{ margin: 0, color: '#1f2937' }}>{quote.ValidatedBy || quote.validatedBy || '—'}</p>
+            </div>
+            <div>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Director Reason</label>
+              <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{quote.DirectorDecisionReason || quote.directorDecisionReason || '—'}</p>
             </div>
           </div>
 
@@ -2744,7 +2723,7 @@ const LandlordDashboard = () => {
               <div className="sa-section-header">
                 <div>
                   <h3>Maintenance Requests</h3>
-                  <p>Maintenance requests from technicians for your properties – click a row to view details and approve</p>
+                  <p>Maintenance requests from technicians for your properties – click a row to view details</p>
                 </div>
               </div>
               <div className="sa-table-wrapper">
@@ -2759,13 +2738,11 @@ const LandlordDashboard = () => {
                       <th>Priority</th>
                       <th>Est. Cost</th>
                       <th>Status</th>
-                      <th />
                     </tr>
                   </thead>
                   <tbody>
                     {maintenances.map((m, index) => {
                       const status = (m.Status || m.status || '').toLowerCase();
-                      const canApprove = status !== 'approved' && status !== 'completed';
                       return (
                         <tr
                           key={m.ID || m.id || `maint-${index}`}
@@ -2790,27 +2767,6 @@ const LandlordDashboard = () => {
                             <span className={`sa-status-pill ${status || 'pending'}`}>
                               {m.Status || m.status || 'Pending'}
                             </span>
-                          </td>
-                          <td className="sa-row-actions" onClick={(e) => e.stopPropagation()}>
-                            {canApprove && (
-                              <button
-                                className="table-action-button edit"
-                                style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none', padding: '6px 12px' }}
-                                disabled={loading}
-                                onClick={async () => {
-                                  try {
-                                    await landlordService.approveMaintenance(m.ID || m.id);
-                                    addNotification('Maintenance approved successfully', 'success');
-                                    loadData();
-                                  } catch (err) {
-                                    console.error('Error approving maintenance:', err);
-                                    addNotification(err?.message || 'Failed to approve maintenance', 'error');
-                                  }
-                                }}
-                              >
-                                Approve
-        </button>
-                            )}
                           </td>
                         </tr>
                       );
@@ -2866,8 +2822,8 @@ const LandlordDashboard = () => {
                           </td>
                           <td>{quote.ValidatedBy || quote.validatedBy || '—'}</td>
                           <td className="sa-row-actions" onClick={(e) => e.stopPropagation()}>
-                            {status !== 'approved' && status !== 'rejected' && (
-                              <>
+                    {status === 'pending_owner_approval' && (
+                      <>
                                 <button
                                   className="table-action-button edit"
                                   style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none', padding: '6px 12px' }}

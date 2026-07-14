@@ -79,7 +79,6 @@ export default function MessagingPanel({
   hideGroups = false,
 }) {
   const [search, setSearch] = useState('');
-  const [messageChannel, setMessageChannel] = useState('sms');
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
   const [groups, setGroups] = useState([]);
   const [groupMessages, setGroupMessages] = useState([]);
@@ -141,7 +140,7 @@ export default function MessagingPanel({
     if (isGroupSelected) {
       handleSendGroupMessage();
     } else {
-      handleSendMessage(messageChannel);
+      handleSendMessage();
     }
   };
 
@@ -529,17 +528,6 @@ export default function MessagingPanel({
 
             {/* Input */}
             <div style={s.inputBar}>
-              {!isGroupSelected && (
-                <select
-                  value={messageChannel}
-                  onChange={e => setMessageChannel(e.target.value)}
-                  style={s.channelSelect}
-                >
-                  <option value="sms">SMS</option>
-                  <option value="email">Email</option>
-                  <option value="both">The two</option>
-                </select>
-              )}
               <input
                 type="text"
                 placeholder={selectedGroup ? `Message ${selectedGroup.name}...` : 'Type a message...'}
@@ -558,6 +546,7 @@ export default function MessagingPanel({
                 }}
               >
                 <Send size={18} />
+                <span style={{ marginLeft: '8px' }}>Send</span>
               </button>
             </div>
           </>
@@ -1030,19 +1019,6 @@ const s = {
     borderTop: '1px solid #f1f5f9',
     flexShrink: 0,
   },
-  channelSelect: {
-    minWidth: '112px',
-    height: '44px',
-    padding: '0 12px',
-    border: '2px solid #e2e8f0',
-    borderRadius: '14px',
-    background: '#f8fafc',
-    color: '#334155',
-    fontSize: '0.86rem',
-    fontFamily: 'inherit',
-    outline: 'none',
-    boxSizing: 'border-box',
-  },
   input: {
     flex: 1,
     padding: '12px 18px',
@@ -1056,9 +1032,10 @@ const s = {
     boxSizing: 'border-box',
   },
   sendBtn: {
-    width: '44px',
+    minWidth: '108px',
     height: '44px',
-    borderRadius: '50%',
+    padding: '0 16px',
+    borderRadius: '22px',
     border: 'none',
     background: '#e2e8f0',
     color: '#94a3b8',
@@ -1068,6 +1045,7 @@ const s = {
     cursor: 'not-allowed',
     transition: 'all 0.2s ease',
     flexShrink: 0,
+    fontWeight: 600,
   },
   sendBtnActive: {
     background: 'linear-gradient(135deg, #3b82f6, #2563eb)',

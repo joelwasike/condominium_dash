@@ -1508,7 +1508,7 @@ const SuperAdminDashboard = () => {
     }
   }, [addNotification]);
 
-  const handleSendMessage = async (channel = 'sms') => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedAdminId) return;
     if (String(selectedAdminId).startsWith('group:')) return;
     const storedUser = localStorage.getItem('user');
@@ -1521,7 +1521,7 @@ const SuperAdminDashboard = () => {
     const content = chatInput.trim();
     setChatInput('');
     try {
-      await superAdminService.sendChatMessage({ fromUserId: currentUserId, toUserId: selectedAdminId, content, channel });
+      await superAdminService.sendChatMessage({ fromUserId: currentUserId, toUserId: selectedAdminId, content });
       if (selectedAdminId) await loadChatForAdmin(selectedAdminId);
     } catch (error) {
       console.error('Error sending message:', error);
