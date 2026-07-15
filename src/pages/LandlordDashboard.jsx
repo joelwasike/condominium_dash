@@ -141,6 +141,32 @@ const LandlordDashboard = () => {
   // Quote detail (Pending Maintenance Quotes - click to view full details)
   const [selectedQuote, setSelectedQuote] = useState(null);
 
+  const parseQuoteDocuments = (quote) => {
+    const raw = quote?.Documents
+      ?? quote?.documents
+      ?? quote?.documentURLs
+      ?? quote?.DocumentURLs
+      ?? quote?.documentUrls
+      ?? quote?.DocumentUrls
+      ?? quote?.attachments
+      ?? quote?.Attachments
+      ?? [];
+    const list = Array.isArray(raw) ? raw : [raw];
+    return list.flatMap((doc) => {
+      if (!doc) return [];
+      if (typeof doc === 'string') {
+        const trimmed = doc.trim();
+        return trimmed ? [{ url: trimmed, label: 'Document' }] : [];
+      }
+      const url = doc.url || doc.URL || doc.path || doc.Path || doc.link || doc.Link || doc.href || doc.Href || doc.documentUrl || doc.DocumentUrl || doc.documentURL || doc.DocumentURL || '';
+      if (!url) return [];
+      return [{
+        url,
+        label: doc.name || doc.Name || doc.title || doc.Title || doc.label || doc.Label || doc.filename || doc.fileName || 'Document'
+      }];
+    });
+  };
+
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setNotifications(prev => [...prev, { id, message, type }]);
@@ -2093,6 +2119,9 @@ const LandlordDashboard = () => {
       }
     }
 
+    const displayDocuments = [...parseQuoteDocuments(q), ...parseQuoteDocuments(maint)]
+      .filter((doc, index, arr) => arr.findIndex((item) => item.url === doc.url) === index);
+
     const status = (q.Status || q.status || '').toLowerCase();
     const canApprove = status === 'pending_owner_approval';
 
@@ -2202,6 +2231,27 @@ const LandlordDashboard = () => {
               <div>
                 <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Director Reason</label>
                 <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{q.DirectorDecisionReason || q.directorDecisionReason || '—'}</p>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Documents</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+                {displayDocuments.map((doc, index) => (
+                  <a
+                    key={`${doc.url}-${index}`}
+                    href={doc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="sa-outline-button"
+                    style={{ justifyContent: 'center', textDecoration: 'none' }}
+                  >
+                    {doc.label || `Document ${index + 1}`}
+                  </a>
+                ))}
+                {displayDocuments.length === 0 && (
+                  <p style={{ margin: 0, color: '#6b7280' }}>No downloadable documents attached.</p>
+                )}
               </div>
             </div>
 

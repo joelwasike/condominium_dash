@@ -292,7 +292,18 @@ export const getAgencyDirectorDemoData = () => {
       directorDecisionBy: 'Agency Director',
       directorDecisionAt: generateDate(4),
       validatedBy: 'Agency Director',
-      approvedBy: '—'
+      approvedBy: '—',
+      documents: [
+        { name: 'Contractor quotation', url: 'https://example.com/demo-quotes/ac-quotation.pdf' },
+        { name: 'Repair invoice', url: 'https://example.com/demo-quotes/ac-invoice.pdf' }
+      ],
+      maintenance: {
+        issue: 'AC not cooling',
+        photos: [
+          'https://example.com/demo-quotes/ac-photo-1.jpg',
+          'https://example.com/demo-quotes/ac-photo-2.jpg'
+        ],
+      }
     },
     {
       id: generateId(),
@@ -307,7 +318,16 @@ export const getAgencyDirectorDemoData = () => {
       directorDecisionBy: 'Agency Director',
       directorDecisionAt: generateDate(7),
       validatedBy: '—',
-      approvedBy: '—'
+      approvedBy: '—',
+      documents: [
+        { name: 'Rejection quote', url: 'https://example.com/demo-quotes/window-lock-quote.pdf' }
+      ],
+      maintenance: {
+        issue: 'Broken window lock',
+        photos: [
+          'https://example.com/demo-quotes/window-lock-photo.jpg'
+        ],
+      }
     }
   ],
   conversations: []

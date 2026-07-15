@@ -26,7 +26,8 @@ import {
   LogOut,
   History,
   TrendingUp,
-  FileCheck
+  FileCheck,
+  ArrowLeft
 } from 'lucide-react';
 import { technicianService } from '../services/technicianService';
 import { messagingService } from '../services/messagingService';
@@ -309,7 +310,108 @@ const TechnicianDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [showWorkStartModal, setShowWorkStartModal] = useState(false);
   const [selectedQuoteForWork, setSelectedQuoteForWork] = useState(null);
+  const [selectedQuoteDetail, setSelectedQuoteDetail] = useState(null);
   const [workSchedule, setWorkSchedule] = useState({ startDate: '', endDate: '' });
+
+  const readQuoteValue = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim() !== '') ?? '';
+  const getQuoteRecordId = (record) => record?.id ?? record?.ID ?? record?.Id ?? null;
+  const parseQuoteDocuments = (quote) => {
+    const raw = quote?.Documents
+      ?? quote?.documents
+      ?? quote?.documentURLs
+      ?? quote?.DocumentURLs
+      ?? quote?.documentUrls
+      ?? quote?.DocumentUrls
+      ?? quote?.attachments
+      ?? quote?.Attachments
+      ?? quote?.invoice
+      ?? quote?.quotation
+      ?? quote?.supportingDocument
+      ?? [];
+    const list = Array.isArray(raw) ? raw : [raw];
+    return list.flatMap((doc) => {
+      if (!doc) return [];
+      if (typeof doc === 'string') {
+        const trimmed = doc.trim();
+        return trimmed ? [{ url: trimmed, label: 'Document' }] : [];
+      }
+      const url = readQuoteValue(
+        doc.url,
+        doc.URL,
+        doc.path,
+        doc.Path,
+        doc.link,
+        doc.Link,
+        doc.href,
+        doc.Href,
+        doc.documentUrl,
+        doc.DocumentUrl,
+        doc.documentURL,
+        doc.DocumentURL,
+        doc.fileUrl,
+        doc.FileUrl
+      );
+      if (!url) return [];
+      return [{
+        url,
+        label: readQuoteValue(
+          doc.name,
+          doc.Name,
+          doc.title,
+          doc.Title,
+          doc.label,
+          doc.Label,
+          doc.filename,
+          doc.fileName
+        ) || 'Document'
+      }];
+    });
+  };
+
+  const getQuoteDecisionMeta = (quote) => {
+    const rawDecision = readQuoteValue(quote?.directorDecision, quote?.DirectorDecision, quote?.decision, quote?.Decision);
+    const status = String(readQuoteValue(quote?.Status, quote?.status)).trim().toLowerCase();
+    const reason = readQuoteValue(
+      quote?.directorDecisionReason,
+      quote?.DirectorDecisionReason,
+      quote?.reason,
+      quote?.Reason,
+      quote?.rejectionReason,
+      quote?.RejectionReason,
+      quote?.note,
+      quote?.Note,
+      quote?.comments,
+      quote?.Comments
+    );
+    const decidedBy = readQuoteValue(
+      quote?.directorDecisionBy,
+      quote?.DirectorDecisionBy,
+      quote?.validatedBy,
+      quote?.ValidatedBy,
+      quote?.approvedBy,
+      quote?.ApprovedBy
+    );
+    const decidedAt = readQuoteValue(
+      quote?.directorDecisionAt,
+      quote?.DirectorDecisionAt,
+      quote?.approvedAt,
+      quote?.ApprovedAt,
+      quote?.updatedAt,
+      quote?.UpdatedAt,
+      quote?.date,
+      quote?.Date,
+      quote?.createdAt,
+      quote?.CreatedAt
+    );
+    const decision = String(rawDecision).trim().toLowerCase() || (status === 'rejected' ? 'rejected' : (status === 'approved' || status === 'validated' ? 'approved' : ''));
+    return {
+      decision,
+      reason: reason ? String(reason).trim() : '',
+      decidedBy: decidedBy ? String(decidedBy).trim() : '—',
+      decidedAt: decidedAt || null,
+      status,
+    };
+  };
   
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -2400,8 +2502,145 @@ const TechnicianDashboard = () => {
     );
   };
 
+  const renderQuoteDetail = () => {
+    const quote = selectedQuoteDetail;
+    if (!quote) return null;
+
+    const maintenanceId = quote.MaintenanceID ?? quote.maintenanceId ?? quote.MaintenanceId;
+    const maintenance = quote.maintenance
+      ?? quote.Maintenance
+      ?? (maintenanceId && Array.isArray(requests)
+        ? requests.find((request) => String(request.ID ?? request.id) === String(maintenanceId))
+        : null)
+      ?? {};
+    const documents = parseQuoteDocuments(quote);
+    const maintenanceDocuments = parseQuoteDocuments(maintenance);
+    const displayDocuments = [...documents, ...maintenanceDocuments].filter((doc, index, arr) => arr.findIndex((item) => item.url === doc.url) === index);
+    const photosRaw = maintenance.Photos ?? maintenance.photos ?? maintenance.PhotoURLs ?? maintenance.photoURLs ?? [];
+    const photos = Array.isArray(photosRaw)
+      ? photosRaw
+      : (typeof photosRaw === 'string' && photosRaw.trim()
+        ? (() => { try { const parsed = JSON.parse(photosRaw); return Array.isArray(parsed) ? parsed : []; } catch (_) { return []; } })()
+        : []);
+    const decisionMeta = getQuoteDecisionMeta(quote);
+    const statusLabel = decisionMeta.decision === 'approved'
+      ? 'Validated'
+      : decisionMeta.decision === 'rejected'
+        ? 'Rejected'
+        : (quote.Status || quote.status || 'Pending');
+    const statusClass = (decisionMeta.decision || String(quote.Status || quote.status || 'pending')).toLowerCase().replace(/_/g, '-');
+    const issue = quote.Issue || quote.issue || quote.problem || quote.Problem || maintenance.Issue || maintenance.issue || 'N/A';
+
+    return (
+      <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+        <div className="sa-section-header" style={{ marginBottom: '20px' }}>
+          <div>
+            <h3>Quote Details</h3>
+            <p>Review the quote, decision outcome, and attached documents.</p>
+          </div>
+          <button type="button" className="sa-outline-button" onClick={() => setSelectedQuoteDetail(null)}>
+            <ArrowLeft size={16} />
+            Back to list
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '18px', marginBottom: '24px' }}>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Quote Reference</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{getQuoteRecordId(quote) || '—'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Maintenance Reference</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{maintenanceId || '—'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>
+              {quote.Date || quote.date || quote.CreatedAt || quote.createdAt
+                ? new Date(quote.Date || quote.date || quote.CreatedAt || quote.createdAt).toLocaleString()
+                : 'N/A'}
+            </p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Property</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{quote.Property || quote.property || maintenance.Property || maintenance.property || '—'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Recipient</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{quote.Recipient || quote.recipient || quote.Tenant || quote.tenant || '—'}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Issue</label>
+            <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{issue}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Amount</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{((quote.Amount ?? quote.amount) || 0).toLocaleString()} XOF</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label>
+            <span className={`sa-status-pill ${statusClass}`}>
+              {statusLabel}
+            </span>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Validated By</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{decisionMeta.decidedBy}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Decision Reason</label>
+            <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{decisionMeta.reason || '—'}</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          {displayDocuments.map((doc, index) => (
+            <a
+              key={`${doc.url}-${index}`}
+              href={doc.url}
+              target="_blank"
+              rel="noreferrer"
+              className="sa-outline-button"
+              style={{ justifyContent: 'center', textDecoration: 'none' }}
+            >
+              {doc.label || `Document ${index + 1}`}
+            </a>
+          ))}
+          {displayDocuments.length === 0 && (
+            <p style={{ margin: 0, color: '#6b7280' }}>No downloadable documents attached.</p>
+          )}
+        </div>
+
+        {photos.length > 0 && (
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '12px', display: 'block' }}>Photos ({photos.length})</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px' }}>
+              {photos.map((photoUrl, index) => {
+                const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
+                if (!url) return null;
+                return (
+                  <div key={`${url}-${index}`} style={{ borderRadius: '12px', overflow: 'hidden', background: '#f3f4f6', minHeight: '150px' }}>
+                    <img
+                      src={url}
+                      alt={`Quote maintenance ${index + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                      onClick={() => window.open(url, '_blank')}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render Quotes Section - List quotes being validated and validated quotes
   const renderQuotes = () => {
+    if (selectedQuoteDetail) {
+      return renderQuoteDetail();
+    }
     const isWorkStatusFilter = quoteStatusFilter === 'work_started' || quoteStatusFilter === 'work_not_started';
     const workStartedForQuote = (q) => {
       const quoteMaintenanceId = q.MaintenanceID || q.maintenanceId;
@@ -2510,7 +2749,12 @@ const TechnicianDashboard = () => {
                   </tr>
                 ) : (
                   quotesToValidate.map((q, index) => (
-                    <tr key={q.ID || q.id}>
+                    <tr
+                      key={q.ID || q.id}
+                      className="clickable-row"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedQuoteDetail(q)}
+                    >
                       <td>{index + 1}</td>
                       <td>{q.Date || q.date ? new Date(q.Date || q.date).toLocaleDateString() : 'N/A'}</td>
                       <td>{q.Property || q.property || 'N/A'}</td>
@@ -2564,7 +2808,12 @@ const TechnicianDashboard = () => {
                       w => String(w.ID || w.id) === String(quoteMaintenanceId) && (w.Status || w.status) === 'In Progress'
                     );
                     return (
-                    <tr key={q.ID || q.id}>
+                    <tr
+                      key={q.ID || q.id}
+                      className="clickable-row"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedQuoteDetail(q)}
+                    >
                       <td>{index + 1}</td>
                       <td>{q.Date || q.date ? new Date(q.Date || q.date).toLocaleDateString() : 'N/A'}</td>
                       <td>{q.Property || q.property || 'N/A'}</td>
@@ -2577,7 +2826,7 @@ const TechnicianDashboard = () => {
                         </span>
                       </td>
                       <td>{q.ValidatedBy || q.validatedBy || 'N/A'}</td>
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         {workStarted ? (
                           <span className="sa-status-pill completed" style={{ cursor: 'default' }}>
                             Work Started

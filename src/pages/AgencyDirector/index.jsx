@@ -445,18 +445,98 @@ const AgencyDirectorDashboard = () => {
   };
 
   const parseQuoteDocuments = (quote) => {
-    const raw = quote?.Documents ?? quote?.documents ?? [];
+    const raw = quote?.Documents
+      ?? quote?.documents
+      ?? quote?.documentURLs
+      ?? quote?.DocumentURLs
+      ?? quote?.documentUrls
+      ?? quote?.DocumentUrls
+      ?? quote?.attachments
+      ?? quote?.Attachments
+      ?? [];
     if (Array.isArray(raw)) return raw;
     if (typeof raw === 'string' && raw.trim()) {
       try {
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
+        return Array.isArray(parsed) ? parsed : [parsed];
       } catch (_) {
-        return [];
+        return [raw.trim()];
       }
     }
+    if (raw && typeof raw === 'object') return [raw];
     return [];
   };
+
+  const getQuoteDocumentUrl = (doc) => {
+    if (!doc) return '';
+    if (typeof doc === 'string') return doc.trim();
+    return getValue(
+      doc.url,
+      doc.URL,
+      doc.path,
+      doc.Path,
+      doc.link,
+      doc.Link,
+      doc.href,
+      doc.Href,
+      doc.documentUrl,
+      doc.DocumentUrl,
+      doc.documentURL,
+      doc.DocumentURL,
+      doc.fileUrl,
+      doc.FileUrl
+    ) || '';
+  };
+
+  const getQuoteDocumentLabel = (doc, index) => {
+    if (typeof doc === 'string') {
+      try {
+        const url = new URL(doc);
+        const lastSegment = url.pathname.split('/').filter(Boolean).pop();
+        return lastSegment || `Document ${index + 1}`;
+      } catch (_) {
+        return `Document ${index + 1}`;
+      }
+    }
+    return getValue(
+      doc?.name,
+      doc?.Name,
+      doc?.title,
+      doc?.Title,
+      doc?.label,
+      doc?.Label,
+      doc?.filename,
+      doc?.fileName
+    ) || `Document ${index + 1}`;
+  };
+
+  const normalizeQuoteDocumentEntries = (documents = []) => {
+    const entries = [];
+    const sourceList = Array.isArray(documents) ? documents : [documents];
+    sourceList.forEach((doc, index) => {
+      const url = getQuoteDocumentUrl(doc);
+      if (!url) return;
+      entries.push({
+        url,
+        label: getQuoteDocumentLabel(doc, index),
+      });
+    });
+    const seen = new Set();
+    return entries.filter((entry) => {
+      if (seen.has(entry.url)) return false;
+      seen.add(entry.url);
+      return true;
+    });
+  };
+
+  const getQuoteDecisionLabel = (decision, fallbackStatus = 'Pending') => {
+    if (decision === 'approved') return 'Validated';
+    if (decision === 'rejected') return 'Rejected';
+    if (decision) return decision.charAt(0).toUpperCase() + decision.slice(1);
+    return fallbackStatus;
+  };
+
+  const getQuoteSubmittedAt = (quote) => getValue(quote?.date, quote?.Date);
 
   const getQuotePropertyDisplay = (quote) => {
     const property = getValue(quote?.Property, quote?.property);
@@ -4648,11 +4728,10 @@ const AgencyDirectorDashboard = () => {
     if (!quote) return null;
 
     const maintenance = quote.maintenance || quote.Maintenance || {};
-    const documents = parseQuoteDocuments(quote);
-    const maintenanceDocuments = Array.isArray(maintenance.Documents)
-      ? maintenance.Documents
-      : parseQuoteDocuments(maintenance);
-    const displayDocuments = documents.length > 0 ? documents : maintenanceDocuments;
+    const displayDocuments = normalizeQuoteDocumentEntries([
+      ...parseQuoteDocuments(quote),
+      ...parseQuoteDocuments(maintenance),
+    ]);
     const photosRaw = maintenance.Photos ?? maintenance.photos ?? [];
     const photos = Array.isArray(photosRaw)
       ? photosRaw
@@ -4662,13 +4741,17 @@ const AgencyDirectorDashboard = () => {
     const decisionMeta = getQuoteDecisionMeta(quote);
     const canApprove = !decisionMeta.decision;
     const problem = quote.problem || quote.Problem || quote.issue || quote.Issue || 'N/A';
+    const quoteId = getRecordId(quote) || quote?.quoteId || quote?.QuoteID || '—';
+    const maintenanceId = getRecordId(maintenance) || quote?.maintenanceId || quote?.MaintenanceID || '—';
+    const submittedAt = getQuoteSubmittedAt(quote);
+    const maintenanceIssue = maintenance.issue || maintenance.Issue || maintenance.problem || maintenance.Problem || problem;
 
     return (
       <div className="sa-section-card">
         <div className="sa-section-header" style={{ marginBottom: '20px' }}>
           <div>
             <h3>Quote Review</h3>
-            <p>Review property, tenant, problem, images and documents before approving.</p>
+            <p>Review the full quote record, the decision outcome, and every attached document.</p>
           </div>
           <button
             type="button"
@@ -4682,6 +4765,18 @@ const AgencyDirectorDashboard = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '18px', marginBottom: '24px' }}>
           <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Quote Reference</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{quoteId}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Maintenance Reference</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{maintenanceId}</p>
+          </div>
+          <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Submitted At</label>
+            <p style={{ margin: 0, color: '#1f2937' }}>{submittedAt ? new Date(submittedAt).toLocaleString() : 'N/A'}</p>
+          </div>
+          <div>
             <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Property / Apartment</label>
             <p style={{ margin: 0, color: '#1f2937' }}>{getQuotePropertyDisplay(quote)}</p>
           </div>
@@ -4694,13 +4789,19 @@ const AgencyDirectorDashboard = () => {
             <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{problem}</p>
           </div>
           <div>
+            <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Maintenance Issue</label>
+            <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{maintenanceIssue || 'N/A'}</p>
+          </div>
+          <div>
             <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Cost of Repairs</label>
             <p style={{ margin: 0, color: '#1f2937' }}>{(quote.amount || quote.Amount || 0).toLocaleString()} XOF</p>
           </div>
           <div>
             <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Status</label>
             <span className={`sa-status-pill ${decisionMeta.decision || decisionMeta.status || 'pending'}`}>
-              {decisionMeta.decision ? decisionMeta.decision.charAt(0).toUpperCase() + decisionMeta.decision.slice(1) : (quote.status || quote.Status || 'Pending')}
+              {decisionMeta.decision
+                ? getQuoteDecisionLabel(decisionMeta.decision)
+                : (quote.status || quote.Status || 'Pending')}
             </span>
           </div>
           <div>
@@ -4714,22 +4815,18 @@ const AgencyDirectorDashboard = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-            {displayDocuments.map((doc, index) => {
-              const url = typeof doc === 'string' ? doc : (doc?.url || doc?.URL || doc?.path || '');
-              if (!url) return null;
-              return (
-              <a
-                key={`${doc?.name || 'document'}-${index}`}
-                href={url}
-                target="_blank"
-                rel="noreferrer"
-                className="sa-outline-button"
-                style={{ justifyContent: 'center', textDecoration: 'none' }}
-              >
-                {doc?.name || `Document ${index + 1}`}
-              </a>
-            );
-          })}
+          {displayDocuments.map((doc, index) => (
+            <a
+              key={`${doc.url}-${index}`}
+              href={doc.url}
+              target="_blank"
+              rel="noreferrer"
+              className="sa-outline-button"
+              style={{ justifyContent: 'center', textDecoration: 'none' }}
+            >
+              {doc.label}
+            </a>
+          ))}
           {displayDocuments.length === 0 && (
             <p style={{ margin: 0, color: '#6b7280' }}>No downloadable documents attached.</p>
           )}
@@ -4906,7 +5003,12 @@ const AgencyDirectorDashboard = () => {
                     ? new Date(meta.decidedAt).toLocaleDateString()
                     : (quote.date || quote.Date ? new Date(quote.date || quote.Date).toLocaleDateString() : 'N/A');
                   return (
-                    <tr key={`quote-decision-${quote.id || quote.ID || index}`}>
+                    <tr
+                      key={`quote-decision-${quote.id || quote.ID || index}`}
+                      className="clickable-row"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedQuote(quote)}
+                    >
                       <td>{index + 1}</td>
                       <td>{decidedAt}</td>
                       <td>{getQuotePropertyDisplay(quote)}</td>
@@ -4916,7 +5018,7 @@ const AgencyDirectorDashboard = () => {
                       <td>{(quote.amount || quote.Amount || 0).toLocaleString()} XOF</td>
                       <td>
                         <span className={`sa-status-pill ${meta.decision}`}>
-                          {meta.decision.charAt(0).toUpperCase() + meta.decision.slice(1)}
+                          {getQuoteDecisionLabel(meta.decision)}
                         </span>
                       </td>
                       <td style={{ maxWidth: '280px', whiteSpace: 'pre-wrap' }}>{meta.reason || '—'}</td>
