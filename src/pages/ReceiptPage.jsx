@@ -8,8 +8,8 @@ const ReceiptPage = () => {
         <h1>Receipt</h1>
         <p>Receipt page content coming soon...</p>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default ReceiptPage;

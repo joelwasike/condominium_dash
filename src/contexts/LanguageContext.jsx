@@ -17,11 +17,8 @@ export const LanguageProvider = ({ children }) => {
   const changeLanguage = (lang) => {
     setStoredLanguage(lang);
     setCurrentLanguage(lang);
-    // Dispatch event for components that listen to it
     window.dispatchEvent(new CustomEvent('languageChange', { detail: lang }));
   };
-
-  // Listen for language changes from other sources
   useEffect(() => {
     const handleLanguageChange = (event) => {
       setCurrentLanguage(event.detail || getLanguage());
@@ -36,6 +33,6 @@ export const LanguageProvider = ({ children }) => {
   return (
     <LanguageContext.Provider value={{ language: currentLanguage, changeLanguage, t: translate }}>
       {children}
-    </LanguageContext.Provider>
-  );
+    </LanguageContext.Provider>);
+
 };

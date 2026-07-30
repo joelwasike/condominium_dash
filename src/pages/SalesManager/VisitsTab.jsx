@@ -1,7 +1,5 @@
 import React from 'react';
 import { Plus, Calendar } from 'lucide-react';
-
-/* ── shared inline styles ── */
 const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse' };
 const thStyle = { padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid #f1f5f9' };
@@ -34,12 +32,11 @@ const VisitsTab = ({
   visitStatusFilter,
   setVisitStatusFilter,
   openScheduleVisit,
-  openUpdateVisitStatus,
+  openUpdateVisitStatus
 }) => {
   const visitsToDisplay = visitTab === 'upcoming' ? visits.upcoming : visitTab === 'done' ? visits.done : visits.all;
   return (
     <div style={card}>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
           <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#1e293b' }}>Visit Management</h3>
@@ -50,8 +47,6 @@ const VisitsTab = ({
           Schedule Visit
         </button>
       </div>
-
-      {/* Filters */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button style={filterBtn(visitTab === 'all')} onClick={() => setVisitTab('all')}>All ({visits.all.length})</button>
@@ -66,17 +61,15 @@ const VisitsTab = ({
           <option value="No-show">No-show</option>
         </select>
       </div>
-
-      {/* Content */}
-      {loading ? (
-        <div style={emptyState}>Loading visits...</div>
-      ) : visitsToDisplay.length === 0 ? (
-        <div style={emptyState}>
+      {loading ?
+      <div style={emptyState}>Loading visits...</div> :
+      visitsToDisplay.length === 0 ?
+      <div style={emptyState}>
           <Calendar size={40} style={{ color: '#cbd5e1', marginBottom: '12px' }} />
           <div>No visits scheduled</div>
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
+        </div> :
+
+      <div style={{ overflowX: 'auto' }}>
           <table style={tableStyle}>
             <thead>
               <tr>
@@ -89,18 +82,18 @@ const VisitsTab = ({
             </thead>
             <tbody>
               {visitsToDisplay.map((visit, index) => {
-                const visitId = visit.ID || visit.id || `visit-${index}`;
-                const property = visit.Property || visit.property || visit.Address || visit.address || 'Property';
-                const client = visit.Client || visit.client || visit.ClientName || visit.clientName || 'Client';
-                const clientEmail = visit.ClientEmail || visit.clientEmail || '';
-                const clientPhone = visit.ClientPhone || visit.clientPhone || '';
-                const visitDate = visit.VisitDate || visit.visitDate || visit.Date || visit.date || visit.ScheduledAt || visit.scheduledAt;
-                const visitTime = visit.VisitTime || visit.visitTime || visit.Time || visit.time;
-                const status = visit.Status || visit.status || 'Scheduled';
-                const formattedDate = visitDate ? new Date(visitDate).toLocaleDateString() : 'N/A';
-                const formattedTime = visitTime ? visitTime : (visitDate ? new Date(visitDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A');
-                return (
-                  <tr key={visitId} style={rowHover} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+              const visitId = visit.ID || visit.id || `visit-${index}`;
+              const property = visit.Property || visit.property || visit.Address || visit.address || 'Property';
+              const client = visit.Client || visit.client || visit.ClientName || visit.clientName || 'Client';
+              const clientEmail = visit.ClientEmail || visit.clientEmail || '';
+              const clientPhone = visit.ClientPhone || visit.clientPhone || '';
+              const visitDate = visit.VisitDate || visit.visitDate || visit.Date || visit.date || visit.ScheduledAt || visit.scheduledAt;
+              const visitTime = visit.VisitTime || visit.visitTime || visit.Time || visit.time;
+              const status = visit.Status || visit.status || 'Scheduled';
+              const formattedDate = visitDate ? new Date(visitDate).toLocaleDateString() : 'N/A';
+              const formattedTime = visitTime ? visitTime : visitDate ? new Date(visitDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+              return (
+                <tr key={visitId} style={rowHover} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                     <td style={tdStyle}>
                       <div style={cellMain}>
                         <span style={cellTitle}>{property}</span>
@@ -124,21 +117,21 @@ const VisitsTab = ({
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        {status === 'Scheduled' && (
-                          <button style={actionBtn('edit')} onClick={() => openUpdateVisitStatus(visit)}>Update Status</button>
-                        )}
+                        {status === 'Scheduled' &&
+                      <button style={actionBtn('edit')} onClick={() => openUpdateVisitStatus(visit)}>Update Status</button>
+                      }
                         <button style={actionBtn('view')} onClick={() => openScheduleVisit(property)}>Reschedule</button>
                       </div>
                     </td>
-                  </tr>
-                );
-              })}
+                  </tr>);
+
+            })}
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };
 
 export default VisitsTab;

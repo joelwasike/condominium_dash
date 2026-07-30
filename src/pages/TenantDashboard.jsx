@@ -8,8 +8,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
-} from 'recharts';
+  ResponsiveContainer } from
+'recharts';
 import {
   Home,
   DollarSign,
@@ -31,8 +31,8 @@ import {
   Copy,
   Search,
   FileCheck,
-  Zap
-} from 'lucide-react';
+  Zap } from
+'lucide-react';
 import RoleLayout from '../components/RoleLayout';
 import SettingsPage from './SettingsPage';
 import { t, getLanguage } from '../utils/i18n';
@@ -44,17 +44,15 @@ import { isDemoMode, getTenantDemoData } from '../utils/demoData';
 import { cloudinaryService } from '../services/cloudinaryService';
 import '../components/RoleLayout.css';
 import './SalesManagerDashboard.css';
-
-// Same document list as Add New Client (individual) – required for transfer recipient
 const TRANSFER_INDIVIDUAL_DOCUMENTS = [
-  { key: 'id_document', label: 'CNI, passport or identity certificate' },
-  { key: 'employment_contract', label: 'Employment contract' },
-  { key: 'work_certificate', label: 'Certificate of work' },
-  { key: 'pay_slips', label: 'Last three pay slips' },
-  { key: 'last_utility_receipt', label: 'Last receipt (CIE or SODECI)' },
-  { key: 'last_rent_receipts', label: 'Last rent receipts' },
-  { key: 'rib', label: 'RIB' },
-];
+{ key: 'id_document', label: 'CNI, passport or identity certificate' },
+{ key: 'employment_contract', label: 'Employment contract' },
+{ key: 'work_certificate', label: 'Certificate of work' },
+{ key: 'pay_slips', label: 'Last three pay slips' },
+{ key: 'last_utility_receipt', label: 'Last receipt (CIE or SODECI)' },
+{ key: 'last_rent_receipts', label: 'Last rent receipts' },
+{ key: 'rib', label: 'RIB' }];
+
 
 const TenantDashboard = () => {
   const addMonths = (date, months) => {
@@ -133,7 +131,7 @@ const TenantDashboard = () => {
   const [leaseInfo, setLeaseInfo] = useState(null);
   const [payments, setPayments] = useState([]);
   const [transferRequests, setTransferRequests] = useState([]);
-  const [paymentsTab, setPaymentsTab] = useState('payments'); // 'payments' | 'transfers'
+  const [paymentsTab, setPaymentsTab] = useState('payments');
   const [maintenanceRequests, setMaintenanceRequests] = useState([]);
   const [advertisements, setAdvertisements] = useState([]);
   const [showMaintenanceViewModal, setShowMaintenanceViewModal] = useState(false);
@@ -141,18 +139,14 @@ const TenantDashboard = () => {
   const [technicianContacts, setTechnicianContacts] = useState([]);
   const [technicianContactSearch, setTechnicianContactSearch] = useState('');
   const [myInventory, setMyInventory] = useState([]);
-  
-  // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const isLoadingUsersRef = useRef(false);
   const messagesEndRef = useRef(null);
-
-  // State to force re-render when language changes
   const [language, setLanguage] = useState(getLanguage());
-  
+
   useEffect(() => {
     const handleLanguageChange = () => {
       setLanguage(getLanguage());
@@ -163,32 +157,31 @@ const TenantDashboard = () => {
 
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: t('nav.overview'), icon: Home },
-      { id: 'payments', label: t('nav.payments'), icon: DollarSign },
-      { id: 'maintenance', label: t('technician.maintenance'), icon: Wrench },
-      { id: 'technician-contacts', label: 'Technician Contacts', icon: Phone },
-      { id: 'state-of-entry-exit', label: 'State of Entry / Exit', icon: FileCheck },
-      { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
-      { id: 'chat', label: t('nav.messages'), icon: MessageCircle },
-      { id: 'settings', label: t('nav.profileSettings'), icon: Settings }
-    ],
+    { id: 'overview', label: t('nav.overview'), icon: Home },
+    { id: 'payments', label: t('nav.payments'), icon: DollarSign },
+    { id: 'maintenance', label: t('technician.maintenance'), icon: Wrench },
+    { id: 'technician-contacts', label: 'Technician Contacts', icon: Phone },
+    { id: 'state-of-entry-exit', label: 'State of Entry / Exit', icon: FileCheck },
+    { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
+    { id: 'chat', label: t('nav.messages'), icon: MessageCircle },
+    { id: 'settings', label: t('nav.profileSettings'), icon: Settings }],
+
     [language]
   );
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setNotifications(prev => [...prev, { id, message, type }]);
+    setNotifications((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 3000);
   }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
       if (isDemoMode()) {
-        // Use demo data
         const demoData = getTenantDemoData();
         setOverviewData(demoData.overview);
         setLeaseInfo(demoData.leaseInfo);
@@ -197,14 +190,14 @@ const TenantDashboard = () => {
         setLoading(false);
         return;
       }
-      
+
       const [overview, paymentsData, transfersData, maintenanceData, lease] = await Promise.all([
-        tenantService.getOverview().catch(() => null),
-        tenantService.listPayments().catch(() => []),
-        tenantService.listTransferRequests().catch(() => []),
-        tenantService.listMaintenance().catch(() => []),
-        tenantService.getLeaseInfo().catch(() => null)
-      ]);
+      tenantService.getOverview().catch(() => null),
+      tenantService.listPayments().catch(() => []),
+      tenantService.listTransferRequests().catch(() => []),
+      tenantService.listMaintenance().catch(() => []),
+      tenantService.getLeaseInfo().catch(() => null)]
+      );
 
       setOverviewData(overview);
       setLeaseInfo(lease);
@@ -212,7 +205,6 @@ const TenantDashboard = () => {
       setPayments(paymentsArray);
       const transfersArray = Array.isArray(transfersData) ? transfersData : [];
       setTransferRequests(transfersArray);
-      // Ensure maintenance is an array
       const maintenanceArray = Array.isArray(maintenanceData) ? maintenanceData : [];
       setMaintenanceRequests(maintenanceArray);
     } catch (error) {
@@ -224,8 +216,6 @@ const TenantDashboard = () => {
       setLoading(false);
     }
   };
-
-  // Load payments and transfer requests
   const loadPayments = async () => {
     try {
       if (isDemoMode()) {
@@ -235,9 +225,9 @@ const TenantDashboard = () => {
         return;
       }
       const [paymentsData, transfersData] = await Promise.all([
-        tenantService.listPayments(),
-        tenantService.listTransferRequests()
-      ]);
+      tenantService.listPayments(),
+      tenantService.listTransferRequests()]
+      );
       setPayments(Array.isArray(paymentsData) ? paymentsData : []);
       setTransferRequests(Array.isArray(transfersData) ? transfersData : []);
     } catch (error) {
@@ -249,8 +239,6 @@ const TenantDashboard = () => {
       }
     }
   };
-
-  // Load advertisements
   const loadAdvertisements = async () => {
     try {
       const ads = await tenantService.getAdvertisements();
@@ -261,17 +249,14 @@ const TenantDashboard = () => {
       setAdvertisements([]);
     }
   };
-
-  // Load technician contacts
   const loadTechnicianContacts = async () => {
     try {
       if (isDemoMode()) {
-        // Use demo data if available
         const demoData = getTenantDemoData();
         setTechnicianContacts(demoData.technicianContacts || []);
         return;
       }
-      
+
       const contacts = await tenantService.getTechnicianContacts();
       setTechnicianContacts(Array.isArray(contacts) ? contacts : []);
     } catch (error) {
@@ -280,8 +265,6 @@ const TenantDashboard = () => {
       setTechnicianContacts([]);
     }
   };
-
-  // Load my state of entry/exit (inventory) records filled by technician
   const loadMyInventory = async () => {
     try {
       if (isDemoMode()) {
@@ -296,32 +279,22 @@ const TenantDashboard = () => {
       setMyInventory([]);
     }
   };
-
-  // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
-
-  // Auto-scroll when messages change
   useEffect(() => {
     if (chatMessages.length > 0) {
       scrollToBottom();
     }
   }, [chatMessages, scrollToBottom]);
-
-  // Load chat for a specific user
   const loadChatForUser = useCallback(async (userId) => {
     if (!userId) return;
-    
+
     try {
       setSelectedUserId(userId);
       const messages = await messagingService.getConversation(userId);
-      
-      // Normalize messages array
       const normalizedMessages = Array.isArray(messages) ? messages : [];
       setChatMessages(normalizedMessages);
-      
-      // Mark messages as read
       try {
         await messagingService.markMessagesAsRead(userId);
       } catch (readError) {
@@ -332,12 +305,8 @@ const TenantDashboard = () => {
       addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
       setChatMessages([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // addNotification is stable, no need to include
-
-  // Load users for messaging (from same company)
+  }, []);
   const loadUsers = useCallback(async () => {
-    // Prevent multiple simultaneous calls
     if (isLoadingUsersRef.current) {
       console.log('Users already loading, skipping...');
       return;
@@ -346,109 +315,88 @@ const TenantDashboard = () => {
     try {
       isLoadingUsersRef.current = true;
       console.log('Loading users for messaging...');
-      // Use the new getUsers endpoint
       const users = await messagingService.getUsers();
       console.log('Users API response:', users);
-      
-      // Handle different response formats
       let usersArray = [];
       if (Array.isArray(users)) {
         usersArray = users;
       } else if (users && Array.isArray(users.users)) {
         usersArray = users.users;
       } else if (users && typeof users === 'object') {
-        // Try to find array in response
-        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+        usersArray = Object.values(users).find((val) => Array.isArray(val)) || [];
       }
-      
-      console.log('Processed users array:', usersArray);
-      
-	      // Get current user ID to exclude from list
-	      const storedUser = localStorage.getItem('user');
-	      let currentUserId = null;
-	      let currentRole = '';
-	      if (storedUser) {
-	        try {
-	          const user = JSON.parse(storedUser);
-	          currentUserId = user.id || user.ID;
-	          currentRole = (user.role || user.Role || '').toString().toLowerCase();
-	          console.log('Current user ID:', currentUserId);
-	        } catch (error) {
-	          console.error('Error parsing stored user:', error);
-	        }
-	      }
-      
-      // Tenant restriction: tenants can only chat with admin + technician
-      const tenantAllowedRoles = new Set(['admin', 'technician']);
 
-      // Map users to chat format and exclude current user
-	      const chatUsersList = usersArray
-	        .filter(user => {
-          const userId = user.id || user.ID;
-          // Convert both to strings for comparison to handle type mismatches
-          const userIdStr = userId ? String(userId) : null;
-          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
-	          if (!shouldInclude && userIdStr) {
-	            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
-	          }
-	          if (!shouldInclude) return false;
-	          const role = (user.role || user.Role || '').toString().toLowerCase();
-	          if (currentRole === 'tenant' && !tenantAllowedRoles.has(role)) return false;
-	          return true;
-	        })
-        .map(user => {
-          const userId = user.id || user.ID;
-          return {
-            userId: userId,
-            name: user.name || user.Name || 'User',
-            email: user.email || user.Email || '',
-            role: user.role || user.Role || '',
-            company: user.company || user.Company || '',
-            status: user.status || user.Status || 'Active',
-            unreadCount: 0 // Will be updated from conversations if needed
-          };
-        })
-        .sort((a, b) => {
-          const nameA = (a.name || '').toLowerCase();
-          const nameB = (b.name || '').toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
-      
+      console.log('Processed users array:', usersArray);
+      const storedUser = localStorage.getItem('user');
+      let currentUserId = null;
+      let currentRole = '';
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          currentUserId = user.id || user.ID;
+          currentRole = (user.role || user.Role || '').toString().toLowerCase();
+          console.log('Current user ID:', currentUserId);
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+        }
+      }
+      const tenantAllowedRoles = new Set(['admin', 'technician']);
+      const chatUsersList = usersArray.
+      filter((user) => {
+        const userId = user.id || user.ID;
+        const userIdStr = userId ? String(userId) : null;
+        const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+        const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+        if (!shouldInclude && userIdStr) {
+          console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+        }
+        if (!shouldInclude) return false;
+        const role = (user.role || user.Role || '').toString().toLowerCase();
+        if (currentRole === 'tenant' && !tenantAllowedRoles.has(role)) return false;
+        return true;
+      }).
+      map((user) => {
+        const userId = user.id || user.ID;
+        return {
+          userId: userId,
+          name: user.name || user.Name || 'User',
+          email: user.email || user.Email || '',
+          role: user.role || user.Role || '',
+          company: user.company || user.Company || '',
+          status: user.status || user.Status || 'Active',
+          unreadCount: 0
+        };
+      }).
+      sort((a, b) => {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
       console.log('Final chat users list:', chatUsersList);
-      
-      // Get conversations to update unread counts and include users who have messaged but aren't in users list
       try {
         const conversations = await messagingService.getConversations();
         if (Array.isArray(conversations)) {
-          // Create a map of existing users by ID for quick lookup
           const existingUsersMap = new Map();
-          chatUsersList.forEach(u => {
+          chatUsersList.forEach((u) => {
             existingUsersMap.set(String(u.userId), u);
           });
-          
-          // Process conversations to update unread counts and add missing users
-	          conversations.forEach(conv => {
+          conversations.forEach((conv) => {
             const convUserId = String(conv.userId || conv.userID);
             const existingUser = existingUsersMap.get(convUserId);
-            
+
             if (existingUser) {
-              // Update unread count for existing user
               if (conv.unreadCount) {
                 existingUser.unreadCount = conv.unreadCount;
               }
             } else {
-              // User has a conversation but isn't in the users list - add them
-              // This handles cases where users from other companies or roles have messaged
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
-              
-              // Only add if it's not the current user
-	              const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-	              const convRole = (convUser.role || convUser.Role || conv.role || '').toString().toLowerCase();
-	              if (currentRole === 'tenant' && !tenantAllowedRoles.has(convRole)) return;
+              const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+              const convRole = (convUser.role || convUser.Role || conv.role || '').toString().toLowerCase();
+              if (currentRole === 'tenant' && !tenantAllowedRoles.has(convRole)) return;
 
-	              if (userId && String(userId) !== currentUserIdStr) {
+              if (userId && String(userId) !== currentUserIdStr) {
                 const newUser = {
                   userId: userId,
                   name: convUser.name || convUser.Name || conv.name || 'User',
@@ -464,8 +412,6 @@ const TenantDashboard = () => {
               }
             }
           });
-          
-          // Re-sort after adding new users
           chatUsersList.sort((a, b) => {
             const nameA = (a.name || '').toLowerCase();
             const nameB = (b.name || '').toLowerCase();
@@ -475,15 +421,11 @@ const TenantDashboard = () => {
       } catch (convError) {
         console.error('Error loading conversations for unread counts:', convError);
       }
-      
+
       setChatUsers(chatUsersList);
-      
-      // Auto-select first user if available and no user is selected
-      // Use functional update to avoid dependency on selectedUserId
-      setSelectedUserId(prevSelected => {
+      setSelectedUserId((prevSelected) => {
         if (chatUsersList.length > 0 && !prevSelected) {
           const firstUserId = chatUsersList[0].userId;
-          // Load chat for first user asynchronously
           setTimeout(() => {
             loadChatForUser(firstUserId);
           }, 0);
@@ -491,7 +433,7 @@ const TenantDashboard = () => {
         }
         return prevSelected;
       });
-      
+
       if (chatUsersList.length === 0) {
         console.warn('No users found. This could mean:');
         console.warn('1. No other users in the same company');
@@ -507,52 +449,45 @@ const TenantDashboard = () => {
     } finally {
       isLoadingUsersRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadChatForUser]); // addNotification is stable, no need to include
+  }, [loadChatForUser]);
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
-    
+
     const content = chatInput.trim();
     const tempMessageId = `temp-${Date.now()}`;
-    
-    // Optimistic update - add message immediately
     const optimisticMessage = {
       id: tempMessageId,
       content: content,
-      senderId: null, // Will be set by backend
+      senderId: null,
       receiverId: selectedUserId,
       createdAt: new Date().toISOString(),
       isOptimistic: true
     };
-    
-    setChatMessages(prev => [...prev, optimisticMessage]);
+
+    setChatMessages((prev) => [...prev, optimisticMessage]);
     setChatInput('');
-    
+
     try {
       const payload = {
         toUserId: selectedUserId,
-        content,
+        content
       };
       const sentMessage = await messagingService.sendMessage(payload);
-      
-      // Replace optimistic message with real message from server
       if (sentMessage && sentMessage.id) {
-        setChatMessages(prev => 
-          prev.map(msg => 
-            msg.id === tempMessageId ? sentMessage : msg
-          )
+        setChatMessages((prev) =>
+        prev.map((msg) =>
+        msg.id === tempMessageId ? sentMessage : msg
+        )
         );
       } else {
-        // If server response doesn't have expected format, reload chat
         await loadChatForUser(selectedUserId);
       }
     } catch (error) {
       console.error('Error sending message:', error);
       addNotification(error.message || 'Failed to send message', 'error');
-      // Remove optimistic message on error
-      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      setChatInput(content); // Restore input on error
+      setChatMessages((prev) => prev.filter((msg) => msg.id !== tempMessageId));
+      setChatInput(content);
     }
   };
 
@@ -570,11 +505,9 @@ const TenantDashboard = () => {
       setInventoryDateRange({ min: '', max: '' });
       return;
     }
-    // State of exit: inventory must be done before the 5th of the next month (tenant can choose any day in this range)
     const dayAfter = new Date(terminationDate);
     dayAfter.setDate(dayAfter.getDate() + 1);
     const minDate = dayAfter;
-    // 4th of the month following termination = "before the 5th of the next month"
     const nextMonth = new Date(terminationDate.getFullYear(), terminationDate.getMonth() + 1, 1);
     const maxDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 4);
     const min = minDate.toISOString().split('T')[0];
@@ -582,50 +515,39 @@ const TenantDashboard = () => {
     setInventoryDateRange({ min, max });
 
     if (
-      terminateLeaseForm.inventoryCheckDate &&
-      (terminateLeaseForm.inventoryCheckDate < min ||
-        terminateLeaseForm.inventoryCheckDate > max)
-    ) {
-      setTerminateLeaseForm(prev => ({ ...prev, inventoryCheckDate: '', inventoryCheckTime: '' }));
+    terminateLeaseForm.inventoryCheckDate && (
+    terminateLeaseForm.inventoryCheckDate < min ||
+    terminateLeaseForm.inventoryCheckDate > max))
+    {
+      setTerminateLeaseForm((prev) => ({ ...prev, inventoryCheckDate: '', inventoryCheckTime: '' }));
     }
   }, [terminateLeaseForm.terminationDate]);
-
-  // Load advertisements when advertisements tab is active
   useEffect(() => {
     if (activeTab === 'advertisements') {
       loadAdvertisements();
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load technician contacts when technician-contacts tab is active
+  }, [activeTab]);
   useEffect(() => {
     if (activeTab === 'technician-contacts') {
       loadTechnicianContacts();
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load state of entry/exit when tab is active
+  }, [activeTab]);
   useEffect(() => {
     if (activeTab === 'state-of-entry-exit') {
       loadMyInventory();
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load users when chat tab is active (only once per tab switch)
+  }, [activeTab]);
   useEffect(() => {
     if (activeTab === 'chat' && !isLoadingUsersRef.current) {
       loadUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]); // Only depend on activeTab, not loadUsers
+  }, [activeTab]);
 
   const handleMaintenanceSubmit = async (e) => {
     e.preventDefault();
 
     try {
       setLoading(true);
-      
-      // Get property from leaseInfo or overviewData
       let property = 'Apartment 4B, 123 Main St';
       if (leaseInfo && leaseInfo.property) {
         property = leaseInfo.property;
@@ -636,8 +558,6 @@ const TenantDashboard = () => {
           property = overviewData.property;
         }
       }
-      
-      // Get tenant name
       let tenantName = 'Current Tenant';
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
@@ -651,41 +571,35 @@ const TenantDashboard = () => {
       if (overviewData && overviewData.tenant) {
         tenantName = overviewData.tenant;
       }
-      
-      // Upload photos to Cloudinary first
       let photoUrls = [];
       if (maintenanceForm.photos && maintenanceForm.photos.length > 0) {
         addNotification('Uploading photos...', 'info');
         const uploadResults = await cloudinaryService.uploadMultipleFiles(
-          maintenanceForm.photos.map(photo => photo.file),
+          maintenanceForm.photos.map((photo) => photo.file),
           'real-estate-maintenance'
         );
-        
-        // Filter successful uploads
-        photoUrls = uploadResults
-          .filter(result => result.success)
-          .map(result => result.url);
-        
-        if (uploadResults.some(result => !result.success)) {
+        photoUrls = uploadResults.
+        filter((result) => result.success).
+        map((result) => result.url);
+
+        if (uploadResults.some((result) => !result.success)) {
           addNotification('Some photos failed to upload, but request will be submitted', 'warning');
         }
       }
-      
+
       const maintenanceData = {
         property: property,
         title: maintenanceForm.title,
         description: maintenanceForm.description,
         priority: maintenanceForm.priority,
         tenant: tenantName,
-        photos: photoUrls // Send array of photo URLs (empty array if no photos)
+        photos: photoUrls
       };
 
       const newRequest = await tenantService.createMaintenance(maintenanceData);
-      setMaintenanceRequests(prev => [newRequest, ...prev]);
+      setMaintenanceRequests((prev) => [newRequest, ...prev]);
       addNotification('Maintenance request submitted successfully!', 'success');
-
-      // Clean up object URLs
-      maintenanceForm.photos.forEach(photo => {
+      maintenanceForm.photos.forEach((photo) => {
         if (photo.preview && photo.preview.startsWith('blob:')) {
           URL.revokeObjectURL(photo.preview);
         }
@@ -706,37 +620,37 @@ const TenantDashboard = () => {
     const maxPhotos = 5;
     const currentPhotoCount = maintenanceForm.photos.length;
     const remainingSlots = maxPhotos - currentPhotoCount;
-    
+
     if (remainingSlots <= 0) {
       addNotification(`Maximum ${maxPhotos} photos allowed`, 'warning');
-      e.target.value = ''; // Reset input
+      e.target.value = '';
       return;
     }
-    
+
     const filesToAdd = files.slice(0, remainingSlots);
     if (files.length > remainingSlots) {
       addNotification(`Only ${remainingSlots} more photo(s) can be added (max ${maxPhotos})`, 'warning');
     }
-    
-    const newPhotos = filesToAdd.map(file => ({
+
+    const newPhotos = filesToAdd.map((file) => ({
       id: Date.now() + Math.random(),
       file: file,
       name: file.name,
       preview: URL.createObjectURL(file)
     }));
 
-    setMaintenanceForm(prev => ({
+    setMaintenanceForm((prev) => ({
       ...prev,
       photos: [...prev.photos, ...newPhotos]
     }));
-    
-    e.target.value = ''; // Reset input to allow selecting same file again
+
+    e.target.value = '';
   };
 
   const removePhoto = (photoId) => {
-    setMaintenanceForm(prev => ({
+    setMaintenanceForm((prev) => ({
       ...prev,
-      photos: prev.photos.filter(photo => photo.id !== photoId)
+      photos: prev.photos.filter((photo) => photo.id !== photoId)
     }));
   };
 
@@ -757,11 +671,11 @@ const TenantDashboard = () => {
         return;
       }
       if (
-        terminateLeaseForm.inventoryCheckDate &&
-        inventoryDateRange.min &&
-        (terminateLeaseForm.inventoryCheckDate < inventoryDateRange.min ||
-          terminateLeaseForm.inventoryCheckDate > inventoryDateRange.max)
-      ) {
+      terminateLeaseForm.inventoryCheckDate &&
+      inventoryDateRange.min && (
+      terminateLeaseForm.inventoryCheckDate < inventoryDateRange.min ||
+      terminateLeaseForm.inventoryCheckDate > inventoryDateRange.max))
+      {
         addNotification('State of exit: inventory date must be before the 5th of the next month.', 'error');
         setLoading(false);
         return;
@@ -778,11 +692,11 @@ const TenantDashboard = () => {
         cash: 'Cash',
         'Mobile Money': 'Mobile Money',
         'Bank Transfer': 'Bank Transfer',
-        'Cash': 'Cash',
+        'Cash': 'Cash'
       };
       const normalizedRefundMethod =
-        refundMethodMap[terminateLeaseForm.securityDepositRefundMethod] ||
-        terminateLeaseForm.securityDepositRefundMethod;
+      refundMethodMap[terminateLeaseForm.securityDepositRefundMethod] ||
+      terminateLeaseForm.securityDepositRefundMethod;
 
       if (normalizedRefundMethod === 'Mobile Money' && !terminateLeaseForm.mobileMoneyNumber) {
         addNotification('Mobile money number is required for Mobile Money refunds.', 'error');
@@ -792,11 +706,11 @@ const TenantDashboard = () => {
 
       await tenantService.terminateLease({
         ...terminateLeaseForm,
-        securityDepositRefundMethod: normalizedRefundMethod,
+        securityDepositRefundMethod: normalizedRefundMethod
       });
-      
+
       addNotification('Lease termination request submitted successfully!', 'success');
-      
+
       setTerminateLeaseForm({
         reason: '',
         terminationDate: '',
@@ -806,7 +720,7 @@ const TenantDashboard = () => {
         securityDepositRefundMethod: '',
         mobileMoneyNumber: '',
         terminationLetter: null,
-        supportingDocs: [],
+        supportingDocs: []
       });
       setShowTerminateLeaseModal(false);
     } catch (error) {
@@ -822,18 +736,16 @@ const TenantDashboard = () => {
 
     try {
       setLoading(true);
-      
-      // Get property from leaseInfo, overviewData, or use fallback
       let property = '';
       if (leaseInfo) {
         property = leaseInfo.property || leaseInfo.Property || leaseInfo.address || leaseInfo.Address || '';
       }
       if (!property && overviewData) {
         property =
-          overviewData.property ||
-          overviewData.Property ||
-          (overviewData.lease && (overviewData.lease.property || overviewData.lease.Property || overviewData.lease.address || overviewData.lease.Address)) ||
-          '';
+        overviewData.property ||
+        overviewData.Property ||
+        overviewData.lease && (overviewData.lease.property || overviewData.lease.Property || overviewData.lease.address || overviewData.lease.Address) ||
+        '';
       }
       if (!property) {
         const storedUser = localStorage.getItem('user');
@@ -846,20 +758,18 @@ const TenantDashboard = () => {
           }
         }
       }
-      
-      // Validate required fields according to backend API
       if (!property || property.trim() === '') {
         addNotification('Property information is required. Please ensure you have an active lease.', 'error');
         setLoading(false);
         return;
       }
-      
+
       if (!transferPaymentForm.recipientIdCard || transferPaymentForm.recipientIdCard.trim() === '') {
         addNotification('Recipient ID Card Number is required', 'error');
         setLoading(false);
         return;
       }
-      
+
       if (!transferPaymentForm.entryDate || transferPaymentForm.entryDate.trim() === '') {
         addNotification('Recipient Entry Date is required', 'error');
         setLoading(false);
@@ -867,7 +777,7 @@ const TenantDashboard = () => {
       }
 
       const requiredDocs = TRANSFER_INDIVIDUAL_DOCUMENTS;
-      const missingDocs = requiredDocs.filter(doc => !transferDocFiles[doc.key]);
+      const missingDocs = requiredDocs.filter((doc) => !transferDocFiles[doc.key]);
       if (missingDocs.length > 0) {
         addNotification('Please upload all required documents for the person being transferred to.', 'error');
         setLoading(false);
@@ -915,7 +825,7 @@ const TenantDashboard = () => {
         reason: ''
       });
       setTransferDocFiles({});
-      Object.values(transferDocFileInputRefs.current).forEach(el => { if (el) el.value = ''; });
+      Object.values(transferDocFileInputRefs.current).forEach((el) => {if (el) el.value = '';});
       setShowTransferPaymentModal(false);
       await loadPayments();
     } catch (error) {
@@ -931,8 +841,6 @@ const TenantDashboard = () => {
 
     try {
       setLoading(true);
-      
-      // Get tenant name from user profile or overview data
       let tenantName = 'Current Tenant';
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
@@ -943,12 +851,9 @@ const TenantDashboard = () => {
           console.error('Error parsing stored user:', error);
         }
       }
-      // Also check overviewData for tenant name
       if (overviewData && overviewData.tenant) {
         tenantName = overviewData.tenant;
       }
-      
-      // Get property from lease info, overview data, or use default
       let property = 'Apartment 4B, 123 Main St';
       if (leaseInfo && leaseInfo.property) {
         property = leaseInfo.property;
@@ -959,9 +864,6 @@ const TenantDashboard = () => {
           property = overviewData.property;
         }
       }
-      
-      // Backend expects lowercase field names and "Mobile Money" as method value
-      // Validate payment method
       if (paymentForm.paymentMethod !== 'Mobile Money') {
         addNotification('Payment method must be Mobile Money', 'error');
         setLoading(false);
@@ -972,7 +874,7 @@ const TenantDashboard = () => {
         tenant: tenantName,
         property: property,
         amount: parseFloat(paymentForm.amount),
-        method: paymentForm.paymentMethod, // Must be "Mobile Money"
+        method: paymentForm.paymentMethod,
         chargeType: 'rent',
         reference: paymentForm.reference
       };
@@ -980,12 +882,8 @@ const TenantDashboard = () => {
       console.log('Submitting payment with data:', paymentData);
       await tenantService.recordPayment(paymentData);
       addNotification('Payment submitted successfully!', 'success');
-
-      // Reset form and close modal
       setPaymentForm({ amount: '', paymentMethod: '', reference: '' });
       setShowPaymentModal(false);
-
-      // Reload payments from server to ensure we have the latest data
       await loadPayments();
     } catch (error) {
       console.error('Error submitting payment:', error);
@@ -1048,7 +946,7 @@ const TenantDashboard = () => {
 
   const downloadReceipt = async (paymentId) => {
     try {
-      const payment = payments.find(p => p.ID === paymentId);
+      const payment = payments.find((p) => p.ID === paymentId);
       if (!payment) {
         addNotification('Payment not found', 'error');
         return;
@@ -1075,18 +973,16 @@ const TenantDashboard = () => {
       return <div className="sa-table-empty">Loading overview data...</div>;
     }
 
-  const data = overviewData || {
-    lease: { property: '', endDate: '' },
-    nextRentDue: { amount: null, date: '' },
-    openMaintenanceTickets: 0,
-    tenant: ''
-  };
-  const nextRentDueAmount = Number(data.nextRentDue?.amount ?? 0);
-  const leaseRentAmount = Number(data.lease?.rent ?? 0);
-  const displayNextRentDueAmount = nextRentDueAmount > 0 ? nextRentDueAmount : leaseRentAmount;
-
-    // Calculate open maintenance from actual requests (filter by status)
-    const openMaintenanceCount = maintenanceRequests.filter(m => {
+    const data = overviewData || {
+      lease: { property: '', endDate: '' },
+      nextRentDue: { amount: null, date: '' },
+      openMaintenanceTickets: 0,
+      tenant: ''
+    };
+    const nextRentDueAmount = Number(data.nextRentDue?.amount ?? 0);
+    const leaseRentAmount = Number(data.lease?.rent ?? 0);
+    const displayNextRentDueAmount = nextRentDueAmount > 0 ? nextRentDueAmount : leaseRentAmount;
+    const openMaintenanceCount = maintenanceRequests.filter((m) => {
       const status = (m.Status || m.status || '').toLowerCase();
       return status === 'pending' || status === 'in progress' || status === 'in-progress';
     }).length;
@@ -1107,72 +1003,67 @@ const TenantDashboard = () => {
               <ResponsiveContainer>
                 <AreaChart
                   data={(() => {
-                    // Calculate payment history for last 6 months
                     const now = new Date();
                     const chartData = [];
-                    
+
                     for (let i = 5; i >= 0; i--) {
                       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
                       const monthName = monthDate.toLocaleString('default', { month: 'short' });
                       const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
                       const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-                      
-                      // Count payments in this month
-                      const monthPayments = payments.filter(p => {
+                      const monthPayments = payments.filter((p) => {
                         const paymentDate = new Date(p.Date || p.date || p.createdAt || p.CreatedAt);
                         return paymentDate >= monthStart && paymentDate <= monthEnd;
                       });
                       const totalPaid = monthPayments.reduce((sum, p) => sum + (p.Amount || p.amount || 0), 0);
-                      
-                      // Count maintenance requests in this month
-                      const monthMaintenance = maintenanceRequests.filter(m => {
+                      const monthMaintenance = maintenanceRequests.filter((m) => {
                         const maintDate = new Date(m.Date || m.date || m.CreatedAt || m.createdAt);
                         return maintDate >= monthStart && maintDate <= monthEnd;
                       }).length;
-                      
+
                       chartData.push({
                         month: monthName,
                         payments: Math.round(totalPaid),
                         maintenance: monthMaintenance
                       });
                     }
-                    
+
                     return chartData;
                   })()}
-                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
-                >
+                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+                  
                   <defs>
                     <linearGradient id="colorPayments" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorMaintenance" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                  <XAxis 
-                    dataKey="month" 
-                    stroke="#6b7280" 
+                  <XAxis
+                    dataKey="month"
+                    stroke="#6b7280"
                     tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#e5e7eb' }}
-                  />
-                  <YAxis 
+                    axisLine={{ stroke: '#e5e7eb' }} />
+                  
+                  <YAxis
                     yAxisId="left"
-                    stroke="#6b7280" 
+                    stroke="#6b7280"
                     tick={{ fill: '#6b7280', fontSize: 12 }}
                     axisLine={{ stroke: '#e5e7eb' }}
-                    label={{ value: 'Payments (XOF)', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
-                  />
-                  <YAxis 
+                    label={{ value: 'Payments (XOF)', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }} />
+                  
+                  <YAxis
                     yAxisId="right"
                     orientation="right"
-                    stroke="#6b7280" 
+                    stroke="#6b7280"
                     tick={{ fill: '#6b7280', fontSize: 12 }}
                     axisLine={{ stroke: '#e5e7eb' }}
-                    label={{ value: 'Requests', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }}
-                  />
+                    label={{ value: 'Requests', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }} />
+                  
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -1185,12 +1076,12 @@ const TenantDashboard = () => {
                       if (name === 'payments') return [`${value.toLocaleString()} XOF`, 'Payments'];
                       if (name === 'maintenance') return [value, 'Maintenance Requests'];
                       return value;
-                    }}
-                  />
-                  <Legend 
+                    }} />
+                  
+                  <Legend
                     wrapperStyle={{ paddingTop: '10px' }}
-                    iconType="line"
-                  />
+                    iconType="line" />
+                  
                   <Area
                     yAxisId="left"
                     type="natural"
@@ -1200,8 +1091,8 @@ const TenantDashboard = () => {
                     fill="url(#colorPayments)"
                     dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
                     activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    name="Payments (XOF)"
-                  />
+                    name="Payments (XOF)" />
+                  
                   <Area
                     yAxisId="right"
                     type="natural"
@@ -1211,8 +1102,8 @@ const TenantDashboard = () => {
                     fill="url(#colorMaintenance)"
                     dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
                     activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    name="Maintenance Requests"
-                  />
+                    name="Maintenance Requests" />
+                  
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -1223,13 +1114,13 @@ const TenantDashboard = () => {
               <p className="sa-metric-label">Next Rent Due</p>
               <p className="sa-metric-period">Due: {data.nextRentDue?.date || 'N/A'}</p>
               <p className="sa-metric-value">
-                {displayNextRentDueAmount > 0
-                  ? `${displayNextRentDueAmount.toLocaleString()} XOF`
-                  : 'N/A'}
+                {displayNextRentDueAmount > 0 ?
+                `${displayNextRentDueAmount.toLocaleString()} XOF` :
+                'N/A'}
               </p>
-              {data.nextRentDue?.status === 'ahead' && Number(data.nextRentDue?.aheadAmount || 0) > 0 && (
-                <p className="sa-metric-period">Ahead by: {Number(data.nextRentDue.aheadAmount).toLocaleString()} XOF</p>
-              )}
+              {data.nextRentDue?.status === 'ahead' && Number(data.nextRentDue?.aheadAmount || 0) > 0 &&
+              <p className="sa-metric-period">Ahead by: {Number(data.nextRentDue.aheadAmount).toLocaleString()} XOF</p>
+              }
             </div>
             <div className="sa-metric-card">
               <p className="sa-metric-label">Current Lease</p>
@@ -1263,12 +1154,12 @@ const TenantDashboard = () => {
             <ReportSubmission />
           </div>
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
-  const renderPayments = () => (
-    <div className="sa-section-card">
+  const renderPayments = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
           <h2>Payment Management</h2>
@@ -1283,31 +1174,31 @@ const TenantDashboard = () => {
             <Zap size={18} />
             Pay Bills
           </button>
-          <button 
-            className="sa-primary-cta" 
-            onClick={() => setShowTerminateLeaseModal(true)} 
-            disabled={loading}
-            style={{ backgroundColor: '#ef4444' }}
-          >
+          <button
+          className="sa-primary-cta"
+          onClick={() => setShowTerminateLeaseModal(true)}
+          disabled={loading}
+          style={{ backgroundColor: '#ef4444' }}>
+          
             <FileX size={18} />
             Terminate My Lease
           </button>
-          <button 
-            className="sa-primary-cta" 
-            onClick={async () => {
-              if (!leaseInfo && !isDemoMode()) {
-                try {
-                  const lease = await tenantService.getLeaseInfo();
-                  setLeaseInfo(lease);
-                } catch (error) {
-                  console.error('Error loading lease info:', error);
-                }
+          <button
+          className="sa-primary-cta"
+          onClick={async () => {
+            if (!leaseInfo && !isDemoMode()) {
+              try {
+                const lease = await tenantService.getLeaseInfo();
+                setLeaseInfo(lease);
+              } catch (error) {
+                console.error('Error loading lease info:', error);
               }
-              setShowTransferPaymentModal(true);
-            }} 
-            disabled={loading}
-            style={{ backgroundColor: '#3b82f6' }}
-          >
+            }
+            setShowTransferPaymentModal(true);
+          }}
+          disabled={loading}
+          style={{ backgroundColor: '#3b82f6' }}>
+          
             <UserPlus size={18} />
             Transfer Payment Request
           </button>
@@ -1316,47 +1207,47 @@ const TenantDashboard = () => {
 
       <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
         <button
-          type="button"
-          onClick={() => setPaymentsTab('payments')}
-          style={{
-            padding: '12px 24px',
-            border: 'none',
-            background: 'transparent',
-            color: paymentsTab === 'payments' ? '#7c3aed' : '#6b7280',
-            borderBottom: paymentsTab === 'payments' ? '2px solid #7c3aed' : '2px solid transparent',
-            cursor: 'pointer',
-            fontWeight: paymentsTab === 'payments' ? '600' : '400',
-            marginBottom: '-2px'
-          }}
-        >
+        type="button"
+        onClick={() => setPaymentsTab('payments')}
+        style={{
+          padding: '12px 24px',
+          border: 'none',
+          background: 'transparent',
+          color: paymentsTab === 'payments' ? '#7c3aed' : '#6b7280',
+          borderBottom: paymentsTab === 'payments' ? '2px solid #7c3aed' : '2px solid transparent',
+          cursor: 'pointer',
+          fontWeight: paymentsTab === 'payments' ? '600' : '400',
+          marginBottom: '-2px'
+        }}>
+        
           Payment history
         </button>
         <button
-          type="button"
-          onClick={() => setPaymentsTab('transfers')}
-          style={{
-            padding: '12px 24px',
-            border: 'none',
-            background: 'transparent',
-            color: paymentsTab === 'transfers' ? '#7c3aed' : '#6b7280',
-            borderBottom: paymentsTab === 'transfers' ? '2px solid #7c3aed' : '2px solid transparent',
-            cursor: 'pointer',
-            fontWeight: paymentsTab === 'transfers' ? '600' : '400',
-            marginBottom: '-2px'
-          }}
-        >
+        type="button"
+        onClick={() => setPaymentsTab('transfers')}
+        style={{
+          padding: '12px 24px',
+          border: 'none',
+          background: 'transparent',
+          color: paymentsTab === 'transfers' ? '#7c3aed' : '#6b7280',
+          borderBottom: paymentsTab === 'transfers' ? '2px solid #7c3aed' : '2px solid transparent',
+          cursor: 'pointer',
+          fontWeight: paymentsTab === 'transfers' ? '600' : '400',
+          marginBottom: '-2px'
+        }}>
+        
           Transfer payment requests
         </button>
       </div>
 
-      {paymentsTab === 'payments' && (
-        <>
-          {loading ? (
-            <div className="sa-table-empty">Loading payments...</div>
-          ) : payments.length === 0 ? (
-            <div className="sa-table-empty">No payments found</div>
-          ) : (
-            <div className="sa-table-wrapper">
+      {paymentsTab === 'payments' &&
+    <>
+          {loading ?
+      <div className="sa-table-empty">Loading payments...</div> :
+      payments.length === 0 ?
+      <div className="sa-table-empty">No payments found</div> :
+
+      <div className="sa-table-wrapper">
               <table className="sa-table">
                 <thead>
                   <tr>
@@ -1371,24 +1262,24 @@ const TenantDashboard = () => {
                 </thead>
                 <tbody>
                   {payments.map((payment, index) => {
-                    const paymentId = payment.ID || payment.id;
-                    const paymentDate = payment.Date || payment.date || payment.createdAt || payment.CreatedAt;
-                    const chargeType = payment.ChargeType || payment.chargeType || 'Rent';
-                    const amount = payment.Amount || payment.amount || 0;
-                    const method = payment.Method || payment.method || 'N/A';
-                    const status = payment.Status || payment.status || 'Pending';
-                    const statusLower = String(status || '').toLowerCase();
-                    const canDownloadReceipt = statusLower === 'approved' || statusLower === 'completed' || statusLower === 'paid';
-                    return (
-                      <tr key={paymentId || `payment-${index}`}>
+              const paymentId = payment.ID || payment.id;
+              const paymentDate = payment.Date || payment.date || payment.createdAt || payment.CreatedAt;
+              const chargeType = payment.ChargeType || payment.chargeType || 'Rent';
+              const amount = payment.Amount || payment.amount || 0;
+              const method = payment.Method || payment.method || 'N/A';
+              const status = payment.Status || payment.status || 'Pending';
+              const statusLower = String(status || '').toLowerCase();
+              const canDownloadReceipt = statusLower === 'approved' || statusLower === 'completed' || statusLower === 'paid';
+              return (
+                <tr key={paymentId || `payment-${index}`}>
                         <td>{index + 1}</td>
                         <td>{paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</td>
                         <td>
                           <div className="sa-cell-main">
                             <span className="sa-cell-title">{chargeType}</span>
-                            {payment.reference && (
-                              <span className="sa-cell-sub">Ref: {payment.reference}</span>
-                            )}
+                            {payment.reference &&
+                      <span className="sa-cell-sub">Ref: {payment.reference}</span>
+                      }
                           </div>
                         </td>
                         <td>{typeof amount === 'number' ? amount.toLocaleString() : amount} XOF</td>
@@ -1401,37 +1292,37 @@ const TenantDashboard = () => {
                         <td className="table-menu">
                           <div className="table-actions">
                             <button
-                              className="table-action-button view"
-                              onClick={() => {
-                                if (!canDownloadReceipt) return;
-                                downloadReceipt(paymentId);
-                              }}
-                              disabled={!canDownloadReceipt}
-                              title="Download Receipt"
-                            >
+                        className="table-action-button view"
+                        onClick={() => {
+                          if (!canDownloadReceipt) return;
+                          downloadReceipt(paymentId);
+                        }}
+                        disabled={!canDownloadReceipt}
+                        title="Download Receipt">
+                        
                               <Download size={14} />
                               Download
                             </button>
                           </div>
                         </td>
-                      </tr>
-                    );
-                  })}
+                      </tr>);
+
+            })}
                 </tbody>
               </table>
             </div>
-          )}
+      }
         </>
-      )}
+    }
 
-      {paymentsTab === 'transfers' && (
-        <>
-          {loading ? (
-            <div className="sa-table-empty">Loading transfer requests...</div>
-          ) : transferRequests.length === 0 ? (
-            <div className="sa-table-empty">No transfer requests yet. Use &quot;Transfer Payment Request&quot; to submit one.</div>
-          ) : (
-            <div className="sa-table-wrapper">
+      {paymentsTab === 'transfers' &&
+    <>
+          {loading ?
+      <div className="sa-table-empty">Loading transfer requests...</div> :
+      transferRequests.length === 0 ?
+      <div className="sa-table-empty">No transfer requests yet. Use &quot;Transfer Payment Request&quot; to submit one.</div> :
+
+      <div className="sa-table-wrapper">
               <table className="sa-table">
                 <thead>
                   <tr>
@@ -1444,38 +1335,38 @@ const TenantDashboard = () => {
                 </thead>
                 <tbody>
                   {transferRequests.map((tr, index) => {
-                    const requestDate = tr.requestDate || tr.createdAt || tr.CreatedAt;
-                    const newClient = tr.newClient || tr.recipientName || tr.RecipientName || 'N/A';
-                    const status = tr.status || tr.Status || 'Pending';
-                    return (
-                      <tr key={tr.id || tr.ID || `transfer-${index}`}>
+              const requestDate = tr.requestDate || tr.createdAt || tr.CreatedAt;
+              const newClient = tr.newClient || tr.recipientName || tr.RecipientName || 'N/A';
+              const status = tr.status || tr.Status || 'Pending';
+              return (
+                <tr key={tr.id || tr.ID || `transfer-${index}`}>
                         <td>{index + 1}</td>
                         <td>{tr.property || tr.Property || 'N/A'}</td>
                         <td>{newClient}</td>
                         <td>
-                          {requestDate
-                            ? new Date(requestDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-                            : 'N/A'}
+                          {requestDate ?
+                    new Date(requestDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) :
+                    'N/A'}
                         </td>
                         <td>
                           <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
                             {status}
                           </span>
                         </td>
-                      </tr>
-                    );
-                  })}
+                      </tr>);
+
+            })}
                 </tbody>
               </table>
             </div>
-          )}
+      }
         </>
-      )}
-    </div>
-  );
+    }
+    </div>;
 
-  const renderMaintenance = () => (
-    <div className="sa-section-card">
+
+  const renderMaintenance = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
           <h2>Maintenance Requests</h2>
@@ -1487,12 +1378,12 @@ const TenantDashboard = () => {
         </button>
       </div>
 
-      {loading ? (
-        <div className="sa-table-empty">Loading maintenance requests...</div>
-      ) : maintenanceRequests.length === 0 ? (
-        <div className="sa-table-empty">No maintenance requests found</div>
-      ) : (
-        <div className="sa-table-wrapper">
+      {loading ?
+    <div className="sa-table-empty">Loading maintenance requests...</div> :
+    maintenanceRequests.length === 0 ?
+    <div className="sa-table-empty">No maintenance requests found</div> :
+
+    <div className="sa-table-wrapper">
           <table className="sa-table">
             <thead>
               <tr>
@@ -1505,15 +1396,15 @@ const TenantDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {maintenanceRequests.map((request, index) => (
-                <tr key={request.ID || request.id || `request-${index}`}>
+              {maintenanceRequests.map((request, index) =>
+          <tr key={request.ID || request.id || `request-${index}`}>
                   <td>{index + 1}</td>
                   <td>
                     <div className="sa-cell-main">
                       <span className="sa-cell-title">{request.Issue || request.Title || request.title || 'Maintenance Request'}</span>
-                      {request.Description && (
-                        <span className="sa-cell-sub">{request.Description || request.description}</span>
-                      )}
+                      {request.Description &&
+                <span className="sa-cell-sub">{request.Description || request.description}</span>
+                }
                     </div>
                   </td>
                   <td>
@@ -1530,140 +1421,135 @@ const TenantDashboard = () => {
                   <td className="table-menu">
                     <div className="table-actions">
                       <button
-                        className="table-action-button view"
-                        onClick={() => {
-                          setSelectedMaintenanceRequest(request);
-                          setShowMaintenanceViewModal(true);
-                        }}
-                      >
+                  className="table-action-button view"
+                  onClick={() => {
+                    setSelectedMaintenanceRequest(request);
+                    setShowMaintenanceViewModal(true);
+                  }}>
+                  
                         View
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+          )}
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
+    }
+    </div>;
 
-  // Render messaging page
-  const renderMessages = () => (
-    <div className="sa-chat-page">
+  const renderMessages = () =>
+  <div className="sa-chat-page">
       <div className="sa-chat-layout">
         <div className="sa-chat-list">
           <h3>Users</h3>
           <ul>
             {chatUsers.map((user) => {
-              const active = user.userId === selectedUserId;
-              return (
-                <li
-                  key={`chat-user-${user.userId}`}
-                  className={active ? 'active' : ''}
-                  onClick={() => loadChatForUser(user.userId)}
-                >
+            const active = user.userId === selectedUserId;
+            return (
+              <li
+                key={`chat-user-${user.userId}`}
+                className={active ? 'active' : ''}
+                onClick={() => loadChatForUser(user.userId)}>
+                
                   <div className="sa-cell-main">
                     <span className="sa-cell-title">{user.name || 'User'}</span>
                     <span className="sa-cell-sub">{user.email || ''}</span>
-                    {user.role && (
-                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    {user.role &&
+                  <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                         {user.role}
                       </span>
-                    )}
-                    {user.unreadCount > 0 && (
-                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                  }
+                    {user.unreadCount > 0 &&
+                  <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
                         {user.unreadCount} unread
                       </span>
-                    )}
+                  }
                   </div>
-                </li>
-              );
-            })}
-            {chatUsers.length === 0 && (
-              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                </li>);
+
+          })}
+            {chatUsers.length === 0 &&
+          <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
                 No users available
               </li>
-            )}
+          }
           </ul>
         </div>
         
         <div className="sa-chat-conversation">
           <div className="sa-chat-header">
             <h3>Messages</h3>
-            {selectedUserId && (
-              <span className="sa-chat-subtitle">
+            {selectedUserId &&
+          <span className="sa-chat-subtitle">
                 Chat with{' '}
                 {
-                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
-                    .name || 'User'
-                }
+            (chatUsers.find((u) => u.userId === selectedUserId) || {}).
+            name || 'User'
+            }
               </span>
-            )}
+          }
           </div>
           <div className="sa-chat-messages">
             {chatMessages.map((msg, index) => {
-              const messageContent = msg.content || msg.Content || '';
-              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
-              const messageFromUserId = msg.fromUserId || msg.FromUserId;
-              const messageId = msg.id || msg.ID || index;
-              
-              // Determine if message is outgoing or incoming
-              const storedUser = localStorage.getItem('user');
-              let isOutgoing = false;
-              if (storedUser) {
-                try {
-                  const user = JSON.parse(storedUser);
-                  const currentUserId = user.id || user.ID;
-                  isOutgoing = String(messageFromUserId) === String(currentUserId);
-                } catch (e) {
-                  // Default to incoming if we can't parse user
-                }
+            const messageContent = msg.content || msg.Content || '';
+            const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+            const messageFromUserId = msg.fromUserId || msg.FromUserId;
+            const messageId = msg.id || msg.ID || index;
+            const storedUser = localStorage.getItem('user');
+            let isOutgoing = false;
+            if (storedUser) {
+              try {
+                const user = JSON.parse(storedUser);
+                const currentUserId = user.id || user.ID;
+                isOutgoing = String(messageFromUserId) === String(currentUserId);
+              } catch (e) {
               }
-              
-              return (
-                <div
-                  key={`msg-${messageId}`}
-                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
-                >
+            }
+
+            return (
+              <div
+                key={`msg-${messageId}`}
+                className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}>
+                
                   <p>{messageContent}</p>
                   <span className="sa-chat-meta">
-                    {messageCreatedAt
-                      ? new Date(messageCreatedAt).toLocaleString()
-                      : ''}
+                    {messageCreatedAt ?
+                  new Date(messageCreatedAt).toLocaleString() :
+                  ''}
                   </span>
-                </div>
-              );
-            })}
-            {chatMessages.length === 0 && (
-              <div className="sa-table-empty">
-                {selectedUserId 
-                  ? 'No messages yet. Start the conversation!'
-                  : 'Select a conversation on the left to start messaging.'}
+                </div>);
+
+          })}
+            {chatMessages.length === 0 &&
+          <div className="sa-table-empty">
+                {selectedUserId ?
+            'No messages yet. Start the conversation!' :
+            'Select a conversation on the left to start messaging.'}
               </div>
-            )}
+          }
             <div ref={messagesEndRef} />
           </div>
           <div className="sa-chat-input-row">
             <input
-              type="text"
-              placeholder="Reply..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              disabled={!selectedUserId}
-            />
-            <button 
-              className="sa-primary-cta" 
-              onClick={handleSendMessage}
-              disabled={!selectedUserId || !chatInput.trim()}
-            >
+            type="text"
+            placeholder="Reply..."
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            disabled={!selectedUserId} />
+          
+            <button
+            className="sa-primary-cta"
+            onClick={handleSendMessage}
+            disabled={!selectedUserId || !chatInput.trim()}>
+            
               <MessageCircle size={16} />
               Send
             </button>
@@ -1672,11 +1558,11 @@ const TenantDashboard = () => {
         
         <div className="sa-chat-details">
           <h4>Contact Details</h4>
-          {selectedUserId ? (
-            (() => {
-              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
-              return (
-                <>
+          {selectedUserId ?
+        (() => {
+          const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
+          return (
+            <>
                   <p>
                     <strong>Name:</strong> {user.name || 'N/A'}
                   </p>
@@ -1686,21 +1572,21 @@ const TenantDashboard = () => {
                   <p>
                     <strong>Role:</strong> {user.role || 'N/A'}
                   </p>
-                  {user.company && (
-                    <p>
+                  {user.company &&
+              <p>
                       <strong>Company:</strong> {user.company}
                     </p>
-                  )}
-                </>
-              );
-            })()
-          ) : (
-            <p>Select a conversation to view details.</p>
-          )}
+              }
+                </>);
+
+        })() :
+
+        <p>Select a conversation to view details.</p>
+        }
         </div>
       </div>
-    </div>
-  );
+    </div>;
+
 
   const renderAdvertisements = () => {
     return (
@@ -1713,48 +1599,48 @@ const TenantDashboard = () => {
         </div>
 
         <div className="sa-ads-list">
-          {advertisements.length > 0 ? (
-            advertisements.map((ad, index) => {
-              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-              const fullImageUrl = imageUrl 
-                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                : null;
+          {advertisements.length > 0 ?
+          advertisements.map((ad, index) => {
+            const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+            const fullImageUrl = imageUrl ?
+            imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}` :
+            null;
 
-              return (
-                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
+            return (
+              <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
                   <div className="sa-ad-status-column">
                     <span className="sa-ad-status published">Active</span>
                   </div>
                   <div className="sa-ad-main">
-                    {fullImageUrl && (
-                      <img 
-                        src={fullImageUrl} 
-                        alt={ad.Title || ad.title || 'Advertisement'} 
-                        className="sa-ad-image"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    )}
+                    {fullImageUrl &&
+                  <img
+                    src={fullImageUrl}
+                    alt={ad.Title || ad.title || 'Advertisement'}
+                    className="sa-ad-image"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }} />
+
+                  }
                     <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
                     <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
-                    {ad.CreatedAt && (
-                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
+                    {ad.CreatedAt &&
+                  <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
                         Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
                       </span>
-                    )}
+                  }
                   </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="sa-table-empty">
+                </div>);
+
+          }) :
+
+          <div className="sa-table-empty">
               No active advertisements available at this time.
             </div>
-          )}
+          }
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
   const copyToClipboard = async (text) => {
@@ -1762,7 +1648,6 @@ const TenantDashboard = () => {
       await navigator.clipboard.writeText(text);
       addNotification('Phone number copied to clipboard!', 'success');
     } catch (error) {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = text;
       textArea.style.position = 'fixed';
@@ -1780,15 +1665,14 @@ const TenantDashboard = () => {
   };
 
   const renderTechnicianContacts = () => {
-    // Filter by worker name (search)
     const searchTrim = (technicianContactSearch || '').trim().toLowerCase();
-    const filteredContacts = searchTrim
-      ? technicianContacts.filter((contact) => {
-          const name = (contact.Name || contact.name || '').toLowerCase();
-          const category = (contact.Category || contact.category || '').toLowerCase();
-          return name.includes(searchTrim) || category.includes(searchTrim);
-        })
-      : technicianContacts;
+    const filteredContacts = searchTrim ?
+    technicianContacts.filter((contact) => {
+      const name = (contact.Name || contact.name || '').toLowerCase();
+      const category = (contact.Category || contact.category || '').toLowerCase();
+      return name.includes(searchTrim) || category.includes(searchTrim);
+    }) :
+    technicianContacts;
 
     return (
       <div className="sa-section-card">
@@ -1799,184 +1683,184 @@ const TenantDashboard = () => {
           </div>
         </div>
 
-        {technicianContacts.length > 0 && (
-          <div style={{ marginBottom: '20px', marginTop: '8px' }}>
+        {technicianContacts.length > 0 &&
+        <div style={{ marginBottom: '20px', marginTop: '8px' }}>
             <div
-              className="sa-search-input"
-              style={{
-                maxWidth: '400px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '10px 14px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                backgroundColor: '#f9fafb'
-              }}
-            >
+            className="sa-search-input"
+            style={{
+              maxWidth: '400px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 14px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: '#f9fafb'
+            }}>
+            
               <Search size={18} color="#6b7280" />
               <input
-                type="text"
-                placeholder="Search by worker name or category..."
-                value={technicianContactSearch}
-                onChange={(e) => setTechnicianContactSearch(e.target.value)}
-                style={{ border: 'none', background: 'transparent', flex: 1, fontSize: '0.9rem', outline: 'none' }}
-              />
+              type="text"
+              placeholder="Search by worker name or category..."
+              value={technicianContactSearch}
+              onChange={(e) => setTechnicianContactSearch(e.target.value)}
+              style={{ border: 'none', background: 'transparent', flex: 1, fontSize: '0.9rem', outline: 'none' }} />
+            
             </div>
           </div>
-        )}
+        }
 
-        {loading ? (
-          <div className="sa-table-empty">Loading technician contacts...</div>
-        ) : technicianContacts.length === 0 ? (
-          <div className="sa-table-empty">No technician contacts available</div>
-        ) : filteredContacts.length === 0 ? (
-          <div className="sa-table-empty">No technicians match your search</div>
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: '24px',
-              marginTop: '24px',
-              alignItems: 'stretch',
-            }}
-          >
+        {loading ?
+        <div className="sa-table-empty">Loading technician contacts...</div> :
+        technicianContacts.length === 0 ?
+        <div className="sa-table-empty">No technician contacts available</div> :
+        filteredContacts.length === 0 ?
+        <div className="sa-table-empty">No technicians match your search</div> :
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '24px',
+            marginTop: '24px',
+            alignItems: 'stretch'
+          }}>
+          
             {filteredContacts.map((contact) => {
-              const contactId = contact.ID || contact.id;
-              const name = contact.Name || contact.name || 'Unknown';
-              const phone = contact.Phone || contact.phone || '';
-              const email = contact.Email || contact.email || '';
-              const address = contact.Address || contact.address || '';
-              const description = contact.Description || contact.description || '';
-              const categoryName = contact.Category || contact.category || '';
-              const photoUrl = contact.PhotoURL || contact.photoURL || contact.photoUrl || '';
+            const contactId = contact.ID || contact.id;
+            const name = contact.Name || contact.name || 'Unknown';
+            const phone = contact.Phone || contact.phone || '';
+            const email = contact.Email || contact.email || '';
+            const address = contact.Address || contact.address || '';
+            const description = contact.Description || contact.description || '';
+            const categoryName = contact.Category || contact.category || '';
+            const photoUrl = contact.PhotoURL || contact.photoURL || contact.photoUrl || '';
 
-              return (
-                <div
-                  key={contactId}
-                  style={{
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    backgroundColor: '#ffffff',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-                    transition: 'box-shadow 0.2s',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: '0',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
-                  }}
-                >
+            return (
+              <div
+                key={contactId}
+                style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+                  transition: 'box-shadow 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: '0'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
+                }}>
+                
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '12px', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                      {photoUrl ? (
-                        <img
-                          src={photoUrl}
-                          alt={`${name}`}
-                          style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                          onClick={() => window.open(photoUrl, '_blank')}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: '48px',
-                            height: '48px',
-                            borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                            color: '#fff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '1rem',
-                            fontWeight: '600',
-                            flexShrink: 0,
-                          }}
-                        >
+                      {photoUrl ?
+                    <img
+                      src={photoUrl}
+                      alt={`${name}`}
+                      style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                      onClick={() => window.open(photoUrl, '_blank')} /> :
+
+
+                    <div
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        flexShrink: 0
+                      }}>
+                      
                           {(name || 'U').charAt(0).toUpperCase()}
                         </div>
-                      )}
+                    }
                       <h4 style={{ margin: 0, color: '#1f2937', fontSize: '1.05rem', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {name}
                       </h4>
                     </div>
                     <span
-                      style={{
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        backgroundColor: '#f3f4f6',
-                        color: '#6b7280',
-                        fontSize: '0.7rem',
-                        textTransform: 'capitalize',
-                        flexShrink: 0,
-                      }}
-                    >
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: '#f3f4f6',
+                      color: '#6b7280',
+                      fontSize: '0.7rem',
+                      textTransform: 'capitalize',
+                      flexShrink: 0
+                    }}>
+                    
                       {categoryName || '—'}
                     </span>
                   </div>
 
-                  {phone && (
-                    <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  {phone &&
+                <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <Phone size={16} color="#6b7280" style={{ flexShrink: 0 }} />
                       <span style={{ color: '#374151', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{phone}</span>
                       <button
-                        onClick={() => copyToClipboard(phone)}
-                        style={{
-                          padding: '6px 10px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          backgroundColor: '#ffffff',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '0.8rem',
-                          color: '#374151',
-                          flexShrink: 0,
-                        }}
-                        title="Copy phone number"
-                      >
+                    onClick={() => copyToClipboard(phone)}
+                    style={{
+                      padding: '6px 10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: '#ffffff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.8rem',
+                      color: '#374151',
+                      flexShrink: 0
+                    }}
+                    title="Copy phone number">
+                    
                         <Copy size={14} />
                         Copy
                       </button>
                     </div>
-                  )}
+                }
 
-                  {email && (
-                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  {email &&
+                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <span style={{ color: '#6b7280', fontSize: '0.8rem', flexShrink: 0 }}>Email:</span>
                       <a href={`mailto:${email}`} style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {email}
                       </a>
                     </div>
-                  )}
+                }
 
-                  {address && (
-                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px', flexShrink: 0 }}>
+                  {address &&
+                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px', flexShrink: 0 }}>
                       <span style={{ color: '#6b7280', fontSize: '0.8rem', flexShrink: 0 }}>Address:</span>
                       <span style={{ color: '#374151', fontSize: '0.85rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{address}</span>
                     </div>
-                  )}
+                }
 
-                  {description && (
-                    <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                  {description &&
+                <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
                       <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem', lineHeight: '1.45', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {description}
                       </p>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                }
+                </div>);
+
+          })}
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
   const renderStateOfEntryExit = () => {
@@ -1988,10 +1872,10 @@ const TenantDashboard = () => {
             <p>View inventory (state of entry or exit) reports filled by the technician for your property</p>
           </div>
         </div>
-        {myInventory.length === 0 ? (
-          <div className="sa-table-empty">No state of entry or exit records yet. When a technician fills an inventory for you, it will appear here.</div>
-        ) : (
-          <div className="sa-table-wrapper" style={{ marginTop: '20px' }}>
+        {myInventory.length === 0 ?
+        <div className="sa-table-empty">No state of entry or exit records yet. When a technician fills an inventory for you, it will appear here.</div> :
+
+        <div className="sa-table-wrapper" style={{ marginTop: '20px' }}>
             <table className="sa-table">
               <thead>
                 <tr>
@@ -2005,24 +1889,24 @@ const TenantDashboard = () => {
               </thead>
               <tbody>
                 {myInventory.map((inv) => {
-                  const type = inv.type || inv.Type || '';
-                  const property = inv.property || inv.Property || '—';
-                  const date = inv.date || inv.Date || inv.createdAt || inv.CreatedAt;
-                  const dateStr = date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
-                  const inspector = inv.inspector || inv.Inspector || '—';
-                  const status = inv.status || inv.Status || '—';
-                  const reportURL = inv.reportURL || inv.ReportURL;
-                  return (
-                    <tr key={inv.id || inv.ID}>
+                const type = inv.type || inv.Type || '';
+                const property = inv.property || inv.Property || '—';
+                const date = inv.date || inv.Date || inv.createdAt || inv.CreatedAt;
+                const dateStr = date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
+                const inspector = inv.inspector || inv.Inspector || '—';
+                const status = inv.status || inv.Status || '—';
+                const reportURL = inv.reportURL || inv.ReportURL;
+                return (
+                  <tr key={inv.id || inv.ID}>
                       <td>
                         <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '0.85rem',
-                          fontWeight: '500',
-                          backgroundColor: type === 'Move-in' ? '#dbeafe' : '#fef3c7',
-                          color: type === 'Move-in' ? '#1e40af' : '#92400e'
-                        }}>
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '0.85rem',
+                        fontWeight: '500',
+                        backgroundColor: type === 'Move-in' ? '#dbeafe' : '#fef3c7',
+                        color: type === 'Move-in' ? '#1e40af' : '#92400e'
+                      }}>
                           {type === 'Move-in' ? 'Entry' : type === 'Move-out' ? 'Exit' : type || '—'}
                         </span>
                       </td>
@@ -2031,28 +1915,28 @@ const TenantDashboard = () => {
                       <td>{inspector}</td>
                       <td>{status}</td>
                       <td>
-                        {reportURL ? (
-                          <a
-                            href={reportURL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}
-                          >
+                        {reportURL ?
+                      <a
+                        href={reportURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}>
+                        
                             View report
-                          </a>
-                        ) : (
-                          <span style={{ color: '#9ca3af' }}>—</span>
-                        )}
+                          </a> :
+
+                      <span style={{ color: '#9ca3af' }}>—</span>
+                      }
                       </td>
-                    </tr>
-                  );
-                })}
+                    </tr>);
+
+              })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
   const renderContent = (tabId = activeTab) => {
@@ -2075,8 +1959,8 @@ const TenantDashboard = () => {
         return (
           <div className="embedded-settings">
             <SettingsPage />
-          </div>
-        );
+          </div>);
+
       default:
         return renderOverview();
     }
@@ -2084,11 +1968,11 @@ const TenantDashboard = () => {
 
   const layoutMenu = useMemo(
     () =>
-      tabs.map(tab => ({
-        ...tab,
-        onSelect: () => setActiveTab(tab.id),
-        active: activeTab === tab.id
-      })),
+    tabs.map((tab) => ({
+      ...tab,
+      onSelect: () => setActiveTab(tab.id),
+      active: activeTab === tab.id
+    })),
     [tabs, activeTab]
   );
 
@@ -2106,29 +1990,27 @@ const TenantDashboard = () => {
         menu={layoutMenu}
         activeId={activeTab}
         onActiveChange={setActiveTab}
-        onLogout={handleLogout}
-      >
-        {({ activeId }) => (
-          <div className="content-body">
+        onLogout={handleLogout}>
+        
+        {({ activeId }) =>
+        <div className="content-body">
             {renderContent(activeId)}
           </div>
-        )}
+        }
       </RoleLayout>
 
-      {notifications.length > 0 && (
-        <div className="notifications-container">
-          {notifications.map(notification => (
-            <div key={notification.id} className={`notification notification-${notification.type}`}>
+      {notifications.length > 0 &&
+      <div className="notifications-container">
+          {notifications.map((notification) =>
+        <div key={notification.id} className={`notification notification-${notification.type}`}>
               <span>{notification.message}</span>
-              <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
+              <button onClick={() => setNotifications((prev) => prev.filter((n) => n.id !== notification.id))}>×</button>
             </div>
-          ))}
+        )}
         </div>
-      )}
-
-      {/* Maintenance Request Modal */}
-      {showMaintenanceModal && (
-        <div className="modal-overlay" onClick={() => setShowMaintenanceModal(false)}>
+      }
+      {showMaintenanceModal &&
+      <div className="modal-overlay" onClick={() => setShowMaintenanceModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Submit Maintenance Request</h3>
@@ -2140,23 +2022,23 @@ const TenantDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="title">Issue Title</label>
                     <input
-                      type="text"
-                      id="title"
-                      value={maintenanceForm.title}
-                      onChange={(e) => setMaintenanceForm(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="e.g., Leaky faucet in kitchen"
-                      required
-                    />
+                    type="text"
+                    id="title"
+                    value={maintenanceForm.title}
+                    onChange={(e) => setMaintenanceForm((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g., Leaky faucet in kitchen"
+                    required />
+                  
                   </div>
 
                   <div className="form-group">
                     <label htmlFor="priority">Priority Level</label>
                     <select
-                      id="priority"
-                      value={maintenanceForm.priority}
-                      onChange={(e) => setMaintenanceForm(prev => ({ ...prev, priority: e.target.value }))}
-                      required
-                    >
+                    id="priority"
+                    value={maintenanceForm.priority}
+                    onChange={(e) => setMaintenanceForm((prev) => ({ ...prev, priority: e.target.value }))}
+                    required>
+                    
                       <option value="low">Low - Can wait</option>
                       <option value="medium">Medium - Should be fixed soon</option>
                       <option value="high">High - Urgent</option>
@@ -2168,26 +2050,26 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="description">Description</label>
                   <textarea
-                    id="description"
-                    value={maintenanceForm.description}
-                    onChange={(e) => setMaintenanceForm(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Please describe the issue in detail..."
-                    rows="4"
-                    required
-                  />
+                  id="description"
+                  value={maintenanceForm.description}
+                  onChange={(e) => setMaintenanceForm((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Please describe the issue in detail..."
+                  rows="4"
+                  required />
+                
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="photos">Upload Photos (Optional)</label>
                   <div className="photo-upload-area">
                     <input
-                      type="file"
-                      id="photos"
-                      accept="image/*"
-                      multiple
-                      onChange={handlePhotoUpload}
-                      style={{ display: 'none' }}
-                    />
+                    type="file"
+                    id="photos"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    style={{ display: 'none' }} />
+                  
                     <label htmlFor="photos" className="photo-upload-button">
                       <Camera size={20} />
                       <span>Choose Photos</span>
@@ -2195,33 +2077,33 @@ const TenantDashboard = () => {
                     <p className="photo-help-text">Upload photos to help describe the issue (max 5 photos)</p>
                   </div>
 
-                  {maintenanceForm.photos.length > 0 && (
-                    <div className="maintenance-photo-preview-grid">
-                      {maintenanceForm.photos.map(photo => (
-                        <div key={photo.id} className="maintenance-photo-preview-item">
+                  {maintenanceForm.photos.length > 0 &&
+                <div className="maintenance-photo-preview-grid">
+                      {maintenanceForm.photos.map((photo) =>
+                  <div key={photo.id} className="maintenance-photo-preview-item">
                           <button
-                            type="button"
-                            className="maintenance-photo-placeholder"
-                            onClick={() => window.open(photo.preview, '_blank')}
-                            title={photo.name}
-                          >
+                      type="button"
+                      className="maintenance-photo-placeholder"
+                      onClick={() => window.open(photo.preview, '_blank')}
+                      title={photo.name}>
+                      
                             <span>Photo</span>
                             <span className="maintenance-photo-placeholder-name">
                               {photo.name || 'Attachment'}
                             </span>
                           </button>
                           <button
-                            type="button"
-                            className="remove-photo-button"
-                            onClick={() => removePhoto(photo.id)}
-                          >
+                      type="button"
+                      className="remove-photo-button"
+                      onClick={() => removePhoto(photo.id)}>
+                      
                             <X size={16} />
                           </button>
                           <span className="photo-name">{photo.name}</span>
                         </div>
-                      ))}
-                    </div>
                   )}
+                    </div>
+                }
                 </div>
 
                 <div className="modal-footer">
@@ -2236,11 +2118,9 @@ const TenantDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+      }
+      {showPaymentModal &&
+      <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Make Payment</h3>
@@ -2252,23 +2132,23 @@ const TenantDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="amount">Amount</label>
                     <input
-                      type="number"
-                      id="amount"
-                      value={paymentForm.amount}
-                      onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="Enter amount"
-                      required
-                    />
+                    type="number"
+                    id="amount"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm((prev) => ({ ...prev, amount: e.target.value }))}
+                    placeholder="Enter amount"
+                    required />
+                  
                   </div>
 
                   <div className="form-group">
                     <label htmlFor="paymentMethod">Payment Method</label>
                     <select
-                      id="paymentMethod"
-                      value={paymentForm.paymentMethod}
-                      onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                      required
-                    >
+                    id="paymentMethod"
+                    value={paymentForm.paymentMethod}
+                    onChange={(e) => setPaymentForm((prev) => ({ ...prev, paymentMethod: e.target.value }))}
+                    required>
+                    
                       <option value="">Select payment method</option>
                       <option value="Mobile Money">Mobile Money</option>
                     </select>
@@ -2278,13 +2158,13 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="reference">Reference Number</label>
                   <input
-                    type="text"
-                    id="reference"
-                    value={paymentForm.reference}
-                    onChange={(e) => setPaymentForm(prev => ({ ...prev, reference: e.target.value }))}
-                    placeholder="Enter transaction reference"
-                    required
-                  />
+                  type="text"
+                  id="reference"
+                  value={paymentForm.reference}
+                  onChange={(e) => setPaymentForm((prev) => ({ ...prev, reference: e.target.value }))}
+                  placeholder="Enter transaction reference"
+                  required />
+                
                 </div>
 
                 <div className="modal-footer">
@@ -2299,11 +2179,9 @@ const TenantDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Pay Bills Modal - Water & Electricity */}
-      {showBillsModal && (
-        <div className="modal-overlay" onClick={() => setShowBillsModal(false)}>
+      }
+      {showBillsModal &&
+      <div className="modal-overlay" onClick={() => setShowBillsModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Pay Bills</h3>
@@ -2314,10 +2192,10 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="billType">Bill Type</label>
                   <select
-                    id="billType"
-                    value={billsForm.billType}
-                    onChange={(e) => setBillsForm(prev => ({ ...prev, billType: e.target.value }))}
-                  >
+                  id="billType"
+                  value={billsForm.billType}
+                  onChange={(e) => setBillsForm((prev) => ({ ...prev, billType: e.target.value }))}>
+                  
                     <option value="water">Water</option>
                     <option value="electricity">Electricity</option>
                   </select>
@@ -2326,23 +2204,23 @@ const TenantDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="billsAmount">Amount (XOF)</label>
                     <input
-                      type="number"
-                      id="billsAmount"
-                      value={billsForm.amount}
-                      onChange={(e) => setBillsForm(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="Enter amount"
-                      required
-                      min="1"
-                    />
+                    type="number"
+                    id="billsAmount"
+                    value={billsForm.amount}
+                    onChange={(e) => setBillsForm((prev) => ({ ...prev, amount: e.target.value }))}
+                    placeholder="Enter amount"
+                    required
+                    min="1" />
+                  
                   </div>
                   <div className="form-group">
                     <label htmlFor="billsPaymentMethod">Payment Method</label>
                     <select
-                      id="billsPaymentMethod"
-                      value={billsForm.paymentMethod}
-                      onChange={(e) => setBillsForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                      required
-                    >
+                    id="billsPaymentMethod"
+                    value={billsForm.paymentMethod}
+                    onChange={(e) => setBillsForm((prev) => ({ ...prev, paymentMethod: e.target.value }))}
+                    required>
+                    
                       <option value="">Select payment method</option>
                       <option value="Mobile Money">Mobile Money</option>
                     </select>
@@ -2351,13 +2229,13 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="billsReference">Reference Number</label>
                   <input
-                    type="text"
-                    id="billsReference"
-                    value={billsForm.reference}
-                    onChange={(e) => setBillsForm(prev => ({ ...prev, reference: e.target.value }))}
-                    placeholder="Enter transaction reference"
-                    required
-                  />
+                  type="text"
+                  id="billsReference"
+                  value={billsForm.reference}
+                  onChange={(e) => setBillsForm((prev) => ({ ...prev, reference: e.target.value }))}
+                  placeholder="Enter transaction reference"
+                  required />
+                
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="action-button secondary" onClick={() => setShowBillsModal(false)}>
@@ -2371,11 +2249,9 @@ const TenantDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Terminate Lease Modal */}
-      {showTerminateLeaseModal && (
-        <div className="modal-overlay" onClick={() => setShowTerminateLeaseModal(false)}>
+      }
+      {showTerminateLeaseModal &&
+      <div className="modal-overlay" onClick={() => setShowTerminateLeaseModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Terminate My Lease</h3>
@@ -2386,11 +2262,11 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="reason">Reason for Termination *</label>
                   <select
-                    id="reason"
-                    value={terminateLeaseForm.reason}
-                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, reason: e.target.value }))}
-                    required
-                  >
+                  id="reason"
+                  value={terminateLeaseForm.reason}
+                  onChange={(e) => setTerminateLeaseForm((prev) => ({ ...prev, reason: e.target.value }))}
+                  required>
+                  
                     <option value="">Select a reason</option>
                     <option value="moving_out">Moving Out</option>
                     <option value="job_relocation">Job Relocation</option>
@@ -2404,13 +2280,13 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="terminationDate">Desired Termination Date *</label>
                   <input
-                    type="date"
-                    id="terminationDate"
-                    value={terminateLeaseForm.terminationDate}
-                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, terminationDate: e.target.value }))}
-                    min={minTerminationDate}
-                    required
-                  />
+                  type="date"
+                  id="terminationDate"
+                  value={terminateLeaseForm.terminationDate}
+                  onChange={(e) => setTerminateLeaseForm((prev) => ({ ...prev, terminationDate: e.target.value }))}
+                  min={minTerminationDate}
+                  required />
+                
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     Legal notice: minimum 3 months from today.
                   </small>
@@ -2419,22 +2295,22 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="comments">Additional Comments</label>
                   <textarea
-                    id="comments"
-                    value={terminateLeaseForm.comments}
-                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, comments: e.target.value }))}
-                    placeholder="Provide any additional details about your termination request..."
-                    rows="4"
-                  />
+                  id="comments"
+                  value={terminateLeaseForm.comments}
+                  onChange={(e) => setTerminateLeaseForm((prev) => ({ ...prev, comments: e.target.value }))}
+                  placeholder="Provide any additional details about your termination request..."
+                  rows="4" />
+                
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="securityDepositRefundMethod">Security Deposit Refund Method *</label>
                   <select
-                    id="securityDepositRefundMethod"
-                    value={terminateLeaseForm.securityDepositRefundMethod}
-                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, securityDepositRefundMethod: e.target.value }))}
-                    required
-                  >
+                  id="securityDepositRefundMethod"
+                  value={terminateLeaseForm.securityDepositRefundMethod}
+                  onChange={(e) => setTerminateLeaseForm((prev) => ({ ...prev, securityDepositRefundMethod: e.target.value }))}
+                  required>
+                  
                     <option value="">Select refund method</option>
                     <option value="Bank Transfer">Bank Transfer</option>
                     <option value="Mobile Money">Mobile Money</option>
@@ -2444,47 +2320,47 @@ const TenantDashboard = () => {
                     How would you like to receive your security deposit refund?
                   </small>
                 </div>
-                {terminateLeaseForm.securityDepositRefundMethod === 'Mobile Money' && (
-                  <div className="form-group">
+                {terminateLeaseForm.securityDepositRefundMethod === 'Mobile Money' &&
+              <div className="form-group">
                     <label htmlFor="mobileMoneyNumber">Mobile Money Number *</label>
                     <input
-                      type="tel"
-                      id="mobileMoneyNumber"
-                      value={terminateLeaseForm.mobileMoneyNumber}
-                      onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, mobileMoneyNumber: e.target.value }))}
-                      placeholder="e.g., +225 07 12 34 56 78"
-                      required
-                    />
+                  type="tel"
+                  id="mobileMoneyNumber"
+                  value={terminateLeaseForm.mobileMoneyNumber}
+                  onChange={(e) => setTerminateLeaseForm((prev) => ({ ...prev, mobileMoneyNumber: e.target.value }))}
+                  placeholder="e.g., +225 07 12 34 56 78"
+                  required />
+                
                   </div>
-                )}
+              }
 
                 <div className="form-group">
                   <label htmlFor="inventoryCheckDate">Inventory Check Date *</label>
                   <input
-                    type="date"
-                    id="inventoryCheckDate"
-                    value={terminateLeaseForm.inventoryCheckDate}
-                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, inventoryCheckDate: e.target.value }))}
-                    min={inventoryDateRange.min || undefined}
-                    max={inventoryDateRange.max || undefined}
-                    disabled={!terminateLeaseForm.terminationDate}
-                    required
-                  />
+                  type="date"
+                  id="inventoryCheckDate"
+                  value={terminateLeaseForm.inventoryCheckDate}
+                  onChange={(e) => setTerminateLeaseForm((prev) => ({ ...prev, inventoryCheckDate: e.target.value }))}
+                  min={inventoryDateRange.min || undefined}
+                  max={inventoryDateRange.max || undefined}
+                  disabled={!terminateLeaseForm.terminationDate}
+                  required />
+                
                     <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                    {terminateLeaseForm.terminationDate
-                      ? `State of exit: choose a date between ${inventoryDateRange.min} and ${inventoryDateRange.max} (inventory must be done before the 5th of the next month).`
-                      : 'Select a termination date first.'}
+                    {terminateLeaseForm.terminationDate ?
+                  `State of exit: choose a date between ${inventoryDateRange.min} and ${inventoryDateRange.max} (inventory must be done before the 5th of the next month).` :
+                  'Select a termination date first.'}
                   </small>
                 </div>
                 <div className="form-group">
                   <label htmlFor="inventoryCheckTime">Inventory Check Time</label>
                   <input
-                    type="time"
-                    id="inventoryCheckTime"
-                    value={terminateLeaseForm.inventoryCheckTime}
-                    onChange={(e) => setTerminateLeaseForm(prev => ({ ...prev, inventoryCheckTime: e.target.value }))}
-                    disabled={!terminateLeaseForm.terminationDate}
-                  />
+                  type="time"
+                  id="inventoryCheckTime"
+                  value={terminateLeaseForm.inventoryCheckTime}
+                  onChange={(e) => setTerminateLeaseForm((prev) => ({ ...prev, inventoryCheckTime: e.target.value }))}
+                  disabled={!terminateLeaseForm.terminationDate} />
+                
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     Optional. Set the time for the inventory check appointment.
                   </small>
@@ -2493,15 +2369,15 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="terminationLetter">Termination Letter (Required) *</label>
                   <input
-                    type="file"
-                    id="terminationLetter"
-                    accept=".pdf,image/*"
-                    required
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setTerminateLeaseForm(prev => ({ ...prev, terminationLetter: file }));
-                    }}
-                  />
+                  type="file"
+                  id="terminationLetter"
+                  accept=".pdf,image/*"
+                  required
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setTerminateLeaseForm((prev) => ({ ...prev, terminationLetter: file }));
+                  }} />
+                
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     Upload the letter mentioning reason and desired departure date.
                   </small>
@@ -2510,15 +2386,15 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="supportingDocs">Supporting Documents (Optional)</label>
                   <input
-                    type="file"
-                    id="supportingDocs"
-                    accept=".pdf,image/*"
-                    multiple
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      setTerminateLeaseForm(prev => ({ ...prev, supportingDocs: files }));
-                    }}
-                  />
+                  type="file"
+                  id="supportingDocs"
+                  accept=".pdf,image/*"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setTerminateLeaseForm((prev) => ({ ...prev, supportingDocs: files }));
+                  }} />
+                
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     Transfer, professional reason, force majeure, etc.
                   </small>
@@ -2536,11 +2412,9 @@ const TenantDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Transfer Payment Request Modal */}
-      {showTransferPaymentModal && (
-        <div className="modal-overlay" onClick={() => setShowTransferPaymentModal(false)}>
+      }
+      {showTransferPaymentModal &&
+      <div className="modal-overlay" onClick={() => setShowTransferPaymentModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Transfer Payment Request</h3>
@@ -2551,38 +2425,38 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="recipientName">Recipient Name *</label>
                   <input
-                    type="text"
-                    id="recipientName"
-                    value={transferPaymentForm.recipientName}
-                    onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, recipientName: e.target.value }))}
-                    placeholder="Enter recipient's full name"
-                    required
-                  />
+                  type="text"
+                  id="recipientName"
+                  value={transferPaymentForm.recipientName}
+                  onChange={(e) => setTransferPaymentForm((prev) => ({ ...prev, recipientName: e.target.value }))}
+                  placeholder="Enter recipient's full name"
+                  required />
+                
                 </div>
 
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="recipientEmail">Recipient Email *</label>
                     <input
-                      type="email"
-                      id="recipientEmail"
-                      value={transferPaymentForm.recipientEmail}
-                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, recipientEmail: e.target.value }))}
-                      placeholder="recipient@email.com"
-                      required
-                    />
+                    type="email"
+                    id="recipientEmail"
+                    value={transferPaymentForm.recipientEmail}
+                    onChange={(e) => setTransferPaymentForm((prev) => ({ ...prev, recipientEmail: e.target.value }))}
+                    placeholder="recipient@email.com"
+                    required />
+                  
                   </div>
 
                   <div className="form-group">
                     <label htmlFor="recipientPhone">Recipient Phone *</label>
                     <input
-                      type="tel"
-                      id="recipientPhone"
-                      value={transferPaymentForm.recipientPhone}
-                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, recipientPhone: e.target.value }))}
-                      placeholder="+1234567890"
-                      required
-                    />
+                    type="tel"
+                    id="recipientPhone"
+                    value={transferPaymentForm.recipientPhone}
+                    onChange={(e) => setTransferPaymentForm((prev) => ({ ...prev, recipientPhone: e.target.value }))}
+                    placeholder="+1234567890"
+                    required />
+                  
                   </div>
                 </div>
 
@@ -2590,11 +2464,11 @@ const TenantDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="relationship">Relationship *</label>
                     <select
-                      id="relationship"
-                      value={transferPaymentForm.relationship}
-                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, relationship: e.target.value }))}
-                      required
-                    >
+                    id="relationship"
+                    value={transferPaymentForm.relationship}
+                    onChange={(e) => setTransferPaymentForm((prev) => ({ ...prev, relationship: e.target.value }))}
+                    required>
+                    
                       <option value="">Select relationship</option>
                       <option value="family_member">Family Member</option>
                       <option value="brother">Brother</option>
@@ -2609,26 +2483,26 @@ const TenantDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="recipientIdCard">Recipient ID Card Number *</label>
                     <input
-                      type="text"
-                      id="recipientIdCard"
-                      value={transferPaymentForm.recipientIdCard}
-                      onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, recipientIdCard: e.target.value }))}
-                      placeholder="Enter recipient's ID card number"
-                      required
-                    />
+                    type="text"
+                    id="recipientIdCard"
+                    value={transferPaymentForm.recipientIdCard}
+                    onChange={(e) => setTransferPaymentForm((prev) => ({ ...prev, recipientIdCard: e.target.value }))}
+                    placeholder="Enter recipient's ID card number"
+                    required />
+                  
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="entryDate">Date When Recipient Will Enter *</label>
                   <input
-                    type="date"
-                    id="entryDate"
-                    value={transferPaymentForm.entryDate}
-                    onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, entryDate: e.target.value }))}
-                    min={new Date().toISOString().split('T')[0]}
-                    required
-                  />
+                  type="date"
+                  id="entryDate"
+                  value={transferPaymentForm.entryDate}
+                  onChange={(e) => setTransferPaymentForm((prev) => ({ ...prev, entryDate: e.target.value }))}
+                  min={new Date().toISOString().split('T')[0]}
+                  required />
+                
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     Select the date when the recipient will enter/start.
                   </small>
@@ -2637,13 +2511,13 @@ const TenantDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="reason">Reason for Transfer *</label>
                   <textarea
-                    id="reason"
-                    value={transferPaymentForm.reason}
-                    onChange={(e) => setTransferPaymentForm(prev => ({ ...prev, reason: e.target.value }))}
-                    placeholder="Explain why you're transferring this payment request..."
-                    rows="3"
-                    required
-                  />
+                  id="reason"
+                  value={transferPaymentForm.reason}
+                  onChange={(e) => setTransferPaymentForm((prev) => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Explain why you're transferring this payment request..."
+                  rows="3"
+                  required />
+                
                 </div>
 
                 <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
@@ -2651,54 +2525,54 @@ const TenantDashboard = () => {
                   <p style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#6b7280' }}>
                     Upload the same documents required to create a new client for the person being transferred to.
                   </p>
-                  {TRANSFER_INDIVIDUAL_DOCUMENTS.map((doc) => (
-                    <div key={doc.key} className="form-group" style={{ marginBottom: '12px' }}>
+                  {TRANSFER_INDIVIDUAL_DOCUMENTS.map((doc) =>
+                <div key={doc.key} className="form-group" style={{ marginBottom: '12px' }}>
                       <label style={{ display: 'block', marginBottom: '4px' }}>{doc.label} *</label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <input
-                          ref={(el) => { if (el) transferDocFileInputRefs.current[doc.key] = el; }}
-                          type="file"
-                          accept=".pdf,image/*"
-                          required={!transferDocFiles[doc.key]}
-                          style={{ maxWidth: '100%' }}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            setTransferDocFiles(prev => ({ ...prev, [doc.key]: file }));
-                          }}
-                        />
-                        {transferDocFiles[doc.key] && (
-                          <>
+                      ref={(el) => {if (el) transferDocFileInputRefs.current[doc.key] = el;}}
+                      type="file"
+                      accept=".pdf,image/*"
+                      required={!transferDocFiles[doc.key]}
+                      style={{ maxWidth: '100%' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        setTransferDocFiles((prev) => ({ ...prev, [doc.key]: file }));
+                      }} />
+                    
+                        {transferDocFiles[doc.key] &&
+                    <>
                             <span style={{ fontSize: '13px', color: '#374151' }}>{transferDocFiles[doc.key].name}</span>
                             <button
-                              type="button"
-                              className="action-button secondary"
-                              style={{ padding: '4px 10px', fontSize: '12px' }}
-                              onClick={() => {
-                                const inputEl = transferDocFileInputRefs.current[doc.key];
-                                if (inputEl) inputEl.value = '';
-                                setTransferDocFiles(prev => {
-                                  const next = { ...prev };
-                                  delete next[doc.key];
-                                  return next;
-                                });
-                              }}
-                            >
+                        type="button"
+                        className="action-button secondary"
+                        style={{ padding: '4px 10px', fontSize: '12px' }}
+                        onClick={() => {
+                          const inputEl = transferDocFileInputRefs.current[doc.key];
+                          if (inputEl) inputEl.value = '';
+                          setTransferDocFiles((prev) => {
+                            const next = { ...prev };
+                            delete next[doc.key];
+                            return next;
+                          });
+                        }}>
+                        
                               Remove
                             </button>
                           </>
-                        )}
+                    }
                       </div>
                     </div>
-                  ))}
+                )}
                 </div>
 
-                <div style={{ 
-                  padding: '12px', 
-                  backgroundColor: '#fef3c7', 
-                  borderRadius: '6px', 
-                  marginBottom: '16px',
-                  border: '1px solid #fbbf24'
-                }}>
+                <div style={{
+                padding: '12px',
+                backgroundColor: '#fef3c7',
+                borderRadius: '6px',
+                marginBottom: '16px',
+                border: '1px solid #fbbf24'
+              }}>
                   <small style={{ color: '#92400e', fontSize: '0.85rem', display: 'block' }}>
                     <strong>Note:</strong> The recipient will receive a notification about this payment request. 
                     They will need to accept and complete the payment on your behalf.
@@ -2717,11 +2591,9 @@ const TenantDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Maintenance Request View Modal */}
-      {showMaintenanceViewModal && selectedMaintenanceRequest && (
-        <div className="modal-overlay" onClick={() => setShowMaintenanceViewModal(false)}>
+      }
+      {showMaintenanceViewModal && selectedMaintenanceRequest &&
+      <div className="modal-overlay" onClick={() => setShowMaintenanceViewModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h3>Maintenance Request Details</h3>
@@ -2761,92 +2633,90 @@ const TenantDashboard = () => {
                   <div>
                     <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
                     <p style={{ margin: 0, color: '#1f2937' }}>
-                      {selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt
-                        ? new Date(selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt).toLocaleDateString()
-                        : 'N/A'}
+                      {selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt ?
+                    new Date(selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt).toLocaleDateString() :
+                    'N/A'}
                     </p>
                   </div>
                 </div>
 
-                {(selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property) && (
-                  <div>
+                {(selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property) &&
+              <div>
                     <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Property</label>
                     <p style={{ margin: 0, color: '#1f2937' }}>
                       {selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property}
                     </p>
                   </div>
-                )}
-
-                {/* Photos Section */}
-                {(selectedMaintenanceRequest.Photos || selectedMaintenanceRequest.photos || selectedMaintenanceRequest.PhotoURLs || selectedMaintenanceRequest.photoURLs) && (
-                  <div>
+              }
+                {(selectedMaintenanceRequest.Photos || selectedMaintenanceRequest.photos || selectedMaintenanceRequest.PhotoURLs || selectedMaintenanceRequest.photoURLs) &&
+              <div>
                     <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Photos</label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
                       {(() => {
-                        let photos = [];
-                        try {
-                          if (selectedMaintenanceRequest.Photos) {
-                            photos = Array.isArray(selectedMaintenanceRequest.Photos) 
-                              ? selectedMaintenanceRequest.Photos 
-                              : (typeof selectedMaintenanceRequest.Photos === 'string' ? JSON.parse(selectedMaintenanceRequest.Photos || '[]') : []);
-                          } else if (selectedMaintenanceRequest.photos) {
-                            photos = Array.isArray(selectedMaintenanceRequest.photos) 
-                              ? selectedMaintenanceRequest.photos 
-                              : (typeof selectedMaintenanceRequest.photos === 'string' ? JSON.parse(selectedMaintenanceRequest.photos || '[]') : []);
-                          } else if (selectedMaintenanceRequest.PhotoURLs) {
-                            photos = Array.isArray(selectedMaintenanceRequest.PhotoURLs) 
-                              ? selectedMaintenanceRequest.PhotoURLs 
-                              : (typeof selectedMaintenanceRequest.PhotoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.PhotoURLs || '[]') : []);
-                          } else if (selectedMaintenanceRequest.photoURLs) {
-                            photos = Array.isArray(selectedMaintenanceRequest.photoURLs) 
-                              ? selectedMaintenanceRequest.photoURLs 
-                              : (typeof selectedMaintenanceRequest.photoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.photoURLs || '[]') : []);
-                          }
-                        } catch (error) {
-                          console.error('Error parsing photos:', error);
-                          photos = [];
-                        }
+                    let photos = [];
+                    try {
+                      if (selectedMaintenanceRequest.Photos) {
+                        photos = Array.isArray(selectedMaintenanceRequest.Photos) ?
+                        selectedMaintenanceRequest.Photos :
+                        typeof selectedMaintenanceRequest.Photos === 'string' ? JSON.parse(selectedMaintenanceRequest.Photos || '[]') : [];
+                      } else if (selectedMaintenanceRequest.photos) {
+                        photos = Array.isArray(selectedMaintenanceRequest.photos) ?
+                        selectedMaintenanceRequest.photos :
+                        typeof selectedMaintenanceRequest.photos === 'string' ? JSON.parse(selectedMaintenanceRequest.photos || '[]') : [];
+                      } else if (selectedMaintenanceRequest.PhotoURLs) {
+                        photos = Array.isArray(selectedMaintenanceRequest.PhotoURLs) ?
+                        selectedMaintenanceRequest.PhotoURLs :
+                        typeof selectedMaintenanceRequest.PhotoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.PhotoURLs || '[]') : [];
+                      } else if (selectedMaintenanceRequest.photoURLs) {
+                        photos = Array.isArray(selectedMaintenanceRequest.photoURLs) ?
+                        selectedMaintenanceRequest.photoURLs :
+                        typeof selectedMaintenanceRequest.photoURLs === 'string' ? JSON.parse(selectedMaintenanceRequest.photoURLs || '[]') : [];
+                      }
+                    } catch (error) {
+                      console.error('Error parsing photos:', error);
+                      photos = [];
+                    }
 
-                        return photos.length > 0 ? photos.map((photoUrl, index) => (
-                          <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
-                            <img 
-                              src={photoUrl} 
-                              alt={`Maintenance photo ${index + 1}`}
-                              style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: 'cover',
-                                cursor: 'pointer'
-                              }}
-                              onClick={() => window.open(photoUrl, '_blank')}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af;">Image not available</div>';
-                              }}
-                            />
+                    return photos.length > 0 ? photos.map((photoUrl, index) =>
+                    <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
+                            <img
+                        src={photoUrl}
+                        alt={`Maintenance photo ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => window.open(photoUrl, '_blank')}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af;">Image not available</div>';
+                        }} />
+                      
                           </div>
-                        )) : null;
-                      })()}
+                    ) : null;
+                  })()}
                     </div>
                   </div>
-                )}
+              }
               </div>
             </div>
             <div className="modal-footer">
-              <button 
-                type="button" 
-                className="action-button secondary" 
-                onClick={() => setShowMaintenanceViewModal(false)}
-              >
+              <button
+              type="button"
+              className="action-button secondary"
+              onClick={() => setShowMaintenanceViewModal(false)}>
+              
                 Close
               </button>
             </div>
           </div>
         </div>
-      )}
+      }
 
-    </>
-  );
+    </>);
+
 };
 
 export default TenantDashboard;

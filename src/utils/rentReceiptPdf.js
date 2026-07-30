@@ -5,11 +5,9 @@ import RentReceiptTemplate from '../components/RentReceiptTemplate';
 
 export async function saveRentReceiptPdf({ item, isCollection = false, filename = 'rent-receipt.pdf' }) {
   if (!item) return;
-
-  // html2canvas requires element to be in viewport; render in visible overlay, capture, then remove.
   const overlay = document.createElement('div');
   overlay.style.cssText =
-    'position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f0f0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;';
+  'position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f0f0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;';
   document.body.appendChild(overlay);
 
   const container = document.createElement('div');
@@ -19,7 +17,7 @@ export async function saveRentReceiptPdf({ item, isCollection = false, filename 
   root.render(React.createElement(RentReceiptTemplate, { data: item, isCollection }));
 
   try {
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 800));
     const receiptEl = container.querySelector('.receipt-container') || container.firstChild;
     if (!receiptEl) throw new Error('Receipt element not found');
 

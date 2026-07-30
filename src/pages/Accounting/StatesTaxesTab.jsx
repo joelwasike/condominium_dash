@@ -116,7 +116,7 @@ const StatesTaxesTab = (props) => {
           rentCollected: 0,
           remainingRent: 0,
           _paidTenantKeys: new Set(),
-          _sortIndex: index,
+          _sortIndex: index
         });
       }
 
@@ -152,7 +152,7 @@ const StatesTaxesTab = (props) => {
           rentCollected: 0,
           remainingRent: 0,
           _paidTenantKeys: new Set(),
-          _sortIndex: tenantRows.length + index,
+          _sortIndex: tenantRows.length + index
         });
       }
 
@@ -165,25 +165,25 @@ const StatesTaxesTab = (props) => {
       }
     });
 
-    return [...propertyMap.values()]
-      .map((bucket) => {
-        const remainingRent = Math.max(0, bucket.rentAwaited - bucket.rentCollected);
-        return {
-          property: bucket.property,
-          numberOfTenants: bucket.numberOfTenants,
-          numberOfTenantsWhoPaid: bucket.numberOfTenantsWhoPaid,
-          rentAwaited: bucket.rentAwaited,
-          rentCollected: bucket.rentCollected,
-          remainingRent,
-          collectionRatePercent: bucket.rentAwaited > 0 ? (bucket.rentCollected / bucket.rentAwaited) * 100 : 0,
-        };
-      })
-      .sort((left, right) => {
-        const leftIndex = propertyMap.get(normalizeText(left.property))?._sortIndex ?? 0;
-        const rightIndex = propertyMap.get(normalizeText(right.property))?._sortIndex ?? 0;
-        if (leftIndex !== rightIndex) return leftIndex - rightIndex;
-        return left.property.localeCompare(right.property);
-      });
+    return [...propertyMap.values()].
+    map((bucket) => {
+      const remainingRent = Math.max(0, bucket.rentAwaited - bucket.rentCollected);
+      return {
+        property: bucket.property,
+        numberOfTenants: bucket.numberOfTenants,
+        numberOfTenantsWhoPaid: bucket.numberOfTenantsWhoPaid,
+        rentAwaited: bucket.rentAwaited,
+        rentCollected: bucket.rentCollected,
+        remainingRent,
+        collectionRatePercent: bucket.rentAwaited > 0 ? bucket.rentCollected / bucket.rentAwaited * 100 : 0
+      };
+    }).
+    sort((left, right) => {
+      const leftIndex = propertyMap.get(normalizeText(left.property))?._sortIndex ?? 0;
+      const rightIndex = propertyMap.get(normalizeText(right.property))?._sortIndex ?? 0;
+      if (leftIndex !== rightIndex) return leftIndex - rightIndex;
+      return left.property.localeCompare(right.property);
+    });
   }, [tenants, tenantPayments, reportMonthRange]);
   const money = (v) => `${Number(v || 0).toLocaleString()} FCFA`;
 
@@ -193,7 +193,7 @@ const StatesTaxesTab = (props) => {
       numberOfTenantsWhoPaid: 0,
       rentAwaited: 0,
       rentCollected: 0,
-      remainingRent: 0,
+      remainingRent: 0
     };
     rows.forEach((r) => {
       t.numberOfTenants += Number(r.numberOfTenants || 0);
@@ -210,7 +210,7 @@ const StatesTaxesTab = (props) => {
     totalExpectedMonthlyRents: totals.rentAwaited,
     totalCollectedRentForTheMonth: totals.rentCollected,
     totalUnpaidRentForTheMonth: totals.remainingRent,
-    totalImpayes: totals.remainingRent,
+    totalImpayes: totals.remainingRent
   }), [totals]);
 
   return (
@@ -227,23 +227,23 @@ const StatesTaxesTab = (props) => {
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="sa-input"
-              style={{ minWidth: '160px' }}
-            />
+              style={{ minWidth: '160px' }} />
+            
             <button
               className="sa-primary-cta"
-              onClick={() => addNotification('Export coming soon', 'info')}
-            >
+              onClick={() => addNotification('Export coming soon', 'info')}>
+              
               <Download size={18} /> Export
             </button>
           </div>
         </div>
 
-        {loading ? (
-          <div className="loading">Loading daily report...</div>
-        ) : !report ? (
-          <div className="no-data">No data available</div>
-        ) : (
-          <>
+        {loading ?
+        <div className="loading">Loading daily report...</div> :
+        !report ?
+        <div className="no-data">No data available</div> :
+
+        <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
               <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                 <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>Reporting period</p>
@@ -275,8 +275,8 @@ const StatesTaxesTab = (props) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.length > 0 ? rows.map((r, idx) => (
-                      <tr key={r.propertyId || r.propertyID || r.property || idx}>
+                    {rows.length > 0 ? rows.map((r, idx) =>
+                  <tr key={r.propertyId || r.propertyID || r.property || idx}>
                         <td><span className="sa-cell-title">{r.property || r.Property || '—'}</span></td>
                         <td>{Number(r.numberOfTenants || 0)}</td>
                         <td>{Number(r.numberOfTenantsWhoPaid || 0)}</td>
@@ -285,9 +285,9 @@ const StatesTaxesTab = (props) => {
                         <td style={{ color: '#dc2626', fontWeight: 700 }}>{money(r.remainingRent)}</td>
                         <td>{Number(r.collectionRatePercent || 0).toFixed(2)}%</td>
                       </tr>
-                    )) : (
-                      <tr><td colSpan={7} className="no-data">No properties found</td></tr>
-                    )}
+                  ) :
+                  <tr><td colSpan={7} className="no-data">No properties found</td></tr>
+                  }
                     <tr>
                       <td style={{ fontWeight: 800 }}>TOTAL</td>
                       <td style={{ fontWeight: 800 }}>{totals.numberOfTenants}</td>
@@ -296,7 +296,7 @@ const StatesTaxesTab = (props) => {
                       <td style={{ fontWeight: 800 }}>{money(totals.rentCollected)}</td>
                       <td style={{ fontWeight: 800 }}>{money(totals.remainingRent)}</td>
                       <td style={{ fontWeight: 800 }}>
-                        {totals.rentAwaited > 0 ? ((totals.rentCollected / totals.rentAwaited) * 100).toFixed(2) : '0.00'}%
+                        {totals.rentAwaited > 0 ? (totals.rentCollected / totals.rentAwaited * 100).toFixed(2) : '0.00'}%
                       </td>
                     </tr>
                   </tbody>
@@ -322,9 +322,9 @@ const StatesTaxesTab = (props) => {
               </div>
             </div>
           </>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 };
 export default StatesTaxesTab;

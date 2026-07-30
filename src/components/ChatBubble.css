@@ -218,8 +218,6 @@
 .send-button:hover {
   transform: scale(1.05);
 }
-
-/* Mobile responsiveness */
 @media (max-width: 768px) {
   .chat-window {
     width: calc(100vw - 40px);

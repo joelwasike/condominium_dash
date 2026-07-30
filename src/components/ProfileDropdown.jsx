@@ -9,8 +9,6 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
   const [language, setLanguage] = useState(getLanguage());
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  
-  // Listen for language changes to trigger re-render
   useEffect(() => {
     const handleLanguageChange = () => {
       setLanguage(getLanguage());
@@ -18,8 +16,6 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
     window.addEventListener('languageChange', handleLanguageChange);
     return () => window.removeEventListener('languageChange', handleLanguageChange);
   }, []);
-
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -53,8 +49,6 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
   const userName = userProfile?.name || userProfile?.username || 'User';
   const userRole = userProfile?.role || '';
   const profilePicture = userProfile?.profilePictureURL || userProfile?.ProfilePictureURL || userProfile?.profilePicture || userProfile?.profile_picture;
-
-  // Initials from name: "John Doe" -> "JD", "Mary Jane" -> "MJ", "John" -> "J"
   const getInitials = (name) => {
     if (!name || typeof name !== 'string') return 'U';
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -72,37 +66,37 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
       <button
         className="profile-dropdown-trigger"
         onClick={() => setIsOpen(!isOpen)}
-        aria-label={t('common.profile')}
-      >
-        {profilePicture ? (
-          <img
-            src={profilePicture}
-            alt={userName}
-            className="profile-avatar-image"
-          />
-        ) : (
-          <span className="profile-avatar-initials" aria-hidden="true">
+        aria-label={t('common.profile')}>
+        
+        {profilePicture ?
+        <img
+          src={profilePicture}
+          alt={userName}
+          className="profile-avatar-image" /> :
+
+
+        <span className="profile-avatar-initials" aria-hidden="true">
             {initials}
           </span>
-        )}
+        }
         <ChevronDown size={16} className="dropdown-chevron" />
       </button>
 
-      {isOpen && (
-        <div className="profile-dropdown-menu">
+      {isOpen &&
+      <div className="profile-dropdown-menu">
           <div className="profile-dropdown-header">
             <div className="profile-info">
-              {profilePicture ? (
-                <img
-                  src={profilePicture}
-                  alt={userName}
-                  className="profile-avatar-large"
-                />
-              ) : (
-                <div className="profile-avatar-placeholder">
+              {profilePicture ?
+            <img
+              src={profilePicture}
+              alt={userName}
+              className="profile-avatar-large" /> :
+
+
+            <div className="profile-avatar-placeholder">
                   {initials}
                 </div>
-              )}
+            }
               <div className="profile-details-text">
                 <div className="profile-name">{userName}</div>
                 <div className="profile-role">{userRole}</div>
@@ -114,9 +108,9 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
 
           <div className="profile-dropdown-items">
             <button
-              className="profile-dropdown-item"
-              onClick={handleSettingsClick}
-            >
+            className="profile-dropdown-item"
+            onClick={handleSettingsClick}>
+            
               <Settings size={18} />
               <span>{t('common.settings')}</span>
             </button>
@@ -126,17 +120,17 @@ const ProfileDropdown = ({ userProfile, onLogout, onNavigateToSettings }) => {
 
           <div className="profile-dropdown-items">
             <button
-              className="profile-dropdown-item danger"
-              onClick={handleLogout}
-            >
+            className="profile-dropdown-item danger"
+            onClick={handleLogout}>
+            
               <LogOut size={18} />
               <span>{t('common.logout')}</span>
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };
 
 export default ProfileDropdown;

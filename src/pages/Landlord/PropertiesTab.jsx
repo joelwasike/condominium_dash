@@ -42,8 +42,6 @@ const PropertiesTab = ({
       setPmLoading(false);
     }
   });
-
-  // Building detail view
   if ((pmView === 'building-detail' || pmView === 'villa-detail') && buildingDetail) {
     const units = buildingDetail.units || [];
     const totalApartments = buildingDetail.totalApartments ?? units.length;
@@ -54,15 +52,15 @@ const PropertiesTab = ({
       <div className="sa-clients-page">
         <div className="sa-clients-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setBuildingDetail(null); setPmPropertyId(null); setPmBuildingName(''); }}>
+            <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => {setPmView('list');setBuildingDetail(null);setPmPropertyId(null);setPmBuildingName('');}}>
               <ArrowLeft size={18} /> Back
             </button>
             <div><h2>{isVilla ? 'Villa' : 'Building'} {pmBuildingName} management</h2></div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
-          {firstImage && (<img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />)}
-          {images.length > 1 && (<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{images.slice(1, 5).map((img, i) => (<img key={i} src={img} alt={`${pmBuildingName} ${i + 2}`} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />))}</div>)}
+          {firstImage && <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />}
+          {images.length > 1 && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{images.slice(1, 5).map((img, i) => <img key={i} src={img} alt={`${pmBuildingName} ${i + 2}`} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />)}</div>}
           <div style={{ flex: 1, minWidth: 200 }}>
             <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
             <p style={{ margin: 0, color: '#6b7280' }}>Total of apartments: <strong>{totalApartments}</strong></p>
@@ -73,29 +71,27 @@ const PropertiesTab = ({
             <table className="sa-table">
               <thead><tr><th>{isVilla ? 'Villa' : 'Apartments'}</th><th>Type</th><th>Tenant</th><th>Rent</th><th>Enter date</th><th>Status</th></tr></thead>
               <tbody>
-                {units.map((row, i) => (
-                  <tr key={row.id || i}>
+                {units.map((row, i) =>
+                <tr key={row.id || i}>
                     <td>{row.unitNumber || row.name || (isVilla ? 'VILLA' : `Apartment ${i + 1}`)}</td>
                     <td>{row.type || '\u2014'}</td><td>{row.tenant || '\u2014'}</td>
                     <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice || '\u2014'} F CFA</td>
                     <td>{row.enterDate || '\u2014'}</td><td>{row.status || row.statut || '\u2014'}</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    );
-  }
+      </div>);
 
-  // Properties list
+  }
   const propType = (p) => (p.Type || p.type || p.PropertyType || p.propertyType || '').toString().toLowerCase();
-  const isBuilding = (p) => ['building', 'apartment', 'condo', 'house', 'studio'].some(t => propType(p).includes(t));
+  const isBuilding = (p) => ['building', 'apartment', 'condo', 'house', 'studio'].some((t) => propType(p).includes(t));
   const isVillaFn = (p) => propType(p).includes('villa');
   const buildings = properties.filter(isBuilding);
   const villas = properties.filter(isVillaFn);
-  const others = properties.filter(p => !isBuilding(p) && !isVillaFn(p));
+  const others = properties.filter((p) => !isBuilding(p) && !isVillaFn(p));
 
   return (
     <div className="sa-clients-page">
@@ -124,16 +120,16 @@ const PropertiesTab = ({
                     <td>{property.occupancy ?? '\u2014'}</td>
                     <td>{property.statut || property.Status || property.status || '\u2014'}</td>
                     <td onClick={(e) => e.stopPropagation()}><button type="button" className="sa-icon-button" title="View" onClick={handleClick}>\ud83d\udc41\ufe0f</button></td>
-                  </tr>
-                );
+                  </tr>);
+
               })}
-              {properties.length === 0 && !pmLoading && (<tr><td colSpan={9} className="sa-table-empty">No properties found</td></tr>)}
+              {properties.length === 0 && !pmLoading && <tr><td colSpan={9} className="sa-table-empty">No properties found</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default PropertiesTab;

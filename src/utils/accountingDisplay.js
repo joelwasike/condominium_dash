@@ -16,13 +16,13 @@ export const normalizeAmount = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-export const formatOwnerName = (item, fallback = 'N/A') => (
-  readField(item, ['Owner', 'owner', 'OwnerName', 'ownerName', 'Landlord', 'landlord'], fallback) || fallback
-);
+export const formatOwnerName = (item, fallback = 'N/A') =>
+readField(item, ['Owner', 'owner', 'OwnerName', 'ownerName', 'Landlord', 'landlord'], fallback) || fallback;
 
-export const formatTenantName = (item, fallback = 'N/A') => (
-  readField(item, ['Tenant', 'tenant', 'Buyer', 'buyer', 'TenantName', 'tenantName', 'Name', 'name'], fallback) || fallback
-);
+
+export const formatTenantName = (item, fallback = 'N/A') =>
+readField(item, ['Tenant', 'tenant', 'Buyer', 'buyer', 'TenantName', 'tenantName', 'Name', 'name'], fallback) || fallback;
+
 
 export const formatPropertyBuilding = (item, fallback = 'N/A') => {
   const unit = readField(item, ['Unit', 'unit', 'UnitName', 'unitName', 'UnitNumber', 'unitNumber', 'Apartment', 'apartment'], '');
@@ -41,9 +41,9 @@ export const formatDateValue = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-export const getTransactionDateValue = (item) => (
-  readField(item, ['Date', 'date', 'CreatedAt', 'createdAt', 'PaidAt', 'paidAt', 'ApprovedAt', 'approvedAt'], '')
-);
+export const getTransactionDateValue = (item) =>
+readField(item, ['Date', 'date', 'CreatedAt', 'createdAt', 'PaidAt', 'paidAt', 'ApprovedAt', 'approvedAt'], '');
+
 
 export const getTransactionSignature = (item) => {
   if (!item) return '';

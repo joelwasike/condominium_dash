@@ -11,8 +11,8 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
-} from 'recharts';
+  Cell } from
+'recharts';
 import Modal from '../components/Modal';
 import DocumentUpload from '../components/DocumentUpload';
 import ContractUpload from '../components/ContractUpload';
@@ -27,8 +27,6 @@ import LinkFastTab from './SalesManager/LinkFastTab';
 import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 import './SalesManagerDashboard.css';
-
-// Password Display Component
 const PasswordDisplayItem = ({ email, password }) => {
   const [copied, setCopied] = useState(false);
 
@@ -49,9 +47,9 @@ const PasswordDisplayItem = ({ email, password }) => {
           <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '4px' }}>
             Email
           </label>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '8px',
             padding: '8px 12px',
             background: '#f9fafb',
@@ -74,8 +72,8 @@ const PasswordDisplayItem = ({ email, password }) => {
                 color: copied === 'email' ? 'white' : '#374151',
                 transition: 'all 0.2s'
               }}
-              title="Copy email"
-            >
+              title="Copy email">
+              
               {copied === 'email' ? <Check size={14} /> : <Copy size={14} />}
               {copied === 'email' ? 'Copied' : 'Copy'}
             </button>
@@ -87,9 +85,9 @@ const PasswordDisplayItem = ({ email, password }) => {
           <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block', marginBottom: '4px' }}>
             Password
           </label>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '8px',
             padding: '8px 12px',
             background: '#fef3c7',
@@ -114,16 +112,16 @@ const PasswordDisplayItem = ({ email, password }) => {
                 color: copied === 'password' ? 'white' : '#374151',
                 transition: 'all 0.2s'
               }}
-              title="Copy password"
-            >
+              title="Copy password">
+              
               {copied === 'password' ? <Check size={14} /> : <Copy size={14} />}
               {copied === 'password' ? 'Copied' : 'Copy'}
             </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 const SalesManagerDashboard = () => {
@@ -134,9 +132,9 @@ const SalesManagerDashboard = () => {
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [excelFile, setExcelFile] = useState(null);
-  const [importMode, setImportMode] = useState('manual'); // 'manual' or 'excel'
+  const [importMode, setImportMode] = useState('manual');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordData, setPasswordData] = useState(null); // { type: 'single' | 'bulk', user: {...} | users: [...] }
+  const [passwordData, setPasswordData] = useState(null);
   const [selectedClientIds, setSelectedClientIds] = useState([]);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [bulkDeletePassword, setBulkDeletePassword] = useState('');
@@ -150,8 +148,6 @@ const SalesManagerDashboard = () => {
   const [moveInUnits, setMoveInUnits] = useState([]);
   const [selectedMoveInUnitNumber, setSelectedMoveInUnitNumber] = useState('');
   const [moveInPropertyLocked, setMoveInPropertyLocked] = useState(false);
-
-  // Visits / Requests (schedule visit from Property Management uses properties)
   const [showScheduleVisitModal, setShowScheduleVisitModal] = useState(false);
   const [showUpdateVisitStatusModal, setShowUpdateVisitStatusModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
@@ -163,8 +159,6 @@ const SalesManagerDashboard = () => {
   const [visitStatusFilter, setVisitStatusFilter] = useState('');
   const [visitTab, setVisitTab] = useState('all');
   const [requestStatusFilter, setRequestStatusFilter] = useState('');
-  
-  // API Data States
   const [overviewData, setOverviewData] = useState(null);
   const [properties, setProperties] = useState([]);
   const [clients, setClients] = useState([]);
@@ -184,14 +178,14 @@ const SalesManagerDashboard = () => {
   const [alertComposeMessage, setAlertComposeMessage] = useState('');
   const [alertSending, setAlertSending] = useState(false);
   const [advertisements, setAdvertisements] = useState([]);
-  const [owners, setOwners] = useState([]); // Owners (landlords) for property assignment
-  const [salesProperties, setSalesProperties] = useState([]); // Properties that are strictly for sale
+  const [owners, setOwners] = useState([]);
+  const [salesProperties, setSalesProperties] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
 
   const selectedApprovedClient = useMemo(() => {
     if (!selectedApprovedClientId) return null;
-    return approvedClients.find(client => String(client.ID || client.id) === String(selectedApprovedClientId)) || null;
+    return approvedClients.find((client) => String(client.ID || client.id) === String(selectedApprovedClientId)) || null;
   }, [approvedClients, selectedApprovedClientId]);
 
   const addMonths = useCallback((date, months) => {
@@ -216,19 +210,19 @@ const SalesManagerDashboard = () => {
       0
     ) || 0;
     const paidAtRaw =
-      selectedApprovedClient.SecurityDepositPaidAt ||
-      selectedApprovedClient.securityDepositPaidAt ||
-      selectedApprovedClient.SecurityDepositDate ||
-      selectedApprovedClient.securityDepositDate ||
-      selectedApprovedClient.DepositPaidAt ||
-      selectedApprovedClient.depositPaidAt ||
-      selectedApprovedClient.DepositDate ||
-      selectedApprovedClient.depositDate ||
-      null;
+    selectedApprovedClient.SecurityDepositPaidAt ||
+    selectedApprovedClient.securityDepositPaidAt ||
+    selectedApprovedClient.SecurityDepositDate ||
+    selectedApprovedClient.securityDepositDate ||
+    selectedApprovedClient.DepositPaidAt ||
+    selectedApprovedClient.depositPaidAt ||
+    selectedApprovedClient.DepositDate ||
+    selectedApprovedClient.depositDate ||
+    null;
     const checklistCreatedAt =
-      approvedClientChecklist?.CreatedAt ||
-      approvedClientChecklist?.createdAt ||
-      null;
+    approvedClientChecklist?.CreatedAt ||
+    approvedClientChecklist?.createdAt ||
+    null;
     const paidAtCandidate = paidAtRaw || (paid ? checklistCreatedAt : null);
     const paidAt = paidAtCandidate ? new Date(paidAtCandidate) : null;
     const maxMoveInDate = paidAt ? addMonths(paidAt, 1).toISOString().split('T')[0] : '';
@@ -271,14 +265,14 @@ const SalesManagerDashboard = () => {
           return st !== 'occupied' && tenant === '';
         });
         if (cancelled) return;
-        const nextUnits = vacant.length > 0
-          ? vacant
-          : (units.length === 0 ? [{
-              id: selectedMoveInPropertyId,
-              unitNumber: 'Unit 1',
-              status: 'Vacant',
-              tenant: ''
-            }] : []);
+        const nextUnits = vacant.length > 0 ?
+        vacant :
+        units.length === 0 ? [{
+          id: selectedMoveInPropertyId,
+          unitNumber: 'Unit 1',
+          status: 'Vacant',
+          tenant: ''
+        }] : [];
         setMoveInUnits(nextUnits);
         setSelectedMoveInUnitNumber((prev) => {
           const saved = (approvedClientChecklist?.unitNumber || approvedClientChecklist?.UnitNumber || prev || '').toString().trim();
@@ -287,7 +281,7 @@ const SalesManagerDashboard = () => {
             const label = (unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || '').toString().trim();
             return label && label.toLowerCase() === saved.toLowerCase();
           });
-          return match ? (match.unitNumber || match.UnitNumber || match.name || '') : '';
+          return match ? match.unitNumber || match.UnitNumber || match.name || '' : '';
         });
       } catch (error) {
         if (cancelled) return;
@@ -295,15 +289,13 @@ const SalesManagerDashboard = () => {
       }
     };
     loadUnits();
-    return () => { cancelled = true; };
+    return () => {cancelled = true;};
   }, [selectedMoveInPropertyId, approvedClientChecklist]);
-
-  // Auto-slide carousel for advertisements on overview page
   useEffect(() => {
     if (activeTab === 'overview' && advertisements.length > 1) {
       carouselIntervalRef.current = setInterval(() => {
         setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
-      }, 5000); // Change slide every 5 seconds
+      }, 5000);
 
       return () => {
         if (carouselIntervalRef.current) {
@@ -318,11 +310,7 @@ const SalesManagerDashboard = () => {
     }
   }, [activeTab, advertisements.length]);
   const [loading, setLoading] = useState(false);
-  
-  // Property form state
   const [selectedPropertyType, setSelectedPropertyType] = useState('');
-  
-  // Filter states
   const [clientStatusFilter, setClientStatusFilter] = useState('');
   const [clientPropertyFilter, setClientPropertyFilter] = useState('');
   const [clientSearchText, setClientSearchText] = useState('');
@@ -330,15 +318,11 @@ const SalesManagerDashboard = () => {
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
   const [propertyUrgencyFilter, setPropertyUrgencyFilter] = useState('');
   const [alertTypeFilter, setAlertTypeFilter] = useState('');
-  const [salesTypeFilter, setSalesTypeFilter] = useState(''); // Filter for sales properties by type
-
-  // Occupancy page: detail view when user clicks a property (building/apartment)
-  const [occupancyDetailView, setOccupancyDetailView] = useState('list'); // 'list' | 'detail'
+  const [salesTypeFilter, setSalesTypeFilter] = useState('');
+  const [occupancyDetailView, setOccupancyDetailView] = useState('list');
   const [occupancySelectedProperty, setOccupancySelectedProperty] = useState(null);
   const [occupancyDetailData, setOccupancyDetailData] = useState(null);
   const [occupancyDetailLoading, setOccupancyDetailLoading] = useState(false);
-  
-  // Tenant detail view (when a tenant row is clicked)
   const [selectedTenantId, setSelectedTenantId] = useState(null);
   const [tenantDetail, setTenantDetail] = useState(null);
   const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
@@ -346,17 +330,14 @@ const SalesManagerDashboard = () => {
   const [addingNote, setAddingNote] = useState(false);
   const [maintenanceDetail, setMaintenanceDetail] = useState(null);
   const [maintenanceDetailLoading, setMaintenanceDetailLoading] = useState(false);
-  
-  // Edit states
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
-  // Tenant current unit assignment (auto-loaded when Edit Tenant modal opens); null = not assigned or loading
-  const [tenantAssignment, setTenantAssignment] = useState(null); // { propertyId, unitId, buildingName, unitNumber } | null
+  const [tenantAssignment, setTenantAssignment] = useState(null);
   const [loadingAssignment, setLoadingAssignment] = useState(false);
   const [removeFromUnitLoading, setRemoveFromUnitLoading] = useState(false);
   const [editAssignPropertyId, setEditAssignPropertyId] = useState('');
   const [editAssignUnitId, setEditAssignUnitId] = useState('');
-  const [editAssignUnits, setEditAssignUnits] = useState([]); // [{id, unitNumber, status, tenant}]
+  const [editAssignUnits, setEditAssignUnits] = useState([]);
   const [editAssignLoadingUnits, setEditAssignLoadingUnits] = useState(false);
   const [editPropertyOptions, setEditPropertyOptions] = useState([]);
   const [editPropertyLoading, setEditPropertyLoading] = useState(false);
@@ -364,47 +345,42 @@ const SalesManagerDashboard = () => {
   const [editSelectedPropertyAddress, setEditSelectedPropertyAddress] = useState('');
   const [showUnpaidRentModal, setShowUnpaidRentModal] = useState(false);
   const [editingUnpaidRent, setEditingUnpaidRent] = useState(null);
-  
-  // Property states
   const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false);
   const [showEditPropertyModal, setShowEditPropertyModal] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
-  const [expandedOwnerId, setExpandedOwnerId] = useState(null); // For property management owner expansion
-  // Property Management sub-views: owner list -> owner assets (renting/selling) -> building payment
-  const [pmView, setPmView] = useState('list'); // 'list' | 'owner-detail' | 'building-detail' | 'villa-detail' | 'land-detail'
+  const [expandedOwnerId, setExpandedOwnerId] = useState(null);
+  const [pmView, setPmView] = useState('list');
   const [pmOwnerId, setPmOwnerId] = useState(null);
   const [pmOwnerName, setPmOwnerName] = useState('');
-  const [ownerAssets, setOwnerAssets] = useState(null); // { ownerName, assets: [] }
+  const [ownerAssets, setOwnerAssets] = useState(null);
   const [pmPropertyId, setPmPropertyId] = useState(null);
   const [pmBuildingName, setPmBuildingName] = useState('');
-  const [buildingDetail, setBuildingDetail] = useState(null); // { buildingName, units: [], totalApartments, images }
+  const [buildingDetail, setBuildingDetail] = useState(null);
   const [propertyManagementSearch, setPropertyManagementSearch] = useState('');
   const [showAddBuildingModal, setShowAddBuildingModal] = useState(false);
   const [showAddVillaModal, setShowAddVillaModal] = useState(false);
   const [showAddLandModal, setShowAddLandModal] = useState(false);
   const [showAddApartmentModal, setShowAddApartmentModal] = useState(false);
   const [showEditApartmentModal, setShowEditApartmentModal] = useState(false);
-  const [editingUnit, setEditingUnit] = useState(null); // unit from buildingDetail.units (id, unitNumber, type, tenant, rentPrice, etc.)
-  const [editApartmentStatusChoice, setEditApartmentStatusChoice] = useState('Vacant'); // for showing/hiding tenant + enter date in Edit Apartment modal
-  const [landDetail, setLandDetail] = useState(null); // for land-detail view
-  const [pmAddFormImages, setPmAddFormImages] = useState([]); // images for Add Building / Add Land
-  const [addApartmentPictures, setAddApartmentPictures] = useState([]); // multiple photos for Add Apartment
-  const [editApartmentPictures, setEditApartmentPictures] = useState([]); // multiple photos for Edit Apartment
+  const [editingUnit, setEditingUnit] = useState(null);
+  const [editApartmentStatusChoice, setEditApartmentStatusChoice] = useState('Vacant');
+  const [landDetail, setLandDetail] = useState(null);
+  const [pmAddFormImages, setPmAddFormImages] = useState([]);
+  const [addApartmentPictures, setAddApartmentPictures] = useState([]);
+  const [editApartmentPictures, setEditApartmentPictures] = useState([]);
   const [showViewApartmentModal, setShowViewApartmentModal] = useState(false);
-  const [viewingUnit, setViewingUnit] = useState(null); // unit row for View Apartment modal
-  const [pmLoading, setPmLoading] = useState(false); // Loading owner assets or building detail
-  const [showPropertyBuildingType, setShowPropertyBuildingType] = useState(false); // For property form: show building type when type is Apartment
-  const [createPropertyImages, setCreatePropertyImages] = useState([]); // URLs for new property images (Cloudinary)
+  const [viewingUnit, setViewingUnit] = useState(null);
+  const [pmLoading, setPmLoading] = useState(false);
+  const [showPropertyBuildingType, setShowPropertyBuildingType] = useState(false);
+  const [createPropertyImages, setCreatePropertyImages] = useState([]);
   const [createPropertyNumberOfUnits, setCreatePropertyNumberOfUnits] = useState(1);
   const [createPropertyUnits, setCreatePropertyUnits] = useState([{ unitNumber: '1', rent: '', bedrooms: 1, bathrooms: 1, status: 'Vacant', tenant: '' }]);
   const [editPropertyUnits, setEditPropertyUnits] = useState([]);
   const [editPropertyNumberOfUnits, setEditPropertyNumberOfUnits] = useState(1);
-  const [editPropertyImages, setEditPropertyImages] = useState([]); // URLs for edit property images (Cloudinary)
-  const [uploadingImage, setUploadingImage] = useState(false); // Loading state for image upload
-  const [selectedPropertyDetail, setSelectedPropertyDetail] = useState(null); // Property shown in detail modal
-  const [expandedImageUrl, setExpandedImageUrl] = useState(null); // Full-size image overlay (lightbox)
-  
-  // Bulk import (properties + tenants) – kept for tenant import if needed
+  const [editPropertyImages, setEditPropertyImages] = useState([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedPropertyDetail, setSelectedPropertyDetail] = useState(null);
+  const [expandedImageUrl, setExpandedImageUrl] = useState(null);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [bulkImportTab, setBulkImportTab] = useState('properties');
   const [bulkImportFile, setBulkImportFile] = useState(null);
@@ -413,24 +389,18 @@ const SalesManagerDashboard = () => {
   const [propertyImportFile, setPropertyImportFile] = useState(null);
   const [propertyImportLoading, setPropertyImportLoading] = useState(false);
   const [propertyImportOwnerId, setPropertyImportOwnerId] = useState('');
-
-  // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const isLoadingUsersRef = useRef(false);
   const messagesEndRef = useRef(null);
-
-  // Reset create property unit form when opening create modal
   useEffect(() => {
     if (showCreatePropertyModal) {
       setCreatePropertyNumberOfUnits(1);
       setCreatePropertyUnits([{ unitNumber: '1', rent: '', bedrooms: 1, bathrooms: 1, status: 'Vacant', tenant: '' }]);
     }
   }, [showCreatePropertyModal]);
-
-  // When Edit Tenant modal opens, load which unit this tenant is assigned to
   useEffect(() => {
     if (!showEditClientModal || !editingClient) {
       setTenantAssignment(null);
@@ -451,7 +421,7 @@ const SalesManagerDashboard = () => {
             propertyId: res.propertyId,
             unitId: res.unitId,
             buildingName: res.buildingName || 'Building',
-            unitNumber: res.unitNumber || '—',
+            unitNumber: res.unitNumber || '—'
           });
           return;
         }
@@ -459,11 +429,9 @@ const SalesManagerDashboard = () => {
       } catch (_) {
         if (!cancelled) setTenantAssignment(null);
       }
-    })().finally(() => { if (!cancelled) setLoadingAssignment(false); });
-    return () => { cancelled = true; };
+    })().finally(() => {if (!cancelled) setLoadingAssignment(false);});
+    return () => {cancelled = true;};
   }, [showEditClientModal, editingClient]);
-
-  // Load available units when choosing a property in Edit Tenant modal
   useEffect(() => {
     if (!showEditClientModal) return;
     if (!editAssignPropertyId) {
@@ -489,10 +457,8 @@ const SalesManagerDashboard = () => {
         if (!cancelled) setEditAssignLoadingUnits(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {cancelled = true;};
   }, [showEditClientModal, editAssignPropertyId]);
-
-  // Load properties fresh from backend when Edit Tenant modal opens (so dropdown is always up-to-date)
   useEffect(() => {
     if (!showEditClientModal) return;
     let cancelled = false;
@@ -500,7 +466,7 @@ const SalesManagerDashboard = () => {
     (async () => {
       try {
         const list = await salesManagerService.getProperties();
-        const props = Array.isArray(list) ? list : (list?.items || list?.data || []);
+        const props = Array.isArray(list) ? list : list?.items || list?.data || [];
         if (cancelled) return;
         setEditPropertyOptions(Array.isArray(props) ? props : []);
 
@@ -529,13 +495,13 @@ const SalesManagerDashboard = () => {
         if (!cancelled) setEditPropertyLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {cancelled = true;};
   }, [showEditClientModal]);
 
   const setCreatePropertyUnitsCount = useCallback((n) => {
     const num = Math.max(1, parseInt(n, 10) || 1);
     setCreatePropertyNumberOfUnits(num);
-    setCreatePropertyUnits(prev => {
+    setCreatePropertyUnits((prev) => {
       const next = [];
       for (let i = 0; i < num; i++) {
         if (i < prev.length) {
@@ -549,14 +515,14 @@ const SalesManagerDashboard = () => {
   }, []);
 
   const updateCreatePropertyUnit = useCallback((index, field, value) => {
-    setCreatePropertyUnits(prev => prev.map((u, i) => i === index ? { ...u, [field]: value } : u));
+    setCreatePropertyUnits((prev) => prev.map((u, i) => i === index ? { ...u, [field]: value } : u));
   }, []);
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setNotifications(prev => [...prev, { id, message, type }]);
+    setNotifications((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 3000);
   }, []);
 
@@ -569,13 +535,13 @@ const SalesManagerDashboard = () => {
       setShowPropertyBuildingType((full.type || full.Type) === 'Apartment');
       setSelectedPropertyType(full.propertyType || full.PropertyType || '');
       setEditPropertyImages(parsePropertyImages(full.images || full.Images));
-      const units = (full.units || []).map(u => ({
+      const units = (full.units || []).map((u) => ({
         unitNumber: u.unitNumber || u.UnitNumber || '',
         rent: u.rent ?? u.Rent ?? '',
         bedrooms: u.bedrooms ?? u.Bedrooms ?? 1,
         bathrooms: u.bathrooms ?? u.Bathrooms ?? 1,
         status: u.status || u.Status || 'Vacant',
-        tenant: u.tenant ?? (u.Tenant != null ? u.Tenant : ''),
+        tenant: u.tenant ?? (u.Tenant != null ? u.Tenant : '')
       }));
       setEditPropertyUnits(units.length ? units : [{ unitNumber: '1', rent: full.rent ?? '', bedrooms: full.bedrooms ?? 0, bathrooms: full.bathrooms ?? 1, status: 'Vacant', tenant: '' }]);
       setEditPropertyNumberOfUnits(units.length || 1);
@@ -587,28 +553,25 @@ const SalesManagerDashboard = () => {
   }, [addNotification]);
 
   const updateEditPropertyUnit = useCallback((index, field, value) => {
-    setEditPropertyUnits(prev => prev.map((u, i) => i === index ? { ...u, [field]: value } : u));
+    setEditPropertyUnits((prev) => prev.map((u, i) => i === index ? { ...u, [field]: value } : u));
   }, []);
 
   const setEditPropertyUnitsCount = useCallback((n) => {
     const num = Math.max(1, parseInt(n, 10) || 1);
     setEditPropertyNumberOfUnits(num);
-    setEditPropertyUnits(prev => {
+    setEditPropertyUnits((prev) => {
       const next = [];
       for (let i = 0; i < num; i++) {
-        if (i < prev.length) next.push({ ...prev[i], unitNumber: prev[i].unitNumber || String(i + 1) });
-        else next.push({ unitNumber: String(i + 1), rent: '', bedrooms: 1, bathrooms: 1, status: 'Vacant', tenant: '' });
+        if (i < prev.length) next.push({ ...prev[i], unitNumber: prev[i].unitNumber || String(i + 1) });else
+        next.push({ unitNumber: String(i + 1), rent: '', bedrooms: 1, bathrooms: 1, status: 'Vacant', tenant: '' });
       }
       return next;
     });
   }, []);
-
-  // Load data from API
   const loadData = async () => {
     setLoading(true);
     try {
       if (isDemoMode()) {
-        // Use demo data
         const demoData = getSalesManagerDemoData();
         setOverviewData(demoData.overview);
         setProperties(demoData.properties);
@@ -622,36 +585,32 @@ const SalesManagerDashboard = () => {
         setLoading(false);
         return;
       }
-      
+
       const [overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData, alertPropsData] = await Promise.all([
-        salesManagerService.getOverview(),
-        salesManagerService.getProperties({
-          status: propertyStatusFilter || undefined,
-          type: propertyTypeFilter || undefined,
-          urgency: propertyUrgencyFilter || undefined,
-        }),
-        salesManagerService.getClients(),
-        salesManagerService.getApprovedClients().catch(() => []),
-        salesManagerService.getWaitingListClients().catch(() => []),
-        salesManagerService.getUnpaidRents().catch(() => []),
-        salesManagerService.getAlerts(alertTypeFilter || null),
-        salesManagerService.getOwners().catch(() => []),
-        salesManagerService.getSalesProperties().catch(() => []),
-        salesManagerService.getAlertProperties().catch(() => []),
-      ]);
+      salesManagerService.getOverview(),
+      salesManagerService.getProperties({
+        status: propertyStatusFilter || undefined,
+        type: propertyTypeFilter || undefined,
+        urgency: propertyUrgencyFilter || undefined
+      }),
+      salesManagerService.getClients(),
+      salesManagerService.getApprovedClients().catch(() => []),
+      salesManagerService.getWaitingListClients().catch(() => []),
+      salesManagerService.getUnpaidRents().catch(() => []),
+      salesManagerService.getAlerts(alertTypeFilter || null),
+      salesManagerService.getOwners().catch(() => []),
+      salesManagerService.getSalesProperties().catch(() => []),
+      salesManagerService.getAlertProperties().catch(() => [])]
+      );
 
       console.log('Loaded data:', { overview, propertiesData, clientsData, approvedClientsData, waitingListData, unpaidRentsData, alertsData, ownersData, salesPropsData });
 
       const normalizedProperties = Array.isArray(propertiesData) ? propertiesData : [];
       const normalizedSalesProps = Array.isArray(salesPropsData) ? salesPropsData : [];
-
-      // Properties added in this dashboard and marked as "For Sale"
-      const salePropertiesFromManaged = normalizedProperties.filter(p => {
+      const salePropertiesFromManaged = normalizedProperties.filter((p) => {
         const propType = (p.PropertyType || p.propertyType || '').toLowerCase();
         return propType === 'for sale';
       });
-
-      // Combine managed sale properties with backend sales listings
       const combinedSalesProps = [...salePropertiesFromManaged, ...normalizedSalesProps];
 
       setOverviewData(overview);
@@ -673,8 +632,6 @@ const SalesManagerDashboard = () => {
       setLoading(false);
     }
   };
-
-  // Load advertisements
   const loadAdvertisements = async () => {
     try {
       const ads = await salesManagerService.getAdvertisements();
@@ -685,8 +642,6 @@ const SalesManagerDashboard = () => {
       setAdvertisements([]);
     }
   };
-
-  // Load visits and requests (for Visits and Requests tabs)
   const loadListingsData = useCallback(async () => {
     try {
       if (isDemoMode()) {
@@ -696,16 +651,16 @@ const SalesManagerDashboard = () => {
         return;
       }
       const [visitsData, requestsData] = await Promise.all([
-        salesManagerService.listVisits({ status: visitStatusFilter || undefined }).catch(() => ({ upcoming: [], done: [], all: [] })),
-        salesManagerService.listRequests({ status: requestStatusFilter || undefined }).catch(() => []),
-      ]);
+      salesManagerService.listVisits({ status: visitStatusFilter || undefined }).catch(() => ({ upcoming: [], done: [], all: [] })),
+      salesManagerService.listRequests({ status: requestStatusFilter || undefined }).catch(() => [])]
+      );
       if (Array.isArray(visitsData)) {
         setVisits({ upcoming: [], done: [], all: visitsData });
       } else if (visitsData && typeof visitsData === 'object') {
         setVisits({
           upcoming: Array.isArray(visitsData.upcoming) ? visitsData.upcoming : [],
           done: Array.isArray(visitsData.done) ? visitsData.done : [],
-          all: Array.isArray(visitsData.all) ? visitsData.all : [],
+          all: Array.isArray(visitsData.all) ? visitsData.all : []
         });
       } else {
         setVisits({ upcoming: [], done: [], all: [] });
@@ -716,11 +671,9 @@ const SalesManagerDashboard = () => {
       addNotification('Failed to load data', 'error');
     }
   }, [visitStatusFilter, requestStatusFilter]);
-
-  // Reload data when filters change
   useEffect(() => {
     loadData();
-  }, [propertyStatusFilter, propertyTypeFilter, propertyUrgencyFilter, alertTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [propertyStatusFilter, propertyTypeFilter, propertyUrgencyFilter, alertTypeFilter]);
 
   useEffect(() => {
     if (!selectedApprovedClientId) {
@@ -733,9 +686,9 @@ const SalesManagerDashboard = () => {
       try {
         setLoadingApprovedDocs(true);
         const [docs, checklist] = await Promise.all([
-          salesManagerService.getApprovedClientDocuments(selectedApprovedClientId).catch(() => []),
-          salesManagerService.getApprovedClientChecklist(selectedApprovedClientId).catch(() => null),
-        ]);
+        salesManagerService.getApprovedClientDocuments(selectedApprovedClientId).catch(() => []),
+        salesManagerService.getApprovedClientChecklist(selectedApprovedClientId).catch(() => null)]
+        );
         setApprovedClientDocuments(Array.isArray(docs) ? docs : []);
         setApprovedClientChecklist(checklist || null);
       } catch (error) {
@@ -749,8 +702,6 @@ const SalesManagerDashboard = () => {
     };
     loadApprovedClientDocs();
   }, [selectedApprovedClientId, addNotification]);
-
-  // Fetch full tenant details when a tenant is selected for detail view
   useEffect(() => {
     if (!selectedTenantId) {
       setTenantDetail(null);
@@ -771,49 +722,34 @@ const SalesManagerDashboard = () => {
       }
     };
     loadTenantDetail();
-    return () => { cancelled = true; };
+    return () => {cancelled = true;};
   }, [selectedTenantId]);
-
-  // Load advertisements when advertisements or overview tab is active
   useEffect(() => {
     if (activeTab === 'advertisements' || activeTab === 'overview') {
       loadAdvertisements();
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load visits/requests when on those tabs
+  }, [activeTab]);
   useEffect(() => {
     if (activeTab === 'visits' || activeTab === 'requests') {
       loadListingsData();
     }
   }, [activeTab, loadListingsData]);
-
-
-  // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
-
-  // Auto-scroll when messages change
   useEffect(() => {
     if (chatMessages.length > 0) {
       scrollToBottom();
     }
   }, [chatMessages, scrollToBottom]);
-
-  // Load chat for a specific user
   const loadChatForUser = useCallback(async (userId) => {
     if (!userId) return;
-    
+
     try {
       setSelectedUserId(userId);
       const messages = await messagingService.getConversation(userId);
-      
-      // Normalize messages array
       const normalizedMessages = Array.isArray(messages) ? messages : [];
       setChatMessages(normalizedMessages);
-      
-      // Mark messages as read
       try {
         await messagingService.markMessagesAsRead(userId);
       } catch (readError) {
@@ -821,12 +757,9 @@ const SalesManagerDashboard = () => {
       }
     } catch (error) {
       console.error('Error loading chat:', error);
-      
-      // Handle company restriction error specifically
       if (error.message && error.message.includes('own company')) {
         addNotification('Cannot view conversations with users from different companies', 'warning');
-        // Remove the user from the list if they're from a different company
-        setChatUsers(prev => prev.filter(u => String(u.userId) !== String(userId)));
+        setChatUsers((prev) => prev.filter((u) => String(u.userId) !== String(userId)));
         setSelectedUserId(null);
         setChatMessages([]);
       } else {
@@ -834,12 +767,8 @@ const SalesManagerDashboard = () => {
         setChatMessages([]);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // addNotification is stable, no need to include
-
-  // Load users for messaging (from same company)
+  }, []);
   const loadUsers = useCallback(async () => {
-    // Prevent multiple simultaneous calls
     if (isLoadingUsersRef.current) {
       console.log('Users already loading, skipping...');
       return;
@@ -848,24 +777,18 @@ const SalesManagerDashboard = () => {
     try {
       isLoadingUsersRef.current = true;
       console.log('Loading users for messaging...');
-      // Use the new getUsers endpoint
       const users = await messagingService.getUsers();
       console.log('Users API response:', users);
-      
-      // Handle different response formats
       let usersArray = [];
       if (Array.isArray(users)) {
         usersArray = users;
       } else if (users && Array.isArray(users.users)) {
         usersArray = users.users;
       } else if (users && typeof users === 'object') {
-        // Try to find array in response
-        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+        usersArray = Object.values(users).find((val) => Array.isArray(val)) || [];
       }
-      
+
       console.log('Processed users array:', usersArray);
-      
-      // Get current user ID and company to exclude from list and filter by company
       const storedUser = localStorage.getItem('user');
       let currentUserId = null;
       let currentUserCompany = null;
@@ -880,86 +803,67 @@ const SalesManagerDashboard = () => {
           console.error('Error parsing stored user:', error);
         }
       }
-      
-      // Map users to chat format and exclude current user
-      // Also filter by company to ensure we only show users from the same company
-      const chatUsersList = usersArray
-        .filter(user => {
-          const userId = user.id || user.ID;
-          const userCompany = user.company || user.Company;
-          
-          // Convert both to strings for comparison to handle type mismatches
-          const userIdStr = userId ? String(userId) : null;
-          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-          
-          // Check if user is not the current user
-          const isNotCurrentUser = userIdStr && userIdStr !== currentUserIdStr;
-          
-          // Check if user is from the same company (if company info is available)
-          const isSameCompany = !currentUserCompany || !userCompany || currentUserCompany === userCompany;
-          
-          const shouldInclude = isNotCurrentUser && isSameCompany;
-          
-          if (!shouldInclude && userIdStr) {
-            if (!isNotCurrentUser) {
-              console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
-            } else if (!isSameCompany) {
-              console.log(`Excluding user ${userIdStr} (different company: ${userCompany} vs ${currentUserCompany})`);
-            }
+      const chatUsersList = usersArray.
+      filter((user) => {
+        const userId = user.id || user.ID;
+        const userCompany = user.company || user.Company;
+        const userIdStr = userId ? String(userId) : null;
+        const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+        const isNotCurrentUser = userIdStr && userIdStr !== currentUserIdStr;
+        const isSameCompany = !currentUserCompany || !userCompany || currentUserCompany === userCompany;
+
+        const shouldInclude = isNotCurrentUser && isSameCompany;
+
+        if (!shouldInclude && userIdStr) {
+          if (!isNotCurrentUser) {
+            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+          } else if (!isSameCompany) {
+            console.log(`Excluding user ${userIdStr} (different company: ${userCompany} vs ${currentUserCompany})`);
           }
-          return shouldInclude;
-        })
-        .map(user => {
-          const userId = user.id || user.ID;
-          return {
-            userId: userId,
-            name: user.name || user.Name || 'User',
-            email: user.email || user.Email || '',
-            role: user.role || user.Role || '',
-            company: user.company || user.Company || '',
-            status: user.status || user.Status || 'Active',
-            unreadCount: 0 // Will be updated from conversations if needed
-          };
-        })
-        .sort((a, b) => {
-          const nameA = (a.name || '').toLowerCase();
-          const nameB = (b.name || '').toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
-      
+        }
+        return shouldInclude;
+      }).
+      map((user) => {
+        const userId = user.id || user.ID;
+        return {
+          userId: userId,
+          name: user.name || user.Name || 'User',
+          email: user.email || user.Email || '',
+          role: user.role || user.Role || '',
+          company: user.company || user.Company || '',
+          status: user.status || user.Status || 'Active',
+          unreadCount: 0
+        };
+      }).
+      sort((a, b) => {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
       console.log('Final chat users list:', chatUsersList);
-      
-      // Get conversations to update unread counts and include users who have messaged but aren't in users list
       try {
         const conversations = await messagingService.getConversations();
         if (Array.isArray(conversations)) {
-          // Create a map of existing users by ID for quick lookup
           const existingUsersMap = new Map();
-          chatUsersList.forEach(u => {
+          chatUsersList.forEach((u) => {
             existingUsersMap.set(String(u.userId), u);
           });
-          
-          // Process conversations to update unread counts and add missing users
-          conversations.forEach(conv => {
+          conversations.forEach((conv) => {
             const convUserId = String(conv.userId || conv.userID);
             const existingUser = existingUsersMap.get(convUserId);
-            
+
             if (existingUser) {
-              // Update unread count for existing user
               if (conv.unreadCount) {
                 existingUser.unreadCount = conv.unreadCount;
               }
             } else {
-              // User has a conversation but isn't in the users list - add them
-              // BUT only if they're from the same company (to avoid 403 errors)
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
               const userCompany = convUser.company || convUser.Company || conv.company || '';
-              
-              // Only add if it's not the current user AND from the same company
               const currentUserIdStr = currentUserId ? String(currentUserId) : null;
               const isSameCompany = !currentUserCompany || !userCompany || currentUserCompany === userCompany;
-              
+
               if (userId && String(userId) !== currentUserIdStr && isSameCompany) {
                 const newUser = {
                   userId: userId,
@@ -982,8 +886,6 @@ const SalesManagerDashboard = () => {
               }
             }
           });
-          
-          // Re-sort after adding new users
           chatUsersList.sort((a, b) => {
             const nameA = (a.name || '').toLowerCase();
             const nameB = (b.name || '').toLowerCase();
@@ -993,15 +895,11 @@ const SalesManagerDashboard = () => {
       } catch (convError) {
         console.error('Error loading conversations for unread counts:', convError);
       }
-      
+
       setChatUsers(chatUsersList);
-      
-      // Auto-select first user if available and no user is selected
-      // Use functional update to avoid dependency on selectedUserId
-      setSelectedUserId(prevSelected => {
+      setSelectedUserId((prevSelected) => {
         if (chatUsersList.length > 0 && !prevSelected) {
           const firstUserId = chatUsersList[0].userId;
-          // Load chat for first user asynchronously
           setTimeout(() => {
             loadChatForUser(firstUserId);
           }, 0);
@@ -1009,7 +907,7 @@ const SalesManagerDashboard = () => {
         }
         return prevSelected;
       });
-      
+
       if (chatUsersList.length === 0) {
         console.warn('No users found. This could mean:');
         console.warn('1. No other users in the same company');
@@ -1025,41 +923,33 @@ const SalesManagerDashboard = () => {
     } finally {
       isLoadingUsersRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadChatForUser]); // addNotification is stable, no need to include
-
-  // Load data on component mount
+  }, [loadChatForUser]);
   useEffect(() => {
     loadData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load users when chat tab is active (only once per tab switch)
+  }, []);
   useEffect(() => {
     if (activeTab === 'chat' && !isLoadingUsersRef.current) {
       loadUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]); // Only depend on activeTab, not loadUsers
+  }, [activeTab]);
 
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: 'Overview', icon: TrendingUp },
-      { id: 'visits', label: 'Visits', icon: Calendar },
-      { id: 'requests', label: 'Requests', icon: ClipboardList },
-      { id: 'occupancy', label: 'Occupancy', icon: Building },
-      { id: 'sales-tracking', label: 'Sales Tracking', icon: FileText },
-      { id: 'clients', label: 'Tenant Management', icon: Users },
-      { id: 'property-management', label: 'Property Management', icon: Building },
-      { id: 'link-fast', label: 'Link Fast', icon: Link2 },
-      { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
-      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
-      { id: 'chat', label: 'Messages', icon: MessageCircle },
-      { id: 'settings', label: 'Profile Settings', icon: Settings }
-    ],
+    { id: 'overview', label: 'Overview', icon: TrendingUp },
+    { id: 'visits', label: 'Visits', icon: Calendar },
+    { id: 'requests', label: 'Requests', icon: ClipboardList },
+    { id: 'occupancy', label: 'Occupancy', icon: Building },
+    { id: 'sales-tracking', label: 'Sales Tracking', icon: FileText },
+    { id: 'clients', label: 'Tenant Management', icon: Users },
+    { id: 'property-management', label: 'Property Management', icon: Building },
+    { id: 'link-fast', label: 'Link Fast', icon: Link2 },
+    { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
+    { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
+    { id: 'chat', label: 'Messages', icon: MessageCircle },
+    { id: 'settings', label: 'Profile Settings', icon: Settings }],
+
     []
   );
-
-  // Visits / Requests handlers (Schedule visit from Property Management uses properties for dropdown)
   const openScheduleVisit = (propertyAddress = '') => {
     setVisitProperty(propertyAddress);
     setShowScheduleVisitModal(true);
@@ -1114,8 +1004,8 @@ const SalesManagerDashboard = () => {
         if (!file.type || !file.type.startsWith('image/')) continue;
         const result = await cloudinaryService.uploadFile(file, 'property-images');
         if (result.success && result.url) {
-          if (isEdit) setEditPropertyImages(prev => [...prev, result.url]);
-          else setCreatePropertyImages(prev => [...prev, result.url]);
+          if (isEdit) setEditPropertyImages((prev) => [...prev, result.url]);else
+          setCreatePropertyImages((prev) => [...prev, result.url]);
         }
       }
     } catch (err) {
@@ -1133,7 +1023,7 @@ const SalesManagerDashboard = () => {
       for (const file of Array.from(files)) {
         if (!file.type || !file.type.startsWith('image/')) continue;
         const result = await cloudinaryService.uploadFile(file, 'property-images');
-        if (result.success && result.url) setPmAddFormImages(prev => [...prev, result.url]);
+        if (result.success && result.url) setPmAddFormImages((prev) => [...prev, result.url]);
       }
     } catch (err) {
       console.error('Image upload error:', err);
@@ -1197,15 +1087,12 @@ const SalesManagerDashboard = () => {
     }
   }, [addNotification, loadListingsData, selectedRequest]);
 
-  // No mock data - using real API data only
-
   const handleKycUpload = async (file, userRole) => {
-    // Validate file
     if (!validateFileType(file)) {
       addNotification('Invalid file type. Please upload PDF, DOC, DOCX, or image files.', 'error');
       return;
     }
-    
+
     if (!validateFileSize(file)) {
       addNotification('File size too large. Please upload files smaller than 10MB.', 'error');
       return;
@@ -1214,11 +1101,11 @@ const SalesManagerDashboard = () => {
     try {
       setLoading(true);
       const uploadResult = await cloudinaryService.uploadFile(file, 'real-estate-kyc');
-      
+
       if (uploadResult.success) {
-        setUploadedDocuments(prev => [...prev, { 
-          type: 'KYC', 
-          file: file, 
+        setUploadedDocuments((prev) => [...prev, {
+          type: 'KYC',
+          file: file,
           name: file.name,
           url: uploadResult.url,
           publicId: uploadResult.publicId,
@@ -1239,13 +1126,12 @@ const SalesManagerDashboard = () => {
   };
 
   const handleContractUpload = async (files, contractDetails, userRole) => {
-    // Validate files
     for (const file of files) {
       if (!validateFileType(file)) {
         addNotification(`Invalid file type for ${file.name}. Please upload PDF, DOC, DOCX, or image files.`, 'error');
         return;
       }
-      
+
       if (!validateFileSize(file)) {
         addNotification(`File size too large for ${file.name}. Please upload files smaller than 10MB.`, 'error');
         return;
@@ -1255,10 +1141,10 @@ const SalesManagerDashboard = () => {
     try {
       setLoading(true);
       const uploadResults = await cloudinaryService.uploadMultipleFiles(files, 'real-estate-contracts');
-      
-      const successfulUploads = uploadResults.filter(result => result.success);
-      const failedUploads = uploadResults.filter(result => !result.success);
-      
+
+      const successfulUploads = uploadResults.filter((result) => result.success);
+      const failedUploads = uploadResults.filter((result) => !result.success);
+
       if (successfulUploads.length > 0) {
         const uploadedDocs = successfulUploads.map((result, index) => ({
           type: 'Contract',
@@ -1270,12 +1156,12 @@ const SalesManagerDashboard = () => {
           uploadedAt: result.uploadedAt,
           details: contractDetails
         }));
-        
-        setUploadedDocuments(prev => [...prev, ...uploadedDocs]);
+
+        setUploadedDocuments((prev) => [...prev, ...uploadedDocs]);
         addNotification(`${successfulUploads.length} contract document(s) uploaded successfully!`, 'success');
         setShowContractModal(false);
       }
-      
+
       if (failedUploads.length > 0) {
         addNotification(`${failedUploads.length} document(s) failed to upload`, 'error');
       }
@@ -1297,19 +1183,18 @@ const SalesManagerDashboard = () => {
   const downloadCsvExample = () => {
     const headers = ['Name', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status'];
     const exampleRows = [
-      ['Jane Doe', 'jane.doe@example.com', '+2250700000000', '150000', '2026-02-01', 'Active'],
-      ['John Smith', 'john.smith@example.com', '+2250700000001', '180000', '2026-02-15', 'Active']
-    ];
+    ['Jane Doe', 'jane.doe@example.com', '+2250700000000', '150000', '2026-02-01', 'Active'],
+    ['John Smith', 'john.smith@example.com', '+2250700000001', '180000', '2026-02-15', 'Active']];
+
     const escapeCsv = (v) => {
       const s = String(v ?? '').trim();
       if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
       return s;
     };
-    // Use semicolon delimiter to match common exports (and the backend supports both ';' and ',').
     const csvContent = [
-      headers.join(';'),
-      ...exampleRows.map(r => r.map(escapeCsv).join(';'))
-    ].join('\n') + '\n';
+    headers.join(';'),
+    ...exampleRows.map((r) => r.map(escapeCsv).join(';'))].
+    join('\n') + '\n';
     downloadBlob(csvContent, 'tenants_import_example.csv');
   };
 
@@ -1359,23 +1244,23 @@ const SalesManagerDashboard = () => {
     };
     const propHeaders = ['Address', 'Type', 'PropertyType', 'BuildingType', 'Status', 'NumberOfUnits', 'Rent', 'Bedrooms', 'Bathrooms', 'Urgency', 'LandlordId', 'UnitNumbers', 'UnitRents'];
     const propRows = [
-      ['123 Main St', 'House', 'For Rent', '', 'Vacant', '1', '150000', '3', '2', 'normal', '', '', ''],
-      ['456 Oak Ave', 'Apartment', 'For Rent', 'T2', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']
-    ];
+    ['123 Main St', 'House', 'For Rent', '', 'Vacant', '1', '150000', '3', '2', 'normal', '', '', ''],
+    ['456 Oak Ave', 'Apartment', 'For Rent', 'T2', 'Vacant', '2', '', '2', '1', 'normal', '', 'F1|F2', '100000|120000']];
+
     const tenantHeaders = ['Name', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status'];
     const tenantRows = [
-      ['Jane Doe', 'jane@example.com', '+2250700000000', '150000', '2026-02-01', 'Active'],
-      ['John Smith', 'john@example.com', '+2250700000001', '100000', '2026-02-15', 'Active']
-    ];
+    ['Jane Doe', 'jane@example.com', '+2250700000000', '150000', '2026-02-01', 'Active'],
+    ['John Smith', 'john@example.com', '+2250700000001', '100000', '2026-02-15', 'Active']];
+
     const sections = [
-      '[PROPERTIES]',
-      propHeaders.join(','),
-      ...propRows.map(r => r.map(escapeCsv).join(',')),
-      '',
-      '[TENANTS]',
-      tenantHeaders.join(','),
-      ...tenantRows.map(r => r.map(escapeCsv).join(','))
-    ];
+    '[PROPERTIES]',
+    propHeaders.join(','),
+    ...propRows.map((r) => r.map(escapeCsv).join(',')),
+    '',
+    '[TENANTS]',
+    tenantHeaders.join(','),
+    ...tenantRows.map((r) => r.map(escapeCsv).join(','))];
+
     downloadBlob(sections.join('\n') + '\n', 'full_import_example.csv');
   };
 
@@ -1405,9 +1290,9 @@ const SalesManagerDashboard = () => {
         for (let j = 0; j < raw.length; j++) {
           const c = raw[j];
           if (c === '"') {
-            if (inQuotes && raw[j + 1] === '"') { val += '"'; j++; }
-            else inQuotes = !inQuotes;
-          } else if ((c === ',' && !inQuotes) || (c === '\n' && !inQuotes)) {
+            if (inQuotes && raw[j + 1] === '"') {val += '"';j++;} else
+            inQuotes = !inQuotes;
+          } else if (c === ',' && !inQuotes || c === '\n' && !inQuotes) {
             row.push(val.trim());
             val = '';
             if (c === '\n') break;
@@ -1419,13 +1304,13 @@ const SalesManagerDashboard = () => {
         return row;
       };
       const cells = parseRow(line);
-      if (cells.length === 0 || cells.every(c => !c)) continue;
+      if (cells.length === 0 || cells.every((c) => !c)) continue;
       if (!headers) {
-        headers = cells.map(c => (c || '').trim());
+        headers = cells.map((c) => (c || '').trim());
         continue;
       }
       const obj = {};
-      headers.forEach((h, idx) => { if (h) obj[h] = cells[idx] ?? ''; });
+      headers.forEach((h, idx) => {if (h) obj[h] = cells[idx] ?? '';});
       if (currentSection === 'properties' && obj.Address) result.properties.push(obj);
       if (currentSection === 'tenants' && obj.Name) result.tenants.push(obj);
     }
@@ -1445,7 +1330,7 @@ const SalesManagerDashboard = () => {
     return {
       success: result.success || result.created?.length || 0,
       failed: result.failed || result.errors?.length || 0,
-      result,
+      result
     };
   };
 
@@ -1455,14 +1340,14 @@ const SalesManagerDashboard = () => {
       const text = await file.text();
       if (text.includes('[PROPERTIES]') || text.includes('[TENANTS]')) {
         const { tenants } = parseCsvRows(text, null);
-        if (tenants.length === 0) { addNotification('No tenant rows found in file', 'error'); return { success: 0, failed: 0 }; }
+        if (tenants.length === 0) {addNotification('No tenant rows found in file', 'error');return { success: 0, failed: 0 };}
         const headers = ['Name', 'Email', 'Phone', 'Amount', 'MoveInDate', 'Status'];
         const escapeCsv = (v) => {
           const s = String(v ?? '').trim();
           if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
           return s;
         };
-        const lines = [headers.join(','), ...tenants.map(t => headers.map(h => escapeCsv(t[h] || '')).join(','))];
+        const lines = [headers.join(','), ...tenants.map((t) => headers.map((h) => escapeCsv(t[h] || '')).join(','))];
         fileToSend = new File([lines.join('\n')], 'tenants.csv', { type: 'text/csv' });
       }
     }
@@ -1482,17 +1367,17 @@ const SalesManagerDashboard = () => {
     }
     setBulkImportLoading(true);
     try {
-      let hasProps = false, hasTenants = false;
+      let hasProps = false,hasTenants = false;
       if (isCsv) {
         const text = await bulkImportFile.text();
         hasProps = text.includes('[PROPERTIES]');
         hasTenants = text.includes('[TENANTS]');
       }
       const doBoth = hasProps && hasTenants;
-      const doProps = hasProps || (bulkImportTab === 'properties' && !hasTenants);
-      const doTenants = hasTenants || (bulkImportTab === 'tenants' && !hasProps);
+      const doProps = hasProps || bulkImportTab === 'properties' && !hasTenants;
+      const doTenants = hasTenants || bulkImportTab === 'tenants' && !hasProps;
 
-      let totalSuccess = 0, totalFailed = 0;
+      let totalSuccess = 0,totalFailed = 0;
       let lastTenantResult = null;
 
       if (doProps) {
@@ -1502,14 +1387,14 @@ const SalesManagerDashboard = () => {
       }
       if (doTenants) {
         const res = await handleBulkImportTenants(bulkImportFile);
-        totalSuccess += (res.success || 0);
-        totalFailed += (res.failed || 0);
+        totalSuccess += res.success || 0;
+        totalFailed += res.failed || 0;
         lastTenantResult = res;
       }
 
       if (totalSuccess > 0 || totalFailed > 0) await loadData();
       if (lastTenantResult?.result?.createdUsers?.length) {
-        const usersWithPasswords = lastTenantResult.result.createdUsers.filter(u => u.password);
+        const usersWithPasswords = lastTenantResult.result.createdUsers.filter((u) => u.password);
         if (usersWithPasswords.length > 0) {
           setPasswordData({
             type: 'bulk',
@@ -1522,11 +1407,11 @@ const SalesManagerDashboard = () => {
         }
       }
 
-      const msg = doBoth
-        ? `Import complete: ${totalSuccess} succeeded, ${totalFailed} failed`
-        : doProps && !doTenants
-          ? `Properties: ${totalSuccess} imported, ${totalFailed} failed`
-          : `Tenants: ${totalSuccess} imported, ${totalFailed} failed`;
+      const msg = doBoth ?
+      `Import complete: ${totalSuccess} succeeded, ${totalFailed} failed` :
+      doProps && !doTenants ?
+      `Properties: ${totalSuccess} imported, ${totalFailed} failed` :
+      `Tenants: ${totalSuccess} imported, ${totalFailed} failed`;
       addNotification(msg, totalSuccess > 0 ? 'success' : totalFailed > 0 ? 'error' : 'info');
       setShowBulkImportModal(false);
       setBulkImportFile(null);
@@ -1543,27 +1428,23 @@ const SalesManagerDashboard = () => {
       addNotification('Please select a file first', 'error');
       return;
     }
-
-    // Validate file type (Excel and CSV)
     const validTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-      'application/vnd.ms-excel', // .xls
-      'application/vnd.ms-excel.sheet.macroEnabled.12', // .xlsm
-      'text/csv', // .csv
-      'application/csv', // .csv (alternative MIME type)
-      'text/plain', // .csv (some systems use this)
-    ];
-    
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'application/vnd.ms-excel.sheet.macroEnabled.12',
+    'text/csv',
+    'application/csv',
+    'text/plain'];
+
+
     const validExtensions = /\.(xlsx|xls|csv)$/i;
-    
+
     if (!validTypes.includes(excelFile.type) && !excelFile.name.match(validExtensions)) {
       addNotification('Please upload a valid file (.xlsx, .xls, or .csv)', 'error');
       setExcelFile(null);
       return;
     }
-
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
     if (excelFile.size > maxSize) {
       addNotification('File size too large. Please upload files smaller than 10MB.', 'error');
       setExcelFile(null);
@@ -1573,18 +1454,13 @@ const SalesManagerDashboard = () => {
     try {
       setLoading(true);
       addNotification('Importing tenants from file...', 'info');
-      
+
       const result = await salesManagerService.importClientsFromExcel(excelFile);
-      
+
       console.log('Excel import result:', result);
-      
-      // Reload clients data
       await loadData();
-      
-      // Check if passwords are returned in the response
       if (result.createdUsers && Array.isArray(result.createdUsers) && result.createdUsers.length > 0) {
-        // Filter users that have passwords (newly created)
-        const usersWithPasswords = result.createdUsers.filter(user => user.password && !user.note);
+        const usersWithPasswords = result.createdUsers.filter((user) => user.password && !user.note);
         if (usersWithPasswords.length > 0) {
           setPasswordData({
             type: 'bulk',
@@ -1596,8 +1472,6 @@ const SalesManagerDashboard = () => {
           setShowPasswordModal(true);
         }
       }
-      
-      // Show success notification
       const successCount = result.success || result.createdUsers?.length || 0;
       const failedCount = result.failed || 0;
       let notificationMessage = `Successfully imported ${successCount} tenant(s) from file!`;
@@ -1608,8 +1482,6 @@ const SalesManagerDashboard = () => {
         notificationMessage += ` Check password modal for details.`;
       }
       addNotification(notificationMessage, 'success');
-      
-      // Close modal and reset
       setShowTenantCreationModal(false);
       setExcelFile(null);
       setImportMode('manual');
@@ -1634,26 +1506,24 @@ const SalesManagerDashboard = () => {
     const formData = new FormData(e.target);
     const approvedClientId = formData.get('approvedClientId')?.trim();
     const propertyIdOrAddress =
-      formData.get('property')?.trim() ||
-      (selectedMoveInPropertyId ? String(selectedMoveInPropertyId).trim() : '');
+    formData.get('property')?.trim() || (
+    selectedMoveInPropertyId ? String(selectedMoveInPropertyId).trim() : '');
     const rent = formData.get('rent');
     const moveInDate = formData.get('moveInDate');
-    
+
     if (!approvedClientId || !propertyIdOrAddress || !rent || !moveInDate) {
       addNotification('Please select an approved client and fill all required fields', 'error');
       return;
     }
 
-    const approvedClient = approvedClients.find(client => String(client.ID || client.id) === String(approvedClientId));
+    const approvedClient = approvedClients.find((client) => String(client.ID || client.id) === String(approvedClientId));
     if (!approvedClient) {
       addNotification('Selected approved client not found', 'error');
       return;
     }
-
-    // Property dropdown now stores property ID; resolve for display/API and for unit assignment
     const selectedProperty = properties.find((p) => String(p.ID || p.id) === String(propertyIdOrAddress));
-    const propertyId = selectedProperty ? (selectedProperty.ID ?? selectedProperty.id) : null;
-    const propertyAddress = selectedProperty ? (selectedProperty.Address || selectedProperty.address || '') : propertyIdOrAddress;
+    const propertyId = selectedProperty ? selectedProperty.ID ?? selectedProperty.id : null;
+    const propertyAddress = selectedProperty ? selectedProperty.Address || selectedProperty.address || '' : propertyIdOrAddress;
 
     const depositPaid = Boolean(
       approvedClient.SecurityDepositPaid ||
@@ -1674,9 +1544,9 @@ const SalesManagerDashboard = () => {
         return;
       }
     }
-    
+
     const unitNumber = (selectedMoveInUnitNumber || formData.get('unitNumber') || '').trim();
-    
+
     const tenantData = {
       newClientId: Number(approvedClientId),
       name: approvedClient.name || approvedClient.Name || '',
@@ -1686,55 +1556,50 @@ const SalesManagerDashboard = () => {
       unitNumber: unitNumber || null,
       amount: parseFloat(rent),
       moveInDate: moveInDate,
-      adminDocumentIds: approvedClientDocuments.map(doc => doc.ID || doc.id).filter(Boolean),
-      adminChecklistId: approvedClientChecklist?.ID || approvedClientChecklist?.id || null,
+      adminDocumentIds: approvedClientDocuments.map((doc) => doc.ID || doc.id).filter(Boolean),
+      adminChecklistId: approvedClientChecklist?.ID || approvedClientChecklist?.id || null
     };
-    
+
     try {
       setLoading(true);
       console.log('Creating tenant with data:', tenantData);
       const newClient = await salesManagerService.createClient(tenantData);
       console.log('Created tenant response:', newClient);
-      
-      // Assign tenant to the selected building unit so it shows in Property Management
       if (unitNumber && propertyId) {
-          try {
-            const buildingDetail = await salesManagerService.getPropertyBuildingDetail(propertyId);
-            const units = buildingDetail?.units || [];
-            const unitLabel = unitNumber.trim().toLowerCase();
-            const unitLabelShort = unitLabel.replace(/^unit\s*/i, '').trim();
-            let unit = units.find((u) => {
-              const uNum = (u.unitNumber || u.name || '').toString().trim().toLowerCase();
-              return uNum === unitLabel || uNum === unitLabelShort;
-            });
-            if (!unit && units.length > 0) {
-              const idx = parseInt(unitNumber.replace(/\D/g, ''), 10);
-              unit = (idx >= 1 && units[idx - 1]) ? units[idx - 1] : units[0];
-            }
-            if (unit) {
-              const enterDate = moveInDate || new Date().toISOString().split('T')[0];
-              try {
-                await salesManagerService.updatePropertyUnit(propertyId, unit.id, {
-                  tenant: null,
-                  status: 'Vacant',
-                  enterDate: null,
-                });
-              } catch (_) {
-                // Ignore: unit may already be vacant
-              }
-              await salesManagerService.updatePropertyUnit(propertyId, unit.id, {
-                tenant: tenantData.name,
-                status: 'Occupied',
-                enterDate,
-              });
-            }
-          } catch (assignErr) {
-            console.warn('Tenant created but unit assignment failed:', assignErr);
-            addNotification('Tenant created; could not assign to unit. You can assign from Edit Tenant.', 'warning');
+        try {
+          const buildingDetail = await salesManagerService.getPropertyBuildingDetail(propertyId);
+          const units = buildingDetail?.units || [];
+          const unitLabel = unitNumber.trim().toLowerCase();
+          const unitLabelShort = unitLabel.replace(/^unit\s*/i, '').trim();
+          let unit = units.find((u) => {
+            const uNum = (u.unitNumber || u.name || '').toString().trim().toLowerCase();
+            return uNum === unitLabel || uNum === unitLabelShort;
+          });
+          if (!unit && units.length > 0) {
+            const idx = parseInt(unitNumber.replace(/\D/g, ''), 10);
+            unit = idx >= 1 && units[idx - 1] ? units[idx - 1] : units[0];
           }
+          if (unit) {
+            const enterDate = moveInDate || new Date().toISOString().split('T')[0];
+            try {
+              await salesManagerService.updatePropertyUnit(propertyId, unit.id, {
+                tenant: null,
+                status: 'Vacant',
+                enterDate: null
+              });
+            } catch (_) {
+            }
+            await salesManagerService.updatePropertyUnit(propertyId, unit.id, {
+              tenant: tenantData.name,
+              status: 'Occupied',
+              enterDate
+            });
+          }
+        } catch (assignErr) {
+          console.warn('Tenant created but unit assignment failed:', assignErr);
+          addNotification('Tenant created; could not assign to unit. You can assign from Edit Tenant.', 'warning');
+        }
       }
-      
-      // Check if password is returned in the response
       if (newClient.user && newClient.user.password) {
         setPasswordData({
           type: 'single',
@@ -1743,11 +1608,7 @@ const SalesManagerDashboard = () => {
         });
         setShowPasswordModal(true);
       }
-      
-      // Reload data to get updated client list
       await loadData();
-      
-      // Reset form and close modal
       setShowTenantCreationModal(false);
       setUploadedDocuments([]);
       setSelectedApprovedClientId('');
@@ -1756,7 +1617,7 @@ const SalesManagerDashboard = () => {
       setMoveInUnits([]);
       setMoveInFormPropertyRent(0);
       e.target.reset();
-      
+
       addNotification(`Tenant "${tenantData.name}" created successfully!`, 'success');
     } catch (error) {
       console.error('Failed to create tenant:', error);
@@ -1769,7 +1630,7 @@ const SalesManagerDashboard = () => {
 
 
   const removeDocument = (index) => {
-    setUploadedDocuments(prev => prev.filter((_, i) => i !== index));
+    setUploadedDocuments((prev) => prev.filter((_, i) => i !== index));
     addNotification('Document removed', 'info');
   };
 
@@ -1805,7 +1666,7 @@ const SalesManagerDashboard = () => {
       phone: formData.get('phone')?.trim() || editingClient.Phone,
       property: formData.get('property')?.trim() || editingClient.Property,
       amount: formData.get('amount') ? parseFloat(formData.get('amount')) : editingClient.Amount,
-      status: formData.get('status') || editingClient.Status,
+      status: formData.get('status') || editingClient.Status
     };
     const unitRaw = formData.get('unitNumber');
     if (unitRaw != null) {
@@ -1817,8 +1678,6 @@ const SalesManagerDashboard = () => {
       setLoading(true);
       const clientId = editingClient.ID || editingClient.id;
       await salesManagerService.updateClient(clientId, updateData);
-
-      // Optional: assign/move tenant to a selected unit (if provided)
       const desiredUnitId = (formData.get('assignUnitId') || '').toString().trim();
       const desiredPropertyId = (formData.get('assignPropertyId') || '').toString().trim();
       if (desiredPropertyId && desiredUnitId && updateData.name) {
@@ -1827,7 +1686,7 @@ const SalesManagerDashboard = () => {
             await salesManagerService.updatePropertyUnit(tenantAssignment.propertyId, tenantAssignment.unitId, {
               tenant: null,
               status: 'Vacant',
-              enterDate: null,
+              enterDate: null
             });
           } catch (vacErr) {
             console.warn('Failed to vacate previous unit:', vacErr);
@@ -1838,7 +1697,7 @@ const SalesManagerDashboard = () => {
           tenant: updateData.name,
           status: 'Occupied',
           rent: updateData.amount || 0,
-          enterDate: enterDate || null,
+          enterDate: enterDate || null
         });
 
         const selectedProp = (properties || []).find((p) => String(p.id ?? p.ID) === String(desiredPropertyId));
@@ -1870,7 +1729,7 @@ const SalesManagerDashboard = () => {
       await salesManagerService.updatePropertyUnit(tenantAssignment.propertyId, tenantAssignment.unitId, {
         tenant: null,
         status: 'Vacant',
-        enterDate: null,
+        enterDate: null
       });
       if (editingClient) {
         const clientId = editingClient.ID ?? editingClient.id;
@@ -1914,7 +1773,7 @@ const SalesManagerDashboard = () => {
       amount: formData.get('amount') ? parseFloat(formData.get('amount')) : editingUnpaidRent.Amount,
       paidAmount: formData.get('paidAmount') ? parseFloat(formData.get('paidAmount')) : null,
       paymentDate: formData.get('paymentDate') || null,
-      notes: formData.get('notes')?.trim() || null,
+      notes: formData.get('notes')?.trim() || null
     };
 
     try {
@@ -1936,15 +1795,15 @@ const SalesManagerDashboard = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const numUnits = createPropertyNumberOfUnits;
-    const unitsPayload = createPropertyUnits.slice(0, numUnits).map(u => ({
+    const unitsPayload = createPropertyUnits.slice(0, numUnits).map((u) => ({
       unitNumber: String(u.unitNumber || '').trim(),
       rent: parseFloat(u.rent) || 0,
       bedrooms: parseInt(u.bedrooms, 10) || 0,
       bathrooms: parseFloat(u.bathrooms) || 1,
       status: u.status === 'Occupied' ? 'Occupied' : 'Vacant',
-      tenant: (u.status === 'Occupied' && u.tenant) ? String(u.tenant).trim() : null,
+      tenant: u.status === 'Occupied' && u.tenant ? String(u.tenant).trim() : null
     }));
-    
+
     const propertyData = {
       name: formData.get('name')?.trim(),
       address: formData.get('address')?.trim(),
@@ -1956,13 +1815,13 @@ const SalesManagerDashboard = () => {
       bedrooms: formData.get('bedrooms') ? parseInt(formData.get('bedrooms'), 10) : undefined,
       bathrooms: formData.get('bathrooms') ? parseFloat(formData.get('bathrooms')) : undefined,
       urgency: formData.get('urgency')?.trim() || 'normal',
-      landlord_id: formData.get('owner') ? parseInt(formData.get('owner'), 10) : null,
+      landlord_id: formData.get('owner') ? parseInt(formData.get('owner'), 10) : null
     };
 
     if (numUnits > 1) {
-      if (unitsPayload.length !== numUnits || unitsPayload.some(u => !u.unitNumber)) {
+      if (unitsPayload.length !== numUnits || unitsPayload.some((u) => !u.unitNumber)) {
         addNotification('Each unit must have a name/label (e.g. F1, House A, 101).', 'error');
-      return;
+        return;
       }
       propertyData.units = unitsPayload;
       propertyData.rent = 0;
@@ -2037,7 +1896,7 @@ const SalesManagerDashboard = () => {
         city: city || '',
         neighborhood: neighborhood || '',
         typeR: typeR || '',
-        images: pmAddFormImages,
+        images: pmAddFormImages
       });
       addNotification('Building created successfully', 'success');
       setShowAddBuildingModal(false);
@@ -2073,7 +1932,7 @@ const SalesManagerDashboard = () => {
     const monthlyRent = parseFloat(formData.get('villaMonthlyRent')) || 0;
     const extra = JSON.stringify({
       pieces: { livingRooms, bedrooms, bathrooms, visitorWc },
-      equipment: [courtyard, garage, garden, airConditioning, swimmingPool].filter(Boolean),
+      equipment: [courtyard, garage, garden, airConditioning, swimmingPool].filter(Boolean)
     });
     setLoading(true);
     try {
@@ -2089,7 +1948,7 @@ const SalesManagerDashboard = () => {
         neighborhood: preciseLocation?.split('–')[1]?.trim() || '',
         typeR: typeR || '',
         extra,
-        units: [{ unitNumber: '1', rent: monthlyRent, status: 'Vacant' }],
+        units: [{ unitNumber: '1', rent: monthlyRent, status: 'Vacant' }]
       });
       addNotification('Villa created successfully', 'success');
       setShowAddVillaModal(false);
@@ -2132,7 +1991,7 @@ const SalesManagerDashboard = () => {
         city: city || '',
         neighborhood: neighborhood || '',
         superficie,
-        documents: documents || '',
+        documents: documents || ''
       });
       addNotification('Land created successfully', 'success');
       setShowAddLandModal(false);
@@ -2159,7 +2018,7 @@ const SalesManagerDashboard = () => {
       livingRoom: formData.get('apartmentLivingRoom')?.trim(),
       kitchen: formData.get('apartmentKitchen')?.trim(),
       balcony: formData.get('apartmentBalcony')?.trim(),
-      parking: formData.get('apartmentParking')?.trim(),
+      parking: formData.get('apartmentParking')?.trim()
     });
     if (pmPropertyId && (pmView === 'building-detail' || pmView === 'villa-detail')) {
       setLoading(true);
@@ -2169,7 +2028,7 @@ const SalesManagerDashboard = () => {
           features,
           picture: addApartmentPictures.length > 0 ? JSON.stringify(addApartmentPictures) : undefined,
           rent,
-          status: 'Vacant',
+          status: 'Vacant'
         });
         addNotification('Apartment added successfully', 'success');
         setShowAddApartmentModal(false);
@@ -2196,7 +2055,7 @@ const SalesManagerDashboard = () => {
           numberOfUnits: 1,
           rent,
           landlord_id: pmOwnerId,
-          units: [{ unitNumber: name || '1', rent, status: 'Vacant', features, picture: addApartmentPictures.length > 0 ? JSON.stringify(addApartmentPictures) : undefined }],
+          units: [{ unitNumber: name || '1', rent, status: 'Vacant', features, picture: addApartmentPictures.length > 0 ? JSON.stringify(addApartmentPictures) : undefined }]
         });
         addNotification('Apartment created successfully', 'success');
         setShowAddApartmentModal(false);
@@ -2233,12 +2092,12 @@ const SalesManagerDashboard = () => {
       livingRoom: formData.get('editApartmentLivingRoom')?.trim(),
       kitchen: formData.get('editApartmentKitchen')?.trim(),
       balcony: formData.get('editApartmentBalcony')?.trim(),
-      parking: formData.get('editApartmentParking')?.trim(),
+      parking: formData.get('editApartmentParking')?.trim()
     });
     const rent = parseFloat(formData.get('editApartmentRent')) || 0;
     const status = formData.get('editApartmentStatus')?.trim() || 'Vacant';
-    const tenant = status === 'Occupied' ? (formData.get('editApartmentTenant')?.trim() || null) : null;
-    const enterDate = status === 'Occupied' ? (formData.get('editApartmentEnterDate')?.trim() || null) : null;
+    const tenant = status === 'Occupied' ? formData.get('editApartmentTenant')?.trim() || null : null;
+    const enterDate = status === 'Occupied' ? formData.get('editApartmentEnterDate')?.trim() || null : null;
     setLoading(true);
     try {
       await salesManagerService.updatePropertyUnit(pmPropertyId, editingUnit.id, {
@@ -2250,7 +2109,7 @@ const SalesManagerDashboard = () => {
         rent,
         tenant: status === 'Occupied' ? tenant : null,
         status,
-        enterDate: status === 'Occupied' ? enterDate : null,
+        enterDate: status === 'Occupied' ? enterDate : null
       });
       addNotification('Apartment updated successfully', 'success');
       setShowEditApartmentModal(false);
@@ -2286,16 +2145,16 @@ const SalesManagerDashboard = () => {
     updateData.images = editPropertyImages;
 
     const numUnits = editPropertyNumberOfUnits;
-    const unitsPayload = editPropertyUnits.slice(0, numUnits).map(u => ({
+    const unitsPayload = editPropertyUnits.slice(0, numUnits).map((u) => ({
       unitNumber: String(u.unitNumber || '').trim(),
       rent: parseFloat(u.rent) || 0,
       bedrooms: parseInt(u.bedrooms, 10) || 0,
       bathrooms: parseFloat(u.bathrooms) || 1,
       status: u.status === 'Occupied' ? 'Occupied' : 'Vacant',
-      tenant: (u.status === 'Occupied' && u.tenant) ? String(u.tenant).trim() : null,
+      tenant: u.status === 'Occupied' && u.tenant ? String(u.tenant).trim() : null
     }));
     if (unitsPayload.length > 0) {
-      if (unitsPayload.some(u => !u.unitNumber)) {
+      if (unitsPayload.some((u) => !u.unitNumber)) {
         addNotification('Each unit must have a name (e.g. F1, House A).', 'error');
         return;
       }
@@ -2337,39 +2196,29 @@ const SalesManagerDashboard = () => {
       totalActiveTenants: 0,
       numberOfUnpaidAccounts: 0,
       totalUnpaidRentAmount: 0,
-      // Legacy field names for backward compatibility
       occupancyRate: 0,
       activeClients: 0,
       unpaidCount: 0,
-      unpaidAmount: 0,
+      unpaidAmount: 0
     };
-
-    // Calculate actual metrics from loaded data
     const totalPropertiesCount = properties.length || data.totalProperties || 0;
-    const occupiedCount = properties.filter(p => (p.status || p.Status || '').toLowerCase() === 'occupied').length || data.occupiedProperties || 0;
-    const vacantCount = properties.filter(p => (p.status || p.Status || '').toLowerCase() === 'vacant').length || data.vacantProperties || 0;
-    const actualOccupancyRate = totalPropertiesCount > 0 ? (occupiedCount / totalPropertiesCount * 100) : (data.globalOccupancyRate || data.occupancyRate || 0);
-    
-    // Use enhanced fields if available, fallback to legacy, then fallback to calculated values
+    const occupiedCount = properties.filter((p) => (p.status || p.Status || '').toLowerCase() === 'occupied').length || data.occupiedProperties || 0;
+    const vacantCount = properties.filter((p) => (p.status || p.Status || '').toLowerCase() === 'vacant').length || data.vacantProperties || 0;
+    const actualOccupancyRate = totalPropertiesCount > 0 ? occupiedCount / totalPropertiesCount * 100 : data.globalOccupancyRate || data.occupancyRate || 0;
     const occupancyRate = data.globalOccupancyRate || data.occupancyRate || actualOccupancyRate;
-    const activeTenants = data.totalActiveTenants || data.activeClients || clients.filter(c => (c.status || c.Status || '').toLowerCase() === 'active').length || 0;
+    const activeTenants = data.totalActiveTenants || data.activeClients || clients.filter((c) => (c.status || c.Status || '').toLowerCase() === 'active').length || 0;
     const unpaidCount = data.numberOfUnpaidAccounts || data.unpaidCount || unpaidRents.length || 0;
     const unpaidAmount = data.totalUnpaidRentAmount || data.unpaidAmount || unpaidRents.reduce((sum, r) => sum + (r.amount || r.Amount || 0), 0) || 0;
-    
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-    // Use historical data from backend if available, otherwise calculate from current data
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     let chartData = [];
     if (data.historicalData && Array.isArray(data.historicalData) && data.historicalData.length > 0) {
       chartData = data.historicalData;
     } else {
-      // Fallback: Calculate historical occupancy data for the last 6 months
       const now = new Date();
       for (let i = 5; i >= 0; i--) {
         const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthName = monthDate.toLocaleString('default', { month: 'short' });
-        
-        // Use current occupancy rate for all months (fallback)
         chartData.push({
           month: monthName,
           occupancyRate: Math.round(actualOccupancyRate * 10) / 10,
@@ -2394,40 +2243,40 @@ const SalesManagerDashboard = () => {
               <ResponsiveContainer>
                 <AreaChart
                   data={chartData}
-                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
-                >
+                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+                  
                   <defs>
                     <linearGradient id="colorOccupancy" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorTenants" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                  <XAxis 
-                    dataKey="month" 
-                    stroke="#6b7280" 
+                  <XAxis
+                    dataKey="month"
+                    stroke="#6b7280"
                     tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#e5e7eb' }}
-                  />
-                  <YAxis 
+                    axisLine={{ stroke: '#e5e7eb' }} />
+                  
+                  <YAxis
                     yAxisId="left"
-                    stroke="#6b7280" 
+                    stroke="#6b7280"
                     tick={{ fill: '#6b7280', fontSize: 12 }}
                     axisLine={{ stroke: '#e5e7eb' }}
-                    label={{ value: 'Occupancy %', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
-                  />
-                  <YAxis 
+                    label={{ value: 'Occupancy %', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }} />
+                  
+                  <YAxis
                     yAxisId="right"
                     orientation="right"
-                    stroke="#6b7280" 
+                    stroke="#6b7280"
                     tick={{ fill: '#6b7280', fontSize: 12 }}
                     axisLine={{ stroke: '#e5e7eb' }}
-                    label={{ value: 'Tenants', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }}
-                  />
+                    label={{ value: 'Tenants', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }} />
+                  
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -2440,12 +2289,12 @@ const SalesManagerDashboard = () => {
                       if (name === 'occupancyRate') return [`${value.toFixed(1)}%`, 'Occupancy Rate'];
                       if (name === 'activeTenants') return [value, 'Active Tenants'];
                       return value;
-                    }}
-                  />
-                  <Legend 
+                    }} />
+                  
+                  <Legend
                     wrapperStyle={{ paddingTop: '10px' }}
-                    iconType="line"
-                  />
+                    iconType="line" />
+                  
                   <Area
                     yAxisId="left"
                     type="natural"
@@ -2455,8 +2304,8 @@ const SalesManagerDashboard = () => {
                     fill="url(#colorOccupancy)"
                     dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
                     activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    name="Occupancy Rate (%)"
-                  />
+                    name="Occupancy Rate (%)" />
+                  
                   <Area
                     yAxisId="right"
                     type="natural"
@@ -2466,8 +2315,8 @@ const SalesManagerDashboard = () => {
                     fill="url(#colorTenants)"
                     dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
                     activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    name="Active Tenants"
-                  />
+                    name="Active Tenants" />
+                  
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -2517,98 +2366,97 @@ const SalesManagerDashboard = () => {
                 {vacantCount}
               </p>
             </div>
-            {/* Advertisements Display - Replacing Banner Card */}
-            {advertisements.length > 0 ? (
-              <div style={{
-                gridColumn: 'span 2',
-                minHeight: '400px',
-                padding: '32px',
-                backgroundColor: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '24px',
-                overflowX: 'auto'
-              }}>
+            {advertisements.length > 0 ?
+            <div style={{
+              gridColumn: 'span 2',
+              minHeight: '400px',
+              padding: '32px',
+              backgroundColor: '#fff',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '24px',
+              overflowX: 'auto'
+            }}>
                 <div style={{
-                  display: 'flex',
-                  gap: '24px',
-                  flexWrap: 'nowrap',
-                  overflowX: 'auto',
-                  paddingBottom: '16px',
-                  width: '100%'
-                }}>
+                display: 'flex',
+                gap: '24px',
+                flexWrap: 'nowrap',
+                overflowX: 'auto',
+                paddingBottom: '16px',
+                width: '100%'
+              }}>
                   {advertisements.map((ad, index) => {
-                    const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-                    const fullImageUrl = imageUrl 
-                      ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                      : null;
+                  const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+                  const fullImageUrl = imageUrl ?
+                  imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}` :
+                  null;
 
-                    return (
-                      <div 
-                        key={`ad-${ad.ID || ad.id || index}`}
+                  return (
+                    <div
+                      key={`ad-${ad.ID || ad.id || index}`}
+                      style={{
+                        minWidth: '350px',
+                        maxWidth: '450px',
+                        padding: '20px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        flexShrink: 0
+                      }}>
+                      
+                        {fullImageUrl &&
+                      <img
+                        src={fullImageUrl}
+                        alt={ad.Title || ad.title || 'Advertisement'}
                         style={{
-                          minWidth: '350px',
-                          maxWidth: '450px',
-                          padding: '20px',
-                          backgroundColor: '#f9fafb',
+                          width: '100%',
+                          height: 'auto',
+                          maxHeight: '250px',
+                          objectFit: 'contain',
                           borderRadius: '8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          flexShrink: 0
+                          marginBottom: '16px'
                         }}
-                      >
-                        {fullImageUrl && (
-                          <img 
-                            src={fullImageUrl} 
-                            alt={ad.Title || ad.title || 'Advertisement'} 
-                            style={{
-                              width: '100%',
-                              height: 'auto',
-                              maxHeight: '250px',
-                              objectFit: 'contain',
-                              borderRadius: '8px',
-                              marginBottom: '16px'
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        )}
-                        <h3 style={{ 
-                          margin: '0 0 8px 0', 
-                          fontSize: '1.1rem', 
-                          color: '#1f2937',
-                          fontWeight: '600'
-                        }}>
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }} />
+
+                      }
+                        <h3 style={{
+                        margin: '0 0 8px 0',
+                        fontSize: '1.1rem',
+                        color: '#1f2937',
+                        fontWeight: '600'
+                      }}>
                           {ad.Title || ad.title || 'Untitled Advertisement'}
                         </h3>
-                        <p style={{ 
-                          margin: '0 0 12px 0', 
-                          fontSize: '0.9rem', 
-                          color: '#6b7280',
-                          lineHeight: '1.5'
-                        }}>
+                        <p style={{
+                        margin: '0 0 12px 0',
+                        fontSize: '0.9rem',
+                        color: '#6b7280',
+                        lineHeight: '1.5'
+                      }}>
                           {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
                         </p>
-                        {ad.CreatedAt && (
-                          <span style={{ 
-                            fontSize: '0.8rem', 
-                            color: '#9ca3af'
-                          }}>
+                        {ad.CreatedAt &&
+                      <span style={{
+                        fontSize: '0.8rem',
+                        color: '#9ca3af'
+                      }}>
                             Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
                           </span>
-                        )}
+                      }
+            </div>);
+
+                })}
             </div>
-                    );
-                  })}
-            </div>
-              </div>
-            ) : (
-              <div className="sa-banner-card">
+              </div> :
+
+            <div className="sa-banner-card">
                 <div className="sa-banner-text">
                   <h3>Increase your sales</h3>
                   <p>
@@ -2618,7 +2466,7 @@ const SalesManagerDashboard = () => {
                   <button className="sa-banner-button">Learn More</button>
                 </div>
               </div>
-            )}
+            }
           </div>
         </div>
 
@@ -2640,9 +2488,9 @@ const SalesManagerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-          {alerts.length > 0 ? (
-            alerts.filter(alert => alert.Urgency === 'urgent' || alert.Urgency === 'high').map(alert => (
-                    <tr key={alert.ID}>
+          {alerts.length > 0 ?
+                alerts.filter((alert) => alert.Urgency === 'urgent' || alert.Urgency === 'high').map((alert) =>
+                <tr key={alert.ID}>
                       <td>
                         <input type="checkbox" />
                       </td>
@@ -2667,20 +2515,20 @@ const SalesManagerDashboard = () => {
                         {alert.Amount ? `${alert.Amount.toLocaleString()} XOF` : '—'}
                       </td>
                     </tr>
-            ))
-          ) : (
-                  <tr>
+                ) :
+
+                <tr>
                     <td colSpan={6} className="sa-table-empty">
                       No priority alerts at the moment.
                     </td>
                   </tr>
-                )}
+                }
               </tbody>
             </table>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
   };
 
   const handleOpenOccupancyDetail = async (property) => {
@@ -2704,8 +2552,6 @@ const SalesManagerDashboard = () => {
 
   const renderOccupancy = () => {
     const totalProperties = properties.length;
-
-    // Helper: filled units per property (from API or derived from status)
     const getFilledUnits = (property) => {
       const n = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
       const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
@@ -2714,37 +2560,31 @@ const SalesManagerDashboard = () => {
       if (n <= 1) return status === 'occupied' ? 1 : 0;
       return 0;
     };
-
-    // Villas: filter by Type, then use units to determine occupied vs vacant
     const isVilla = (p) => (p.Type || p.type || '').toString().trim().toLowerCase() === 'villa';
     const villas = properties.filter(isVilla);
     const totalVillas = villas.length;
-    const occupiedVillas = villas.filter(v => {
+    const occupiedVillas = villas.filter((v) => {
       const total = v.NumberOfUnits ?? v.numberOfUnits ?? 1;
       const filled = getFilledUnits(v);
       return total > 0 && filled >= total;
     }).length;
-    const vacantVillas = villas.filter(v => {
+    const vacantVillas = villas.filter((v) => {
       const total = v.NumberOfUnits ?? v.numberOfUnits ?? 1;
       const filled = getFilledUnits(v);
       return total === 0 || filled < total;
     }).length;
-    const villaOccupancyRate = totalVillas > 0 ? Math.round((occupiedVillas / totalVillas) * 100) : 0;
-
-    // All properties (for overall metrics)
-    const occupiedProperties = properties.filter(p => {
+    const villaOccupancyRate = totalVillas > 0 ? Math.round(occupiedVillas / totalVillas * 100) : 0;
+    const occupiedProperties = properties.filter((p) => {
       const total = p.NumberOfUnits ?? p.numberOfUnits ?? 1;
       const filled = getFilledUnits(p);
       return total > 0 && filled >= total;
     }).length;
-    const vacantProperties = properties.filter(p => {
+    const vacantProperties = properties.filter((p) => {
       const total = p.NumberOfUnits ?? p.numberOfUnits ?? 1;
       const filled = getFilledUnits(p);
       return total === 0 || filled < total;
     }).length;
-    const occupancyRate = totalProperties > 0 ? Math.round((occupiedProperties / totalProperties) * 100) : 0;
-
-    // Occupancy detail view: single property overview (units, tenants, graph)
+    const occupancyRate = totalProperties > 0 ? Math.round(occupiedProperties / totalProperties * 100) : 0;
     if (occupancyDetailView === 'detail') {
       const detail = occupancyDetailData || {};
       const units = detail.units || [];
@@ -2755,17 +2595,17 @@ const SalesManagerDashboard = () => {
       const vacantUnits = units.filter((u) => !isUnitOccupied(u));
       const occupiedCountDetail = occupiedUnits.length;
       const vacantCountDetail = vacantUnits.length;
-      const occupancyRateDetail = totalUnits > 0 ? Math.round((occupiedCountDetail / totalUnits) * 100) : 0;
+      const occupancyRateDetail = totalUnits > 0 ? Math.round(occupiedCountDetail / totalUnits * 100) : 0;
       const totalRent = occupiedUnits.reduce((sum, u) => sum + (Number(u.rentPrice) || Number(u.rent) || 0), 0);
       const pieData = [
-        { name: 'Occupied', value: occupiedCountDetail, color: '#22c55e' },
-        { name: 'Vacant', value: vacantCountDetail, color: '#94a3b8' },
-      ].filter((d) => d.value > 0);
+      { name: 'Occupied', value: occupiedCountDetail, color: '#22c55e' },
+      { name: 'Vacant', value: vacantCountDetail, color: '#94a3b8' }].
+      filter((d) => d.value > 0);
 
       return (
         <div className="sa-occupancy-page">
           <div className="sa-occupancy-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setOccupancyDetailView('list'); setOccupancySelectedProperty(null); setOccupancyDetailData(null); }}>
+            <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => {setOccupancyDetailView('list');setOccupancySelectedProperty(null);setOccupancyDetailData(null);}}>
               <ArrowLeft size={18} />
               Back
             </button>
@@ -2774,12 +2614,12 @@ const SalesManagerDashboard = () => {
               <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>Units, tenants and occupancy overview</p>
             </div>
           </div>
-          {occupancyDetailLoading ? (
-            <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
+          {occupancyDetailLoading ?
+          <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
               <p className="sa-cell-sub" style={{ margin: 0 }}>Loading…</p>
-            </div>
-          ) : (
-            <>
+            </div> :
+
+          <>
               <div className="sa-occupancy-metrics" style={{ marginTop: '20px' }}>
                 <div className="sa-metric-card">
                   <p className="sa-metric-label">Total Units</p>
@@ -2802,16 +2642,16 @@ const SalesManagerDashboard = () => {
                   <p className="sa-metric-value">{totalRent.toLocaleString()} XOF</p>
                 </div>
               </div>
-              {pieData.length > 0 && (
-                <div className="sa-section-card" style={{ marginTop: '20px' }}>
+              {pieData.length > 0 &&
+            <div className="sa-section-card" style={{ marginTop: '20px' }}>
                   <h3 style={{ margin: '0 0 16px 0' }}>Occupancy</h3>
                   <div style={{ width: '100%', maxWidth: 340, height: 260, margin: '0 auto' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={72}>
-                          {pieData.map((entry) => (
-                            <Cell key={entry.name} fill={entry.color} />
-                          ))}
+                          {pieData.map((entry) =>
+                      <Cell key={entry.name} fill={entry.color} />
+                      )}
                         </Pie>
                         <Tooltip formatter={(value) => [value, 'Units']} />
                         <Legend layout="horizontal" align="center" verticalAlign="bottom" />
@@ -2819,7 +2659,7 @@ const SalesManagerDashboard = () => {
                     </ResponsiveContainer>
                   </div>
                 </div>
-              )}
+            }
               <div className="sa-section-card" style={{ marginTop: '20px' }}>
                 <h3 style={{ margin: '0 0 12px 0' }}>Occupied units</h3>
                 <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '0.875rem' }}>Units with current tenants</p>
@@ -2835,11 +2675,11 @@ const SalesManagerDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {occupiedUnits.length > 0 ? (
-                        occupiedUnits.map((u, i) => {
-                          const tenantName = u.tenant || u.Tenant || '';
-                          return (
-                          <tr key={u.id || i}>
+                      {occupiedUnits.length > 0 ?
+                    occupiedUnits.map((u, i) => {
+                      const tenantName = u.tenant || u.Tenant || '';
+                      return (
+                        <tr key={u.id || i}>
                             <td>
                               {u.unitNumber || u.name || `Unit ${i + 1}`}
                               {tenantName ? <span style={{ color: '#6b7280', fontSize: '0.875rem' }}> – {tenantName}</span> : null}
@@ -2848,12 +2688,12 @@ const SalesManagerDashboard = () => {
                             <td>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
                             <td>{u.enterDate || '—'}</td>
                             <td><span className="sa-status-pill occupied">{u.status || u.statut || 'Occupied'}</span></td>
-                          </tr>
-                          );
-                        })
-                      ) : (
-                        <tr><td colSpan={5} className="sa-table-empty">No occupied units</td></tr>
-                      )}
+                          </tr>);
+
+                    }) :
+
+                    <tr><td colSpan={5} className="sa-table-empty">No occupied units</td></tr>
+                    }
                     </tbody>
                   </table>
                 </div>
@@ -2872,31 +2712,31 @@ const SalesManagerDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {vacantUnits.length > 0 ? (
-                        vacantUnits.map((u, i) => (
-                          <tr key={u.id || i}>
+                      {vacantUnits.length > 0 ?
+                    vacantUnits.map((u, i) =>
+                    <tr key={u.id || i}>
                             <td>{u.unitNumber || u.name || `Unit ${i + 1}`}</td>
                             <td>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
                             <td>{u.type || '—'}</td>
                             <td><span className="sa-status-pill vacant">{u.status || u.statut || 'Vacant'}</span></td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr><td colSpan={4} className="sa-table-empty">No vacant units</td></tr>
-                      )}
+                    ) :
+
+                    <tr><td colSpan={4} className="sa-table-empty">No vacant units</td></tr>
+                    }
                     </tbody>
                   </table>
                 </div>
               </div>
-              {totalUnits === 0 && (
-                <div className="sa-section-card" style={{ marginTop: '20px', padding: '24px', textAlign: 'center', color: '#6b7280' }}>
+              {totalUnits === 0 &&
+            <div className="sa-section-card" style={{ marginTop: '20px', padding: '24px', textAlign: 'center', color: '#6b7280' }}>
                   <p style={{ margin: 0 }}>This property has no units in the system yet.</p>
                 </div>
-              )}
+            }
             </>
-          )}
-        </div>
-      );
+          }
+        </div>);
+
     }
 
     return (
@@ -2951,34 +2791,34 @@ const SalesManagerDashboard = () => {
             <Filter size={16} />
             Filter
           </button>
-          <select 
+          <select
             className="sa-filter-button"
             value={propertyStatusFilter}
             onChange={(e) => setPropertyStatusFilter(e.target.value)}
-            style={{ padding: '8px 14px', cursor: 'pointer' }}
-          >
+            style={{ padding: '8px 14px', cursor: 'pointer' }}>
+            
             <option value="">All Status</option>
             <option value="Vacant">Vacant</option>
             <option value="Occupied">Occupied</option>
             </select>
-          <select 
+          <select
             className="sa-filter-button"
             value={propertyTypeFilter}
             onChange={(e) => setPropertyTypeFilter(e.target.value)}
-            style={{ padding: '8px 14px', cursor: 'pointer' }}
-          >
+            style={{ padding: '8px 14px', cursor: 'pointer' }}>
+            
             <option value="">All Types</option>
             <option value="Apartment">Apartment</option>
             <option value="House">House</option>
             <option value="Condo">Condo</option>
             <option value="Studio">Studio</option>
             </select>
-          <select 
+          <select
             className="sa-filter-button"
             value={propertyUrgencyFilter}
             onChange={(e) => setPropertyUrgencyFilter(e.target.value)}
-            style={{ padding: '8px 14px', cursor: 'pointer' }}
-          >
+            style={{ padding: '8px 14px', cursor: 'pointer' }}>
+            
             <option value="">All Urgency</option>
               <option value="urgent">Urgent</option>
               <option value="high">High</option>
@@ -3009,22 +2849,22 @@ const SalesManagerDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {properties.length > 0 ? (
-                  properties.map(property => {
-                    const propertyId = property.ID || property.id;
-                    const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
-                    const filledUnits = getFilledUnits(property);
-                    const remaining = Math.max(0, totalUnits - filledUnits);
-                    const isFull = totalUnits > 0 && filledUnits >= totalUnits;
-                    return (
-                      <tr
-                        key={propertyId}
-                        onClick={() => handleOpenOccupancyDetail(property)}
-                        style={{ cursor: 'pointer' }}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpenOccupancyDetail(property); } }}
-                      >
+              {properties.length > 0 ?
+                properties.map((property) => {
+                  const propertyId = property.ID || property.id;
+                  const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+                  const filledUnits = getFilledUnits(property);
+                  const remaining = Math.max(0, totalUnits - filledUnits);
+                  const isFull = totalUnits > 0 && filledUnits >= totalUnits;
+                  return (
+                    <tr
+                      key={propertyId}
+                      onClick={() => handleOpenOccupancyDetail(property)}
+                      style={{ cursor: 'pointer' }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();handleOpenOccupancyDetail(property);}}}>
+                      
                         <td onClick={(e) => e.stopPropagation()}>
                           <input type="checkbox" />
                         </td>
@@ -3036,24 +2876,24 @@ const SalesManagerDashboard = () => {
                         <td>
                           <div className="sa-cell-main">
                             <span className="sa-cell-title">{property.Type || property.type || 'N/A'}</span>
-                            {property.BuildingType || property.buildingType ? (
-                              <span className="sa-cell-sub">({property.BuildingType || property.buildingType})</span>
-                            ) : null}
+                            {property.BuildingType || property.buildingType ?
+                          <span className="sa-cell-sub">({property.BuildingType || property.buildingType})</span> :
+                          null}
                           </div>
                         </td>
                         <td>
                           <span className={`sa-status-pill ${isFull ? 'occupied' : 'vacant'}`}>
-                            {isFull ? 'Occupied' : (remaining > 0 ? 'Partially filled' : (property.Status || property.status || 'Unknown'))}
+                            {isFull ? 'Occupied' : remaining > 0 ? 'Partially filled' : property.Status || property.status || 'Unknown'}
                       </span>
                     </td>
                         <td>
                           <div className="sa-cell-main">
                             <span className="sa-cell-title">{filledUnits} / {totalUnits}</span>
-                            {remaining > 0 && (
-                              <span className="sa-cell-sub" style={{ display: 'block', fontSize: '0.8rem', color: '#6b7280' }}>
+                            {remaining > 0 &&
+                          <span className="sa-cell-sub" style={{ display: 'block', fontSize: '0.8rem', color: '#6b7280' }}>
                                 {remaining} remaining
                               </span>
-                            )}
+                          }
                           </div>
                         </td>
                         <td>
@@ -3063,45 +2903,43 @@ const SalesManagerDashboard = () => {
                         </td>
                         <td>{property.Rent || property.rent ? `${property.Rent || property.rent} XOF/month` : 'N/A'}</td>
                         <td>
-                          {property.Urgency || property.urgency ? (
-                            <span className={`sa-status-pill ${(property.Urgency || property.urgency).toLowerCase()}`}>
+                          {property.Urgency || property.urgency ?
+                        <span className={`sa-status-pill ${(property.Urgency || property.urgency).toLowerCase()}`}>
                               {property.Urgency || property.urgency}
-                        </span>
-                      ) : (
+                        </span> :
+
                         'N/A'
-                      )}
+                        }
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                           <button
-                            className="sa-action-button"
-                            onClick={() => openEditPropertyModal(property)}
-                            title="Edit Property"
-                          >
+                          className="sa-action-button"
+                          onClick={() => openEditPropertyModal(property)}
+                          title="Edit Property">
+                          
                             ✏️
                       </button>
                     </td>
-                  </tr>
-                    );
-                  })
-              ) : (
+                  </tr>);
+
+                }) :
+
                 <tr>
                     <td colSpan={9} className="sa-table-empty">No properties found. Create your first property to get started.</td>
                 </tr>
-              )}
+                }
             </tbody>
           </table>
           </div>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Property Management - Owners list, owner assets (renting/selling), building payment
-    const getOwnerId = (owner) => owner.id || owner.ID;
+  };
+  const getOwnerId = (owner) => owner.id || owner.ID;
   const getPropertyOwnerId = (property) => property.LandlordID || property.landlordId || property.landlordID || property.landlord_id || property.LandlordId;
 
   const handleSeeOwner = async (owner) => {
-      const ownerId = getOwnerId(owner);
+    const ownerId = getOwnerId(owner);
     if (!ownerId) return;
     setPmLoading(true);
     try {
@@ -3162,20 +3000,17 @@ const SalesManagerDashboard = () => {
   };
 
   const renderPropertyManagement = () => {
-    // Filter owners by search (member name)
     const searchLower = (propertyManagementSearch || '').trim().toLowerCase();
-    const filteredOwners = searchLower
-      ? owners.filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower))
-      : owners;
-
-    // Building management view – "Building X management" (image, total apartments, ADD APPARTMENT, table)
+    const filteredOwners = searchLower ?
+    owners.filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower)) :
+    owners;
     if (pmView === 'building-detail' && buildingDetail) {
       const units = buildingDetail.units || [];
       const totalApartments = buildingDetail.totalApartments ?? units.length;
       const images = buildingDetail.images || [];
       const firstImage = images[0];
-    return (
-      <div className="sa-clients-page">
+      return (
+        <div className="sa-clients-page">
         <div className="sa-clients-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => setPmView('owner-detail')}>
@@ -3188,9 +3023,9 @@ const SalesManagerDashboard = () => {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
-            {firstImage && (
-              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
-            )}
+            {firstImage &&
+            <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            }
             <div style={{ flex: 1, minWidth: 200 }}>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
               <p style={{ margin: 0, color: '#6b7280' }}>Total of appartments: <strong>{totalApartments}</strong></p>
@@ -3212,8 +3047,8 @@ const SalesManagerDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {units.map((row, i) => (
-                    <tr key={row.id || i}>
+                  {units.map((row, i) =>
+                  <tr key={row.id || i}>
                       <td>{row.unitNumber || row.name || `Appartment ${i + 1}`}</td>
                       <td>{row.type || '—'}</td>
                       <td>{row.tenant || '—'}</td>
@@ -3222,60 +3057,58 @@ const SalesManagerDashboard = () => {
                       <td>{row.status || row.statut || '—'}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button 
-                            type="button"
-                            className="table-action-button edit"
-                            style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
-                            onClick={() => { setViewingUnit(row); setShowViewApartmentModal(true); }}
-                          >
+            <button
+                          type="button"
+                          className="table-action-button edit"
+                          style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
+                          onClick={() => {setViewingUnit(row);setShowViewApartmentModal(true);}}>
+                          
                             View
                           </button>
                           <button
-                            type="button"
-                            className="table-action-button contact"
-                            style={{ padding: '6px 12px' }}
-                            onClick={() => { setEditingUnit(row); setEditApartmentPictures(parseUnitPictures(row.picture)); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}
-                            title="Edit apartment details"
-                          >
+                          type="button"
+                          className="table-action-button contact"
+                          style={{ padding: '6px 12px' }}
+                          onClick={() => {setEditingUnit(row);setEditApartmentPictures(parseUnitPictures(row.picture));setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString());setShowEditApartmentModal(true);}}
+                          title="Edit apartment details">
+                          
                             Edit
                           </button>
                           <button
-                            type="button"
-                            className="table-action-button"
-                            style={{ background: '#ef4444', color: '#fff', padding: '6px 12px' }}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              const label = row.unitNumber || row.name || `Apartment ${i + 1}`;
-                              if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
-                              setPmLoading(true);
-                              try {
-                                await salesManagerService.deletePropertyUnit(pmPropertyId, row.id);
-                                addNotification('Unit deleted successfully', 'success');
-                                const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
-                                setBuildingDetail(data);
-                              } catch (err) {
-                                addNotification(err.message || 'Failed to delete unit', 'error');
-                              } finally {
-                                setPmLoading(false);
-                              }
-                            }}
-                            disabled={pmLoading}
-                          >
+                          type="button"
+                          className="table-action-button"
+                          style={{ background: '#ef4444', color: '#fff', padding: '6px 12px' }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const label = row.unitNumber || row.name || `Apartment ${i + 1}`;
+                            if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
+                            setPmLoading(true);
+                            try {
+                              await salesManagerService.deletePropertyUnit(pmPropertyId, row.id);
+                              addNotification('Unit deleted successfully', 'success');
+                              const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
+                              setBuildingDetail(data);
+                            } catch (err) {
+                              addNotification(err.message || 'Failed to delete unit', 'error');
+                            } finally {
+                              setPmLoading(false);
+                            }
+                          }}
+                          disabled={pmLoading}>
+                          
                             Delete
             </button>
           </div>
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
         </div>
           </div>
-        </div>
-      );
-    }
+        </div>);
 
-    // Villa management view – "Villa X management" (same layout as building)
+    }
     if (pmView === 'villa-detail' && buildingDetail) {
       const units = buildingDetail.units || [];
       const totalApartments = buildingDetail.totalApartments ?? units.length;
@@ -3295,9 +3128,9 @@ const SalesManagerDashboard = () => {
           </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
-            {firstImage && (
-              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
-            )}
+            {firstImage &&
+            <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            }
             <div style={{ flex: 1, minWidth: 200 }}>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
               <p style={{ margin: 0, color: '#6b7280' }}>BIG HOUSE</p>
@@ -3318,8 +3151,8 @@ const SalesManagerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                  {units.map((row, i) => (
-                    <tr key={row.id || i}>
+                  {units.map((row, i) =>
+                  <tr key={row.id || i}>
                       <td>VILLA</td>
                       <td>{row.type || '—'}</td>
                       <td>{row.tenant || '—'}</td>
@@ -3329,65 +3162,63 @@ const SalesManagerDashboard = () => {
                       <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button
-                            type="button"
-                            className="table-action-button edit"
-                            style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
-                            onClick={() => { setViewingUnit(row); setShowViewApartmentModal(true); }}
-                          >
+                          type="button"
+                          className="table-action-button edit"
+                          style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
+                          onClick={() => {setViewingUnit(row);setShowViewApartmentModal(true);}}>
+                          
                             View
                           </button>
                           <button
-                            type="button"
-                            className="table-action-button contact"
-                            style={{ padding: '6px 12px' }}
-                            onClick={() => { setEditingUnit(row); setEditApartmentPictures(parseUnitPictures(row.picture)); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}
-                            title="Edit apartment details"
-                          >
+                          type="button"
+                          className="table-action-button contact"
+                          style={{ padding: '6px 12px' }}
+                          onClick={() => {setEditingUnit(row);setEditApartmentPictures(parseUnitPictures(row.picture));setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString());setShowEditApartmentModal(true);}}
+                          title="Edit apartment details">
+                          
                             Edit
                           </button>
                           <button
-                            type="button"
-                            className="table-action-button"
-                            style={{ background: '#ef4444', color: '#fff', padding: '6px 12px' }}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              const label = row.unitNumber || row.name || `Unit ${i + 1}`;
-                              if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
-                              setPmLoading(true);
-                              try {
-                                await salesManagerService.deletePropertyUnit(pmPropertyId, row.id);
-                                addNotification('Unit deleted successfully', 'success');
-                                const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
-                                setBuildingDetail(data);
-                              } catch (err) {
-                                addNotification(err.message || 'Failed to delete unit', 'error');
-                              } finally {
-                                setPmLoading(false);
-                              }
-                            }}
-                            disabled={pmLoading}
-                          >
+                          type="button"
+                          className="table-action-button"
+                          style={{ background: '#ef4444', color: '#fff', padding: '6px 12px' }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const label = row.unitNumber || row.name || `Unit ${i + 1}`;
+                            if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
+                            setPmLoading(true);
+                            try {
+                              await salesManagerService.deletePropertyUnit(pmPropertyId, row.id);
+                              addNotification('Unit deleted successfully', 'success');
+                              const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);
+                              setBuildingDetail(data);
+                            } catch (err) {
+                              addNotification(err.message || 'Failed to delete unit', 'error');
+                            } finally {
+                              setPmLoading(false);
+                            }
+                          }}
+                          disabled={pmLoading}>
+                          
                             Delete
                           </button>
                         </div>
                         </td>
                       </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
-      );
-    }
+        </div>);
 
-    // Land detail view (read-only summary)
+    }
     if (pmView === 'land-detail' && landDetail) {
       return (
         <div className="sa-clients-page">
           <div className="sa-clients-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('owner-detail'); setLandDetail(null); }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => {setPmView('owner-detail');setLandDetail(null);}}>
                 <ArrowLeft size={18} />
                 Back
               </button>
@@ -3402,25 +3233,23 @@ const SalesManagerDashboard = () => {
             <p><strong>Statut:</strong> {landDetail.statut || 'For sell'}</p>
             <p><strong>Price:</strong> {typeof landDetail.rentPrice === 'number' ? landDetail.rentPrice.toLocaleString() : landDetail.rentPrice ?? '—'}</p>
           </div>
-        </div>
-      );
-    }
+        </div>);
 
-    // Owner assets view – "Owner X assets management" with ADD BUILDING / VILLA / LAND / APPARTMENT and single table
+    }
     if (pmView === 'owner-detail' && ownerAssets) {
       const assets = ownerAssets.assets || [];
       const handleAssetClick = (asset) => {
         const type = (asset.type || '').toLowerCase();
-        if (type === 'building') handleViewBuilding(asset);
-        else if (type === 'villa') handleViewVilla(asset);
-        else if (type === 'land') handleViewLand(asset);
-        else handleViewBuilding(asset);
+        if (type === 'building') handleViewBuilding(asset);else
+        if (type === 'villa') handleViewVilla(asset);else
+        if (type === 'land') handleViewLand(asset);else
+        handleViewBuilding(asset);
       };
       return (
         <div className="sa-clients-page">
           <div className="sa-clients-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setOwnerAssets(null); setPmOwnerId(null); setPmOwnerName(''); }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => {setPmView('list');setOwnerAssets(null);setPmOwnerId(null);setPmOwnerName('');}}>
                 <ArrowLeft size={18} />
                 Back
               </button>
@@ -3451,13 +3280,13 @@ const SalesManagerDashboard = () => {
                                     </tr>
                                   </thead>
                                   <tbody>
-                  {assets.map((row) => (
-                    <tr
-                      key={row.id}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => handleAssetClick(row)}
-                      className="clickable-row"
-                    >
+                  {assets.map((row) =>
+                  <tr
+                    key={row.id}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleAssetClick(row)}
+                    className="clickable-row">
+                    
                       <td className="sa-cell-main">{row.name || row.building || '—'}</td>
                       <td>{row.apartmentsDisplay ?? row.apartments ?? '—'}</td>
                       <td>{typeof row.rentPrice === 'number' ? row.rentPrice.toLocaleString() : row.rentPrice ?? '—'}</td>
@@ -3467,70 +3296,70 @@ const SalesManagerDashboard = () => {
                       <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button
-                            type="button"
-                            className="table-action-button edit"
-                            style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
-                            onClick={async () => {
-                              setPmLoading(true);
-                              try {
-                                const full = await salesManagerService.getProperty(row.id);
-                                setSelectedPropertyDetail(full);
-                              } catch (err) {
-                                addNotification('Failed to load property details', 'error');
-                              } finally {
-                                setPmLoading(false);
-                              }
-                            }}
-                            disabled={pmLoading}
-                          >
+                          type="button"
+                          className="table-action-button edit"
+                          style={{ background: '#3b82f6', color: '#fff', padding: '6px 12px' }}
+                          onClick={async () => {
+                            setPmLoading(true);
+                            try {
+                              const full = await salesManagerService.getProperty(row.id);
+                              setSelectedPropertyDetail(full);
+                            } catch (err) {
+                              addNotification('Failed to load property details', 'error');
+                            } finally {
+                              setPmLoading(false);
+                            }
+                          }}
+                          disabled={pmLoading}>
+                          
                             View
                           </button>
                           <button
-                            type="button"
-                            className="table-action-button edit"
-                            style={{ background: '#22c55e', color: '#fff', padding: '6px 12px' }}
-                            onClick={() => openEditPropertyModal(row)}
-                          >
+                          type="button"
+                          className="table-action-button edit"
+                          style={{ background: '#22c55e', color: '#fff', padding: '6px 12px' }}
+                          onClick={() => openEditPropertyModal(row)}>
+                          
                             Edit
                           </button>
                           <button
-                            type="button"
-                            className="table-action-button"
-                            style={{ background: '#ef4444', color: '#fff', padding: '6px 12px' }}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              const name = row.name || row.building || row.address || 'this property';
-                              if (!window.confirm(`Delete "${name}"? This will remove the property and all its units. This action cannot be undone.`)) return;
-                              setPmLoading(true);
-                              try {
-                                await salesManagerService.deleteProperty(row.id);
-                                addNotification('Property deleted successfully', 'success');
-                                const data = await salesManagerService.getOwnerAssets(pmOwnerId);
-                                setOwnerAssets(data);
-                                await loadData();
-                              } catch (err) {
-                                addNotification(err.message || 'Failed to delete property', 'error');
-                              } finally {
-                                setPmLoading(false);
-                              }
-                            }}
-                            disabled={pmLoading}
-                          >
+                          type="button"
+                          className="table-action-button"
+                          style={{ background: '#ef4444', color: '#fff', padding: '6px 12px' }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const name = row.name || row.building || row.address || 'this property';
+                            if (!window.confirm(`Delete "${name}"? This will remove the property and all its units. This action cannot be undone.`)) return;
+                            setPmLoading(true);
+                            try {
+                              await salesManagerService.deleteProperty(row.id);
+                              addNotification('Property deleted successfully', 'success');
+                              const data = await salesManagerService.getOwnerAssets(pmOwnerId);
+                              setOwnerAssets(data);
+                              await loadData();
+                            } catch (err) {
+                              addNotification(err.message || 'Failed to delete property', 'error');
+                            } finally {
+                              setPmLoading(false);
+                            }
+                          }}
+                          disabled={pmLoading}>
+                          
                             Delete
                           </button>
                         </div>
                                         </td>
                                       </tr>
-                                    ))}
+                  )}
                                   </tbody>
                                 </table>
                               </div>
-            {assets.length === 0 && !pmLoading && (
-              <p className="sa-table-empty">No assets for this owner.</p>
-            )}
+            {assets.length === 0 && !pmLoading &&
+            <p className="sa-table-empty">No assets for this owner.</p>
+            }
           </div>
-        </div>
-      );
+        </div>);
+
     }
 
     const normalizeAssetText = (value) => (value ?? '').toString().trim().toLowerCase();
@@ -3560,7 +3389,7 @@ const SalesManagerDashboard = () => {
           totalUnits,
           occupiedUnits,
           vacantUnits: Math.max(0, totalUnits - occupiedUnits),
-          occupancyLabel: `${occupiedUnits}/${totalUnits}`,
+          occupancyLabel: `${occupiedUnits}/${totalUnits}`
         };
       }
       const status = normalizeAssetText(property?.Status || property?.status || property?.statut);
@@ -3569,7 +3398,7 @@ const SalesManagerDashboard = () => {
         totalUnits: 1,
         occupiedUnits: occupied ? 1 : 0,
         vacantUnits: occupied ? 0 : 1,
-        occupancyLabel: `${occupied ? 1 : 0}/1`,
+        occupancyLabel: `${occupied ? 1 : 0}/1`
       };
     };
     const getPropertyMonthlyIncome = (property) => {
@@ -3596,8 +3425,6 @@ const SalesManagerDashboard = () => {
       dedupeSet.add(String(assetId));
       dedupedAssets.push(asset);
     });
-
-    // Property Management entry – columns: Name, Total of assets, Property for sell, Property for manage, Occupancy, Income (this month)
     const unassignedProperties = properties.filter((p) => !getPropertyOwnerId(p));
     return (
       <div className="sa-clients-page">
@@ -3613,16 +3440,16 @@ const SalesManagerDashboard = () => {
                 setSelectedPropertyType('');
                 setCreatePropertyImages([]);
                 setShowCreatePropertyModal(true);
-              }}
-            >
+              }}>
+              
               <Plus size={18} style={{ marginRight: '4px' }} />
               Add Property
             </button>
             <button
               type="button"
               className="sa-primary-cta secondary"
-              onClick={() => { setPropertyImportFile(null); setShowPropertyImportModal(true); }}
-            >
+              onClick={() => {setPropertyImportFile(null);setShowPropertyImportModal(true);}}>
+              
               <FileSpreadsheet size={18} style={{ marginRight: '4px' }} />
               Import from CSV
             </button>
@@ -3633,8 +3460,8 @@ const SalesManagerDashboard = () => {
                 placeholder="Search by member name"
                 value={propertyManagementSearch}
                 onChange={(e) => setPropertyManagementSearch(e.target.value)}
-                style={{ padding: '8px 12px 8px 36px', border: '1px solid #e5e7eb', borderRadius: '8px', minWidth: '220px' }}
-              />
+                style={{ padding: '8px 12px 8px 36px', border: '1px solid #e5e7eb', borderRadius: '8px', minWidth: '220px' }} />
+              
             </div>
           </div>
         </div>
@@ -3665,9 +3492,9 @@ const SalesManagerDashboard = () => {
                     acc.total += summary.totalUnits;
                     return acc;
                   }, { occupied: 0, total: 0 });
-                  const occupancy = occupancySummary.totalUnits > 0
-                    ? `${occupancySummary.occupied}/${occupancySummary.totalUnits}`
-                    : '0/0';
+                  const occupancy = occupancySummary.totalUnits > 0 ?
+                  `${occupancySummary.occupied}/${occupancySummary.totalUnits}` :
+                  '0/0';
                   const incomeThisMonth = ownerAssets.reduce((sum, asset) => sum + getPropertyMonthlyIncome(asset), 0);
                   const totalOfAssets = ownerAssets.length;
                   return (
@@ -3675,8 +3502,8 @@ const SalesManagerDashboard = () => {
                       key={ownerId || index}
                       style={{ cursor: 'pointer' }}
                       onClick={() => handleSeeOwner(owner)}
-                      className="clickable-row"
-                    >
+                      className="clickable-row">
+                      
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{owner.name || owner.Name || 'N/A'}</span>
                       </td>
@@ -3686,23 +3513,23 @@ const SalesManagerDashboard = () => {
                       <td>{propertyForManage}</td>
                       <td>{occupancy}</td>
                       <td>{incomeThisMonth.toLocaleString()} XOF</td>
-                        </tr>
-                  );
+                        </tr>);
+
                 })}
-                {filteredOwners.length === 0 && (
-                  <tr>
+                {filteredOwners.length === 0 &&
+                <tr>
                     <td colSpan={7} className="sa-table-empty">
                       No owners found. Ask the Agency Director to add property owners.
                     </td>
                   </tr>
-                )}
+                }
               </tbody>
             </table>
           </div>
         </div>
 
-        {unassignedProperties.length > 0 && (
-          <div className="sa-section-card" style={{ marginTop: '20px' }}>
+        {unassignedProperties.length > 0 &&
+        <div className="sa-section-card" style={{ marginTop: '20px' }}>
             <div className="sa-section-header">
               <div>
                 <h3>Properties Without Owner</h3>
@@ -3724,12 +3551,12 @@ const SalesManagerDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {unassignedProperties.map((property, index) => (
-                    <tr
-                      key={`unassigned-${property.ID || property.id || index}`}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => setSelectedPropertyDetail(property)}
-                    >
+                  {unassignedProperties.map((property, index) =>
+                <tr
+                  key={`unassigned-${property.ID || property.id || index}`}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setSelectedPropertyDetail(property)}>
+                  
                       <td>{index + 1}</td>
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{property.Address || property.address || 'N/A'}</span>
@@ -3741,9 +3568,9 @@ const SalesManagerDashboard = () => {
                         </span>
                       </td>
                       <td>
-                        {typeof (property.Rent || property.rent) === 'number'
-                          ? (property.Rent || property.rent).toLocaleString()
-                          : property.Rent || property.rent || 'N/A'}
+                        {typeof (property.Rent || property.rent) === 'number' ?
+                    (property.Rent || property.rent).toLocaleString() :
+                    property.Rent || property.rent || 'N/A'}
                       </td>
                       <td>{property.Bedrooms || property.bedrooms || 0}</td>
                       <td>{property.Bathrooms || property.bathrooms || 0}</td>
@@ -3754,17 +3581,15 @@ const SalesManagerDashboard = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                )}
                 </tbody>
               </table>
             </div>
           </div>
-        )}
-      </div>
-    );
-  }; // end renderPropertyManagement
+        }
+      </div>);
 
-  // Sales Tracking - Properties that are strictly for sale
+  };
   const renderSalesTracking = () => {
     const normalizeType = (type) => (type || '').toLowerCase();
 
@@ -3776,10 +3601,10 @@ const SalesManagerDashboard = () => {
     const totalSales = salesProperties.length;
     const typeCounts = {
       house: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'house').length,
-      apartment: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'apartment')
-        .length,
+      apartment: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'apartment').
+      length,
       villa: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'villa').length,
-      land: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'land').length,
+      land: salesProperties.filter((p) => normalizeType(p.Type || p.type) === 'land').length
     };
 
     return (
@@ -3817,32 +3642,32 @@ const SalesManagerDashboard = () => {
         <div className="sa-transactions-filters">
           <button
             className="sa-filter-button"
-            onClick={() => setSalesTypeFilter('')}
-          >
+            onClick={() => setSalesTypeFilter('')}>
+            
             All Types
           </button>
           <button
             className={`sa-filter-button ${salesTypeFilter === 'house' ? 'active' : ''}`}
-            onClick={() => setSalesTypeFilter('house')}
-          >
+            onClick={() => setSalesTypeFilter('house')}>
+            
             Houses
           </button>
           <button
             className={`sa-filter-button ${salesTypeFilter === 'apartment' ? 'active' : ''}`}
-            onClick={() => setSalesTypeFilter('apartment')}
-          >
+            onClick={() => setSalesTypeFilter('apartment')}>
+            
             Apartments
           </button>
           <button
             className={`sa-filter-button ${salesTypeFilter === 'villa' ? 'active' : ''}`}
-            onClick={() => setSalesTypeFilter('villa')}
-          >
+            onClick={() => setSalesTypeFilter('villa')}>
+            
             Villas
           </button>
           <button
             className={`sa-filter-button ${salesTypeFilter === 'land' ? 'active' : ''}`}
-            onClick={() => setSalesTypeFilter('land')}
-          >
+            onClick={() => setSalesTypeFilter('land')}>
+            
             Land
           </button>
         </div>
@@ -3865,8 +3690,8 @@ const SalesManagerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredSales.map((property, index) => (
-                  <tr key={property.id || index}>
+                {filteredSales.map((property, index) =>
+                <tr key={property.id || index}>
                     <td>{property.address || property.Address || 'N/A'}</td>
                     <td>{property.type || property.Type || 'N/A'}</td>
                     <td>{property.bedrooms || property.Bedrooms || 0}</td>
@@ -3874,62 +3699,51 @@ const SalesManagerDashboard = () => {
                     <td>{property.price || property.Price || 'N/A'}</td>
                     <td>{property.status || property.Status || 'N/A'}</td>
                   </tr>
-                ))}
-                {filteredSales.length === 0 && (
-                  <tr>
+                )}
+                {filteredSales.length === 0 &&
+                <tr>
                     <td colSpan={6} className="sa-table-empty">
                       No properties for sale found for the selected filters.
                     </td>
                   </tr>
-                )}
+                }
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Get unique properties from clients for filter dropdown
+  };
   const uniqueProperties = useMemo(() => {
     const props = new Set();
-    clients.forEach(client => {
+    clients.forEach((client) => {
       const p = client.Property || client.property;
       if (p) props.add(p);
     });
     return Array.from(props).sort();
   }, [clients]);
-
-  // Normalize status for filter comparison (e.g. "Waiting List" and "waiting list" match)
   const normalizeStatus = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
   const statusMatches = (clientStatus, filterStatus) => {
     const a = normalizeStatus(clientStatus);
     const b = normalizeStatus(filterStatus);
     return a === b || a.replace(/\s/g, '') === b.replace(/\s/g, '');
   };
-
-  // Filter clients based on filters
   const filteredClients = useMemo(() => {
-    return clients.filter(client => {
-      // Status filter
+    return clients.filter((client) => {
       if (clientStatusFilter) {
         const clientStatus = (client.Status || client.status || '').toString();
         if (!statusMatches(clientStatus, clientStatusFilter)) return false;
       }
-
-      // Property filter (substring match)
       if (clientPropertyFilter) {
-        const clientProperty = ((client.Property || client.property) || '').toLowerCase();
+        const clientProperty = (client.Property || client.property || '').toLowerCase();
         const filterProperty = clientPropertyFilter.toLowerCase().trim();
         if (!clientProperty.includes(filterProperty)) return false;
       }
-
-      // Search text filter (name, email, phone)
       if (clientSearchText) {
         const searchLower = clientSearchText.toLowerCase().trim();
-        const name = ((client.Name || client.name) || '').toLowerCase();
-        const email = ((client.Email || client.email) || '').toLowerCase();
-        const phone = ((client.Phone || client.phone) || '').toLowerCase();
+        const name = (client.Name || client.name || '').toLowerCase();
+        const email = (client.Email || client.email || '').toLowerCase();
+        const phone = (client.Phone || client.phone || '').toLowerCase();
         if (!name.includes(searchLower) && !email.includes(searchLower) && !phone.includes(searchLower)) return false;
       }
 
@@ -3938,25 +3752,23 @@ const SalesManagerDashboard = () => {
   }, [clients, clientStatusFilter, clientPropertyFilter, clientSearchText]);
 
   const filteredClientIds = useMemo(
-    () => filteredClients.map((c) => (c.id ?? c.ID)).filter((id) => id != null),
+    () => filteredClients.map((c) => c.id ?? c.ID).filter((id) => id != null),
     [filteredClients]
   );
   const allFilteredSelected = filteredClientIds.length > 0 && filteredClientIds.every((id) => selectedClientIds.includes(id));
 
   const toggleSelectClient = (clientId) => {
     if (clientId == null) return;
-    setSelectedClientIds((prev) => (prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]));
+    setSelectedClientIds((prev) => prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]);
   };
 
   const toggleSelectAllFiltered = () => {
     setSelectedClientIds((prev) => {
       const prevSet = new Set(prev);
       if (allFilteredSelected) {
-        // Unselect only currently filtered
         filteredClientIds.forEach((id) => prevSet.delete(id));
         return Array.from(prevSet);
       }
-      // Select all filtered (keep any previously selected too)
       filteredClientIds.forEach((id) => prevSet.add(id));
       return Array.from(prevSet);
     });
@@ -3989,8 +3801,6 @@ const SalesManagerDashboard = () => {
       if (failedCount > 0) {
         addNotification(`${failedCount} deletion(s) failed.`, 'error');
       }
-
-      // Refresh tenant list
       const clientsData = await salesManagerService.getClients();
       setClients(Array.isArray(clientsData) ? clientsData : []);
       setSelectedClientIds([]);
@@ -4009,8 +3819,8 @@ const SalesManagerDashboard = () => {
           <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
             <p className="sa-cell-sub" style={{ margin: 0 }}>Loading tenant details…</p>
           </div>
-        </div>
-      );
+        </div>);
+
     }
     const c = tenantDetail?.client;
     if (!c) {
@@ -4019,17 +3829,17 @@ const SalesManagerDashboard = () => {
           <button
             type="button"
             className="sa-outline-button sa-tenant-detail-back-btn"
-            onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
-            style={{ marginBottom: '16px' }}
-          >
+            onClick={() => {setSelectedTenantId(null);setTenantDetail(null);}}
+            style={{ marginBottom: '16px' }}>
+            
             <ArrowLeft size={16} />
             Back to list
           </button>
           <div className="sa-section-card">
             <p className="sa-cell-sub" style={{ margin: 0 }}>Tenant not found or failed to load.</p>
           </div>
-        </div>
-      );
+        </div>);
+
     }
     const prop = tenantDetail?.property;
     const alertList = Array.isArray(tenantDetail?.alerts) ? tenantDetail.alerts : [];
@@ -4082,8 +3892,8 @@ const SalesManagerDashboard = () => {
           <button
             type="button"
             className="sa-outline-button sa-tenant-detail-back-btn"
-            onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
-          >
+            onClick={() => {setSelectedTenantId(null);setTenantDetail(null);}}>
+            
             <ArrowLeft size={16} />
             Back to list
           </button>
@@ -4099,12 +3909,12 @@ const SalesManagerDashboard = () => {
               <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`} style={{ marginRight: '8px' }}>
                 {status}
               </span>
-              {propertyAddr && propertyAddr !== '—' && (
-                <span className="sa-tenant-detail-meta">
+              {propertyAddr && propertyAddr !== '—' &&
+              <span className="sa-tenant-detail-meta">
                   <MapPin size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
                   {propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
                 </span>
-              )}
+              }
             </div>
           </div>
         </div>
@@ -4120,34 +3930,34 @@ const SalesManagerDashboard = () => {
                 <dt>Name</dt>
                 <dd>{name}</dd>
               </div>
-              {email && (
-                <div>
+              {email &&
+              <div>
                   <dt>Email</dt>
                   <dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Mail size={14} /> {email}
                   </dd>
                 </div>
-              )}
-              {phone && (
-                <div>
+              }
+              {phone &&
+              <div>
                   <dt>Phone</dt>
                   <dd style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Phone size={14} /> {phone}
                   </dd>
                 </div>
-              )}
+              }
               <div>
                 <dt>Status</dt>
                 <dd>
                   <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`}>{status}</span>
                 </dd>
               </div>
-              {createdAt && (
-                <div>
+              {createdAt &&
+              <div>
                   <dt>Member since</dt>
                   <dd>{new Date(createdAt).toLocaleDateString()}</dd>
                 </div>
-              )}
+              }
             </dl>
             <h4 style={{ margin: '16px 0 8px', fontSize: '0.9rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <FileCheck size={16} />
@@ -4170,52 +3980,52 @@ const SalesManagerDashboard = () => {
                   <MapPin size={14} /> {propertyAddr}
                 </dd>
               </div>
-              {unitNumber && unitNumber !== '—' && (
-                <div>
+              {unitNumber && unitNumber !== '—' &&
+              <div>
                   <dt>Unit</dt>
                   <dd>{unitNumber}</dd>
                 </div>
-              )}
+              }
               <div>
                 <dt>Monthly rent</dt>
                 <dd className="sa-tenant-detail-value-bold">{Number(amount).toLocaleString()} XOF</dd>
               </div>
-              {depositPaidAmount != null && (
-                <div>
+              {depositPaidAmount != null &&
+              <div>
                   <dt>Deposit paid amount{depositStatus ? ` (${depositStatus})` : ''}</dt>
                   <dd>{Number(depositPaidAmount).toLocaleString()} XOF</dd>
                 </div>
-              )}
-              {rentPaidInAdvance != null && Number(rentPaidInAdvance) > 0 && (
-                <div>
+              }
+              {rentPaidInAdvance != null && Number(rentPaidInAdvance) > 0 &&
+              <div>
                   <dt>Rent paid in advance</dt>
                   <dd>{Number(rentPaidInAdvance).toLocaleString()} XOF</dd>
                 </div>
-              )}
-              {unpaidRentAmount != null && Number(unpaidRentAmount) > 0 && (
-                <div>
+              }
+              {unpaidRentAmount != null && Number(unpaidRentAmount) > 0 &&
+              <div>
                   <dt>Unpaid rent</dt>
                   <dd>{Number(unpaidRentAmount).toLocaleString()} XOF</dd>
                 </div>
-              )}
-              {numberOfMonthsUnpaid != null && Number(numberOfMonthsUnpaid) > 0 && (
-                <div>
+              }
+              {numberOfMonthsUnpaid != null && Number(numberOfMonthsUnpaid) > 0 &&
+              <div>
                   <dt>Months unpaid</dt>
                   <dd>{Number(numberOfMonthsUnpaid)}</dd>
                 </div>
-              )}
-              {penaltyToPay != null && Number(penaltyToPay) > 0 && (
-                <div>
+              }
+              {penaltyToPay != null && Number(penaltyToPay) > 0 &&
+              <div>
                   <dt>Penalty to pay</dt>
                   <dd>{Number(penaltyToPay).toLocaleString()} XOF</dd>
                 </div>
-              )}
-              {balanceToPayEstimate != null && Number(balanceToPayEstimate) > 0 && (
-                <div>
+              }
+              {balanceToPayEstimate != null && Number(balanceToPayEstimate) > 0 &&
+              <div>
                   <dt>Balance to pay</dt>
                   <dd className="sa-tenant-detail-value-bold">{Number(balanceToPayEstimate).toLocaleString()} XOF</dd>
                 </div>
-              )}
+              }
               <div>
                 <dt>Last payment</dt>
                 <dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</dd>
@@ -4223,8 +4033,8 @@ const SalesManagerDashboard = () => {
             </dl>
           </div>
 
-          {prop && (
-            <div className="sa-section-card sa-tenant-detail-card">
+          {prop &&
+          <div className="sa-section-card sa-tenant-detail-card">
               <h3>
                 <Building size={18} />
                 Property details
@@ -4234,18 +4044,18 @@ const SalesManagerDashboard = () => {
                   <dt>Type</dt>
                   <dd>{prop.type || prop.Type || '—'}</dd>
                 </div>
-                {(prop.bedrooms ?? prop.Bedrooms) != null && (
-                  <div>
+                {(prop.bedrooms ?? prop.Bedrooms) != null &&
+              <div>
                     <dt>Bedrooms</dt>
                     <dd>{prop.bedrooms ?? prop.Bedrooms}</dd>
                   </div>
-                )}
-                {(prop.bathrooms ?? prop.Bathrooms) != null && (
-                  <div>
+              }
+                {(prop.bathrooms ?? prop.Bathrooms) != null &&
+              <div>
                     <dt>Bathrooms</dt>
                     <dd>{prop.bathrooms ?? prop.Bathrooms}</dd>
                   </div>
-                )}
+              }
                 <div>
                   <dt>Property status</dt>
                   <dd>
@@ -4256,17 +4066,17 @@ const SalesManagerDashboard = () => {
                 </div>
               </dl>
             </div>
-          )}
+          }
 
           <div className="sa-section-card sa-tenant-detail-card" style={alertList.length ? undefined : { gridColumn: '1 / -1' }}>
             <h3>
               <AlertTriangle size={18} />
               Alerts & activity
             </h3>
-            {alertList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {alertList.map((alert, idx) => (
-                  <li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item">
+            {alertList.length > 0 ?
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {alertList.map((alert, idx) =>
+              <li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item">
                     <div className="sa-tenant-detail-alert-title">{alert.Title || alert.title || 'Alert'}</div>
                     {alert.Message && <div className="sa-cell-sub" style={{ marginBottom: '4px' }}>{alert.Message}</div>}
                     <div className="sa-tenant-detail-alert-meta">
@@ -4274,11 +4084,11 @@ const SalesManagerDashboard = () => {
                       {alert.Amount != null && ` · ${Number(alert.Amount).toLocaleString()} XOF`}
                     </div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="sa-cell-sub">No alerts for this tenant.</p>
-            )}
+              )}
+              </ul> :
+
+            <p className="sa-cell-sub">No alerts for this tenant.</p>
+            }
           </div>
 
           <div className="sa-section-card sa-tenant-detail-card">
@@ -4286,41 +4096,41 @@ const SalesManagerDashboard = () => {
               <Wrench size={18} />
               Maintenances requested
             </h3>
-            {maintenancesList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {maintenancesList.length > 0 ?
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {maintenancesList.map((m, idx) => {
-                  const mid = m.ID ?? m.id;
-                  const openMaintenanceDetail = () => {
-                    if (mid == null) return;
-                    setMaintenanceDetailLoading(true);
-                    setMaintenanceDetail(null);
-                    salesManagerService.getMaintenance(mid)
-                      .then((data) => setMaintenanceDetail(data))
-                      .catch((err) => addNotification(err?.message || 'Failed to load maintenance details', 'error'))
-                      .finally(() => setMaintenanceDetailLoading(false));
-                  };
-                  return (
-                    <li
-                      key={mid ?? idx}
-                      className="sa-tenant-detail-alert-item"
-                      role="button"
-                      tabIndex={0}
-                      onClick={openMaintenanceDetail}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMaintenanceDetail(); } }}
-                      style={{ cursor: mid != null ? 'pointer' : 'default' }}
-                    >
+                const mid = m.ID ?? m.id;
+                const openMaintenanceDetail = () => {
+                  if (mid == null) return;
+                  setMaintenanceDetailLoading(true);
+                  setMaintenanceDetail(null);
+                  salesManagerService.getMaintenance(mid).
+                  then((data) => setMaintenanceDetail(data)).
+                  catch((err) => addNotification(err?.message || 'Failed to load maintenance details', 'error')).
+                  finally(() => setMaintenanceDetailLoading(false));
+                };
+                return (
+                  <li
+                    key={mid ?? idx}
+                    className="sa-tenant-detail-alert-item"
+                    role="button"
+                    tabIndex={0}
+                    onClick={openMaintenanceDetail}
+                    onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();openMaintenanceDetail();}}}
+                    style={{ cursor: mid != null ? 'pointer' : 'default' }}>
+                    
                       <div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div>
                       <div className="sa-tenant-detail-alert-meta">
-                        {(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}
+                        {m.Status || m.status || '—'} · {m.Priority || m.priority || '—'}
                         {m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="sa-cell-sub">No maintenance requests for this tenant.</p>
-            )}
+                    </li>);
+
+              })}
+              </ul> :
+
+            <p className="sa-cell-sub">No maintenance requests for this tenant.</p>
+            }
           </div>
 
           <div className="sa-section-card sa-tenant-detail-card">
@@ -4328,23 +4138,23 @@ const SalesManagerDashboard = () => {
               <Receipt size={18} />
               Recent payment history
             </h3>
-            {paymentsList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {paymentsList.slice(0, 5).map((p, idx) => (
-                  <li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+            {paymentsList.length > 0 ?
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {paymentsList.slice(0, 5).map((p, idx) =>
+              <li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
                     <div className="sa-tenant-detail-alert-title">
-                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
+                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {p.Status || p.status || '—'}
                     </div>
                     <div className="sa-tenant-detail-alert-meta">
-                      {p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}
+                      {p.Date ? new Date(p.Date).toLocaleDateString() : p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—'}
                       {(p.Method || p.method) && ` · ${p.Method || p.method}`}
                     </div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="sa-cell-sub">No payment history for this tenant.</p>
-            )}
+              )}
+              </ul> :
+
+            <p className="sa-cell-sub">No payment history for this tenant.</p>
+            }
           </div>
 
           <div className="sa-section-card sa-tenant-detail-card">
@@ -4358,31 +4168,31 @@ const SalesManagerDashboard = () => {
               placeholder="Add a note for future reference (visible only to sales managers)..."
               rows={2}
               className="sa-tenant-detail-notes-input"
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginBottom: '10px' }}
-            />
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginBottom: '10px' }} />
+            
             <button
               type="button"
               className="sa-primary-cta"
               onClick={handleAddPrivateNote}
               disabled={!privateNoteInput.trim() || addingNote}
-              style={{ marginBottom: '16px' }}
-            >
+              style={{ marginBottom: '16px' }}>
+              
               {addingNote ? 'Adding…' : 'Add note'}
             </button>
-            {privateNotesList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {privateNotesList.map((n) => (
-                  <li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}>
+            {privateNotesList.length > 0 ?
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {privateNotesList.map((n) =>
+              <li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}>
                     <div className="sa-tenant-detail-alert-title">{n.note ?? n.Note}</div>
                     <div className="sa-tenant-detail-alert-meta">
-                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}
+                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : ''}
                     </div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="sa-cell-sub">No private notes yet.</p>
-            )}
+              )}
+              </ul> :
+
+            <p className="sa-cell-sub">No private notes yet.</p>
+            }
           </div>
 
           <div className="sa-section-card sa-tenant-detail-card">
@@ -4395,8 +4205,8 @@ const SalesManagerDashboard = () => {
                 type="button"
                 className="sa-outline-button"
                 onClick={() => handleQuickAction('Generate Receipt')}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              >
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                
                 <Receipt size={16} />
                 Generate Receipt
               </button>
@@ -4404,8 +4214,8 @@ const SalesManagerDashboard = () => {
                 type="button"
                 className="sa-outline-button"
                 onClick={() => handleQuickAction('Send Reminder SMS')}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              >
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                
                 <MessageSquare size={16} />
                 Send Reminder SMS
               </button>
@@ -4413,8 +4223,8 @@ const SalesManagerDashboard = () => {
                 type="button"
                 className="sa-outline-button"
                 onClick={() => handleQuickAction('Report Incident')}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              >
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                
                 <AlertCircle size={16} />
                 Report Incident
               </button>
@@ -4435,56 +4245,56 @@ const SalesManagerDashboard = () => {
                 setShowEditClientModal(true);
                 setSelectedTenantId(null);
                 setTenantDetail(null);
-              }}
-            >
+              }}>
+              
               Edit tenant
             </button>
           </div>
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
-  const renderClients = () => (
-    <div className="sa-clients-page">
+  const renderClients = () =>
+  <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
           <h2>Tenant List</h2>
           <p>{filteredClients.length} results found</p>
         </div>
         <div className="sa-clients-header-right">
-          {selectedClientIds.length > 0 && (
-            <button
-              type="button"
-              className="sa-primary-cta secondary"
-              style={{ marginRight: '8px' }}
-              onClick={openBulkDeleteModal}
-              title="Delete selected tenants"
-            >
+          {selectedClientIds.length > 0 &&
+        <button
+          type="button"
+          className="sa-primary-cta secondary"
+          style={{ marginRight: '8px' }}
+          onClick={openBulkDeleteModal}
+          title="Delete selected tenants">
+          
               Delete selected ({selectedClientIds.length})
             </button>
-          )}
+        }
           <button
-            className="sa-primary-cta"
-            onClick={() => {
-              setImportMode('manual');
-              setExcelFile(null);
-              setShowTenantCreationModal(true);
-            }}
-          >
+          className="sa-primary-cta"
+          onClick={() => {
+            setImportMode('manual');
+            setExcelFile(null);
+            setShowTenantCreationModal(true);
+          }}>
+          
             <Plus size={16} />
             Add Tenant
           </button>
           <button
-            type="button"
-            className="sa-primary-cta secondary"
-            style={{ marginLeft: '8px' }}
-            onClick={() => {
-              setImportMode('excel');
-              setExcelFile(null);
-              setShowTenantCreationModal(true);
-            }}
-          >
+          type="button"
+          className="sa-primary-cta secondary"
+          style={{ marginLeft: '8px' }}
+          onClick={() => {
+            setImportMode('excel');
+            setExcelFile(null);
+            setShowTenantCreationModal(true);
+          }}>
+          
             <FileSpreadsheet size={16} style={{ marginRight: '4px' }} />
             Import from Excel
           </button>
@@ -4499,33 +4309,33 @@ const SalesManagerDashboard = () => {
         <div className="sa-metric-card">
           <p className="sa-metric-label">Active Tenants</p>
           <p className="sa-metric-number">
-            {filteredClients.filter(client => (client.Status || client.status || '').toString().toLowerCase() === 'active').length}
+            {filteredClients.filter((client) => (client.Status || client.status || '').toString().toLowerCase() === 'active').length}
             <span className="sa-metric-trend positive">+1.5%</span>
           </p>
         </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Overdue Accounts</p>
           <p className="sa-metric-number">
-            {filteredClients.filter(client => (client.Status || client.status || '').toString().toLowerCase() === 'overdue').length}
+            {filteredClients.filter((client) => (client.Status || client.status || '').toString().toLowerCase() === 'overdue').length}
             <span className="sa-metric-trend negative">-1.5%</span>
           </p>
           </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Waiting List</p>
           <p className="sa-metric-value">
-            {filteredClients.filter(client => {
-              const s = (client.Status || client.status || '').toString().toLowerCase().replace(/\s+/g, ' ');
-              return s === 'waiting list' || s === 'waitinglist';
-            }).length}
+            {filteredClients.filter((client) => {
+            const s = (client.Status || client.status || '').toString().toLowerCase().replace(/\s+/g, ' ');
+            return s === 'waiting list' || s === 'waitinglist';
+          }).length}
           </p>
           </div>
         <div className="sa-metric-card">
           <p className="sa-metric-label">Total Monthly Revenue</p>
           <p className="sa-metric-value">
               {filteredClients.reduce(
-                (sum, client) => sum + (client.Amount || client.amount || 0),
-                0
-              ).toLocaleString()} XOF
+            (sum, client) => sum + (client.Amount || client.amount || 0),
+            0
+          ).toLocaleString()} XOF
           </p>
         </div>
       </div>
@@ -4533,11 +4343,11 @@ const SalesManagerDashboard = () => {
       <div className="sa-transactions-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
         <Filter size={16} style={{ color: '#6b7280' }} />
         <select
-          value={clientStatusFilter}
-          onChange={(e) => setClientStatusFilter(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '140px', fontSize: '0.875rem' }}
-          aria-label="Filter by status"
-        >
+        value={clientStatusFilter}
+        onChange={(e) => setClientStatusFilter(e.target.value)}
+        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '140px', fontSize: '0.875rem' }}
+        aria-label="Filter by status">
+        
           <option value="">All statuses</option>
           <option value="Active">Active</option>
           <option value="Overdue">Overdue</option>
@@ -4545,35 +4355,35 @@ const SalesManagerDashboard = () => {
           <option value="Inactive">Inactive</option>
         </select>
         <input
-          type="text"
-          placeholder="Search by name, email, phone"
-          value={clientSearchText}
-          onChange={(e) => setClientSearchText(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '200px', fontSize: '0.875rem' }}
-          aria-label="Search tenants"
-        />
+        type="text"
+        placeholder="Search by name, email, phone"
+        value={clientSearchText}
+        onChange={(e) => setClientSearchText(e.target.value)}
+        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '200px', fontSize: '0.875rem' }}
+        aria-label="Search tenants" />
+      
         <input
-          type="text"
-          placeholder="Filter by property"
-          value={clientPropertyFilter}
-          onChange={(e) => setClientPropertyFilter(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '180px', fontSize: '0.875rem' }}
-          aria-label="Filter by property"
-        />
-        {(clientStatusFilter || clientPropertyFilter || clientSearchText) && (
-          <button
-            type="button"
-            className="action-button secondary"
-            style={{ padding: '8px 14px', fontSize: '0.875rem' }}
-            onClick={() => {
-              setClientStatusFilter('');
-              setClientPropertyFilter('');
-              setClientSearchText('');
-            }}
-          >
+        type="text"
+        placeholder="Filter by property"
+        value={clientPropertyFilter}
+        onChange={(e) => setClientPropertyFilter(e.target.value)}
+        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', minWidth: '180px', fontSize: '0.875rem' }}
+        aria-label="Filter by property" />
+      
+        {(clientStatusFilter || clientPropertyFilter || clientSearchText) &&
+      <button
+        type="button"
+        className="action-button secondary"
+        style={{ padding: '8px 14px', fontSize: '0.875rem' }}
+        onClick={() => {
+          setClientStatusFilter('');
+          setClientPropertyFilter('');
+          setClientSearchText('');
+        }}>
+        
             Clear filters
         </button>
-        )}
+      }
       </div>
 
       <div className="sa-section-card">
@@ -4587,11 +4397,11 @@ const SalesManagerDashboard = () => {
             <tr>
                 <th onClick={(e) => e.stopPropagation()}>
                   <input
-                    type="checkbox"
-                    checked={allFilteredSelected}
-                    onChange={(e) => { e.stopPropagation(); toggleSelectAllFiltered(); }}
-                    aria-label="Select all filtered tenants"
-                  />
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={(e) => {e.stopPropagation();toggleSelectAllFiltered();}}
+                  aria-label="Select all filtered tenants" />
+                
                 </th>
                 <th>Client</th>
               <th>Property</th>
@@ -4603,26 +4413,26 @@ const SalesManagerDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredClients.length > 0 ? (
-              filteredClients.map(client => {
-                const clientId = client.id ?? client.ID;
-                const isSelected = clientId != null && selectedClientIds.includes(clientId);
-                return (
-              <tr
-                key={clientId ?? client.Email ?? client.email}
-                onClick={() => clientId != null && setSelectedTenantId(clientId)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (clientId != null) setSelectedTenantId(clientId); } }}
-                style={{ cursor: clientId != null ? 'pointer' : 'default' }}
-              >
+            {filteredClients.length > 0 ?
+            filteredClients.map((client) => {
+              const clientId = client.id ?? client.ID;
+              const isSelected = clientId != null && selectedClientIds.includes(clientId);
+              return (
+                <tr
+                  key={clientId ?? client.Email ?? client.email}
+                  onClick={() => clientId != null && setSelectedTenantId(clientId)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();if (clientId != null) setSelectedTenantId(clientId);}}}
+                  style={{ cursor: clientId != null ? 'pointer' : 'default' }}>
+                  
                 <td onClick={(e) => e.stopPropagation()}>
                       <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => { e.stopPropagation(); toggleSelectClient(clientId); }}
-                        aria-label={`Select tenant ${client.Name || client.name || ''}`}
-                      />
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {e.stopPropagation();toggleSelectClient(clientId);}}
+                      aria-label={`Select tenant ${client.Name || client.name || ''}`} />
+                    
                 </td>
                     <td>
                       <div className="sa-cell-main">
@@ -4636,7 +4446,7 @@ const SalesManagerDashboard = () => {
                         {client.Status || client.status || 'Unknown'}
                       </span>
                     </td>
-                    <td>{(client.LastPayment || client.lastPayment) ? new Date(client.LastPayment || client.lastPayment).toLocaleDateString() : 'N/A'}</td>
+                    <td>{client.LastPayment || client.lastPayment ? new Date(client.LastPayment || client.lastPayment).toLocaleDateString() : 'N/A'}</td>
                     <td>{(client.Amount || client.amount || 0).toLocaleString()} XOF</td>
                     <td>
                       <div className="sa-cell-main">
@@ -4647,22 +4457,20 @@ const SalesManagerDashboard = () => {
                     <td className="sa-row-actions" onClick={(e) => e.stopPropagation()}>
                       <button className="sa-icon-button" onClick={() => handleEditClient(client)} title="Edit">✏️</button>
                 </td>
-              </tr>
-                );
-              })
-            ) : (
-              <tr>
+              </tr>);
+
+            }) :
+
+            <tr>
                   <td colSpan={8} className="sa-table-empty">No tenants found. Start the backend to see real data.</td>
               </tr>
-            )}
+            }
           </tbody>
         </table>
         </div>
       </div>
-
-      {/* Waiting List Section */}
-      {waitingListClients.length > 0 && (
-        <div className="sa-section-card" style={{ marginTop: '24px' }}>
+      {waitingListClients.length > 0 &&
+    <div className="sa-section-card" style={{ marginTop: '24px' }}>
           <div className="sa-section-header">
             <h3>Waiting List Tenants</h3>
             <p>Tenants waiting for available properties.</p>
@@ -4680,8 +4488,8 @@ const SalesManagerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {waitingListClients.map(client => (
-                  <tr key={client.ID || client.id}>
+                {waitingListClients.map((client) =>
+            <tr key={client.ID || client.id}>
                     <td>
                       <input type="checkbox" />
                     </td>
@@ -4702,16 +4510,14 @@ const SalesManagerDashboard = () => {
                       <button className="sa-icon-button" onClick={() => handleEditClient(client)} title="Edit">✏️</button>
                     </td>
                   </tr>
-                ))}
+            )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
-
-      {/* Unpaid Rents Section */}
-      {unpaidRents.length > 0 && (
-        <div className="sa-section-card" style={{ marginTop: '24px' }}>
+    }
+      {unpaidRents.length > 0 &&
+    <div className="sa-section-card" style={{ marginTop: '24px' }}>
           <div className="sa-section-header">
             <h3>Unpaid Rents</h3>
             <p>Manage overdue payments and update payment status.</p>
@@ -4730,8 +4536,8 @@ const SalesManagerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {unpaidRents.map(unpaid => (
-                  <tr key={unpaid.ID || unpaid.id}>
+                {unpaidRents.map((unpaid) =>
+            <tr key={unpaid.ID || unpaid.id}>
                     <td>
                       <input type="checkbox" />
                     </td>
@@ -4753,58 +4559,58 @@ const SalesManagerDashboard = () => {
                       <button className="sa-icon-button" onClick={() => handleEditUnpaidRent(unpaid)} title="Update Payment">💰</button>
                     </td>
                   </tr>
-                ))}
+            )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+    }
 
       <Modal
-        isOpen={showBulkDeleteModal}
-        onClose={() => { if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false); }}
-        title="Confirm bulk tenant deletion"
-        size="sm"
-      >
+      isOpen={showBulkDeleteModal}
+      onClose={() => {if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false);}}
+      title="Confirm bulk tenant deletion"
+      size="sm">
+      
         <p style={{ marginTop: 0, color: '#6b7280', fontSize: '0.9rem' }}>
           You are about to permanently delete <strong>{selectedClientIds.length}</strong> tenant(s). Enter your password to continue.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <input
-            type="password"
-            value={bulkDeletePassword}
-            onChange={(e) => setBulkDeletePassword(e.target.value)}
-            placeholder="Your password"
-            className="sa-input"
-            style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-            disabled={bulkDeleteSubmitting}
-          />
+          type="password"
+          value={bulkDeletePassword}
+          onChange={(e) => setBulkDeletePassword(e.target.value)}
+          placeholder="Your password"
+          className="sa-input"
+          style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+          disabled={bulkDeleteSubmitting} />
+        
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
             <button
-              type="button"
-              className="sa-outline-button"
-              onClick={() => setShowBulkDeleteModal(false)}
-              disabled={bulkDeleteSubmitting}
-            >
+            type="button"
+            className="sa-outline-button"
+            onClick={() => setShowBulkDeleteModal(false)}
+            disabled={bulkDeleteSubmitting}>
+            
               Cancel
             </button>
             <button
-              type="button"
-              className="sa-primary-cta"
-              onClick={confirmBulkDelete}
-              disabled={bulkDeleteSubmitting || !bulkDeletePassword.trim()}
-              style={{ background: '#dc2626' }}
-            >
+            type="button"
+            className="sa-primary-cta"
+            onClick={confirmBulkDelete}
+            disabled={bulkDeleteSubmitting || !bulkDeletePassword.trim()}
+            style={{ background: '#dc2626' }}>
+            
               {bulkDeleteSubmitting ? 'Deleting…' : 'Delete'}
             </button>
           </div>
         </div>
       </Modal>
-    </div>
-  );
+    </div>;
 
-  const renderAlerts = () => (
-    <div className="sa-alerts-page">
+
+  const renderAlerts = () =>
+  <div className="sa-alerts-page">
       <div className="sa-alerts-header">
         <div>
           <h2>Unpaid Rent Alerts</h2>
@@ -4828,15 +4634,15 @@ const SalesManagerDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {alertProperties.length > 0 ? (
-              alertProperties.map((p) => {
-                const total = p.numberOfUnits ?? p.NumberOfUnits ?? 1;
-                const occ = p.occupiedUnits ?? p.OccupiedUnits ?? 0;
-                const unpaid = p.unpaidUnits ?? p.UnpaidUnits ?? 0;
-                const displayName = (p.name || p.Name || p.address || p.Address || '—').toString().trim();
-                const address = (p.address || p.Address || '').toString().trim();
-                return (
-                  <tr key={p.id ?? p.ID ?? displayName}>
+            {alertProperties.length > 0 ?
+            alertProperties.map((p) => {
+              const total = p.numberOfUnits ?? p.NumberOfUnits ?? 1;
+              const occ = p.occupiedUnits ?? p.OccupiedUnits ?? 0;
+              const unpaid = p.unpaidUnits ?? p.UnpaidUnits ?? 0;
+              const displayName = (p.name || p.Name || p.address || p.Address || '—').toString().trim();
+              const address = (p.address || p.Address || '').toString().trim();
+              return (
+                <tr key={p.id ?? p.ID ?? displayName}>
                     <td>
                       <div className="sa-cell-main">
                         <span className="sa-cell-title">{displayName}</span>
@@ -4847,56 +4653,56 @@ const SalesManagerDashboard = () => {
                     <td>{`${unpaid}/${total}`}</td>
                     <td>
                       <button
-                        type="button"
-                        className="sa-outline-button"
-                        onClick={async () => {
-                          const pid = p.id ?? p.ID;
-                          if (!pid) return;
-                          setSelectedAlertProperty(p);
-                          setShowAlertPropertyModal(true);
-                          setAlertComposeClient(null);
-                          setAlertPropertyTenants([]);
-                          setAlertTenantsLoading(true);
-                          try {
-                            const tenants = await salesManagerService.getAlertPropertyTenants(pid);
-                            setAlertPropertyTenants(Array.isArray(tenants) ? tenants : []);
-                          } catch (e) {
-                            addNotification(e?.message || 'Failed to load unpaid tenants', 'error');
-                          } finally {
-                            setAlertTenantsLoading(false);
-                          }
-                        }}
-                      >
+                      type="button"
+                      className="sa-outline-button"
+                      onClick={async () => {
+                        const pid = p.id ?? p.ID;
+                        if (!pid) return;
+                        setSelectedAlertProperty(p);
+                        setShowAlertPropertyModal(true);
+                        setAlertComposeClient(null);
+                        setAlertPropertyTenants([]);
+                        setAlertTenantsLoading(true);
+                        try {
+                          const tenants = await salesManagerService.getAlertPropertyTenants(pid);
+                          setAlertPropertyTenants(Array.isArray(tenants) ? tenants : []);
+                        } catch (e) {
+                          addNotification(e?.message || 'Failed to load unpaid tenants', 'error');
+                        } finally {
+                          setAlertTenantsLoading(false);
+                        }
+                      }}>
+                      
                         See
                       </button>
                     </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
+                  </tr>);
+
+            }) :
+
+            <tr>
                   <td colSpan={4} className="sa-table-empty">No properties found. Start the backend to see real data.</td>
               </tr>
-            )}
+            }
           </tbody>
         </table>
         </div>
       </div>
 
       <Modal
-        isOpen={showAlertPropertyModal}
-        onClose={() => { if (!alertSending) { setShowAlertPropertyModal(false); setSelectedAlertProperty(null); setAlertComposeClient(null); } }}
-        title={alertComposeClient ? 'Send Alert' : 'Unpaid Tenants'}
-        size="lg"
-      >
-        {!alertComposeClient ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      isOpen={showAlertPropertyModal}
+      onClose={() => {if (!alertSending) {setShowAlertPropertyModal(false);setSelectedAlertProperty(null);setAlertComposeClient(null);}}}
+      title={alertComposeClient ? 'Send Alert' : 'Unpaid Tenants'}
+      size="lg">
+      
+        {!alertComposeClient ?
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ color: '#64748b', fontSize: '0.9rem' }}>
               {(() => {
-                const name = (selectedAlertProperty?.name || selectedAlertProperty?.Name || selectedAlertProperty?.address || selectedAlertProperty?.Address || '').toString().trim();
-                const addr = (selectedAlertProperty?.address || selectedAlertProperty?.Address || '').toString().trim();
-                return name ? `${name}${addr && addr !== name ? ` — ${addr}` : ''}` : addr;
-              })()}
+            const name = (selectedAlertProperty?.name || selectedAlertProperty?.Name || selectedAlertProperty?.address || selectedAlertProperty?.Address || '').toString().trim();
+            const addr = (selectedAlertProperty?.address || selectedAlertProperty?.Address || '').toString().trim();
+            return name ? `${name}${addr && addr !== name ? ` — ${addr}` : ''}` : addr;
+          })()}
             </div>
             <div className="sa-table-wrapper" style={{ maxHeight: 420, overflow: 'auto' }}>
               <table className="sa-table">
@@ -4909,11 +4715,11 @@ const SalesManagerDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {alertTenantsLoading ? (
-                    <tr><td colSpan={4} className="sa-table-empty">Loading…</td></tr>
-                  ) : alertPropertyTenants.length > 0 ? (
-                    alertPropertyTenants.map((t) => (
-                      <tr key={t.id ?? t.ID ?? t.email ?? t.phone ?? t.name}>
+                  {alertTenantsLoading ?
+              <tr><td colSpan={4} className="sa-table-empty">Loading…</td></tr> :
+              alertPropertyTenants.length > 0 ?
+              alertPropertyTenants.map((t) =>
+              <tr key={t.id ?? t.ID ?? t.email ?? t.phone ?? t.name}>
                         <td>
                           <div className="sa-cell-main">
                             <span className="sa-cell-title">{t.name || t.Name || '—'}</span>
@@ -4925,135 +4731,130 @@ const SalesManagerDashboard = () => {
                         <td>
                           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             <button
-                              type="button"
-                              className="sa-outline-button"
-                              onClick={() => {
-                                setAlertComposeClient(t);
-                                setAlertComposeChannel('sms');
-                                setAlertComposeSubject('');
-                                setAlertComposeMessage('');
-                              }}
-                            >
+                      type="button"
+                      className="sa-outline-button"
+                      onClick={() => {
+                        setAlertComposeClient(t);
+                        setAlertComposeChannel('sms');
+                        setAlertComposeSubject('');
+                        setAlertComposeMessage('');
+                      }}>
+                      
                               SMS
                             </button>
                             <button
-                              type="button"
-                              className="sa-outline-button"
-                              onClick={() => {
-                                setAlertComposeClient(t);
-                                setAlertComposeChannel('email');
-                                const propName = (selectedAlertProperty?.name || selectedAlertProperty?.Name || selectedAlertProperty?.address || selectedAlertProperty?.Address || 'Property').toString().trim();
-                                setAlertComposeSubject(`Unpaid rent reminder - ${propName}`);
-                                setAlertComposeMessage('');
-                              }}
-                            >
+                      type="button"
+                      className="sa-outline-button"
+                      onClick={() => {
+                        setAlertComposeClient(t);
+                        setAlertComposeChannel('email');
+                        const propName = (selectedAlertProperty?.name || selectedAlertProperty?.Name || selectedAlertProperty?.address || selectedAlertProperty?.Address || 'Property').toString().trim();
+                        setAlertComposeSubject(`Unpaid rent reminder - ${propName}`);
+                        setAlertComposeMessage('');
+                      }}>
+                      
                               Email
                             </button>
                           </div>
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr><td colSpan={4} className="sa-table-empty">No unpaid tenants for this property.</td></tr>
-                  )}
+              ) :
+
+              <tr><td colSpan={4} className="sa-table-empty">No unpaid tenants for this property.</td></tr>
+              }
                 </tbody>
               </table>
             </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          </div> :
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
               <div style={{ color: '#334155' }}>
                 <div style={{ fontWeight: 700 }}>{alertComposeClient.name || alertComposeClient.Name || 'Tenant'}</div>
-                <div style={{ color: '#64748b', fontSize: '0.9rem' }}>{alertComposeChannel === 'sms' ? (alertComposeClient.phone || alertComposeClient.Phone || 'No phone') : (alertComposeClient.email || alertComposeClient.Email || 'No email')}</div>
+                <div style={{ color: '#64748b', fontSize: '0.9rem' }}>{alertComposeChannel === 'sms' ? alertComposeClient.phone || alertComposeClient.Phone || 'No phone' : alertComposeClient.email || alertComposeClient.Email || 'No email'}</div>
               </div>
               <button type="button" className="sa-outline-button" onClick={() => setAlertComposeClient(null)} disabled={alertSending}>Back</button>
             </div>
 
-            {alertComposeChannel === 'email' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {alertComposeChannel === 'email' &&
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Subject</label>
                 <input
-                  className="sa-input"
-                  value={alertComposeSubject}
-                  onChange={(e) => setAlertComposeSubject(e.target.value)}
-                  placeholder="Email subject"
-                  disabled={alertSending}
-                />
+            className="sa-input"
+            value={alertComposeSubject}
+            onChange={(e) => setAlertComposeSubject(e.target.value)}
+            placeholder="Email subject"
+            disabled={alertSending} />
+          
               </div>
-            )}
+        }
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>Message</label>
               <textarea
-                className="sa-input"
-                rows={8}
-                value={alertComposeMessage}
-                onChange={(e) => setAlertComposeMessage(e.target.value)}
-                placeholder="Type the alert message to send…"
-                disabled={alertSending}
-                style={{ resize: 'vertical' }}
-              />
+            className="sa-input"
+            rows={8}
+            value={alertComposeMessage}
+            onChange={(e) => setAlertComposeMessage(e.target.value)}
+            placeholder="Type the alert message to send…"
+            disabled={alertSending}
+            style={{ resize: 'vertical' }} />
+          
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button type="button" className="sa-outline-button" onClick={() => setAlertComposeClient(null)} disabled={alertSending}>Cancel</button>
               <button
-                type="button"
-                className="sa-primary-cta"
-                disabled={alertSending || !String(alertComposeMessage || '').trim()}
-                onClick={async () => {
-                  const clientId = alertComposeClient.id ?? alertComposeClient.ID;
-                  if (!clientId) return;
-                  setAlertSending(true);
+            type="button"
+            className="sa-primary-cta"
+            disabled={alertSending || !String(alertComposeMessage || '').trim()}
+            onClick={async () => {
+              const clientId = alertComposeClient.id ?? alertComposeClient.ID;
+              if (!clientId) return;
+              setAlertSending(true);
+              try {
+                await salesManagerService.sendTenantAlert({
+                  clientId,
+                  channel: alertComposeChannel,
+                  message: alertComposeMessage.trim(),
+                  subject: alertComposeChannel === 'email' ? (alertComposeSubject || '').trim() : undefined,
+                  urgency: 'High'
+                });
+                addNotification('Alert sent successfully', 'success');
+                setAlertComposeClient(null);
+                setAlertPropertiesLoading(true);
+                try {
+                  const props = await salesManagerService.getAlertProperties();
+                  setAlertProperties(Array.isArray(props) ? props : []);
+                } finally {
+                  setAlertPropertiesLoading(false);
+                }
+                if (selectedAlertProperty?.id || selectedAlertProperty?.ID) {
+                  setAlertTenantsLoading(true);
                   try {
-                    await salesManagerService.sendTenantAlert({
-                      clientId,
-                      channel: alertComposeChannel,
-                      message: alertComposeMessage.trim(),
-                      subject: alertComposeChannel === 'email' ? (alertComposeSubject || '').trim() : undefined,
-                      urgency: 'High',
-                    });
-                    addNotification('Alert sent successfully', 'success');
-                    setAlertComposeClient(null);
-                    // Refresh counts and list for correctness.
-                    setAlertPropertiesLoading(true);
-                    try {
-                      const props = await salesManagerService.getAlertProperties();
-                      setAlertProperties(Array.isArray(props) ? props : []);
-                    } finally {
-                      setAlertPropertiesLoading(false);
-                    }
-                    if (selectedAlertProperty?.id || selectedAlertProperty?.ID) {
-                      setAlertTenantsLoading(true);
-                      try {
-                        const tenants = await salesManagerService.getAlertPropertyTenants(selectedAlertProperty.id ?? selectedAlertProperty.ID);
-                        setAlertPropertyTenants(Array.isArray(tenants) ? tenants : []);
-                      } finally {
-                        setAlertTenantsLoading(false);
-                      }
-                    }
-                  } catch (e) {
-                    addNotification(e?.message || 'Failed to send alert', 'error');
+                    const tenants = await salesManagerService.getAlertPropertyTenants(selectedAlertProperty.id ?? selectedAlertProperty.ID);
+                    setAlertPropertyTenants(Array.isArray(tenants) ? tenants : []);
                   } finally {
-                    setAlertSending(false);
+                    setAlertTenantsLoading(false);
                   }
-                }}
-              >
+                }
+              } catch (e) {
+                addNotification(e?.message || 'Failed to send alert', 'error');
+              } finally {
+                setAlertSending(false);
+              }
+            }}>
+            
                 {alertSending ? 'Sending…' : 'Send'}
               </button>
             </div>
           </div>
-        )}
+      }
       </Modal>
-    </div>
-  );
+    </div>;
 
-  // Handle send message
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
-    
-    // Get current user ID from localStorage
     const storedUser = localStorage.getItem('user');
     let currentUserId = null;
     if (storedUser) {
@@ -5064,16 +4865,14 @@ const SalesManagerDashboard = () => {
         console.error('Error parsing stored user:', error);
       }
     }
-    
+
     if (!currentUserId) {
       addNotification('Unable to identify current user. Please log in again.', 'error');
       return;
     }
-    
+
     const content = chatInput.trim();
     const tempMessageId = `temp-${Date.now()}`;
-    
-    // Optimistically add message to UI immediately
     const optimisticMessage = {
       id: tempMessageId,
       ID: tempMessageId,
@@ -5084,152 +4883,143 @@ const SalesManagerDashboard = () => {
       read: false,
       type: 'message'
     };
-    
-    setChatMessages(prev => [...prev, optimisticMessage]);
+
+    setChatMessages((prev) => [...prev, optimisticMessage]);
     setChatInput('');
-    
+
     try {
       const payload = {
         toUserId: selectedUserId,
-        content,
+        content
       };
       const sentMessage = await messagingService.sendMessage(payload);
-      
-      // Replace optimistic message with real message from server
       if (sentMessage && sentMessage.id) {
-        setChatMessages(prev => 
-          prev.map(msg => 
-            msg.id === tempMessageId ? sentMessage : msg
-          )
+        setChatMessages((prev) =>
+        prev.map((msg) =>
+        msg.id === tempMessageId ? sentMessage : msg
+        )
         );
       } else {
-        // If server response doesn't have expected format, reload chat
         await loadChatForUser(selectedUserId);
       }
     } catch (error) {
       console.error('Error sending message:', error);
       addNotification(error.message || 'Failed to send message', 'error');
-      // Remove optimistic message on error
-      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      setChatInput(content); // Restore input on error
+      setChatMessages((prev) => prev.filter((msg) => msg.id !== tempMessageId));
+      setChatInput(content);
     }
   };
-
-  // Render messaging page
-  const renderMessages = () => (
-    <div className="sa-chat-page">
+  const renderMessages = () =>
+  <div className="sa-chat-page">
       <div className="sa-chat-layout">
         <div className="sa-chat-list">
           <h3>Users</h3>
           <ul>
             {chatUsers.map((user) => {
-              const active = user.userId === selectedUserId;
-              return (
-                <li
-                  key={`chat-user-${user.userId}`}
-                  className={active ? 'active' : ''}
-                  onClick={() => loadChatForUser(user.userId)}
-                >
+            const active = user.userId === selectedUserId;
+            return (
+              <li
+                key={`chat-user-${user.userId}`}
+                className={active ? 'active' : ''}
+                onClick={() => loadChatForUser(user.userId)}>
+                
                   <div className="sa-cell-main">
                     <span className="sa-cell-title">{user.name || 'User'}</span>
                     <span className="sa-cell-sub">{user.email || ''}</span>
-                    {user.role && (
-                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    {user.role &&
+                  <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                         {user.role}
                       </span>
-                    )}
-                    {user.unreadCount > 0 && (
-                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                  }
+                    {user.unreadCount > 0 &&
+                  <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
                         {user.unreadCount} unread
                       </span>
-                    )}
+                  }
                   </div>
-                </li>
-              );
-            })}
-            {chatUsers.length === 0 && (
-              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                </li>);
+
+          })}
+            {chatUsers.length === 0 &&
+          <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
                 No users available
               </li>
-            )}
+          }
           </ul>
         </div>
         
         <div className="sa-chat-conversation">
           <div className="sa-chat-header">
             <h3>Messages</h3>
-            {selectedUserId && (
-              <span className="sa-chat-subtitle">
+            {selectedUserId &&
+          <span className="sa-chat-subtitle">
                 Chat with{' '}
                 {
-                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
-                    .name || 'User'
-                }
+            (chatUsers.find((u) => u.userId === selectedUserId) || {}).
+            name || 'User'
+            }
               </span>
-            )}
+          }
           </div>
           <div className="sa-chat-messages">
             {chatMessages.map((msg, index) => {
-              const messageContent = msg.content || msg.Content || '';
-              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
-              const messageFromUserId = msg.fromUserId || msg.FromUserId;
-              const messageId = msg.id || msg.ID || index;
-              
-              // Determine if message is outgoing or incoming
-              const storedUser = localStorage.getItem('user');
-              let isOutgoing = false;
-              if (storedUser) {
-                try {
-                  const user = JSON.parse(storedUser);
-                  const currentUserId = user.id || user.ID;
-                  isOutgoing = String(messageFromUserId) === String(currentUserId);
-                } catch (e) {
-                  // Default to incoming if we can't parse user
-                }
+            const messageContent = msg.content || msg.Content || '';
+            const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+            const messageFromUserId = msg.fromUserId || msg.FromUserId;
+            const messageId = msg.id || msg.ID || index;
+            const storedUser = localStorage.getItem('user');
+            let isOutgoing = false;
+            if (storedUser) {
+              try {
+                const user = JSON.parse(storedUser);
+                const currentUserId = user.id || user.ID;
+                isOutgoing = String(messageFromUserId) === String(currentUserId);
+              } catch (e) {
               }
-              
-              return (
-                <div
-                  key={`msg-${messageId}`}
-                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
-                >
+            }
+
+            return (
+              <div
+                key={`msg-${messageId}`}
+                className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}>
+                
                   <p>{messageContent}</p>
                   <span className="sa-chat-meta">
-                    {messageCreatedAt
-                      ? new Date(messageCreatedAt).toLocaleString()
-                      : ''}
+                    {messageCreatedAt ?
+                  new Date(messageCreatedAt).toLocaleString() :
+                  ''}
                   </span>
-                </div>
-              );
-            })}
-            {chatMessages.length === 0 && (
-              <div className="sa-table-empty">
-                {selectedUserId 
-                  ? 'No messages yet. Start the conversation!'
-                  : 'Select a conversation on the left to start messaging.'}
+                </div>);
+
+          })}
+            {chatMessages.length === 0 &&
+          <div className="sa-table-empty">
+                {selectedUserId ?
+            'No messages yet. Start the conversation!' :
+            'Select a conversation on the left to start messaging.'}
               </div>
-            )}
+          }
             <div ref={messagesEndRef} />
           </div>
           <div className="sa-chat-input-row">
             <input
-              type="text"
-              placeholder="Reply..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              disabled={!selectedUserId}
-            />
-            <button 
-              className="sa-primary-cta" 
-              onClick={handleSendMessage}
-              disabled={!selectedUserId || !chatInput.trim()}
-            >
+            type="text"
+            placeholder="Reply..."
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            disabled={!selectedUserId} />
+          
+            <button
+            className="sa-primary-cta"
+            onClick={handleSendMessage}
+            disabled={!selectedUserId || !chatInput.trim()}>
+            
               <MessageCircle size={16} />
               Send
             </button>
@@ -5238,11 +5028,11 @@ const SalesManagerDashboard = () => {
         
         <div className="sa-chat-details">
           <h4>Contact Details</h4>
-          {selectedUserId ? (
-            (() => {
-              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
-              return (
-                <>
+          {selectedUserId ?
+        (() => {
+          const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
+          return (
+            <>
                   <p>
                     <strong>Name:</strong> {user.name || 'N/A'}
                   </p>
@@ -5252,21 +5042,21 @@ const SalesManagerDashboard = () => {
                   <p>
                     <strong>Role:</strong> {user.role || 'N/A'}
                   </p>
-                  {user.company && (
-                    <p>
+                  {user.company &&
+              <p>
                       <strong>Company:</strong> {user.company}
                     </p>
-                  )}
-                </>
-              );
-            })()
-          ) : (
-            <p>Select a conversation to view details.</p>
-          )}
+              }
+                </>);
+
+        })() :
+
+        <p>Select a conversation to view details.</p>
+        }
         </div>
       </div>
-    </div>
-  );
+    </div>;
+
 
   const renderAdvertisements = () => {
     return (
@@ -5279,48 +5069,48 @@ const SalesManagerDashboard = () => {
         </div>
 
         <div className="sa-ads-list">
-          {advertisements.length > 0 ? (
-            advertisements.map((ad, index) => {
-              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-              const fullImageUrl = imageUrl 
-                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                : null;
+          {advertisements.length > 0 ?
+          advertisements.map((ad, index) => {
+            const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+            const fullImageUrl = imageUrl ?
+            imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}` :
+            null;
 
-              return (
-                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
+            return (
+              <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
                   <div className="sa-ad-status-column">
                     <span className="sa-ad-status published">Active</span>
                   </div>
                   <div className="sa-ad-main">
-                    {fullImageUrl && (
-                      <img 
-                        src={fullImageUrl} 
-                        alt={ad.Title || ad.title || 'Advertisement'} 
-                        className="sa-ad-image"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    )}
+                    {fullImageUrl &&
+                  <img
+                    src={fullImageUrl}
+                    alt={ad.Title || ad.title || 'Advertisement'}
+                    className="sa-ad-image"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }} />
+
+                  }
                     <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
                     <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
-                    {ad.CreatedAt && (
-                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
+                    {ad.CreatedAt &&
+                  <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
                         Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
                       </span>
-                    )}
+                  }
                   </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="sa-table-empty">
+                </div>);
+
+          }) :
+
+          <div className="sa-table-empty">
               No active advertisements available at this time.
             </div>
-          )}
+          }
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
   const renderVisits = () => {
@@ -5351,12 +5141,12 @@ const SalesManagerDashboard = () => {
             <option value="No-show">No-show</option>
           </select>
         </div>
-        {loading ? (
-          <div className="sa-table-empty">Loading visits...</div>
-        ) : visitsToDisplay.length === 0 ? (
-          <div className="sa-table-empty">No visits scheduled</div>
-        ) : (
-          <div className="sa-table-wrapper">
+        {loading ?
+        <div className="sa-table-empty">Loading visits...</div> :
+        visitsToDisplay.length === 0 ?
+        <div className="sa-table-empty">No visits scheduled</div> :
+
+        <div className="sa-table-wrapper">
             <table className="sa-table">
               <thead>
                 <tr>
@@ -5369,18 +5159,18 @@ const SalesManagerDashboard = () => {
               </thead>
               <tbody>
                 {visitsToDisplay.map((visit, index) => {
-                  const visitId = visit.ID || visit.id || `visit-${index}`;
-                  const property = visit.Property || visit.property || visit.Address || visit.address || 'Property';
-                  const client = visit.Client || visit.client || visit.ClientName || visit.clientName || 'Client';
-                  const clientEmail = visit.ClientEmail || visit.clientEmail || '';
-                  const clientPhone = visit.ClientPhone || visit.clientPhone || '';
-                  const visitDate = visit.VisitDate || visit.visitDate || visit.Date || visit.date || visit.ScheduledAt || visit.scheduledAt;
-                  const visitTime = visit.VisitTime || visit.visitTime || visit.Time || visit.time;
-                  const status = visit.Status || visit.status || 'Scheduled';
-                  const formattedDate = visitDate ? new Date(visitDate).toLocaleDateString() : 'N/A';
-                  const formattedTime = visitTime ? visitTime : (visitDate ? new Date(visitDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A');
-                  return (
-                    <tr key={visitId}>
+                const visitId = visit.ID || visit.id || `visit-${index}`;
+                const property = visit.Property || visit.property || visit.Address || visit.address || 'Property';
+                const client = visit.Client || visit.client || visit.ClientName || visit.clientName || 'Client';
+                const clientEmail = visit.ClientEmail || visit.clientEmail || '';
+                const clientPhone = visit.ClientPhone || visit.clientPhone || '';
+                const visitDate = visit.VisitDate || visit.visitDate || visit.Date || visit.date || visit.ScheduledAt || visit.scheduledAt;
+                const visitTime = visit.VisitTime || visit.visitTime || visit.Time || visit.time;
+                const status = visit.Status || visit.status || 'Scheduled';
+                const formattedDate = visitDate ? new Date(visitDate).toLocaleDateString() : 'N/A';
+                const formattedTime = visitTime ? visitTime : visitDate ? new Date(visitDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                return (
+                  <tr key={visitId}>
                       <td>
                         <div className="sa-cell-main">
                           <span className="sa-cell-title">{property}</span>
@@ -5404,21 +5194,21 @@ const SalesManagerDashboard = () => {
                       </td>
                       <td>
                         <div className="sa-row-actions">
-                          {status === 'Scheduled' && (
-                            <button className="table-action-button edit" onClick={() => openUpdateVisitStatus(visit)}>Update Status</button>
-                          )}
+                          {status === 'Scheduled' &&
+                        <button className="table-action-button edit" onClick={() => openUpdateVisitStatus(visit)}>Update Status</button>
+                        }
                           <button className="table-action-button view" onClick={() => openScheduleVisit(property)}>Reschedule</button>
                         </div>
                       </td>
-                    </tr>
-                  );
-                })}
+                    </tr>);
+
+              })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
   const renderRequests = () => {
@@ -5439,12 +5229,12 @@ const SalesManagerDashboard = () => {
             <option value="Scheduled">Scheduled</option>
           </select>
         </div>
-        {loading ? (
-          <div className="sa-table-empty">Loading requests...</div>
-        ) : requests.length === 0 ? (
-          <div className="sa-table-empty">No requests received</div>
-        ) : (
-          <div className="sa-table-wrapper">
+        {loading ?
+        <div className="sa-table-empty">Loading requests...</div> :
+        requests.length === 0 ?
+        <div className="sa-table-empty">No requests received</div> :
+
+        <div className="sa-table-wrapper">
             <table className="sa-table">
               <thead>
                 <tr>
@@ -5457,17 +5247,17 @@ const SalesManagerDashboard = () => {
               </thead>
               <tbody>
                 {requests.map((request, index) => {
-                  const requestId = request.ID || request.id || `request-${index}`;
-                  const clientName = request.ClientName || request.clientName || 'Client';
-                  const clientEmail = request.ClientEmail || request.clientEmail || '';
-                  const clientPhone = request.ClientPhone || request.clientPhone || '';
-                  const property = request.Property || request.property || 'Property';
-                  const status = request.Status || request.status || 'Pending';
-                  const createdAt = request.CreatedAt || request.createdAt;
-                  const preferredDate = request.PreferredDate || request.preferredDate;
-                  const followUpCount = request.followUpCount || request.FollowUpCount || 0;
-                  return (
-                    <tr key={requestId}>
+                const requestId = request.ID || request.id || `request-${index}`;
+                const clientName = request.ClientName || request.clientName || 'Client';
+                const clientEmail = request.ClientEmail || request.clientEmail || '';
+                const clientPhone = request.ClientPhone || request.clientPhone || '';
+                const property = request.Property || request.property || 'Property';
+                const status = request.Status || request.status || 'Pending';
+                const createdAt = request.CreatedAt || request.createdAt;
+                const preferredDate = request.PreferredDate || request.preferredDate;
+                const followUpCount = request.followUpCount || request.FollowUpCount || 0;
+                return (
+                  <tr key={requestId}>
                       <td>
                         <div className="sa-cell-main">
                           <span className="sa-cell-title">{clientName}</span>
@@ -5488,29 +5278,29 @@ const SalesManagerDashboard = () => {
                       </td>
                       <td>
                         <span className={`sa-status-pill ${status.toLowerCase()}`}>{status}</span>
-                        {followUpCount > 0 && (
-                          <span className="sa-cell-sub" style={{ display: 'block', marginTop: '4px' }}>{followUpCount} follow-up{followUpCount > 1 ? 's' : ''}</span>
-                        )}
+                        {followUpCount > 0 &&
+                      <span className="sa-cell-sub" style={{ display: 'block', marginTop: '4px' }}>{followUpCount} follow-up{followUpCount > 1 ? 's' : ''}</span>
+                      }
                       </td>
                       <td>
                         <div className="sa-row-actions">
-                          {status === 'Pending' && (
-                            <>
+                          {status === 'Pending' &&
+                        <>
                               <button className="table-action-button edit" onClick={() => handleApproveRequest(requestId)}>Approve</button>
                               <button className="table-action-button contact" onClick={() => openFollowUp(request)}>Follow-up</button>
                             </>
-                          )}
+                        }
                         </div>
                       </td>
-                    </tr>
-                  );
-                })}
+                    </tr>);
+
+              })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
   const renderContent = (tabId = activeTab) => {
@@ -5534,8 +5324,8 @@ const SalesManagerDashboard = () => {
         return (
           <div className="sa-section-card" style={{ padding: '18px' }}>
             <LinkFastTab clients={clients} properties={properties} addNotification={addNotification} loadData={loadData} />
-          </div>
-        );
+          </div>);
+
       case 'alerts':
         return renderAlerts();
       case 'advertisements':
@@ -5546,8 +5336,8 @@ const SalesManagerDashboard = () => {
         return (
           <div className="embedded-settings">
             <SettingsPage />
-          </div>
-        );
+          </div>);
+
       default:
         return renderOverview();
     }
@@ -5555,11 +5345,11 @@ const SalesManagerDashboard = () => {
 
   const layoutMenu = useMemo(
     () =>
-      tabs.map(tab => ({
-        ...tab,
-        onSelect: () => setActiveTab(tab.id),
-        active: activeTab === tab.id
-      })),
+    tabs.map((tab) => ({
+      ...tab,
+      onSelect: () => setActiveTab(tab.id),
+      active: activeTab === tab.id
+    })),
     [tabs, activeTab]
   );
 
@@ -5577,18 +5367,16 @@ const SalesManagerDashboard = () => {
         menu={layoutMenu}
         activeId={activeTab}
         onActiveChange={setActiveTab}
-        onLogout={handleLogout}
-      >
-        {({ activeId }) => (
-          <div className="content-body sales-manager-content">
+        onLogout={handleLogout}>
+        
+        {({ activeId }) =>
+        <div className="content-body sales-manager-content">
               {renderContent(activeId || activeTab)}
           </div>
-        )}
+        }
       </RoleLayout>
-
-      {/* Property Detail Modal - click on a property row to view full data + images */}
-      {selectedPropertyDetail && (
-        <div className="modal-overlay" onClick={() => setSelectedPropertyDetail(null)}>
+      {selectedPropertyDetail &&
+      <div className="modal-overlay" onClick={() => setSelectedPropertyDetail(null)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
             <div className="modal-header">
               <h3>Property details</h3>
@@ -5599,88 +5387,84 @@ const SalesManagerDashboard = () => {
                 <div><strong>Address / Name</strong>: {selectedPropertyDetail.Address || selectedPropertyDetail.address || 'N/A'}</div>
                 <div><strong>Type</strong>: {selectedPropertyDetail.Type || selectedPropertyDetail.type || 'N/A'}</div>
                 <div><strong>Property type</strong>: {selectedPropertyDetail.PropertyType || selectedPropertyDetail.propertyType || 'N/A'}</div>
-                {(selectedPropertyDetail.City || selectedPropertyDetail.city) && (
-                  <div><strong>City</strong>: {selectedPropertyDetail.City || selectedPropertyDetail.city}</div>
-                )}
-                {(selectedPropertyDetail.Neighborhood || selectedPropertyDetail.neighborhood) && (
-                  <div><strong>Neighborhood</strong>: {selectedPropertyDetail.Neighborhood || selectedPropertyDetail.neighborhood}</div>
-                )}
-                {(selectedPropertyDetail.TypeR || selectedPropertyDetail.typeR) && (
-                  <div><strong>Type (R+)</strong>: {selectedPropertyDetail.TypeR || selectedPropertyDetail.typeR}</div>
-                )}
-                {(selectedPropertyDetail.BuildingType || selectedPropertyDetail.buildingType) && (
-                  <div><strong>Building type</strong>: {selectedPropertyDetail.BuildingType || selectedPropertyDetail.buildingType}</div>
-                )}
+                {(selectedPropertyDetail.City || selectedPropertyDetail.city) &&
+              <div><strong>City</strong>: {selectedPropertyDetail.City || selectedPropertyDetail.city}</div>
+              }
+                {(selectedPropertyDetail.Neighborhood || selectedPropertyDetail.neighborhood) &&
+              <div><strong>Neighborhood</strong>: {selectedPropertyDetail.Neighborhood || selectedPropertyDetail.neighborhood}</div>
+              }
+                {(selectedPropertyDetail.TypeR || selectedPropertyDetail.typeR) &&
+              <div><strong>Type (R+)</strong>: {selectedPropertyDetail.TypeR || selectedPropertyDetail.typeR}</div>
+              }
+                {(selectedPropertyDetail.BuildingType || selectedPropertyDetail.buildingType) &&
+              <div><strong>Building type</strong>: {selectedPropertyDetail.BuildingType || selectedPropertyDetail.buildingType}</div>
+              }
                 <div><strong>Status</strong>: {selectedPropertyDetail.Status || selectedPropertyDetail.status || 'N/A'}</div>
-                <div><strong>Rent / Price</strong>: {typeof (selectedPropertyDetail.Rent || selectedPropertyDetail.rent) === 'number' ? (selectedPropertyDetail.Rent || selectedPropertyDetail.rent).toLocaleString() : (selectedPropertyDetail.Rent || selectedPropertyDetail.rent || 'N/A')} XOF</div>
+                <div><strong>Rent / Price</strong>: {typeof (selectedPropertyDetail.Rent || selectedPropertyDetail.rent) === 'number' ? (selectedPropertyDetail.Rent || selectedPropertyDetail.rent).toLocaleString() : selectedPropertyDetail.Rent || selectedPropertyDetail.rent || 'N/A'} XOF</div>
                 <div><strong>Bedrooms</strong>: {selectedPropertyDetail.Bedrooms ?? selectedPropertyDetail.bedrooms ?? 0}</div>
                 <div><strong>Bathrooms</strong>: {selectedPropertyDetail.Bathrooms ?? selectedPropertyDetail.bathrooms ?? 0}</div>
                 <div><strong>Number of units</strong>: {selectedPropertyDetail.NumberOfUnits ?? selectedPropertyDetail.numberOfUnits ?? 1}</div>
                 <div><strong>Filled units</strong>: {selectedPropertyDetail.FilledUnits ?? selectedPropertyDetail.filledUnits ?? selectedPropertyDetail.occupiedUnits ?? 0}</div>
                 <div><strong>Urgency</strong>: {selectedPropertyDetail.Urgency || selectedPropertyDetail.urgency || 'normal'}</div>
-                {(selectedPropertyDetail.Tenant || selectedPropertyDetail.tenant) && (
-                  <div><strong>Tenant</strong>: {selectedPropertyDetail.Tenant || selectedPropertyDetail.tenant}</div>
-                )}
+                {(selectedPropertyDetail.Tenant || selectedPropertyDetail.tenant) &&
+              <div><strong>Tenant</strong>: {selectedPropertyDetail.Tenant || selectedPropertyDetail.tenant}</div>
+              }
               </div>
               {(() => {
-                const imgs = parsePropertyImages(selectedPropertyDetail.Images || selectedPropertyDetail.images);
-                if (imgs.length === 0) return null;
-                return (
-                  <div style={{ marginTop: '16px' }}>
+              const imgs = parsePropertyImages(selectedPropertyDetail.Images || selectedPropertyDetail.images);
+              if (imgs.length === 0) return null;
+              return (
+                <div style={{ marginTop: '16px' }}>
                     <strong>Images</strong>
                     <small style={{ display: 'block', color: '#6b7280', marginTop: '4px' }}>Click an image to expand</small>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px' }}>
-                      {imgs.map((url, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setExpandedImageUrl(url)}
-                          style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden' }}
-                        >
+                      {imgs.map((url, i) =>
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setExpandedImageUrl(url)}
+                      style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden' }}>
+                      
                           <img src={url} alt="" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
                         </button>
-                      ))}
+                    )}
                     </div>
-                  </div>
-                );
-              })()}
+                  </div>);
+
+            })()}
             </div>
             <div className="modal-footer" style={{ borderTop: '1px solid #e5e7eb', padding: '12px 20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button type="button" className="action-button secondary" onClick={() => setSelectedPropertyDetail(null)}>Close</button>
-              <button type="button" className="action-button primary" onClick={() => { setSelectedPropertyDetail(null); openEditPropertyModal(selectedPropertyDetail); }}>Edit</button>
-              <button type="button" className="action-button primary" onClick={() => { setSelectedPropertyDetail(null); openScheduleVisit(selectedPropertyDetail.Address || selectedPropertyDetail.address); }}>Schedule visit</button>
+              <button type="button" className="action-button primary" onClick={() => {setSelectedPropertyDetail(null);openEditPropertyModal(selectedPropertyDetail);}}>Edit</button>
+              <button type="button" className="action-button primary" onClick={() => {setSelectedPropertyDetail(null);openScheduleVisit(selectedPropertyDetail.Address || selectedPropertyDetail.address);}}>Schedule visit</button>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Expanded image lightbox - click image in property detail to expand */}
-      {expandedImageUrl && (
-        <div
-          className="modal-overlay"
-          style={{ zIndex: 10001, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setExpandedImageUrl(null)}
-        >
+      }
+      {expandedImageUrl &&
+      <div
+        className="modal-overlay"
+        style={{ zIndex: 10001, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        onClick={() => setExpandedImageUrl(null)}>
+        
           <button
-            type="button"
-            onClick={() => setExpandedImageUrl(null)}
-            style={{ position: 'absolute', top: 16, right: 16, background: '#fff', border: 'none', borderRadius: 8, width: 40, height: 40, fontSize: 24, cursor: 'pointer', lineHeight: 1, zIndex: 1 }}
-            aria-label="Close"
-          >
+          type="button"
+          onClick={() => setExpandedImageUrl(null)}
+          style={{ position: 'absolute', top: 16, right: 16, background: '#fff', border: 'none', borderRadius: 8, width: 40, height: 40, fontSize: 24, cursor: 'pointer', lineHeight: 1, zIndex: 1 }}
+          aria-label="Close">
+          
             ×
           </button>
           <img
-            src={expandedImageUrl}
-            alt=""
-            style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain' }}
-            onClick={(e) => e.stopPropagation()}
-          />
+          src={expandedImageUrl}
+          alt=""
+          style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain' }}
+          onClick={(e) => e.stopPropagation()} />
+        
         </div>
-      )}
-
-      {/* Schedule Visit / Update Visit Status / Follow-up modals */}
-      {showScheduleVisitModal && (
-        <div className="modal-overlay" onClick={closeScheduleVisitModal}>
+      }
+      {showScheduleVisitModal &&
+      <div className="modal-overlay" onClick={closeScheduleVisitModal}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Schedule Visit</h3>
@@ -5688,27 +5472,27 @@ const SalesManagerDashboard = () => {
             </div>
             <div className="modal-body">
               <form className="modal-form" onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                handleScheduleVisit({
-                  property: formData.get('property'),
-                  clientName: formData.get('clientName'),
-                  clientEmail: formData.get('clientEmail'),
-                  clientPhone: formData.get('clientPhone'),
-                  visitDate: formData.get('visitDate'),
-                  visitTime: formData.get('visitTime'),
-                  notes: formData.get('notes'),
-                });
-              }}>
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              handleScheduleVisit({
+                property: formData.get('property'),
+                clientName: formData.get('clientName'),
+                clientEmail: formData.get('clientEmail'),
+                clientPhone: formData.get('clientPhone'),
+                visitDate: formData.get('visitDate'),
+                visitTime: formData.get('visitTime'),
+                notes: formData.get('notes')
+              });
+            }}>
                 <div className="form-group">
                   <label htmlFor="visit-property">Property *</label>
                   <select id="visit-property" name="property" defaultValue={visitProperty} required>
                     <option value="">Select Property</option>
                     {properties.map((prop, index) => {
-                      const address = prop.Address || prop.address;
-                      const propId = prop.ID || prop.id || `prop-${index}`;
-                      return address ? <option key={propId} value={address}>{address}</option> : null;
-                    })}
+                    const address = prop.Address || prop.address;
+                    const propId = prop.ID || prop.id || `prop-${index}`;
+                    return address ? <option key={propId} value={address}>{address}</option> : null;
+                  })}
                   </select>
                 </div>
                 <div className="form-group">
@@ -5745,10 +5529,10 @@ const SalesManagerDashboard = () => {
             </div>
           </div>
         </div>
-      )}
+      }
 
-      {showUpdateVisitStatusModal && selectedVisit && (
-        <div className="modal-overlay" onClick={closeUpdateVisitStatusModal}>
+      {showUpdateVisitStatusModal && selectedVisit &&
+      <div className="modal-overlay" onClick={closeUpdateVisitStatusModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Update Visit Status</h3>
@@ -5756,10 +5540,10 @@ const SalesManagerDashboard = () => {
             </div>
             <div className="modal-body">
               <form className="modal-form" onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                handleUpdateVisitStatus(formData.get('status'), formData.get('notes'));
-              }}>
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              handleUpdateVisitStatus(formData.get('status'), formData.get('notes'));
+            }}>
                 <div className="form-group">
                   <label htmlFor="visit-status">Status *</label>
                   <select id="visit-status" name="status" required>
@@ -5781,10 +5565,10 @@ const SalesManagerDashboard = () => {
             </div>
           </div>
         </div>
-      )}
+      }
 
-      {showFollowUpModal && selectedRequest && (
-        <div className="modal-overlay" onClick={closeFollowUpModal}>
+      {showFollowUpModal && selectedRequest &&
+      <div className="modal-overlay" onClick={closeFollowUpModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Send Follow-up</h3>
@@ -5792,10 +5576,10 @@ const SalesManagerDashboard = () => {
             </div>
             <div className="modal-body">
               <form className="modal-form" onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                handleFollowUpRequest(formData.get('message'));
-              }}>
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              handleFollowUpRequest(formData.get('message'));
+            }}>
                 <div className="form-group">
                   <label htmlFor="follow-up-message">Message *</label>
                   <textarea id="follow-up-message" name="message" rows="4" placeholder="Please let us know your preferred visit time..." required />
@@ -5808,111 +5592,109 @@ const SalesManagerDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Password Display Modal */}
-      {showPasswordModal && passwordData && (
-        <div className="modal-overlay" onClick={() => {
-          setShowPasswordModal(false);
-          setPasswordData(null);
-        }}>
+      }
+      {showPasswordModal && passwordData &&
+      <div className="modal-overlay" onClick={() => {
+        setShowPasswordModal(false);
+        setPasswordData(null);
+      }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
-                {passwordData.type === 'bulk' 
-                  ? `Tenant Passwords (${passwordData.users.length} created)`
-                  : 'Tenant Password Created'}
+                {passwordData.type === 'bulk' ?
+              `Tenant Passwords (${passwordData.users.length} created)` :
+              'Tenant Password Created'}
               </h3>
-              <button 
-                className="modal-close" 
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setPasswordData(null);
-                }}
-              >
+              <button
+              className="modal-close"
+              onClick={() => {
+                setShowPasswordModal(false);
+                setPasswordData(null);
+              }}>
+              
                 <X size={20} />
               </button>
             </div>
             <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-              <div style={{ 
-                padding: '16px', 
-                background: '#fef3c7', 
-                borderRadius: '8px', 
-                marginBottom: '20px',
-                border: '1px solid #fbbf24'
-              }}>
+              <div style={{
+              padding: '16px',
+              background: '#fef3c7',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              border: '1px solid #fbbf24'
+            }}>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: '#92400e', fontWeight: 500 }}>
                   ⚠️ Important: Passwords are only shown once. Please copy and securely share them with tenants.
                 </p>
               </div>
 
-              {passwordData.type === 'single' ? (
-                <div>
+              {passwordData.type === 'single' ?
+            <div>
                   <div style={{ marginBottom: '20px' }}>
                     <h4 style={{ marginBottom: '12px', color: '#1f2937' }}>Tenant Information</h4>
                     <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
                       <p style={{ margin: '4px 0' }}><strong>Name:</strong> {passwordData.user.name || passwordData.client?.name || 'N/A'}</p>
                       <p style={{ margin: '4px 0' }}><strong>Email:</strong> {passwordData.user.email || passwordData.client?.email || 'N/A'}</p>
-                      {passwordData.client?.property && (
-                        <p style={{ margin: '4px 0' }}><strong>Property:</strong> {passwordData.client.property}</p>
-                      )}
+                      {passwordData.client?.property &&
+                  <p style={{ margin: '4px 0' }}><strong>Property:</strong> {passwordData.client.property}</p>
+                  }
                     </div>
                   </div>
                   <div>
                     <h4 style={{ marginBottom: '12px', color: '#1f2937' }}>Login Credentials</h4>
-                    <PasswordDisplayItem 
-                      email={passwordData.user.email} 
-                      password={passwordData.user.password}
-                    />
+                    <PasswordDisplayItem
+                  email={passwordData.user.email}
+                  password={passwordData.user.password} />
+                
                   </div>
-                </div>
-              ) : (
-                <div>
-                  {passwordData.failed > 0 && (
-                    <div style={{ 
-                      padding: '12px', 
-                      background: '#fee2e2', 
-                      borderRadius: '8px', 
-                      marginBottom: '16px',
-                      border: '1px solid #fca5a5'
-                    }}>
+                </div> :
+
+            <div>
+                  {passwordData.failed > 0 &&
+              <div style={{
+                padding: '12px',
+                background: '#fee2e2',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                border: '1px solid #fca5a5'
+              }}>
                       <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
                         <strong>Import Summary:</strong> {passwordData.success} succeeded, {passwordData.failed} failed
                       </p>
                     </div>
-                  )}
+              }
                   
-                  {passwordData.errors && passwordData.errors.length > 0 && (
-                    <div style={{ 
-                      padding: '12px', 
-                      background: '#fee2e2', 
-                      borderRadius: '8px', 
-                      marginBottom: '16px',
-                      border: '1px solid #fca5a5'
-                    }}>
+                  {passwordData.errors && passwordData.errors.length > 0 &&
+              <div style={{
+                padding: '12px',
+                background: '#fee2e2',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                border: '1px solid #fca5a5'
+              }}>
                       <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b', fontWeight: 500, marginBottom: '8px' }}>
                         Errors:
                       </p>
                       <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85rem', color: '#991b1b' }}>
-                        {passwordData.errors.map((error, idx) => (
-                          <li key={idx}>{error}</li>
-                        ))}
+                        {passwordData.errors.map((error, idx) =>
+                  <li key={idx}>{error}</li>
+                  )}
                       </ul>
                     </div>
-                  )}
+              }
 
                   <div style={{ marginBottom: '16px' }}>
                     <h4 style={{ marginBottom: '12px', color: '#1f2937' }}>
                       Passwords for Newly Created Tenants ({passwordData.users.length})
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {passwordData.users.map((user, index) => (
-                        <div key={user.id || index} style={{ 
-                          border: '1px solid #e5e7eb', 
-                          borderRadius: '8px', 
-                          padding: '16px',
-                          background: '#ffffff'
-                        }}>
+                      {passwordData.users.map((user, index) =>
+                  <div key={user.id || index} style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    background: '#ffffff'
+                  }}>
                           <div style={{ marginBottom: '12px' }}>
                             <p style={{ margin: '4px 0', fontWeight: 500, color: '#1f2937' }}>
                               {user.name || 'N/A'}
@@ -5921,108 +5703,104 @@ const SalesManagerDashboard = () => {
                               {user.email || 'N/A'}
                             </p>
                           </div>
-                          <PasswordDisplayItem 
-                            email={user.email} 
-                            password={user.password}
-                          />
+                          <PasswordDisplayItem
+                      email={user.email}
+                      password={user.password} />
+                    
                         </div>
-                      ))}
+                  )}
                     </div>
                   </div>
                 </div>
-              )}
+            }
             </div>
             <div className="modal-footer">
-              <button 
-                className="action-button primary" 
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setPasswordData(null);
-                }}
-              >
+              <button
+              className="action-button primary"
+              onClick={() => {
+                setShowPasswordModal(false);
+                setPasswordData(null);
+              }}>
+              
                 I've Copied the Passwords
               </button>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Maintenance detail modal (when clicking a maintenance in tenant detail) */}
-      {(maintenanceDetail != null || maintenanceDetailLoading) && (
-        <div className="modal-overlay" onClick={() => { if (!maintenanceDetailLoading) { setMaintenanceDetail(null); } }}>
+      }
+      {(maintenanceDetail != null || maintenanceDetailLoading) &&
+      <div className="modal-overlay" onClick={() => {if (!maintenanceDetailLoading) {setMaintenanceDetail(null);}}}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Maintenance request details</h3>
               <button
-                type="button"
-                className="modal-close"
-                onClick={() => setMaintenanceDetail(null)}
-                disabled={maintenanceDetailLoading}
-              >
+              type="button"
+              className="modal-close"
+              onClick={() => setMaintenanceDetail(null)}
+              disabled={maintenanceDetailLoading}>
+              
                 <X size={20} />
               </button>
             </div>
             <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-              {maintenanceDetailLoading ? (
-                <p className="sa-cell-sub" style={{ margin: 0 }}>Loading…</p>
-              ) : maintenanceDetail ? (
-                <div className="sa-tenant-detail-dl" style={{ display: 'grid', gap: '12px' }}>
+              {maintenanceDetailLoading ?
+            <p className="sa-cell-sub" style={{ margin: 0 }}>Loading…</p> :
+            maintenanceDetail ?
+            <div className="sa-tenant-detail-dl" style={{ display: 'grid', gap: '12px' }}>
                   <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Property</dt><dd style={{ margin: 0 }}>{maintenanceDetail.property ?? maintenanceDetail.Property ?? '—'}</dd></div>
                   <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Tenant</dt><dd style={{ margin: 0 }}>{maintenanceDetail.tenant ?? maintenanceDetail.Tenant ?? '—'}</dd></div>
                   <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Title</dt><dd style={{ margin: 0 }}>{maintenanceDetail.title ?? maintenanceDetail.Title ?? maintenanceDetail.issue ?? maintenanceDetail.Issue ?? '—'}</dd></div>
-                  {(maintenanceDetail.description ?? maintenanceDetail.Description) && (
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Description</dt><dd style={{ margin: 0 }}>{maintenanceDetail.description ?? maintenanceDetail.Description}</dd></div>
-                  )}
+                  {(maintenanceDetail.description ?? maintenanceDetail.Description) &&
+              <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Description</dt><dd style={{ margin: 0 }}>{maintenanceDetail.description ?? maintenanceDetail.Description}</dd></div>
+              }
                   <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Priority</dt><dd style={{ margin: 0 }}><span className={`sa-status-pill ${(maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '').toLowerCase()}`}>{maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '—'}</span></dd></div>
                   <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Status</dt><dd style={{ margin: 0 }}><span className={`sa-status-pill ${(maintenanceDetail.status ?? maintenanceDetail.Status ?? '').toLowerCase().replace(/\s+/g, '-')}`}>{maintenanceDetail.status ?? maintenanceDetail.Status ?? '—'}</span></dd></div>
-                  {(maintenanceDetail.assigned ?? maintenanceDetail.Assigned) && (
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Assigned to</dt><dd style={{ margin: 0 }}>{maintenanceDetail.assigned ?? maintenanceDetail.Assigned}</dd></div>
-                  )}
-                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Date reported</dt><dd style={{ margin: 0 }}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : (maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—')}</dd></div>
-                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Created</dt><dd style={{ margin: 0 }}>{maintenanceDetail.createdAt ? new Date(maintenanceDetail.createdAt).toLocaleString() : (maintenanceDetail.CreatedAt ? new Date(maintenanceDetail.CreatedAt).toLocaleString() : '—')}</dd></div>
-                  {(maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours) != null && (
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Estimated hours</dt><dd style={{ margin: 0 }}>{maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours}</dd></div>
-                  )}
-                  {(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost) != null && (
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Estimated cost</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost).toLocaleString()} XOF</dd></div>
-                  )}
-                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Quote generated</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.quoteGenerated ?? maintenanceDetail.QuoteGenerated) ? 'Yes' : 'No'}</dd></div>
-                  {(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate) && (
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Work start date</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate).toLocaleDateString()}</dd></div>
-                  )}
-                  {(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate) && (
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Work end date</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate).toLocaleDateString()}</dd></div>
-                  )}
-                  {(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt) && (
-                    <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Completed at</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt).toLocaleString()}</dd></div>
-                  )}
-                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Archived</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.archived ?? maintenanceDetail.Archived) ? 'Yes' : 'No'}</dd></div>
-                  {Array.isArray(maintenanceDetail.photos ?? maintenanceDetail.Photos) && (maintenanceDetail.photos ?? maintenanceDetail.Photos).length > 0 && (
-                    <div>
+                  {(maintenanceDetail.assigned ?? maintenanceDetail.Assigned) &&
+              <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Assigned to</dt><dd style={{ margin: 0 }}>{maintenanceDetail.assigned ?? maintenanceDetail.Assigned}</dd></div>
+              }
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Date reported</dt><dd style={{ margin: 0 }}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—'}</dd></div>
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Created</dt><dd style={{ margin: 0 }}>{maintenanceDetail.createdAt ? new Date(maintenanceDetail.createdAt).toLocaleString() : maintenanceDetail.CreatedAt ? new Date(maintenanceDetail.CreatedAt).toLocaleString() : '—'}</dd></div>
+                  {(maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours) != null &&
+              <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Estimated hours</dt><dd style={{ margin: 0 }}>{maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours}</dd></div>
+              }
+                  {(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost) != null &&
+              <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Estimated cost</dt><dd style={{ margin: 0 }}>{(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost).toLocaleString()} XOF</dd></div>
+              }
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Quote generated</dt><dd style={{ margin: 0 }}>{maintenanceDetail.quoteGenerated ?? maintenanceDetail.QuoteGenerated ? 'Yes' : 'No'}</dd></div>
+                  {(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate) &&
+              <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Work start date</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate).toLocaleDateString()}</dd></div>
+              }
+                  {(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate) &&
+              <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Work end date</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate).toLocaleDateString()}</dd></div>
+              }
+                  {(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt) &&
+              <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Completed at</dt><dd style={{ margin: 0 }}>{new Date(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt).toLocaleString()}</dd></div>
+              }
+                  <div><dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Archived</dt><dd style={{ margin: 0 }}>{maintenanceDetail.archived ?? maintenanceDetail.Archived ? 'Yes' : 'No'}</dd></div>
+                  {Array.isArray(maintenanceDetail.photos ?? maintenanceDetail.Photos) && (maintenanceDetail.photos ?? maintenanceDetail.Photos).length > 0 &&
+              <div>
                       <dt style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '8px' }}>Photos</dt>
                       <dd style={{ margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {(maintenanceDetail.photos ?? maintenanceDetail.Photos).map((url, i) => (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                        {(maintenanceDetail.photos ?? maintenanceDetail.Photos).map((url, i) =>
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
                             <img src={url} alt={`Photo ${i + 1}`} style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
                           </a>
-                        ))}
+                  )}
                       </dd>
                     </div>
-                  )}
-                </div>
-              ) : null}
+              }
+                </div> :
+            null}
             </div>
           </div>
         </div>
-      )}
-
-      {/* Property Import Modal (Properties only - from Property Management) */}
-      {showPropertyImportModal && (
-        <div className="modal-overlay" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); setPropertyImportOwnerId(''); }}>
+      }
+      {showPropertyImportModal &&
+      <div className="modal-overlay" onClick={() => {setShowPropertyImportModal(false);setPropertyImportFile(null);setPropertyImportOwnerId('');}}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="modal-header">
               <h3>Bulk Import Properties</h3>
-              <button className="modal-close" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); setPropertyImportOwnerId(''); }}>×</button>
+              <button className="modal-close" onClick={() => {setShowPropertyImportModal(false);setPropertyImportFile(null);setPropertyImportOwnerId('');}}>×</button>
             </div>
             <div className="modal-body">
               <div style={{ marginBottom: '20px' }}>
@@ -6036,17 +5814,17 @@ const SalesManagerDashboard = () => {
                   Owner for imported properties
                 </label>
                 <select
-                  value={propertyImportOwnerId}
-                  onChange={(e) => setPropertyImportOwnerId(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e5e7eb' }}
-                  disabled={propertyImportLoading}
-                >
+                value={propertyImportOwnerId}
+                onChange={(e) => setPropertyImportOwnerId(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e5e7eb' }}
+                disabled={propertyImportLoading}>
+                
                   <option value="">— Select owner (optional) —</option>
                   {(owners || []).map((o) => {
-                    const id = o.id ?? o.ID;
-                    const name = o.name ?? o.Name ?? `Owner #${id}`;
-                    return <option key={id} value={String(id)}>{name}</option>;
-                  })}
+                  const id = o.id ?? o.ID;
+                  const name = o.name ?? o.Name ?? `Owner #${id}`;
+                  return <option key={id} value={String(id)}>{name}</option>;
+                })}
                 </select>
                 <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '0.82rem' }}>
                   If selected, all imported properties will be attached to this owner.
@@ -6056,66 +5834,64 @@ const SalesManagerDashboard = () => {
                 Upload an Excel or CSV file using the provided template. Missing fields can be edited later.
               </p>
               <div
-                className="file-upload-area"
-                style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: propertyImportLoading ? 'not-allowed' : 'pointer' }}
-                onClick={() => !propertyImportLoading && document.getElementById('property-import-file-input')?.click()}
-              >
+              className="file-upload-area"
+              style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: propertyImportLoading ? 'not-allowed' : 'pointer' }}
+              onClick={() => !propertyImportLoading && document.getElementById('property-import-file-input')?.click()}>
+              
                 <input
-                  type="file"
-                  id="property-import-file-input"
-                  accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) setPropertyImportFile(f); e.target.value = ''; }}
-                  style={{ display: 'none' }}
-                  disabled={propertyImportLoading}
-                />
+                type="file"
+                id="property-import-file-input"
+                accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                onChange={(e) => {const f = e.target.files?.[0];if (f) setPropertyImportFile(f);e.target.value = '';}}
+                style={{ display: 'none' }}
+                disabled={propertyImportLoading} />
+              
                 <FileSpreadsheet size={48} color={propertyImportLoading ? '#9ca3af' : '#2563eb'} style={{ margin: '0 auto 12px' }} />
                 <div>
                   <strong style={{ color: propertyImportLoading ? '#9ca3af' : '#1f2937' }}>
-                    {propertyImportLoading ? 'Importing...' : (propertyImportFile ? propertyImportFile.name : 'Click to select file')}
+                    {propertyImportLoading ? 'Importing...' : propertyImportFile ? propertyImportFile.name : 'Click to select file'}
                   </strong>
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>CSV or Excel (.xlsx, .xls)</p>
                 </div>
               </div>
               <div className="modal-footer" style={{ marginTop: '24px' }}>
-                <button type="button" className="action-button secondary" onClick={() => { setShowPropertyImportModal(false); setPropertyImportFile(null); setPropertyImportOwnerId(''); }}>
+                <button type="button" className="action-button secondary" onClick={() => {setShowPropertyImportModal(false);setPropertyImportFile(null);setPropertyImportOwnerId('');}}>
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  className="action-button primary"
-                  onClick={async () => {
-                    if (!propertyImportFile) { addNotification('Please select a file first', 'error'); return; }
-                    setPropertyImportLoading(true);
-                    try {
-                      const { success, failed } = await handleBulkImportProperties(propertyImportFile);
-                      addNotification(`Properties: ${success} imported, ${failed} failed`, success > 0 ? 'success' : failed > 0 ? 'error' : 'info');
-                      setShowPropertyImportModal(false);
-                      setPropertyImportFile(null);
-                      setPropertyImportOwnerId('');
-                      await loadData();
-                    } catch (err) {
-                      addNotification(err?.message || 'Import failed', 'error');
-                    } finally {
-                      setPropertyImportLoading(false);
-                    }
-                  }}
-                  disabled={!propertyImportFile || propertyImportLoading}
-                >
+                type="button"
+                className="action-button primary"
+                onClick={async () => {
+                  if (!propertyImportFile) {addNotification('Please select a file first', 'error');return;}
+                  setPropertyImportLoading(true);
+                  try {
+                    const { success, failed } = await handleBulkImportProperties(propertyImportFile);
+                    addNotification(`Properties: ${success} imported, ${failed} failed`, success > 0 ? 'success' : failed > 0 ? 'error' : 'info');
+                    setShowPropertyImportModal(false);
+                    setPropertyImportFile(null);
+                    setPropertyImportOwnerId('');
+                    await loadData();
+                  } catch (err) {
+                    addNotification(err?.message || 'Import failed', 'error');
+                  } finally {
+                    setPropertyImportLoading(false);
+                  }
+                }}
+                disabled={!propertyImportFile || propertyImportLoading}>
+                
                   {propertyImportLoading ? 'Importing...' : 'Import'}
                 </button>
               </div>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Bulk Import Modal (Properties + Tenants) */}
-      {showBulkImportModal && (
-        <div className="modal-overlay" onClick={() => { setShowBulkImportModal(false); setBulkImportFile(null); }}>
+      }
+      {showBulkImportModal &&
+      <div className="modal-overlay" onClick={() => {setShowBulkImportModal(false);setBulkImportFile(null);}}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Bulk Import – Properties & Tenants</h3>
-              <button className="modal-close" onClick={() => { setShowBulkImportModal(false); setBulkImportFile(null); }}>×</button>
+              <button className="modal-close" onClick={() => {setShowBulkImportModal(false);setBulkImportFile(null);}}>×</button>
             </div>
             <div className="modal-body">
               <div style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
@@ -6135,25 +5911,25 @@ const SalesManagerDashboard = () => {
               </div>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb' }}>
                 <button
-                  type="button"
-                  onClick={() => setBulkImportTab('properties')}
-                  style={{
-                    padding: '10px 16px', fontSize: '0.9rem', border: 'none', background: 'none', cursor: 'pointer',
-                    borderBottom: bulkImportTab === 'properties' ? '2px solid #2563eb' : '2px solid transparent',
-                    color: bulkImportTab === 'properties' ? '#2563eb' : '#6b7280', fontWeight: bulkImportTab === 'properties' ? 600 : 400
-                  }}
-                >
+                type="button"
+                onClick={() => setBulkImportTab('properties')}
+                style={{
+                  padding: '10px 16px', fontSize: '0.9rem', border: 'none', background: 'none', cursor: 'pointer',
+                  borderBottom: bulkImportTab === 'properties' ? '2px solid #2563eb' : '2px solid transparent',
+                  color: bulkImportTab === 'properties' ? '#2563eb' : '#6b7280', fontWeight: bulkImportTab === 'properties' ? 600 : 400
+                }}>
+                
                   Properties
                 </button>
                 <button
-                  type="button"
-                  onClick={() => setBulkImportTab('tenants')}
-                  style={{
-                    padding: '10px 16px', fontSize: '0.9rem', border: 'none', background: 'none', cursor: 'pointer',
-                    borderBottom: bulkImportTab === 'tenants' ? '2px solid #2563eb' : '2px solid transparent',
-                    color: bulkImportTab === 'tenants' ? '#2563eb' : '#6b7280', fontWeight: bulkImportTab === 'tenants' ? 600 : 400
-                  }}
-                >
+                type="button"
+                onClick={() => setBulkImportTab('tenants')}
+                style={{
+                  padding: '10px 16px', fontSize: '0.9rem', border: 'none', background: 'none', cursor: 'pointer',
+                  borderBottom: bulkImportTab === 'tenants' ? '2px solid #2563eb' : '2px solid transparent',
+                  color: bulkImportTab === 'tenants' ? '#2563eb' : '#6b7280', fontWeight: bulkImportTab === 'tenants' ? 600 : 400
+                }}>
+                
                   Tenants
                 </button>
               </div>
@@ -6162,27 +5938,27 @@ const SalesManagerDashboard = () => {
                   {bulkImportTab === 'properties' ? 'Import Properties' : 'Import Tenants'}
                 </h4>
                 <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
-                  {bulkImportTab === 'properties'
-                    ? 'Upload a CSV with: Address, Type, PropertyType, BuildingType, Status, NumberOfUnits, Rent, Bedrooms, Bathrooms, Urgency, LandlordId. For multi-unit: UnitNumbers (F1|F2), UnitRents (100000|120000).'
-                    : 'Upload a CSV or Excel file with: Name, Property, Email, Phone, Amount, MoveInDate, Status (optional), UnitNumber (optional). Or use the Full Example file to import both properties and tenants.'}
+                  {bulkImportTab === 'properties' ?
+                'Upload a CSV with: Address, Type, PropertyType, BuildingType, Status, NumberOfUnits, Rent, Bedrooms, Bathrooms, Urgency, LandlordId. For multi-unit: UnitNumbers (F1|F2), UnitRents (100000|120000).' :
+                'Upload a CSV or Excel file with: Name, Property, Email, Phone, Amount, MoveInDate, Status (optional), UnitNumber (optional). Or use the Full Example file to import both properties and tenants.'}
                 </p>
                 <div
-                  className="file-upload-area"
-                  style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: bulkImportLoading ? 'not-allowed' : 'pointer' }}
-                  onClick={() => !bulkImportLoading && document.getElementById('bulk-import-file-input')?.click()}
-                >
+                className="file-upload-area"
+                style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: bulkImportLoading ? 'not-allowed' : 'pointer' }}
+                onClick={() => !bulkImportLoading && document.getElementById('bulk-import-file-input')?.click()}>
+                
                   <input
-                    type="file"
-                    id="bulk-import-file-input"
-                    accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) setBulkImportFile(f); e.target.value = ''; }}
-                    style={{ display: 'none' }}
-                    disabled={bulkImportLoading}
-                  />
+                  type="file"
+                  id="bulk-import-file-input"
+                  accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                  onChange={(e) => {const f = e.target.files?.[0];if (f) setBulkImportFile(f);e.target.value = '';}}
+                  style={{ display: 'none' }}
+                  disabled={bulkImportLoading} />
+                
                   <FileSpreadsheet size={48} color={bulkImportLoading ? '#9ca3af' : '#2563eb'} style={{ margin: '0 auto 12px' }} />
                   <div>
                     <strong style={{ color: bulkImportLoading ? '#9ca3af' : '#1f2937' }}>
-                      {bulkImportLoading ? 'Importing...' : (bulkImportFile ? bulkImportFile.name : 'Click to select file')}
+                      {bulkImportLoading ? 'Importing...' : bulkImportFile ? bulkImportFile.name : 'Click to select file'}
                     </strong>
                     <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>
                       {bulkImportTab === 'properties' ? 'CSV only' : 'CSV or Excel (.xlsx, .xls)'}
@@ -6191,130 +5967,127 @@ const SalesManagerDashboard = () => {
                 </div>
               </div>
               <div className="modal-footer" style={{ marginTop: '24px' }}>
-                <button type="button" className="action-button secondary" onClick={() => { setShowBulkImportModal(false); setBulkImportFile(null); }}>
+                <button type="button" className="action-button secondary" onClick={() => {setShowBulkImportModal(false);setBulkImportFile(null);}}>
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  className="action-button primary"
-                  onClick={handleBulkImportUpload}
-                  disabled={!bulkImportFile || bulkImportLoading}
-                >
+                type="button"
+                className="action-button primary"
+                onClick={handleBulkImportUpload}
+                disabled={!bulkImportFile || bulkImportLoading}>
+                
                   {bulkImportLoading ? 'Importing...' : 'Import'}
                 </button>
               </div>
             </div>
           </div>
         </div>
-      )}
+      }
 
       <div className="notifications-container">
-        {notifications.map(notification => (
-          <div key={notification.id} className={`notification notification-${notification.type}`}>
+        {notifications.map((notification) =>
+        <div key={notification.id} className={`notification notification-${notification.type}`}>
             <span>{notification.message}</span>
-            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
+            <button onClick={() => setNotifications((prev) => prev.filter((n) => n.id !== notification.id))}>×</button>
           </div>
-        ))}
+        )}
       </div>
-
-      {/* Tenant Creation Modal */}
-      {showTenantCreationModal && (
-        <div className="modal-overlay" onClick={() => {
-          setShowTenantCreationModal(false);
-          setUploadedDocuments([]);
-          setExcelFile(null);
-          setImportMode('manual');
-          setSelectedApprovedClientId('');
-          setSelectedMoveInPropertyId('');
-          setSelectedMoveInUnitNumber('');
-          setMoveInUnits([]);
-          setMoveInFormPropertyRent(0);
-        }}>
+      {showTenantCreationModal &&
+      <div className="modal-overlay" onClick={() => {
+        setShowTenantCreationModal(false);
+        setUploadedDocuments([]);
+        setExcelFile(null);
+        setImportMode('manual');
+        setSelectedApprovedClientId('');
+        setSelectedMoveInPropertyId('');
+        setSelectedMoveInUnitNumber('');
+        setMoveInUnits([]);
+        setMoveInFormPropertyRent(0);
+      }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{importMode === 'excel' ? 'Import Tenants from File' : 'Create New Tenant'}</h3>
               <button className="modal-close" onClick={() => {
-                setShowTenantCreationModal(false);
-                setUploadedDocuments([]);
-                setExcelFile(null);
-                setImportMode('manual');
-                setSelectedApprovedClientId('');
-                setSelectedMoveInPropertyId('');
-                setSelectedMoveInUnitNumber('');
-                setMoveInUnits([]);
-                setMoveInFormPropertyRent(0);
-              }}>×</button>
+              setShowTenantCreationModal(false);
+              setUploadedDocuments([]);
+              setExcelFile(null);
+              setImportMode('manual');
+              setSelectedApprovedClientId('');
+              setSelectedMoveInPropertyId('');
+              setSelectedMoveInUnitNumber('');
+              setMoveInUnits([]);
+              setMoveInFormPropertyRent(0);
+            }}>×</button>
             </div>
             <div className="modal-body">
-              {/* Import Mode Selection */}
               <div className="import-mode-selector" style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <button
-                    type="button"
-                    className={`action-button ${importMode === 'manual' ? 'primary' : 'secondary'}`}
-                    onClick={() => setImportMode('manual')}
-                    style={{ flex: 1 }}
-                  >
+                  type="button"
+                  className={`action-button ${importMode === 'manual' ? 'primary' : 'secondary'}`}
+                  onClick={() => setImportMode('manual')}
+                  style={{ flex: 1 }}>
+                  
                     <UserPlus size={18} />
                     Add Single Tenant
                   </button>
                   <button
-                    type="button"
-                    className={`action-button ${importMode === 'excel' ? 'primary' : 'secondary'}`}
-                    onClick={() => setImportMode('excel')}
-                    style={{ flex: 1 }}
-                  >
+                  type="button"
+                  className={`action-button ${importMode === 'excel' ? 'primary' : 'secondary'}`}
+                  onClick={() => setImportMode('excel')}
+                  style={{ flex: 1 }}>
+                  
                     <FileSpreadsheet size={18} />
                     Import from File
                   </button>
                 </div>
               </div>
 
-              {importMode === 'excel' ? (
-                    <div className="excel-upload-section">
+              {importMode === 'excel' ?
+            <div className="excel-upload-section">
                       <div style={{ marginBottom: '16px' }}>
                         <h4 style={{ marginBottom: '8px' }}>Upload File</h4>
                         <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '16px' }}>
                           Upload an Excel file (.xlsx, .xls) or CSV file (.csv) with tenant details. Required columns: Name, Property, Email, Phone, Amount, MoveInDate. Optional: Status (defaults to 'Active'). Date format: YYYY-MM-DD or DD/MM/YYYY
                         </p>
                         <button
-                          type="button"
-                          className="action-button secondary"
-                          onClick={downloadCsvExample}
-                          style={{ padding: '8px 14px', fontSize: '0.85rem' }}
-                        >
+                  type="button"
+                  className="action-button secondary"
+                  onClick={downloadCsvExample}
+                  style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
+                  
                           <Download size={16} />
                           Download CSV Example
                         </button>
                       </div>
                       
                       <div className="file-upload-area" style={{
-                        border: '2px dashed #d1d5db',
-                        borderRadius: '12px',
-                        padding: '32px',
-                        textAlign: 'center',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}>
+                border: '2px dashed #d1d5db',
+                borderRadius: '12px',
+                padding: '32px',
+                textAlign: 'center',
+                background: '#fff',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}>
                         <input
-                          type="file"
-                          id="excel-file-input"
-                          accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/csv"
-                          onChange={handleExcelFileSelect}
-                          style={{ display: 'none' }}
-                          disabled={loading}
-                        />
+                  type="file"
+                  id="excel-file-input"
+                  accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/csv"
+                  onChange={handleExcelFileSelect}
+                  style={{ display: 'none' }}
+                  disabled={loading} />
+                
                         <label
-                          htmlFor="excel-file-input"
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '12px',
-                            cursor: loading ? 'not-allowed' : 'pointer'
-                          }}
-                        >
+                  htmlFor="excel-file-input"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px',
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}>
+                  
                           <FileSpreadsheet size={48} color={loading ? '#9ca3af' : '#2563eb'} />
                           <div>
                             <strong style={{ color: loading ? '#9ca3af' : '#1f2937' }}>
@@ -6325,67 +6098,67 @@ const SalesManagerDashboard = () => {
                             </p>
                           </div>
                         </label>
-                        {excelFile && (
-                          <div style={{ marginTop: '12px', padding: '8px 12px', background: '#eff6ff', borderRadius: '8px', display: 'inline-block' }}>
+                        {excelFile &&
+                <div style={{ marginTop: '12px', padding: '8px 12px', background: '#eff6ff', borderRadius: '8px', display: 'inline-block' }}>
                             <FileSpreadsheet size={16} style={{ display: 'inline', marginRight: '8px' }} />
                             <span style={{ fontSize: '0.9rem' }}>{excelFile.name}</span>
                           </div>
-                        )}
+                }
                       </div>
 
                       <div className="modal-footer" style={{ marginTop: '24px' }}>
                         <button
-                          type="button"
-                          className="action-button secondary"
-                          onClick={() => {
-                            setShowTenantCreationModal(false);
-                            setImportMode('manual');
-                            setExcelFile(null);
-                          }}
-                        >
+                  type="button"
+                  className="action-button secondary"
+                  onClick={() => {
+                    setShowTenantCreationModal(false);
+                    setImportMode('manual');
+                    setExcelFile(null);
+                  }}>
+                  
                           Cancel
                         </button>
                         <button
-                          type="button"
-                          className="action-button primary"
-                          onClick={handleExcelUpload}
-                          disabled={!excelFile || loading}
-                        >
+                  type="button"
+                  className="action-button primary"
+                  onClick={handleExcelUpload}
+                  disabled={!excelFile || loading}>
+                  
                           {loading ? 'Importing...' : 'Import Tenants'}
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                <form onSubmit={handleCreateTenant}>
+                    </div> :
+
+            <form onSubmit={handleCreateTenant}>
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="approvedClientId">Approved Client *</label>
                       <select
-                        name="approvedClientId"
-                        id="approvedClientId"
-                        value={selectedApprovedClientId}
-                        onChange={(e) => setSelectedApprovedClientId(e.target.value)}
-                        required
-                      >
+                    name="approvedClientId"
+                    id="approvedClientId"
+                    value={selectedApprovedClientId}
+                    onChange={(e) => setSelectedApprovedClientId(e.target.value)}
+                    required>
+                    
                         <option value="">Select approved client</option>
-                        {approvedClients.map(client => {
-                          const id = client.ID || client.id;
-                          const label = client.name || client.Name || client.email || client.Email || `Client ${id}`;
-                          return (
-                            <option key={id} value={id}>
+                        {approvedClients.map((client) => {
+                      const id = client.ID || client.id;
+                      const label = client.name || client.Name || client.email || client.Email || `Client ${id}`;
+                      return (
+                        <option key={id} value={id}>
                               {label}
-                            </option>
-                          );
-                        })}
+                            </option>);
+
+                    })}
                       </select>
                     </div>
                     <div className="form-group">
                       <label>Client Type</label>
                       <input
-                        type="text"
-                        value={selectedApprovedClient ? (selectedApprovedClient.type || selectedApprovedClient.Type || 'individual') : ''}
-                        disabled
-                      />
+                    type="text"
+                    value={selectedApprovedClient ? selectedApprovedClient.type || selectedApprovedClient.Type || 'individual' : ''}
+                    disabled />
+                  
                     </div>
                   </div>
 
@@ -6393,18 +6166,18 @@ const SalesManagerDashboard = () => {
                     <div className="form-group">
                       <label>Client Name</label>
                       <input
-                        type="text"
-                        value={selectedApprovedClient ? (selectedApprovedClient.name || selectedApprovedClient.Name || '') : ''}
-                        disabled
-                      />
+                    type="text"
+                    value={selectedApprovedClient ? selectedApprovedClient.name || selectedApprovedClient.Name || '' : ''}
+                    disabled />
+                  
                     </div>
                     <div className="form-group">
                       <label>Email Address</label>
                       <input
-                        type="email"
-                        value={selectedApprovedClient ? (selectedApprovedClient.email || selectedApprovedClient.Email || '') : ''}
-                        disabled
-                      />
+                    type="email"
+                    value={selectedApprovedClient ? selectedApprovedClient.email || selectedApprovedClient.Email || '' : ''}
+                    disabled />
+                  
                     </div>
                   </div>
 
@@ -6412,25 +6185,25 @@ const SalesManagerDashboard = () => {
                     <div className="form-group">
                       <label>Phone Number</label>
                       <input
-                        type="tel"
-                        value={selectedApprovedClient ? (selectedApprovedClient.phone || selectedApprovedClient.Phone || '') : ''}
-                        disabled
-                      />
+                    type="tel"
+                    value={selectedApprovedClient ? selectedApprovedClient.phone || selectedApprovedClient.Phone || '' : ''}
+                    disabled />
+                  
                     </div>
                     <div className="form-group">
                       <label>Security Deposit</label>
                       <input
-                        type="text"
-                      value={
-                          selectedApprovedClient
-                            ? (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid') +
-                              (approvedClientDepositInfo.depositValue > 0
-                                ? ` - ${Number(approvedClientDepositInfo.depositValue).toLocaleString(undefined, { maximumFractionDigits: 2 })} XOF`
-                                : '')
-                            : ''
-                        }
-                        disabled
-                      />
+                    type="text"
+                    value={
+                    selectedApprovedClient ?
+                    (approvedClientDepositInfo.paid ? 'Paid' : 'Not Paid') + (
+                    approvedClientDepositInfo.depositValue > 0 ?
+                    ` - ${Number(approvedClientDepositInfo.depositValue).toLocaleString(undefined, { maximumFractionDigits: 2 })} XOF` :
+                    '') :
+                    ''
+                    }
+                    disabled />
+                  
                     </div>
                   </div>
 
@@ -6438,14 +6211,14 @@ const SalesManagerDashboard = () => {
                     <div className="form-group">
                       <label>Deposit Paid Date</label>
                       <input
-                        type="text"
-                        value={
-                          approvedClientDepositInfo.paidAt
-                            ? new Date(approvedClientDepositInfo.paidAt).toLocaleDateString()
-                            : ''
-                        }
-                        disabled
-                      />
+                    type="text"
+                    value={
+                    approvedClientDepositInfo.paidAt ?
+                    new Date(approvedClientDepositInfo.paidAt).toLocaleDateString() :
+                    ''
+                    }
+                    disabled />
+                  
                     </div>
                   </div>
 
@@ -6453,75 +6226,75 @@ const SalesManagerDashboard = () => {
                     <div className="form-group">
                       <label htmlFor="property">Property</label>
                       <select name="property" id="property" value={selectedMoveInPropertyId} required onChange={(e) => {
-                        const val = e.target.value;
-                        const selectedProperty = val ? properties.find(p => String(p.ID || p.id) === val) : null;
-                        setSelectedMoveInPropertyId(val);
-                        setSelectedMoveInUnitNumber('');
-                        setMoveInUnits([]);
-                        if (selectedProperty) {
-                          const rawRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
-                          const propertyRent = Number.isFinite(rawRent) ? Math.round(rawRent) : 0;
-                          setMoveInFormPropertyRent(propertyRent);
-                          const rentInput = document.getElementsByName('rent')[0];
-                          if (rentInput) {
-                            rentInput.value = propertyRent;
-                          }
-                        } else {
-                          setMoveInFormPropertyRent(0);
-                        }
-                      }}>
+                    const val = e.target.value;
+                    const selectedProperty = val ? properties.find((p) => String(p.ID || p.id) === val) : null;
+                    setSelectedMoveInPropertyId(val);
+                    setSelectedMoveInUnitNumber('');
+                    setMoveInUnits([]);
+                    if (selectedProperty) {
+                      const rawRent = Number(selectedProperty.Rent || selectedProperty.rent || 0);
+                      const propertyRent = Number.isFinite(rawRent) ? Math.round(rawRent) : 0;
+                      setMoveInFormPropertyRent(propertyRent);
+                      const rentInput = document.getElementsByName('rent')[0];
+                      if (rentInput) {
+                        rentInput.value = propertyRent;
+                      }
+                    } else {
+                      setMoveInFormPropertyRent(0);
+                    }
+                  }}>
                         <option value="">Select Property</option>
                         {(() => {
-                          const withEmptyUnits = properties.filter(property => {
-                            const address = (property.Address || property.address || '').toString().trim();
-                            const total = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
-                            const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
-                            if (filled !== undefined && filled !== null) return Number(filled) < total;
-                            const status = (property.Status || property.status || '').toLowerCase();
-                            if (total <= 1) return status !== 'occupied';
-                            const occupiedFromClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === address).length;
-                            return occupiedFromClients < total;
-                          });
-                          return withEmptyUnits.length > 0 ? withEmptyUnits.map(property => {
-                            const propertyId = property.ID || property.id;
-                            const address = property.Address || property.address || 'Unnamed Property';
-                            const type = property.Type || property.type || '';
-                            const numberOfUnits = property.NumberOfUnits || property.numberOfUnits || 1;
-                            const displayText = type ? `${address} - ${type} (${numberOfUnits} units)` : `${address} (${numberOfUnits} units)`;
-                            return (
-                              <option key={propertyId || `property-${address}`} value={propertyId ?? ''}>
+                      const withEmptyUnits = properties.filter((property) => {
+                        const address = (property.Address || property.address || '').toString().trim();
+                        const total = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+                        const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
+                        if (filled !== undefined && filled !== null) return Number(filled) < total;
+                        const status = (property.Status || property.status || '').toLowerCase();
+                        if (total <= 1) return status !== 'occupied';
+                        const occupiedFromClients = clients.filter((c) => (c.Property || c.property || '').toString().trim() === address).length;
+                        return occupiedFromClients < total;
+                      });
+                      return withEmptyUnits.length > 0 ? withEmptyUnits.map((property) => {
+                        const propertyId = property.ID || property.id;
+                        const address = property.Address || property.address || 'Unnamed Property';
+                        const type = property.Type || property.type || '';
+                        const numberOfUnits = property.NumberOfUnits || property.numberOfUnits || 1;
+                        const displayText = type ? `${address} - ${type} (${numberOfUnits} units)` : `${address} (${numberOfUnits} units)`;
+                        return (
+                          <option key={propertyId || `property-${address}`} value={propertyId ?? ''}>
                                 {displayText}
-                              </option>
-                            );
-                          }) : (
-                            <option value="" disabled>
+                              </option>);
+
+                      }) :
+                      <option value="" disabled>
                               {properties.length === 0 ? 'No properties available. Start backend to load properties.' : 'No properties with empty units available.'}
-                            </option>
-                          );
-                        })()}
+                            </option>;
+
+                    })()}
                       </select>
                     </div>
                     <div className="form-group">
                       <label htmlFor="unitNumber">Unit Number</label>
                       <select
-                        name="unitNumber"
-                        id="unitNumber"
-                        value={selectedMoveInUnitNumber}
-                        onChange={(e) => setSelectedMoveInUnitNumber(e.target.value)}
-                        required
-                      >
+                    name="unitNumber"
+                    id="unitNumber"
+                    value={selectedMoveInUnitNumber}
+                    onChange={(e) => setSelectedMoveInUnitNumber(e.target.value)}
+                    required>
+                    
                         <option value="">Select Property First</option>
                         {moveInUnits.length > 0 ? moveInUnits.map((unit) => {
-                          const unitId = unit.id ?? unit.ID ?? unit.unitNumber ?? unit.UnitNumber;
-                          const label = unit.unitNumber ?? unit.UnitNumber ?? unit.name ?? unit.Name ?? `Unit #${unitId ?? ''}`;
-                          return (
-                            <option key={unitId || label} value={label}>
+                      const unitId = unit.id ?? unit.ID ?? unit.unitNumber ?? unit.UnitNumber;
+                      const label = unit.unitNumber ?? unit.UnitNumber ?? unit.name ?? unit.Name ?? `Unit #${unitId ?? ''}`;
+                      return (
+                        <option key={unitId || label} value={label}>
                               {label}
-                            </option>
-                          );
-                        }) : selectedMoveInPropertyId ? (
-                          <option value="" disabled>No vacant units</option>
-                        ) : null}
+                            </option>);
+
+                    }) : selectedMoveInPropertyId ?
+                    <option value="" disabled>No vacant units</option> :
+                    null}
                       </select>
                       <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                         Select which unit/apartment the tenant will occupy
@@ -6537,77 +6310,75 @@ const SalesManagerDashboard = () => {
                     <div className="form-group">
                       <label htmlFor="moveInDate">Move-in Date</label>
                       <input
-                        type="date"
-                        name="moveInDate"
-                        required
-                        max={approvedClientDepositInfo.paid ? approvedClientDepositInfo.maxMoveInDate || undefined : undefined}
-                      />
-                      {approvedClientDepositInfo.paid && approvedClientDepositInfo.maxMoveInDate && (
-                        <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    type="date"
+                    name="moveInDate"
+                    required
+                    max={approvedClientDepositInfo.paid ? approvedClientDepositInfo.maxMoveInDate || undefined : undefined} />
+                  
+                      {approvedClientDepositInfo.paid && approvedClientDepositInfo.maxMoveInDate &&
+                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                           Must be within 1 month after deposit payment ({approvedClientDepositInfo.maxMoveInDate}).
                         </small>
-                      )}
+                  }
                     </div>
                   </div>
 
                   <div className="document-upload-section" style={{ marginTop: '24px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
                     <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600' }}>Administrative Agent Documents</h4>
-                    {loadingApprovedDocs ? (
-                      <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Loading documents...</div>
-                    ) : approvedClientDocuments.length === 0 ? (
-                      <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>No documents linked to this client yet.</div>
-                    ) : (
-                      <div className="uploaded-documents-list">
+                    {loadingApprovedDocs ?
+                <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Loading documents...</div> :
+                approvedClientDocuments.length === 0 ?
+                <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>No documents linked to this client yet.</div> :
+
+                <div className="uploaded-documents-list">
                         {approvedClientDocuments.map((doc, index) => {
-                          const docUrl = doc.URL || doc.url;
-                          const fullUrl =
-                            docUrl && docUrl.startsWith('http')
-                              ? docUrl
-                              : docUrl
-                                ? `${API_CONFIG.BASE_URL}${docUrl}`
-                                : '';
-                          return (
-                            <div key={doc.ID || doc.id || index} className="document-item" style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '8px',
-                              background: '#fff',
-                              borderRadius: '8px',
-                              marginBottom: '8px'
-                            }}>
+                    const docUrl = doc.URL || doc.url;
+                    const fullUrl =
+                    docUrl && docUrl.startsWith('http') ?
+                    docUrl :
+                    docUrl ?
+                    `${API_CONFIG.BASE_URL}${docUrl}` :
+                    '';
+                    return (
+                      <div key={doc.ID || doc.id || index} className="document-item" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px',
+                        background: '#fff',
+                        borderRadius: '8px',
+                        marginBottom: '8px'
+                      }}>
                               <FileText size={16} color="#6b7280" />
                               <div className="document-info" style={{ flex: 1 }}>
                                 <span className="document-name" style={{ fontSize: '0.875rem', display: 'block' }}>
                                   {doc.Type || doc.type || 'Document'}
                                 </span>
-                                {fullUrl && (
-                                  <a
-                                    href={fullUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="document-link"
-                                    style={{ fontSize: '0.75rem', color: '#2563eb' }}
-                                  >
+                                {fullUrl &&
+                          <a
+                            href={fullUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="document-link"
+                            style={{ fontSize: '0.75rem', color: '#2563eb' }}>
+                            
                                     View/Download
                                   </a>
-                                )}
+                          }
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {approvedClientChecklist && (
-                      <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#6b7280' }}>
-                        Checklist saved on {approvedClientChecklist.createdAt || approvedClientChecklist.CreatedAt
-                          ? new Date(approvedClientChecklist.createdAt || approvedClientChecklist.CreatedAt).toLocaleDateString()
-                          : 'N/A'}
-                      </div>
-                    )}
-                  </div>
+                            </div>);
 
-                  {/* Document Upload Section */}
+                  })}
+                      </div>
+                }
+                    {approvedClientChecklist &&
+                <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#6b7280' }}>
+                        Checklist saved on {approvedClientChecklist.createdAt || approvedClientChecklist.CreatedAt ?
+                  new Date(approvedClientChecklist.createdAt || approvedClientChecklist.CreatedAt).toLocaleDateString() :
+                  'N/A'}
+                      </div>
+                }
+                  </div>
                   <div className="document-upload-section" style={{ marginTop: '24px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
                     <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600' }}>Upload Documents (Optional)</h4>
                     <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '16px' }}>
@@ -6615,94 +6386,94 @@ const SalesManagerDashboard = () => {
                     </p>
 
                     <div className="upload-buttons" style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                      <button 
-                        type="button"
-                        className="action-button secondary" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setShowKycModal(true);
-                        }}
-                      >
+                      <button
+                    type="button"
+                    className="action-button secondary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowKycModal(true);
+                    }}>
+                    
                         <Upload size={18} />
                         Upload KYC Documents
                       </button>
-                      <button 
-                        type="button"
-                        className="action-button secondary" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setShowContractModal(true);
-                        }}
-                      >
+                      <button
+                    type="button"
+                    className="action-button secondary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowContractModal(true);
+                    }}>
+                    
                         <FileText size={18} />
                         Upload Lease Contract
                       </button>
                     </div>
 
-                    {uploadedDocuments.length > 0 && (
-                      <div className="uploaded-documents-list">
+                    {uploadedDocuments.length > 0 &&
+                <div className="uploaded-documents-list">
                         <h5 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '8px' }}>Uploaded Documents:</h5>
-                        {uploadedDocuments.map((doc, index) => (
-                          <div key={index} className="document-item" style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px', 
-                            padding: '8px', 
-                            background: '#fff', 
-                            borderRadius: '8px',
-                            marginBottom: '8px'
-                          }}>
+                        {uploadedDocuments.map((doc, index) =>
+                  <div key={index} className="document-item" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px',
+                    background: '#fff',
+                    borderRadius: '8px',
+                    marginBottom: '8px'
+                  }}>
                             <FileText size={16} color="#6b7280" />
                             <div className="document-info" style={{ flex: 1 }}>
                               <span className="document-name" style={{ fontSize: '0.875rem', display: 'block' }}>
                                 {doc.type}: {doc.name || doc.details?.contractType || 'Contract'}
                               </span>
-                              {doc.url && (
-                                <a 
-                                  href={doc.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="document-link"
-                                  style={{ fontSize: '0.75rem', color: '#2563eb' }}
-                                >
+                              {doc.url &&
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="document-link"
+                        style={{ fontSize: '0.75rem', color: '#2563eb' }}>
+                        
                                   View Document
                                 </a>
-                              )}
+                      }
                             </div>
-                            <button 
-                              type="button"
-                              className="remove-doc-button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                removeDocument(index);
-                              }}
-                              style={{ 
-                                background: 'none', 
-                                border: 'none', 
-                                cursor: 'pointer',
-                                padding: '4px',
-                                display: 'flex',
-                                alignItems: 'center'
-                              }}
-                            >
+                            <button
+                      type="button"
+                      className="remove-doc-button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        removeDocument(index);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                      
                               <X size={16} color="#ef4444" />
                             </button>
                           </div>
-                        ))}
+                  )}
                       </div>
-                    )}
+                }
                   </div>
 
                   <div className="modal-footer">
                     <button type="button" className="action-button secondary" onClick={() => {
-                      setShowTenantCreationModal(false);
-                      setUploadedDocuments([]);
-                      setSelectedApprovedClientId('');
-                      setSelectedMoveInPropertyId('');
-                      setSelectedMoveInUnitNumber('');
-                      setMoveInUnits([]);
-                      setMoveInFormPropertyRent(0);
-                    }}>
+                  setShowTenantCreationModal(false);
+                  setUploadedDocuments([]);
+                  setSelectedApprovedClientId('');
+                  setSelectedMoveInPropertyId('');
+                  setSelectedMoveInUnitNumber('');
+                  setMoveInUnits([]);
+                  setMoveInFormPropertyRent(0);
+                }}>
                       Cancel
                     </button>
                     <button type="submit" className="action-button primary" disabled={loading}>
@@ -6710,102 +6481,96 @@ const SalesManagerDashboard = () => {
                     </button>
                   </div>
                 </form>
-                  )}
+            }
             </div>
           </div>
         </div>
-      )}
-
-      {/* KYC Upload Modal */}
+      }
       <Modal isOpen={showKycModal} onClose={() => setShowKycModal(false)}>
         <h2>Upload Tenant KYC Documents</h2>
         <DocumentUpload onFileUpload={(file) => handleKycUpload(file, 'tenant')} />
       </Modal>
-
-      {/* Contract Upload Modal */}
       <Modal isOpen={showContractModal} onClose={() => setShowContractModal(false)}>
         <ContractUpload onContractUpload={handleContractUpload} />
       </Modal>
-
-      {/* Edit Client Modal */}
-      {showEditClientModal && editingClient && (
-        <div className="modal-overlay" onClick={() => {
-          setShowEditClientModal(false);
-          setEditingClient(null);
-          resetEditClientModalState();
-        }}>
+      {showEditClientModal && editingClient &&
+      <div className="modal-overlay" onClick={() => {
+        setShowEditClientModal(false);
+        setEditingClient(null);
+        resetEditClientModalState();
+      }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Edit Tenant Profile</h3>
               <button className="modal-close" onClick={() => {
-                setShowEditClientModal(false);
-                setEditingClient(null);
-                resetEditClientModalState();
-              }}>×</button>
+              setShowEditClientModal(false);
+              setEditingClient(null);
+              resetEditClientModalState();
+            }}>×</button>
             </div>
             <div className="modal-body">
               <form onSubmit={handleUpdateClient}>
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="edit-name">Name</label>
-                    <input 
-                      type="text" 
-                      name="name" 
-                      id="edit-name"
-                      defaultValue={editingClient.Name || editingClient.name || ''}
-                      required
-                    />
+                    <input
+                    type="text"
+                    name="name"
+                    id="edit-name"
+                    defaultValue={editingClient.Name || editingClient.name || ''}
+                    required />
+                  
                   </div>
                   <div className="form-group">
                     <label htmlFor="edit-email">Email</label>
-                    <input 
-                      type="email" 
-                      name="email" 
-                      id="edit-email"
-                      defaultValue={editingClient.Email || editingClient.email || ''}
-                      required
-                    />
+                    <input
+                    type="email"
+                    name="email"
+                    id="edit-email"
+                    defaultValue={editingClient.Email || editingClient.email || ''}
+                    required />
+                  
                   </div>
                 </div>
 
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="edit-phone">Phone</label>
-                    <input 
-                      type="tel" 
-                      name="phone" 
-                      id="edit-phone"
-                      defaultValue={editingClient.Phone || editingClient.phone || ''}
-                    />
+                    <input
+                    type="tel"
+                    name="phone"
+                    id="edit-phone"
+                    defaultValue={editingClient.Phone || editingClient.phone || ''} />
+                  
                   </div>
                   <div className="form-group">
                     <label htmlFor="edit-property">Property</label>
                     <select
-                      name="property"
-                      id="edit-property"
-                      value={editSelectedPropertyAddress}
-                      onChange={(e) => {
-                        const addr = e.target.value;
-                        setEditSelectedPropertyAddress(addr);
-                        const match = (editPropertyOptions || []).find((p) => (p.address ?? p.Address ?? '').toString() === addr);
-                        const pid = match ? (match.id ?? match.ID ?? '').toString() : '';
-                        setEditSelectedPropertyId(pid);
-                        setEditAssignPropertyId(pid);
-                        setEditAssignUnitId('');
-                      }}
-                      disabled={editPropertyLoading}
-                    >
+                    name="property"
+                    id="edit-property"
+                    value={editSelectedPropertyAddress}
+                    onChange={(e) => {
+                      const addr = e.target.value;
+                      setEditSelectedPropertyAddress(addr);
+                      const match = (editPropertyOptions || []).find((p) => (p.address ?? p.Address ?? '').toString() === addr);
+                      const pid = match ? (match.id ?? match.ID ?? '').toString() : '';
+                      setEditSelectedPropertyId(pid);
+                      setEditAssignPropertyId(pid);
+                      setEditAssignUnitId('');
+                    }}
+                    disabled={editPropertyLoading}>
+                    
                       <option value="">{editPropertyLoading ? 'Loading properties…' : '— Not assigned —'}</option>
                       {(editPropertyOptions || []).map((p) => {
-                        const addr = (p.address ?? p.Address ?? '').toString();
-                        const pid = p.id ?? p.ID;
-                        if (!addr) return null;
-                        return (
-                          <option key={pid ?? addr} value={addr}>
+                      const addr = (p.address ?? p.Address ?? '').toString();
+                      const pid = p.id ?? p.ID;
+                      if (!addr) return null;
+                      return (
+                        <option key={pid ?? addr} value={addr}>
                             {addr}
-                          </option>
-                        );
-                      })}
+                          </option>);
+
+                    })}
                     </select>
                   </div>
                 </div>
@@ -6813,13 +6578,13 @@ const SalesManagerDashboard = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="edit-amount">Monthly Rent (XOF)</label>
-                    <input 
-                      type="number" 
-                      name="amount" 
-                      id="edit-amount"
-                      step="0.01"
-                      defaultValue={editingClient.Amount || editingClient.amount || 0}
-                    />
+                    <input
+                    type="number"
+                    name="amount"
+                    id="edit-amount"
+                    step="0.01"
+                    defaultValue={editingClient.Amount || editingClient.amount || 0} />
+                  
                   </div>
                   <div className="form-group">
                     <label htmlFor="edit-status">Status</label>
@@ -6834,10 +6599,10 @@ const SalesManagerDashboard = () => {
 
                 <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '20px', paddingTop: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Unit assignment</h4>
-                  {loadingAssignment ? (
-                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Loading where this tenant is placed…</p>
-                  ) : tenantAssignment ? (
-                    <>
+                  {loadingAssignment ?
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>Loading where this tenant is placed…</p> :
+                tenantAssignment ?
+                <>
                       <p style={{ margin: '0 0 12px 0', color: '#374151', fontSize: '0.875rem' }}>
                         Currently assigned to <strong>{tenantAssignment.buildingName}</strong>, Room <strong>{tenantAssignment.unitNumber}</strong>.
                       </p>
@@ -6845,50 +6610,50 @@ const SalesManagerDashboard = () => {
                         {removeFromUnitLoading ? 'Removing…' : 'Remove tenant from this unit'}
                       </button>
                       <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#6b7280' }}>The apartment will be set to vacant and the tenant status to Inactive.</span>
-                    </>
-                  ) : (
-                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>This tenant is not assigned to any apartment unit.</p>
-                  )}
+                    </> :
+
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>This tenant is not assigned to any apartment unit.</p>
+                }
 
                   <div style={{ marginTop: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'end' }}>
                     <div className="form-group" style={{ margin: 0 }}>
                       <label htmlFor="edit-assign-property">Assign to property</label>
                       <select
-                        id="edit-assign-property"
-                        name="assignPropertyId"
-                        value={editAssignPropertyId}
-                        onChange={(e) => { setEditAssignPropertyId(e.target.value); setEditAssignUnitId(''); }}
-                      >
+                      id="edit-assign-property"
+                      name="assignPropertyId"
+                      value={editAssignPropertyId}
+                      onChange={(e) => {setEditAssignPropertyId(e.target.value);setEditAssignUnitId('');}}>
+                      
                         <option value="">— Select a property —</option>
-                        {(editPropertyOptions || [])
-                          .map((p) => {
-                            const pid = p.id ?? p.ID;
-                            const addr = p.address ?? p.Address ?? '';
-                            return <option key={pid} value={pid}>{addr || `Property #${pid}`}</option>;
-                          })}
+                        {(editPropertyOptions || []).
+                      map((p) => {
+                        const pid = p.id ?? p.ID;
+                        const addr = p.address ?? p.Address ?? '';
+                        return <option key={pid} value={pid}>{addr || `Property #${pid}`}</option>;
+                      })}
                       </select>
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
                       <label htmlFor="edit-assign-unit">Assign to unit</label>
                       <select
-                        id="edit-assign-unit"
-                        name="assignUnitId"
-                        value={editAssignUnitId}
-                        onChange={(e) => setEditAssignUnitId(e.target.value)}
-                        disabled={!editAssignPropertyId || editAssignLoadingUnits}
-                      >
+                      id="edit-assign-unit"
+                      name="assignUnitId"
+                      value={editAssignUnitId}
+                      onChange={(e) => setEditAssignUnitId(e.target.value)}
+                      disabled={!editAssignPropertyId || editAssignLoadingUnits}>
+                      
                         <option value="">{editAssignLoadingUnits ? 'Loading units…' : '— Select a vacant unit —'}</option>
-                        {editAssignUnits
-                          .filter((u) => {
-                            const st = (u.status || u.Status || '').toString().toLowerCase();
-                            const tenant = (u.tenant || u.Tenant || '').toString().trim();
-                            return st !== 'occupied' && tenant === '';
-                          })
-                          .map((u) => {
-                            const uid = u.id ?? u.ID;
-                            const un = u.unitNumber ?? u.UnitNumber ?? u.name ?? '';
-                            return <option key={uid} value={uid}>{un || `Unit #${uid}`}</option>;
-                          })}
+                        {editAssignUnits.
+                      filter((u) => {
+                        const st = (u.status || u.Status || '').toString().toLowerCase();
+                        const tenant = (u.tenant || u.Tenant || '').toString().trim();
+                        return st !== 'occupied' && tenant === '';
+                      }).
+                      map((u) => {
+                        const uid = u.id ?? u.ID;
+                        const un = u.unitNumber ?? u.UnitNumber ?? u.name ?? '';
+                        return <option key={uid} value={uid}>{un || `Unit #${uid}`}</option>;
+                      })}
                       </select>
                       <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '0.8rem' }}>
                         Pick a property + vacant unit, then click “Update Client” to assign.
@@ -6902,15 +6667,15 @@ const SalesManagerDashboard = () => {
                 </div>
 
                 <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="action-button secondary" 
-                    onClick={() => {
-                      setShowEditClientModal(false);
-                      setEditingClient(null);
-                      resetEditClientModalState();
-                    }}
-                  >
+                  <button
+                  type="button"
+                  className="action-button secondary"
+                  onClick={() => {
+                    setShowEditClientModal(false);
+                    setEditingClient(null);
+                    resetEditClientModalState();
+                  }}>
+                  
                     Cancel
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
@@ -6921,21 +6686,19 @@ const SalesManagerDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Edit Unpaid Rent Modal */}
-      {showUnpaidRentModal && editingUnpaidRent && (
-        <div className="modal-overlay" onClick={() => {
-          setShowUnpaidRentModal(false);
-          setEditingUnpaidRent(null);
-        }}>
+      }
+      {showUnpaidRentModal && editingUnpaidRent &&
+      <div className="modal-overlay" onClick={() => {
+        setShowUnpaidRentModal(false);
+        setEditingUnpaidRent(null);
+      }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Update Unpaid Rent</h3>
               <button className="modal-close" onClick={() => {
-                setShowUnpaidRentModal(false);
-                setEditingUnpaidRent(null);
-              }}>×</button>
+              setShowUnpaidRentModal(false);
+              setEditingUnpaidRent(null);
+            }}>×</button>
             </div>
             <div className="modal-body">
               <form onSubmit={handleUpdateUnpaidRent}>
@@ -6951,59 +6714,59 @@ const SalesManagerDashboard = () => {
                   </div>
                   <div className="form-group">
                     <label htmlFor="unpaid-amount">Total Amount (XOF)</label>
-                    <input 
-                      type="number" 
-                      name="amount" 
-                      id="unpaid-amount"
-                      step="0.01"
-                      defaultValue={editingUnpaidRent.Amount || 0}
-                      required
-                    />
+                    <input
+                    type="number"
+                    name="amount"
+                    id="unpaid-amount"
+                    step="0.01"
+                    defaultValue={editingUnpaidRent.Amount || 0}
+                    required />
+                  
                   </div>
                 </div>
 
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="unpaid-paid-amount">Paid Amount (XOF)</label>
-                    <input 
-                      type="number" 
-                      name="paidAmount" 
-                      id="unpaid-paid-amount"
-                      step="0.01"
-                      defaultValue={editingUnpaidRent.PaidAmount || editingUnpaidRent.paidAmount || 0}
-                    />
+                    <input
+                    type="number"
+                    name="paidAmount"
+                    id="unpaid-paid-amount"
+                    step="0.01"
+                    defaultValue={editingUnpaidRent.PaidAmount || editingUnpaidRent.paidAmount || 0} />
+                  
                   </div>
                   <div className="form-group">
                     <label htmlFor="unpaid-payment-date">Payment Date</label>
-                    <input 
-                      type="date" 
-                      name="paymentDate" 
-                      id="unpaid-payment-date"
-                      defaultValue={editingUnpaidRent.PaymentDate ? new Date(editingUnpaidRent.PaymentDate).toISOString().split('T')[0] : ''}
-                    />
+                    <input
+                    type="date"
+                    name="paymentDate"
+                    id="unpaid-payment-date"
+                    defaultValue={editingUnpaidRent.PaymentDate ? new Date(editingUnpaidRent.PaymentDate).toISOString().split('T')[0] : ''} />
+                  
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="unpaid-notes">Notes</label>
-                  <textarea 
-                    name="notes" 
-                    id="unpaid-notes"
-                    rows="3"
-                    defaultValue={editingUnpaidRent.Notes || editingUnpaidRent.notes || ''}
-                    placeholder="Add any notes about this payment..."
-                  />
+                  <textarea
+                  name="notes"
+                  id="unpaid-notes"
+                  rows="3"
+                  defaultValue={editingUnpaidRent.Notes || editingUnpaidRent.notes || ''}
+                  placeholder="Add any notes about this payment..." />
+                
                 </div>
 
                 <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="action-button secondary" 
-                    onClick={() => {
-                      setShowUnpaidRentModal(false);
-                      setEditingUnpaidRent(null);
-                    }}
-                  >
+                  <button
+                  type="button"
+                  className="action-button secondary"
+                  onClick={() => {
+                    setShowUnpaidRentModal(false);
+                    setEditingUnpaidRent(null);
+                  }}>
+                  
                     Cancel
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
@@ -7014,23 +6777,21 @@ const SalesManagerDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Create Property Modal */}
-      {showCreatePropertyModal && (
-        <div className="modal-overlay" onClick={() => {
-          setShowCreatePropertyModal(false);
-          setSelectedPropertyType('');
-          setCreatePropertyImages([]);
-        }}>
+      }
+      {showCreatePropertyModal &&
+      <div className="modal-overlay" onClick={() => {
+        setShowCreatePropertyModal(false);
+        setSelectedPropertyType('');
+        setCreatePropertyImages([]);
+      }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Create Property</h3>
               <button className="modal-close" onClick={() => {
-                setShowCreatePropertyModal(false);
-                setSelectedPropertyType('');
-                setCreatePropertyImages([]);
-              }}>×</button>
+              setShowCreatePropertyModal(false);
+              setSelectedPropertyType('');
+              setCreatePropertyImages([]);
+            }}>×</button>
             </div>
             <div className="modal-body">
               <form onSubmit={handleCreateProperty}>
@@ -7038,31 +6799,31 @@ const SalesManagerDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="create-name">Property Name *</label>
                     <input
-                      type="text"
-                      name="name"
-                      id="create-name"
-                      required
-                      placeholder="e.g. Abobo Residence"
-                    />
+                    type="text"
+                    name="name"
+                    id="create-name"
+                    required
+                    placeholder="e.g. Abobo Residence" />
+                  
                   </div>
                   <div className="form-group">
                     <label htmlFor="create-address">Address *</label>
                     <input
-                      type="text"
-                      name="address"
-                      id="create-address"
-                      required
-                      placeholder="123 Main St, Apt 4B"
-                    />
+                    type="text"
+                    name="address"
+                    id="create-address"
+                    required
+                    placeholder="123 Main St, Apt 4B" />
+                  
                   </div>
                   <div className="form-group">
                     <label htmlFor="create-type">Building Type *</label>
-                    <select 
-                      name="type" 
-                      id="create-type" 
-                      required
-                      onChange={(e) => setShowPropertyBuildingType(e.target.value === 'Apartment')}
-                    >
+                    <select
+                    name="type"
+                    id="create-type"
+                    required
+                    onChange={(e) => setShowPropertyBuildingType(e.target.value === 'Apartment')}>
+                    
                       <option value="">Select Building Type</option>
                       <option value="Apartment">Apartment</option>
                       <option value="House">House</option>
@@ -7075,19 +6836,19 @@ const SalesManagerDashboard = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="create-property-type">Property Type (For Sale or Rent) *</label>
-                    <select 
-                      name="propertyType" 
-                      id="create-property-type" 
-                      required
-                      onChange={(e) => setSelectedPropertyType(e.target.value)}
-                    >
+                    <select
+                    name="propertyType"
+                    id="create-property-type"
+                    required
+                    onChange={(e) => setSelectedPropertyType(e.target.value)}>
+                    
                       <option value="">Select Property Type</option>
                       <option value="For Sale">For Sale</option>
                       <option value="For Rent">For Rent</option>
                     </select>
                   </div>
-                  {showPropertyBuildingType && (
-                    <div className="form-group">
+                  {showPropertyBuildingType &&
+                <div className="form-group">
                       <label htmlFor="create-building-type">Building Type (if Apartment) *</label>
                       <select name="buildingType" id="create-building-type" required>
                         <option value="">Select Building Type</option>
@@ -7098,7 +6859,7 @@ const SalesManagerDashboard = () => {
                         <option value="Penthouse">Penthouse</option>
                       </select>
                     </div>
-                  )}
+                }
                 </div>
 
                 <div className="form-row">
@@ -7113,139 +6874,139 @@ const SalesManagerDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="create-number-of-units">Number of Units *</label>
                     <input
-                      type="number"
-                      name="numberOfUnits"
-                      id="create-number-of-units"
-                      required
-                      min="1"
-                      value={createPropertyNumberOfUnits}
-                      onChange={(e) => setCreatePropertyUnitsCount(e.target.value)}
-                      placeholder="e.g. 10"
-                    />
+                    type="number"
+                    name="numberOfUnits"
+                    id="create-number-of-units"
+                    required
+                    min="1"
+                    value={createPropertyNumberOfUnits}
+                    onChange={(e) => setCreatePropertyUnitsCount(e.target.value)}
+                    placeholder="e.g. 10" />
+                  
                     <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                       Total number of units/apartments. You will define each unit below (name, rent, bedrooms, status, tenant).
                     </small>
                   </div>
                 </div>
 
-                {createPropertyNumberOfUnits > 0 && (
-                  <div className="form-group" style={{ marginTop: '16px' }}>
+                {createPropertyNumberOfUnits > 0 &&
+              <div className="form-group" style={{ marginTop: '16px' }}>
                     <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Unit details</label>
                     <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '12px' }}>
                       Enter name (e.g. F1, House A, 101), bedrooms, rent, and status for each unit. If filled, select the tenant.
                     </p>
                     <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px' }}>
-                      {createPropertyUnits.slice(0, createPropertyNumberOfUnits).map((unit, index) => (
-                        <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                      {createPropertyUnits.slice(0, createPropertyNumberOfUnits).map((unit, index) =>
+                  <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
                           <div style={{ fontWeight: 600, marginBottom: '8px', color: '#374151' }}>Unit {index + 1}</div>
                 <div className="form-row">
                   <div className="form-group">
                               <label>Unit name *</label>
                               <input
-                                type="text"
-                                value={unit.unitNumber}
-                                onChange={(e) => updateCreatePropertyUnit(index, 'unitNumber', e.target.value)}
-                                placeholder="e.g. F1, House A, 101"
-                              />
+                          type="text"
+                          value={unit.unitNumber}
+                          onChange={(e) => updateCreatePropertyUnit(index, 'unitNumber', e.target.value)}
+                          placeholder="e.g. F1, House A, 101" />
+                        
                             </div>
                             <div className="form-group">
                               <label>Bedrooms</label>
                               <select
-                                value={unit.bedrooms}
-                                onChange={(e) => updateCreatePropertyUnit(index, 'bedrooms', parseInt(e.target.value, 10))}
-                              >
-                                {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                          value={unit.bedrooms}
+                          onChange={(e) => updateCreatePropertyUnit(index, 'bedrooms', parseInt(e.target.value, 10))}>
+                          
+                                {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
                               </select>
                             </div>
                             <div className="form-group">
                               <label>{selectedPropertyType === 'For Sale' ? 'Price (XOF)' : 'Rent (XOF)'} *</label>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                                value={unit.rent}
-                                onChange={(e) => updateCreatePropertyUnit(index, 'rent', e.target.value)}
-                                placeholder="0"
-                    />
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={unit.rent}
+                          onChange={(e) => updateCreatePropertyUnit(index, 'rent', e.target.value)}
+                          placeholder="0" />
+                        
                   </div>
                 </div>
                           <div className="form-row">
                             <div className="form-group">
                               <label>Status</label>
                               <select
-                                value={unit.status}
-                                onChange={(e) => updateCreatePropertyUnit(index, 'status', e.target.value)}
-                              >
+                          value={unit.status}
+                          onChange={(e) => updateCreatePropertyUnit(index, 'status', e.target.value)}>
+                          
                                 <option value="Vacant">Vacant</option>
                                 <option value="Occupied">Filled</option>
                               </select>
                             </div>
-                            {unit.status === 'Occupied' && (
-                              <div className="form-group" style={{ flex: 1 }}>
+                            {unit.status === 'Occupied' &&
+                      <div className="form-group" style={{ flex: 1 }}>
                                 <label>Tenant</label>
                                 <select
-                                  value={unit.tenant || ''}
-                                  onChange={(e) => updateCreatePropertyUnit(index, 'tenant', e.target.value)}
-                                >
+                          value={unit.tenant || ''}
+                          onChange={(e) => updateCreatePropertyUnit(index, 'tenant', e.target.value)}>
+                          
                                   <option value="">Select tenant</option>
-                                  {clients.map(c => (
-                                    <option key={c.id || c.ID} value={c.name || c.Name || c.email || c.Email}>
+                                  {clients.map((c) =>
+                          <option key={c.id || c.ID} value={c.name || c.Name || c.email || c.Email}>
                                       {c.name || c.Name || c.email || c.Email}
                                     </option>
-                                  ))}
+                          )}
                                 </select>
                               </div>
-                            )}
+                      }
                           </div>
                         </div>
-                      ))}
+                  )}
                     </div>
                   </div>
-                )}
+              }
 
-                {createPropertyNumberOfUnits === 1 && (
-                  <div className="form-row" style={{ marginTop: '12px' }}>
+                {createPropertyNumberOfUnits === 1 &&
+              <div className="form-row" style={{ marginTop: '12px' }}>
                     <div className="form-group">
                       <label>Total rent (from unit above)</label>
                       <input type="text" readOnly value={createPropertyUnits[0]?.rent ? `${Number(createPropertyUnits[0].rent).toLocaleString()} XOF` : '—'} style={{ background: '#f3f4f6' }} />
                     </div>
                   </div>
-                )}
-                {createPropertyNumberOfUnits > 1 && (
-                  <div className="form-row" style={{ marginTop: '12px' }}>
+              }
+                {createPropertyNumberOfUnits > 1 &&
+              <div className="form-row" style={{ marginTop: '12px' }}>
                     <div className="form-group">
                       <label>Total rent (sum of all units)</label>
                       <input
-                        type="text"
-                        readOnly
-                        value={`${createPropertyUnits.slice(0, createPropertyNumberOfUnits).reduce((s, u) => s + (parseFloat(u.rent) || 0), 0).toLocaleString()} XOF`}
-                        style={{ background: '#f3f4f6' }}
-                      />
+                    type="text"
+                    readOnly
+                    value={`${createPropertyUnits.slice(0, createPropertyNumberOfUnits).reduce((s, u) => s + (parseFloat(u.rent) || 0), 0).toLocaleString()} XOF`}
+                    style={{ background: '#f3f4f6' }} />
+                  
                     </div>
                   </div>
-                )}
+              }
 
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="create-bedrooms">Bedrooms</label>
                     <input
-                      type="number"
-                      name="bedrooms"
-                      id="create-bedrooms"
-                      min="0"
-                      placeholder="2"
-                    />
+                    type="number"
+                    name="bedrooms"
+                    id="create-bedrooms"
+                    min="0"
+                    placeholder="2" />
+                  
                   </div>
                   <div className="form-group">
                     <label htmlFor="create-bathrooms">Bathrooms</label>
                     <input
-                      type="number"
-                      name="bathrooms"
-                      id="create-bathrooms"
-                      step="0.5"
-                      min="0"
-                      placeholder="1.5"
-                    />
+                    type="number"
+                    name="bathrooms"
+                    id="create-bathrooms"
+                    step="0.5"
+                    min="0"
+                    placeholder="1.5" />
+                  
                   </div>
                 </div>
 
@@ -7265,48 +7026,48 @@ const SalesManagerDashboard = () => {
                     <label htmlFor="create-owner">Owner *</label>
                     <select name="owner" id="create-owner" required>
                       <option value="">Select Owner</option>
-                      {owners.map(owner => (
-                        <option key={owner.id || owner.ID} value={owner.id || owner.ID}>
+                      {owners.map((owner) =>
+                    <option key={owner.id || owner.ID} value={owner.id || owner.ID}>
                           {owner.name || owner.Name} ({owner.email || owner.Email})
                         </option>
-                      ))}
+                    )}
                     </select>
-                    {owners.length === 0 && (
-                      <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
+                    {owners.length === 0 &&
+                  <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
                         No owners available. Please ask Agency Director to add owners first.
                       </small>
-                    )}
+                  }
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label>Property images</label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    disabled={uploadingImage}
-                    onChange={(e) => { const files = e.target.files; if (files?.length) handlePropertyImageUpload(files, false); e.target.value = ''; }}
-                  />
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={uploadingImage}
+                  onChange={(e) => {const files = e.target.files;if (files?.length) handlePropertyImageUpload(files, false);e.target.value = '';}} />
+                
                   {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
-                  {createPropertyImages.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                      {createPropertyImages.map((url, i) => (
-                        <div key={i} style={{ position: 'relative' }}>
+                  {createPropertyImages.length > 0 &&
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {createPropertyImages.map((url, i) =>
+                  <div key={i} style={{ position: 'relative' }}>
                           <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
-                          <button type="button" onClick={() => setCreatePropertyImages(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
+                          <button type="button" onClick={() => setCreatePropertyImages((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
                         </div>
-                      ))}
-                    </div>
                   )}
+                    </div>
+                }
                 </div>
 
                 <div className="modal-footer">
                   <button
-                    type="button"
-                    className="action-button secondary"
-                    onClick={() => setShowCreatePropertyModal(false)}
-                  >
+                  type="button"
+                  className="action-button secondary"
+                  onClick={() => setShowCreatePropertyModal(false)}>
+                  
                     Cancel
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
@@ -7317,15 +7078,13 @@ const SalesManagerDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Add Building Modal (Property Management) */}
-      {showAddBuildingModal && (
-        <div className="modal-overlay" onClick={() => { setShowAddBuildingModal(false); setPmAddFormImages([]); }}>
+      }
+      {showAddBuildingModal &&
+      <div className="modal-overlay" onClick={() => {setShowAddBuildingModal(false);setPmAddFormImages([]);}}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add Building</h3>
-              <button className="modal-close" onClick={() => { setShowAddBuildingModal(false); setPmAddFormImages([]); }}>×</button>
+              <button className="modal-close" onClick={() => {setShowAddBuildingModal(false);setPmAddFormImages([]);}}>×</button>
             </div>
             <form onSubmit={handleAddBuilding}>
               <div className="modal-body">
@@ -7361,32 +7120,30 @@ const SalesManagerDashboard = () => {
                 </div>
                 <div className="form-group">
                   <label>Pictures</label>
-                  <input type="file" accept="image/*" multiple disabled={uploadingImage} onChange={(e) => { const f = e.target.files; if (f?.length) handlePmAddFormImageUpload(f); e.target.value = ''; }} />
+                  <input type="file" accept="image/*" multiple disabled={uploadingImage} onChange={(e) => {const f = e.target.files;if (f?.length) handlePmAddFormImageUpload(f);e.target.value = '';}} />
                   {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
-                  {pmAddFormImages.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                      {pmAddFormImages.map((url, i) => (
-                        <div key={i} style={{ position: 'relative' }}>
+                  {pmAddFormImages.length > 0 &&
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {pmAddFormImages.map((url, i) =>
+                  <div key={i} style={{ position: 'relative' }}>
                           <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
-                          <button type="button" onClick={() => setPmAddFormImages(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
+                          <button type="button" onClick={() => setPmAddFormImages((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
                         </div>
-                      ))}
-                    </div>
                   )}
+                    </div>
+                }
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="action-button secondary" onClick={() => { setShowAddBuildingModal(false); setPmAddFormImages([]); }}>Cancel</button>
+                <button type="button" className="action-button secondary" onClick={() => {setShowAddBuildingModal(false);setPmAddFormImages([]);}}>Cancel</button>
                 <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Creating...' : 'Add Building'}</button>
               </div>
             </form>
           </div>
         </div>
-      )}
-
-      {/* Add Villa Modal (Property Management) */}
-      {showAddVillaModal && (
-        <div className="modal-overlay" onClick={() => setShowAddVillaModal(false)}>
+      }
+      {showAddVillaModal &&
+      <div className="modal-overlay" onClick={() => setShowAddVillaModal(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add Villa</h3>
@@ -7452,11 +7209,9 @@ const SalesManagerDashboard = () => {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Add Land Modal (Property Management) */}
-      {showAddLandModal && (
-        <div className="modal-overlay" onClick={() => setShowAddLandModal(false)}>
+      }
+      {showAddLandModal &&
+      <div className="modal-overlay" onClick={() => setShowAddLandModal(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add Land</h3>
@@ -7503,15 +7258,13 @@ const SalesManagerDashboard = () => {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Add Apartment Modal (Property Management – for building or standalone) */}
-      {showAddApartmentModal && (
-        <div className="modal-overlay" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPictures([]); }}>
+      }
+      {showAddApartmentModal &&
+      <div className="modal-overlay" onClick={() => {setShowAddApartmentModal(false);setAddApartmentPictures([]);}}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{pmPropertyId && (pmView === 'building-detail' || pmView === 'villa-detail') ? 'Add Apartment to ' + pmBuildingName : 'Add Apartment'}</h3>
-              <button className="modal-close" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPictures([]); }}>×</button>
+              <button className="modal-close" onClick={() => {setShowAddApartmentModal(false);setAddApartmentPictures([]);}}>×</button>
             </div>
             <form onSubmit={handleAddApartment}>
               <div className="modal-body">
@@ -7569,58 +7322,56 @@ const SalesManagerDashboard = () => {
                 <div className="form-group">
                   <label>Apartment photos</label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    disabled={uploadingImage}
-                    onChange={async (e) => {
-                      const files = e.target.files;
-                      if (!files?.length) return;
-                      setUploadingImage(true);
-                      try {
-                        for (const file of Array.from(files)) {
-                          if (!file.type?.startsWith('image/')) continue;
-                          const result = await cloudinaryService.uploadFile(file, 'property-images');
-                          if (result.success && result.url) setAddApartmentPictures(prev => [...prev, result.url]);
-                        }
-                      } catch (err) {
-                        addNotification('Failed to upload image', 'error');
-                      } finally {
-                        setUploadingImage(false);
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={uploadingImage}
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files?.length) return;
+                    setUploadingImage(true);
+                    try {
+                      for (const file of Array.from(files)) {
+                        if (!file.type?.startsWith('image/')) continue;
+                        const result = await cloudinaryService.uploadFile(file, 'property-images');
+                        if (result.success && result.url) setAddApartmentPictures((prev) => [...prev, result.url]);
                       }
-                      e.target.value = '';
-                    }}
-                  />
+                    } catch (err) {
+                      addNotification('Failed to upload image', 'error');
+                    } finally {
+                      setUploadingImage(false);
+                    }
+                    e.target.value = '';
+                  }} />
+                
                   <small style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '4px' }}>You can select multiple photos (e.g. 5 or more).</small>
                   {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
-                  {addApartmentPictures.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                      {addApartmentPictures.map((url, i) => (
-                        <div key={i} style={{ position: 'relative' }}>
+                  {addApartmentPictures.length > 0 &&
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {addApartmentPictures.map((url, i) =>
+                  <div key={i} style={{ position: 'relative' }}>
                           <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
-                          <button type="button" onClick={() => setAddApartmentPictures(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
+                          <button type="button" onClick={() => setAddApartmentPictures((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
                         </div>
-                      ))}
-                    </div>
                   )}
+                    </div>
+                }
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="action-button secondary" onClick={() => { setShowAddApartmentModal(false); setAddApartmentPictures([]); }}>Cancel</button>
+                <button type="button" className="action-button secondary" onClick={() => {setShowAddApartmentModal(false);setAddApartmentPictures([]);}}>Cancel</button>
                 <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Adding...' : 'Add Apartment'}</button>
               </div>
             </form>
           </div>
         </div>
-      )}
-
-      {/* Edit Apartment Modal (full details aligned with state of entry/exit) */}
-      {showEditApartmentModal && editingUnit && (
-        <div className="modal-overlay" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPictures([]); setEditApartmentStatusChoice('Vacant'); }}>
+      }
+      {showEditApartmentModal && editingUnit &&
+      <div className="modal-overlay" onClick={() => {setShowEditApartmentModal(false);setEditingUnit(null);setEditApartmentPictures([]);setEditApartmentStatusChoice('Vacant');}}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Edit apartment – {editingUnit.unitNumber || 'Unit'}</h3>
-              <button className="modal-close" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPictures([]); setEditApartmentStatusChoice('Vacant'); }}>×</button>
+              <button className="modal-close" onClick={() => {setShowEditApartmentModal(false);setEditingUnit(null);setEditApartmentPictures([]);setEditApartmentStatusChoice('Vacant');}}>×</button>
             </div>
             <form onSubmit={handleEditApartment}>
               <div className="modal-body">
@@ -7631,7 +7382,7 @@ const SalesManagerDashboard = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Type of property (as in state of entry/exit)</label>
-                    <select name="editApartmentPropertyType" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.unitType || ''; } catch { return ''; } })()) || ''}>
+                    <select name="editApartmentPropertyType" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.unitType || '';} catch {return '';}})() || ''}>
                       <option value="">Select</option>
                       <option value="Studio">Studio</option>
                       <option value="Apartment">Apartment</option>
@@ -7649,11 +7400,11 @@ const SalesManagerDashboard = () => {
                   </div>
                   <div className="form-group">
                     <label>Number of kitchens</label>
-                    <input type="number" name="editApartmentKitchens" min="0" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.numberOfKitchens ?? 0; } catch { return 0; } })()) || 0} placeholder="e.g. 1" />
+                    <input type="number" name="editApartmentKitchens" min="0" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.numberOfKitchens ?? 0;} catch {return 0;}})() || 0} placeholder="e.g. 1" />
                   </div>
                   <div className="form-group">
                     <label>Swimming pool</label>
-                    <select name="editApartmentSwimmingPool" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.hasSwimmingPool ? 'yes' : 'no'; } catch { return 'no'; } })()) || 'no'}>
+                    <select name="editApartmentSwimmingPool" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.hasSwimmingPool ? 'yes' : 'no';} catch {return 'no';}})() || 'no'}>
                       <option value="no">No</option>
                       <option value="yes">Yes</option>
                     </select>
@@ -7663,43 +7414,43 @@ const SalesManagerDashboard = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Floor</label>
-                    <input type="text" name="editApartmentFloor" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.floor || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 2" />
+                    <input type="text" name="editApartmentFloor" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.floor || '';} catch {return '';}})() || ''} placeholder="e.g. 2" />
                   </div>
                   <div className="form-group">
                     <label>Standard rooms</label>
-                    <input type="text" name="editApartmentStandardRooms" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.standardRooms || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 2" />
+                    <input type="text" name="editApartmentStandardRooms" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.standardRooms || '';} catch {return '';}})() || ''} placeholder="e.g. 2" />
                   </div>
                   <div className="form-group">
                     <label>Self-contained rooms</label>
-                    <input type="text" name="editApartmentSelfContainedRooms" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.selfContainedRooms || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                    <input type="text" name="editApartmentSelfContainedRooms" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.selfContainedRooms || '';} catch {return '';}})() || ''} placeholder="e.g. 1" />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Bathroom</label>
-                    <input type="text" name="editApartmentBathroom" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.bathroom || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                    <input type="text" name="editApartmentBathroom" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.bathroom || '';} catch {return '';}})() || ''} placeholder="e.g. 1" />
                   </div>
                   <div className="form-group">
                     <label>Guest toilet</label>
-                    <input type="text" name="editApartmentGuestToilet" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.guestToilet || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                    <input type="text" name="editApartmentGuestToilet" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.guestToilet || '';} catch {return '';}})() || ''} placeholder="e.g. 1" />
                   </div>
                   <div className="form-group">
                     <label>Living room</label>
-                    <input type="text" name="editApartmentLivingRoom" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.livingRoom || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                    <input type="text" name="editApartmentLivingRoom" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.livingRoom || '';} catch {return '';}})() || ''} placeholder="e.g. 1" />
                   </div>
                   <div className="form-group">
                     <label>Kitchen</label>
-                    <input type="text" name="editApartmentKitchen" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.kitchen || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                    <input type="text" name="editApartmentKitchen" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.kitchen || '';} catch {return '';}})() || ''} placeholder="e.g. 1" />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Balcony</label>
-                    <input type="text" name="editApartmentBalcony" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.balcony || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                    <input type="text" name="editApartmentBalcony" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.balcony || '';} catch {return '';}})() || ''} placeholder="e.g. 1" />
                   </div>
                   <div className="form-group">
                     <label>Parking</label>
-                    <input type="text" name="editApartmentParking" defaultValue={(typeof editingUnit.features === 'string' && (() => { try { const f = JSON.parse(editingUnit.features); return f?.parking || ''; } catch { return ''; } })()) || ''} placeholder="e.g. 1" />
+                    <input type="text" name="editApartmentParking" defaultValue={typeof editingUnit.features === 'string' && (() => {try {const f = JSON.parse(editingUnit.features);return f?.parking || '';} catch {return '';}})() || ''} placeholder="e.g. 1" />
                   </div>
                 </div>
                 <div className="form-row">
@@ -7710,82 +7461,80 @@ const SalesManagerDashboard = () => {
                   <div className="form-group">
                     <label>Status</label>
                     <select
-                      name="editApartmentStatus"
-                      value={editApartmentStatusChoice}
-                      onChange={(e) => setEditApartmentStatusChoice(e.target.value)}
-                    >
+                    name="editApartmentStatus"
+                    value={editApartmentStatusChoice}
+                    onChange={(e) => setEditApartmentStatusChoice(e.target.value)}>
+                    
                       <option value="Vacant">Vacant</option>
                       <option value="Occupied">Occupied</option>
                     </select>
                   </div>
-                  {editApartmentStatusChoice === 'Occupied' && (
-                    <>
+                  {editApartmentStatusChoice === 'Occupied' &&
+                <>
                       <div className="form-group">
                         <label>Tenant</label>
                         <input type="text" name="editApartmentTenant" defaultValue={editingUnit.tenant || ''} placeholder="Tenant name" />
                       </div>
                       <div className="form-group">
                         <label>Enter date</label>
-                        <input type="date" name="editApartmentEnterDate" defaultValue={editingUnit.enterDate ? (editingUnit.enterDate.includes('/') ? (() => { const p = editingUnit.enterDate.split('/'); if (p.length !== 3) return ''; const y = String(p[2]).length === 2 ? '20' + p[2] : p[2]; return `${y}-${String(p[1]).padStart(2,'0')}-${String(p[0]).padStart(2,'0')}`; })() : editingUnit.enterDate) : ''} />
+                        <input type="date" name="editApartmentEnterDate" defaultValue={editingUnit.enterDate ? editingUnit.enterDate.includes('/') ? (() => {const p = editingUnit.enterDate.split('/');if (p.length !== 3) return '';const y = String(p[2]).length === 2 ? '20' + p[2] : p[2];return `${y}-${String(p[1]).padStart(2, '0')}-${String(p[0]).padStart(2, '0')}`;})() : editingUnit.enterDate : ''} />
                       </div>
                     </>
-                  )}
+                }
                 </div>
                 <div className="form-group">
                   <label>Apartment photos</label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    disabled={uploadingImage}
-                    onChange={async (e) => {
-                      const files = e.target.files;
-                      if (!files?.length) return;
-                      setUploadingImage(true);
-                      try {
-                        for (const file of Array.from(files)) {
-                          if (!file.type?.startsWith('image/')) continue;
-                          const result = await cloudinaryService.uploadFile(file, 'property-images');
-                          if (result.success && result.url) setEditApartmentPictures(prev => [...prev, result.url]);
-                        }
-                      } catch (err) {
-                        addNotification('Failed to upload image', 'error');
-                      } finally {
-                        setUploadingImage(false);
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={uploadingImage}
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files?.length) return;
+                    setUploadingImage(true);
+                    try {
+                      for (const file of Array.from(files)) {
+                        if (!file.type?.startsWith('image/')) continue;
+                        const result = await cloudinaryService.uploadFile(file, 'property-images');
+                        if (result.success && result.url) setEditApartmentPictures((prev) => [...prev, result.url]);
                       }
-                      e.target.value = '';
-                    }}
-                  />
+                    } catch (err) {
+                      addNotification('Failed to upload image', 'error');
+                    } finally {
+                      setUploadingImage(false);
+                    }
+                    e.target.value = '';
+                  }} />
+                
                   <small style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '4px' }}>You can select multiple photos (e.g. 5 or more).</small>
                   {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
-                  {editApartmentPictures.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                      {editApartmentPictures.map((url, i) => (
-                        <div key={i} style={{ position: 'relative' }}>
+                  {editApartmentPictures.length > 0 &&
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {editApartmentPictures.map((url, i) =>
+                  <div key={i} style={{ position: 'relative' }}>
                           <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
-                          <button type="button" onClick={() => setEditApartmentPictures(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
+                          <button type="button" onClick={() => setEditApartmentPictures((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
                         </div>
-                      ))}
-                    </div>
                   )}
+                    </div>
+                }
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="action-button secondary" onClick={() => { setShowEditApartmentModal(false); setEditingUnit(null); setEditApartmentPictures([]); setEditApartmentStatusChoice('Vacant'); }}>Cancel</button>
+                <button type="button" className="action-button secondary" onClick={() => {setShowEditApartmentModal(false);setEditingUnit(null);setEditApartmentPictures([]);setEditApartmentStatusChoice('Vacant');}}>Cancel</button>
                 <button type="submit" className="action-button primary" disabled={loading}>{loading ? 'Saving...' : 'Save apartment'}</button>
               </div>
             </form>
           </div>
         </div>
-      )}
-
-      {/* View Apartment Modal – full details + clickable photos */}
-      {showViewApartmentModal && viewingUnit && (
-        <div className="modal-overlay" onClick={() => { setShowViewApartmentModal(false); setViewingUnit(null); }}>
+      }
+      {showViewApartmentModal && viewingUnit &&
+      <div className="modal-overlay" onClick={() => {setShowViewApartmentModal(false);setViewingUnit(null);}}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Apartment – {viewingUnit.unitNumber || 'Unit'}</h3>
-              <button className="modal-close" onClick={() => { setShowViewApartmentModal(false); setViewingUnit(null); }}>×</button>
+              <button className="modal-close" onClick={() => {setShowViewApartmentModal(false);setViewingUnit(null);}}>×</button>
             </div>
             <div className="modal-body" style={{ padding: '20px' }}>
               <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
@@ -7798,48 +7547,46 @@ const SalesManagerDashboard = () => {
                 <div><strong>Status</strong>: {viewingUnit.status || viewingUnit.statut || '—'}</div>
                 <div><strong>Enter date</strong>: {viewingUnit.enterDate || '—'}</div>
               </div>
-              {parseUnitPictures(viewingUnit.picture).length > 0 && (
-                <div style={{ marginTop: '16px' }}>
+              {parseUnitPictures(viewingUnit.picture).length > 0 &&
+            <div style={{ marginTop: '16px' }}>
                   <strong>Photos</strong>
                   <small style={{ display: 'block', color: '#6b7280', marginTop: '4px' }}>Click an image to expand</small>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px' }}>
-                    {parseUnitPictures(viewingUnit.picture).map((url, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setExpandedImageUrl(url)}
-                        style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden' }}
-                      >
+                    {parseUnitPictures(viewingUnit.picture).map((url, i) =>
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setExpandedImageUrl(url)}
+                  style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden' }}>
+                  
                         <img src={url} alt="" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
                       </button>
-                    ))}
+                )}
                   </div>
                 </div>
-              )}
+            }
             </div>
             <div className="modal-footer" style={{ borderTop: '1px solid #e5e7eb', padding: '12px 20px' }}>
-              <button type="button" className="action-button secondary" onClick={() => { setShowViewApartmentModal(false); setViewingUnit(null); }}>Close</button>
-              <button type="button" className="action-button primary" onClick={() => { setShowViewApartmentModal(false); setViewingUnit(null); setEditingUnit(viewingUnit); setEditApartmentPictures(parseUnitPictures(viewingUnit.picture)); setEditApartmentStatusChoice((viewingUnit.status || viewingUnit.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }}>Edit</button>
+              <button type="button" className="action-button secondary" onClick={() => {setShowViewApartmentModal(false);setViewingUnit(null);}}>Close</button>
+              <button type="button" className="action-button primary" onClick={() => {setShowViewApartmentModal(false);setViewingUnit(null);setEditingUnit(viewingUnit);setEditApartmentPictures(parseUnitPictures(viewingUnit.picture));setEditApartmentStatusChoice((viewingUnit.status || viewingUnit.statut || 'Vacant').toString());setShowEditApartmentModal(true);}}>Edit</button>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Edit Property Modal */}
-      {showEditPropertyModal && editingProperty && (
-        <div className="modal-overlay" onClick={() => {
-          setShowEditPropertyModal(false);
-          setEditingProperty(null);
-          setSelectedPropertyType('');
-        }}>
+      }
+      {showEditPropertyModal && editingProperty &&
+      <div className="modal-overlay" onClick={() => {
+        setShowEditPropertyModal(false);
+        setEditingProperty(null);
+        setSelectedPropertyType('');
+      }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Edit Property</h3>
               <button className="modal-close" onClick={() => {
-                setShowEditPropertyModal(false);
-                setEditingProperty(null);
-                setSelectedPropertyType('');
-              }}>×</button>
+              setShowEditPropertyModal(false);
+              setEditingProperty(null);
+              setSelectedPropertyType('');
+            }}>×</button>
             </div>
             <div className="modal-body">
               <form onSubmit={handleUpdateProperty}>
@@ -7847,21 +7594,21 @@ const SalesManagerDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="edit-address">Address</label>
                     <input
-                      type="text"
-                      name="address"
-                      id="edit-address"
-                      defaultValue={editingProperty.Address || editingProperty.address || ''}
-                      placeholder="123 Main St, Apt 4B"
-                    />
+                    type="text"
+                    name="address"
+                    id="edit-address"
+                    defaultValue={editingProperty.Address || editingProperty.address || ''}
+                    placeholder="123 Main St, Apt 4B" />
+                  
                   </div>
                   <div className="form-group">
                     <label htmlFor="edit-type">Building Type</label>
-                    <select 
-                      name="type" 
-                      id="edit-type" 
-                      defaultValue={editingProperty.Type || editingProperty.type || ''}
-                      onChange={(e) => setShowPropertyBuildingType(e.target.value === 'Apartment')}
-                    >
+                    <select
+                    name="type"
+                    id="edit-type"
+                    defaultValue={editingProperty.Type || editingProperty.type || ''}
+                    onChange={(e) => setShowPropertyBuildingType(e.target.value === 'Apartment')}>
+                    
                       <option value="">Select Building Type</option>
                       <option value="Apartment">Apartment</option>
                       <option value="House">House</option>
@@ -7874,19 +7621,19 @@ const SalesManagerDashboard = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="edit-property-type">Property Type (For Sale or Rent)</label>
-                    <select 
-                      name="propertyType" 
-                      id="edit-property-type" 
-                      defaultValue={editingProperty.PropertyType || editingProperty.propertyType || ''}
-                      onChange={(e) => setSelectedPropertyType(e.target.value)}
-                    >
+                    <select
+                    name="propertyType"
+                    id="edit-property-type"
+                    defaultValue={editingProperty.PropertyType || editingProperty.propertyType || ''}
+                    onChange={(e) => setSelectedPropertyType(e.target.value)}>
+                    
                       <option value="">Select Property Type</option>
                       <option value="For Sale">For Sale</option>
                       <option value="For Rent">For Rent</option>
                     </select>
                   </div>
-                  {(showPropertyBuildingType || (editingProperty.Type || editingProperty.type) === 'Apartment') && (
-                    <div className="form-group">
+                  {(showPropertyBuildingType || (editingProperty.Type || editingProperty.type) === 'Apartment') &&
+                <div className="form-group">
                       <label htmlFor="edit-building-type">Building Type (if Apartment)</label>
                       <select name="buildingType" id="edit-building-type" defaultValue={editingProperty.BuildingType || editingProperty.buildingType || ''}>
                         <option value="">Select Building Type</option>
@@ -7897,7 +7644,7 @@ const SalesManagerDashboard = () => {
                         <option value="Penthouse">Penthouse</option>
                       </select>
                     </div>
-                  )}
+                }
                 </div>
 
                 <div className="form-row">
@@ -7912,48 +7659,48 @@ const SalesManagerDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="edit-number-of-units">Number of Units</label>
                     <input
-                      type="number"
-                      name="numberOfUnits"
-                      id="edit-number-of-units"
-                      min="1"
-                      value={editPropertyNumberOfUnits}
-                      onChange={(e) => setEditPropertyUnitsCount(e.target.value)}
-                    />
+                    type="number"
+                    name="numberOfUnits"
+                    id="edit-number-of-units"
+                    min="1"
+                    value={editPropertyNumberOfUnits}
+                    onChange={(e) => setEditPropertyUnitsCount(e.target.value)} />
+                  
                   </div>
                 </div>
 
-                {editPropertyNumberOfUnits > 0 && (
-                  <div className="form-group" style={{ marginTop: '16px' }}>
+                {editPropertyNumberOfUnits > 0 &&
+              <div className="form-group" style={{ marginTop: '16px' }}>
                     <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Unit details</label>
                     <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px' }}>
-                      {editPropertyUnits.slice(0, editPropertyNumberOfUnits).map((unit, index) => (
-                        <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                      {editPropertyUnits.slice(0, editPropertyNumberOfUnits).map((unit, index) =>
+                  <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
                           <div style={{ fontWeight: 600, marginBottom: '8px', color: '#374151' }}>Unit {index + 1}</div>
                 <div className="form-row">
                   <div className="form-group">
                               <label>Unit name *</label>
                     <input
-                                type="text"
-                                value={unit.unitNumber}
-                                onChange={(e) => updateEditPropertyUnit(index, 'unitNumber', e.target.value)}
-                                placeholder="e.g. F1, House A"
-                    />
+                          type="text"
+                          value={unit.unitNumber}
+                          onChange={(e) => updateEditPropertyUnit(index, 'unitNumber', e.target.value)}
+                          placeholder="e.g. F1, House A" />
+                        
                   </div>
                             <div className="form-group">
                               <label>Bedrooms</label>
                               <select value={unit.bedrooms} onChange={(e) => updateEditPropertyUnit(index, 'bedrooms', parseInt(e.target.value, 10))}>
-                                {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                                {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
                               </select>
                 </div>
                   <div className="form-group">
                               <label>Rent (XOF) *</label>
                     <input
-                      type="number"
-                                step="0.01"
-                      min="0"
-                                value={unit.rent}
-                                onChange={(e) => updateEditPropertyUnit(index, 'rent', e.target.value)}
-                    />
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={unit.rent}
+                          onChange={(e) => updateEditPropertyUnit(index, 'rent', e.target.value)} />
+                        
                   </div>
                           </div>
                           <div className="form-row">
@@ -7964,33 +7711,33 @@ const SalesManagerDashboard = () => {
                                 <option value="Occupied">Filled</option>
                               </select>
                             </div>
-                            {unit.status === 'Occupied' && (
-                              <div className="form-group" style={{ flex: 1 }}>
+                            {unit.status === 'Occupied' &&
+                      <div className="form-group" style={{ flex: 1 }}>
                                 <label>Tenant</label>
                                 <select value={unit.tenant || ''} onChange={(e) => updateEditPropertyUnit(index, 'tenant', e.target.value)}>
                                   <option value="">Select tenant</option>
-                                  {clients.map(c => (
-                                    <option key={c.id || c.ID} value={c.name || c.Name || c.email || c.Email}>{c.name || c.Name || c.email || c.Email}</option>
-                                  ))}
+                                  {clients.map((c) =>
+                          <option key={c.id || c.ID} value={c.name || c.Name || c.email || c.Email}>{c.name || c.Name || c.email || c.Email}</option>
+                          )}
                                 </select>
                               </div>
-                            )}
+                      }
                           </div>
                         </div>
-                      ))}
+                  )}
                     </div>
                   </div>
-                )}
+              }
 
                 <div className="form-row" style={{ marginTop: '12px' }}>
                   <div className="form-group">
                     <label>Total rent (sum of units)</label>
                     <input
-                      type="text"
-                      readOnly
-                      value={`${editPropertyUnits.slice(0, editPropertyNumberOfUnits).reduce((s, u) => s + (parseFloat(u.rent) || 0), 0).toLocaleString()} XOF`}
-                      style={{ background: '#f3f4f6' }}
-                    />
+                    type="text"
+                    readOnly
+                    value={`${editPropertyUnits.slice(0, editPropertyNumberOfUnits).reduce((s, u) => s + (parseFloat(u.rent) || 0), 0).toLocaleString()} XOF`}
+                    style={{ background: '#f3f4f6' }} />
+                  
                   </div>
                 </div>
 
@@ -8019,35 +7766,35 @@ const SalesManagerDashboard = () => {
                   <div className="form-group">
                   <label>Property images</label>
                     <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    disabled={uploadingImage}
-                    onChange={(e) => { const files = e.target.files; if (files?.length) handlePropertyImageUpload(files, true); e.target.value = ''; }}
-                  />
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={uploadingImage}
+                  onChange={(e) => {const files = e.target.files;if (files?.length) handlePropertyImageUpload(files, true);e.target.value = '';}} />
+                
                   <small style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem', marginTop: '4px' }}>You can select multiple photos at once (e.g. 5 or more).</small>
                   {uploadingImage && <small style={{ color: '#6b7280' }}>Uploading...</small>}
-                  {editPropertyImages.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                      {editPropertyImages.map((url, i) => (
-                        <div key={i} style={{ position: 'relative' }}>
+                  {editPropertyImages.length > 0 &&
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                      {editPropertyImages.map((url, i) =>
+                  <div key={i} style={{ position: 'relative' }}>
                           <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
-                          <button type="button" onClick={() => setEditPropertyImages(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
+                          <button type="button" onClick={() => setEditPropertyImages((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>×</button>
                   </div>
-                      ))}
-                    </div>
                   )}
+                    </div>
+                }
                 </div>
 
                 <div className="modal-footer">
                   <button
-                    type="button"
-                    className="action-button secondary"
-                    onClick={() => {
-                      setShowEditPropertyModal(false);
-                      setEditingProperty(null);
-                    }}
-                  >
+                  type="button"
+                  className="action-button secondary"
+                  onClick={() => {
+                    setShowEditPropertyModal(false);
+                    setEditingProperty(null);
+                  }}>
+                  
                     Cancel
                   </button>
                   <button type="submit" className="action-button primary" disabled={loading}>
@@ -8058,9 +7805,9 @@ const SalesManagerDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-    </>
-  );
+      }
+    </>);
+
 };
 
 export default SalesManagerDashboard;

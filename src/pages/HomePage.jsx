@@ -5,28 +5,28 @@ import './HomePage.css';
 
 const HomePage = () => {
   const dashboardCards = [
-    {
-      title: 'Tenant Dashboard',
-      description: 'Manage your rental experience, upload documents, and track payments',
-      icon: Users,
-      path: '/tenant',
-      color: '#4299e1'
-    },
-    {
-      title: 'Landlord Dashboard',
-      description: 'Manage properties, tenants, and track rental income',
-      icon: Home,
-      path: '/landlord',
-      color: '#38a169'
-    },
-    {
-      title: 'Administrative Dashboard',
-      description: 'Handle document verification and administrative tasks',
-      icon: DollarSign,
-      path: '/administrative',
-      color: '#e53e3e'
-    }
-  ];
+  {
+    title: 'Tenant Dashboard',
+    description: 'Manage your rental experience, upload documents, and track payments',
+    icon: Users,
+    path: '/tenant',
+    color: '#4299e1'
+  },
+  {
+    title: 'Landlord Dashboard',
+    description: 'Manage properties, tenants, and track rental income',
+    icon: Home,
+    path: '/landlord',
+    color: '#38a169'
+  },
+  {
+    title: 'Administrative Dashboard',
+    description: 'Handle document verification and administrative tasks',
+    icon: DollarSign,
+    path: '/administrative',
+    color: '#e53e3e'
+  }];
+
 
   return (
     <div className="home-page">
@@ -66,8 +66,8 @@ const HomePage = () => {
                   <div className="card-arrow">
                     <ArrowRight size={20} />
                   </div>
-                </Link>
-              );
+                </Link>);
+
             })}
           </div>
         </div>
@@ -95,8 +95,8 @@ const HomePage = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default HomePage;

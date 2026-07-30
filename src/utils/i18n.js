@@ -1,7 +1,5 @@
-// i18n utility for multilingual support
 const translations = {
   en: {
-    // Common
     'common.search': 'Search',
     'common.logout': 'Logout',
     'common.settings': 'Settings',
@@ -42,8 +40,6 @@ const translations = {
     'common.select': 'Select',
     'common.required': 'Required',
     'common.optional': 'Optional',
-    
-    // Navigation
     'nav.dashboard': 'Dashboard',
     'nav.overview': 'Overview',
     'nav.properties': 'Properties',
@@ -84,16 +80,12 @@ const translations = {
     'nav.transactions': 'Transaction History',
     'nav.clientList': 'Client List',
     'nav.profileSettings': 'Profile Settings',
-    
-    // Profile
     'profile.title': 'Profile Settings',
     'profile.personal': 'Personal Information',
     'profile.password': 'Change Password',
     'profile.notifications': 'Notification Preferences',
     'profile.language': 'Language',
     'profile.photo': 'Profile Photo',
-    
-    // Notifications
     'notifications.title': 'Notifications',
     'notifications.noNotifications': 'No notifications',
     'notifications.markAllRead': 'Mark all as read',
@@ -104,13 +96,9 @@ const translations = {
     'notifications.paymentReminders': 'Payment Reminders',
     'notifications.contractDeadlines': 'Contract Deadlines',
     'notifications.statusChanges': 'Status Changes',
-    
-    // Language
     'language.select': 'Select Language',
     'language.english': 'English',
     'language.french': 'French',
-    
-    // Dashboard common
     'dashboard.total': 'Total',
     'dashboard.monthly': 'Monthly',
     'dashboard.yearly': 'Yearly',
@@ -128,8 +116,6 @@ const translations = {
     'dashboard.overdue': 'Overdue',
     'dashboard.paid': 'Paid',
     'dashboard.unpaid': 'Unpaid',
-    
-    // Accounting
     'accounting.recordPayment': 'Record Payment',
     'accounting.recordCashPayment': 'Record Cash Payment',
     'accounting.recordLandlordPayment': 'Record Landlord Payment',
@@ -191,53 +177,39 @@ const translations = {
     'accounting.recordNewPayment': 'Record New Payment',
     'accounting.confirmPaymentApproval': 'Confirm Payment Approval',
     'accounting.editExpense': 'Edit Expense',
-    
-    // Landlord
     'landlord.myProperties': 'My Properties',
     'landlord.myTenants': 'My Tenants',
     'landlord.rentCollected': 'Rent Collected',
     'landlord.netPayout': 'Net Payout',
     'landlord.paymentHistory': 'Payment History',
     'landlord.netPayments': 'Net Payments',
-    
-    // Tenant
     'tenant.myRent': 'My Rent',
     'tenant.paymentHistory': 'Payment History',
     'tenant.makePayment': 'Make Payment',
     'tenant.nextPayment': 'Next Payment',
     'tenant.leaseAgreement': 'Lease Agreement',
     'tenant.documents': 'Documents',
-    
-    // Sales
     'sales.listings': 'Listings',
     'sales.addListing': 'Add Listing',
     'sales.editListing': 'Edit Listing',
     'sales.scheduleVisit': 'Schedule Visit',
     'sales.visitStatus': 'Visit Status',
     'sales.clientRequests': 'Client Requests',
-    
-    // Technician
     'technician.workOrders': 'Work Orders',
     'technician.inspections': 'Inspections',
     'technician.maintenance': 'Maintenance',
     'technician.createWorkOrder': 'Create Work Order',
     'technician.createInspection': 'Create Inspection',
-    
-    // Administrative
     'admin.clientsPending': 'Clients Pending Approval',
     'admin.documentVerification': 'Document Verification',
     'admin.debtCollection': 'Debt Collection',
     'admin.automation': 'Automation & Reports',
-    
-    // Agency Director
     'director.overview': 'Overview',
     'director.management': 'Management',
     'director.users': 'Users',
     'director.properties': 'Properties',
     'director.analytics': 'Analytics',
     'director.subscription': 'Subscription',
-    
-    // Common buttons and actions
     'actions.add': 'Add',
     'actions.edit': 'Edit',
     'actions.delete': 'Delete',
@@ -263,8 +235,6 @@ const translations = {
     'actions.reply': 'Reply',
     'actions.markAsRead': 'Mark as Read',
     'actions.markAllRead': 'Mark All as Read',
-    
-    // Status
     'status.pending': 'Pending',
     'status.approved': 'Approved',
     'status.rejected': 'Rejected',
@@ -278,15 +248,11 @@ const translations = {
     'status.completed': 'Completed',
     'status.inProgress': 'In Progress',
     'status.cancelled': 'Cancelled',
-    
-    // Messages
     'messages.sendMessage': 'Send Message',
     'messages.typeMessage': 'Type a message...',
     'messages.noMessages': 'No messages',
     'messages.noConversations': 'No conversations',
     'messages.selectUser': 'Select a user to start chatting',
-    
-    // Reports
     'reports.generate': 'Generate Report',
     'reports.download': 'Download Report',
     'reports.export': 'Export Report',
@@ -294,14 +260,10 @@ const translations = {
     'reports.selectPeriod': 'Select Period',
     'reports.startDate': 'Start Date',
     'reports.endDate': 'End Date',
-    
-    // Modals
     'modal.confirm': 'Confirm',
     'modal.cancel': 'Cancel',
     'modal.deleteConfirm': 'Are you sure you want to delete this item?',
     'modal.unsavedChanges': 'You have unsaved changes. Are you sure you want to leave?',
-    
-    // Errors
     'error.required': 'This field is required',
     'error.invalidEmail': 'Invalid email address',
     'error.invalidPhone': 'Invalid phone number',
@@ -314,17 +276,14 @@ const translations = {
     'error.unauthorized': 'Unauthorized access',
     'error.notFound': 'Not found',
     'error.serverError': 'Server error. Please try again later.',
-    
-    // Success messages
     'success.saved': 'Saved successfully',
     'success.deleted': 'Deleted successfully',
     'success.uploaded': 'Uploaded successfully',
     'success.sent': 'Sent successfully',
     'success.updated': 'Updated successfully',
-    'success.created': 'Created successfully',
+    'success.created': 'Created successfully'
   },
   fr: {
-    // Common
     'common.search': 'Rechercher',
     'common.logout': 'Déconnexion',
     'common.settings': 'Paramètres',
@@ -365,8 +324,6 @@ const translations = {
     'common.select': 'Sélectionner',
     'common.required': 'Requis',
     'common.optional': 'Optionnel',
-    
-    // Navigation
     'nav.dashboard': 'Tableau de bord',
     'nav.overview': 'Vue d\'ensemble',
     'nav.properties': 'Propriétés',
@@ -407,16 +364,12 @@ const translations = {
     'nav.transactions': 'Historique des Transactions',
     'nav.clientList': 'Liste des Clients',
     'nav.profileSettings': 'Paramètres du Profil',
-    
-    // Profile
     'profile.title': 'Paramètres du profil',
     'profile.personal': 'Informations personnelles',
     'profile.password': 'Changer le mot de passe',
     'profile.notifications': 'Préférences de notification',
     'profile.language': 'Langue',
     'profile.photo': 'Photo de profil',
-    
-    // Notifications
     'notifications.title': 'Notifications',
     'notifications.noNotifications': 'Aucune notification',
     'notifications.markAllRead': 'Tout marquer comme lu',
@@ -427,13 +380,9 @@ const translations = {
     'notifications.paymentReminders': 'Rappels de paiement',
     'notifications.contractDeadlines': 'Échéances de contrat',
     'notifications.statusChanges': 'Changements de statut',
-    
-    // Language
     'language.select': 'Sélectionner la langue',
     'language.english': 'Anglais',
     'language.french': 'Français',
-    
-    // Dashboard common
     'dashboard.total': 'Total',
     'dashboard.monthly': 'Mensuel',
     'dashboard.yearly': 'Annuel',
@@ -451,8 +400,6 @@ const translations = {
     'dashboard.overdue': 'En retard',
     'dashboard.paid': 'Payé',
     'dashboard.unpaid': 'Non payé',
-    
-    // Accounting
     'accounting.recordPayment': 'Enregistrer un Paiement',
     'accounting.recordCashPayment': 'Enregistrer un Paiement Espèces',
     'accounting.recordLandlordPayment': 'Enregistrer un Paiement Propriétaire',
@@ -514,53 +461,39 @@ const translations = {
     'accounting.recordNewPayment': 'Enregistrer un Nouveau Paiement',
     'accounting.confirmPaymentApproval': 'Confirmer l\'Approbation du Paiement',
     'accounting.editExpense': 'Modifier la Dépense',
-    
-    // Landlord
     'landlord.myProperties': 'Mes Propriétés',
     'landlord.myTenants': 'Mes Locataires',
     'landlord.rentCollected': 'Loyers Collectés',
     'landlord.netPayout': 'Paiement Net',
     'landlord.paymentHistory': 'Historique des Paiements',
     'landlord.netPayments': 'Paiements Nets',
-    
-    // Tenant
     'tenant.myRent': 'Mon Loyer',
     'tenant.paymentHistory': 'Historique des Paiements',
     'tenant.makePayment': 'Effectuer un Paiement',
     'tenant.nextPayment': 'Prochain Paiement',
     'tenant.leaseAgreement': 'Contrat de Bail',
     'tenant.documents': 'Documents',
-    
-    // Sales
     'sales.listings': 'Annonces',
     'sales.addListing': 'Ajouter une Annonce',
     'sales.editListing': 'Modifier l\'Annonce',
     'sales.scheduleVisit': 'Planifier une Visite',
     'sales.visitStatus': 'Statut de la Visite',
     'sales.clientRequests': 'Demandes Clients',
-    
-    // Technician
     'technician.workOrders': 'Ordres de Travail',
     'technician.inspections': 'Inspections',
     'technician.maintenance': 'Maintenance',
     'technician.createWorkOrder': 'Créer un Ordre de Travail',
     'technician.createInspection': 'Créer une Inspection',
-    
-    // Administrative
     'admin.clientsPending': 'Clients en Attente d\'Approbation',
     'admin.documentVerification': 'Vérification de Documents',
     'admin.debtCollection': 'Recouvrement de Créances',
     'admin.automation': 'Automatisation & Rapports',
-    
-    // Agency Director
     'director.overview': 'Vue d\'ensemble',
     'director.management': 'Gestion',
     'director.users': 'Utilisateurs',
     'director.properties': 'Propriétés',
     'director.analytics': 'Analyses',
     'director.subscription': 'Abonnement',
-    
-    // Common buttons and actions
     'actions.add': 'Ajouter',
     'actions.edit': 'Modifier',
     'actions.delete': 'Supprimer',
@@ -586,8 +519,6 @@ const translations = {
     'actions.reply': 'Répondre',
     'actions.markAsRead': 'Marquer comme Lu',
     'actions.markAllRead': 'Tout Marquer comme Lu',
-    
-    // Status
     'status.pending': 'En attente',
     'status.approved': 'Approuvé',
     'status.rejected': 'Rejeté',
@@ -601,15 +532,11 @@ const translations = {
     'status.completed': 'Terminé',
     'status.inProgress': 'En cours',
     'status.cancelled': 'Annulé',
-    
-    // Messages
     'messages.sendMessage': 'Envoyer un Message',
     'messages.typeMessage': 'Tapez un message...',
     'messages.noMessages': 'Aucun message',
     'messages.noConversations': 'Aucune conversation',
     'messages.selectUser': 'Sélectionnez un utilisateur pour commencer à discuter',
-    
-    // Reports
     'reports.generate': 'Générer un Rapport',
     'reports.download': 'Télécharger le Rapport',
     'reports.export': 'Exporter le Rapport',
@@ -617,14 +544,10 @@ const translations = {
     'reports.selectPeriod': 'Sélectionner la Période',
     'reports.startDate': 'Date de Début',
     'reports.endDate': 'Date de Fin',
-    
-    // Modals
     'modal.confirm': 'Confirmer',
     'modal.cancel': 'Annuler',
     'modal.deleteConfirm': 'Êtes-vous sûr de vouloir supprimer cet élément?',
     'modal.unsavedChanges': 'Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir partir?',
-    
-    // Errors
     'error.required': 'Ce champ est requis',
     'error.invalidEmail': 'Adresse e-mail invalide',
     'error.invalidPhone': 'Numéro de téléphone invalide',
@@ -637,58 +560,41 @@ const translations = {
     'error.unauthorized': 'Accès non autorisé',
     'error.notFound': 'Non trouvé',
     'error.serverError': 'Erreur serveur. Veuillez réessayer plus tard.',
-    
-    // Success messages
     'success.saved': 'Enregistré avec succès',
     'success.deleted': 'Supprimé avec succès',
     'success.uploaded': 'Téléversé avec succès',
     'success.sent': 'Envoyé avec succès',
     'success.updated': 'Mis à jour avec succès',
-    'success.created': 'Créé avec succès',
+    'success.created': 'Créé avec succès'
   }
 };
-
-// Get current language from localStorage or default to 'en'
 export const getLanguage = () => {
   return localStorage.getItem('language') || 'en';
 };
-
-// Set language
 export const setLanguage = (lang) => {
   localStorage.setItem('language', lang);
-  // Trigger language change event
   window.dispatchEvent(new CustomEvent('languageChange', { detail: lang }));
 };
-
-// Translate function
 export const t = (key, lang = null) => {
   const currentLang = lang || getLanguage();
   const langTranslations = translations[currentLang] || translations['en'];
-  
-  // First, try to find the key directly (flat structure)
   if (langTranslations && langTranslations[key]) {
     return langTranslations[key];
   }
-  
-  // If not found, try nested structure (for backwards compatibility)
   const keys = key.split('.');
   let value = langTranslations;
-  
+
   for (const k of keys) {
     if (value && typeof value === 'object') {
       value = value[k];
     } else {
-      // If nested lookup fails, return the key
       return key;
     }
   }
-  
+
   return value || key;
 };
-
-// Initialize language
 if (!localStorage.getItem('language')) {
-  // Try to detect browser language
   const browserLang = navigator.language.split('-')[0];
   if (browserLang === 'fr') {
     setLanguage('fr');

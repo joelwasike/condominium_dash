@@ -1,7 +1,4 @@
-/* Import Poppins font from Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-
-/* App Styles */
 .App {
   height: 100vh;
   width: 100vw;
@@ -9,8 +6,6 @@
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   font-family: 'Poppins', sans-serif;
 }
-
-/* Dashboard Layout */
 .dashboard-layout {
   display: flex;
   flex-direction: column;
@@ -21,16 +16,15 @@
 .main-content {
   flex: 1;
   background: transparent;
-  padding-top: 72px; /* Account for fixed header height */
+  padding-top: 72px;
 }
 
 @media (max-width: 768px) {
   .main-content {
-    padding-top: 64px; /* Smaller header height on mobile */
+    padding-top: 64px;
   }
 }
 
-/* Global Styles */
 * {
   box-sizing: border-box;
 }
@@ -50,8 +44,6 @@ body {
 code {
   font-family: 'Poppins', monospace;
 }
-
-/* Modern Container Styles */
 .modern-container {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
@@ -76,8 +68,6 @@ code {
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
-
-/* Glass morphism effect */
 .glass-effect {
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(10px);
@@ -85,8 +75,6 @@ code {
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
-
-/* Responsive Design */
 @media (max-width: 768px) {
   .main-content {
     padding: 0;

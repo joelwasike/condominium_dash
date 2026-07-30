@@ -4,28 +4,25 @@ const buildAuthHeaders = () => {
   const token = localStorage.getItem('token');
   if (!token) return {};
   const tokenStr = String(token).trim();
-  const sanitizedToken = tokenStr
-    .split('')
-    .map(char => {
-      const code = char.charCodeAt(0);
-      return (code >= 32 && code <= 126) ? char : '';
-    })
-    .join('');
+  const sanitizedToken = tokenStr.
+  split('').
+  map((char) => {
+    const code = char.charCodeAt(0);
+    return code >= 32 && code <= 126 ? char : '';
+  }).
+  join('');
   return sanitizedToken ? { Authorization: sanitizedToken } : {};
 };
 
 export const technicianService = {
-  // Overview APIs
   getOverview: async () => {
     return apiRequest(buildApiUrl('/api/technician/overview'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
-
-  // Inspection APIs
   listInspections: async () => {
     return apiRequest(buildApiUrl('/api/technician/inspections'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
 
@@ -33,17 +30,17 @@ export const technicianService = {
     return apiRequest(buildApiUrl('/api/technician/inspections'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(inspectionData),
+      body: JSON.stringify(inspectionData)
     });
   },
 
   uploadInspectionPhoto: async (inspectionId, photoFile) => {
     const formData = new FormData();
     formData.append('photo', photoFile);
-    
+
     return apiRequest(buildApiUrl(`/api/technician/inspections/${inspectionId}/photo`), {
       method: 'POST',
-      body: formData,
+      body: formData
     });
   },
 
@@ -51,13 +48,13 @@ export const technicianService = {
     return apiRequest(buildApiUrl(`/api/technician/inspections/${inspectionId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updateData),
+      body: JSON.stringify(updateData)
     });
   },
 
   finalizeInspection: async (inspectionId) => {
     return apiRequest(buildApiUrl(`/api/technician/inspections/${inspectionId}/finalize`), {
-      method: 'POST',
+      method: 'POST'
     });
   },
 
@@ -70,11 +67,9 @@ export const technicianService = {
     const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
     return apiRequest(fullUrl, { method: 'GET' });
   },
-
-  // Inventory APIs
   listInventories: async () => {
     return apiRequest(buildApiUrl('/api/technician/inventories'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
 
@@ -82,21 +77,19 @@ export const technicianService = {
     return apiRequest(buildApiUrl('/api/technician/inventories'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(inventoryData),
+      body: JSON.stringify(inventoryData)
     });
   },
-
-  // Maintenance APIs (from tenant requests)
   listMaintenanceRequests: async (filters = {}) => {
     const queryParams = new URLSearchParams();
     if (filters.status) queryParams.append('status', filters.status);
     if (filters.priority) queryParams.append('priority', filters.priority);
-    
+
     const url = buildApiUrl('/api/technician/maintenance-requests');
     const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
-    
+
     return apiRequest(fullUrl, {
-      method: 'GET',
+      method: 'GET'
     });
   },
 
@@ -108,9 +101,9 @@ export const technicianService = {
     const invoice = requestData?.invoice;
     const supportingDocument = requestData?.supportingDocument;
     const hasPhotos = Array.isArray(photos) && photos.length > 0;
-    const hasQuotation = Array.isArray(quotation) ? quotation.length > 0 : (quotation && quotation instanceof File);
-    const hasInvoice = Array.isArray(invoice) ? invoice.length > 0 : (invoice && invoice instanceof File);
-    const hasSupportingDocument = Array.isArray(supportingDocument) ? supportingDocument.length > 0 : (supportingDocument && supportingDocument instanceof File);
+    const hasQuotation = Array.isArray(quotation) ? quotation.length > 0 : quotation && quotation instanceof File;
+    const hasInvoice = Array.isArray(invoice) ? invoice.length > 0 : invoice && invoice instanceof File;
+    const hasSupportingDocument = Array.isArray(supportingDocument) ? supportingDocument.length > 0 : supportingDocument && supportingDocument instanceof File;
     const hasFiles = hasPhotos || hasQuotation || hasInvoice || hasSupportingDocument;
 
     if (hasFiles) {
@@ -129,12 +122,12 @@ export const technicianService = {
           }
         });
       }
-      if (hasQuotation) (Array.isArray(quotation) ? quotation : [quotation]).forEach(f => formData.append('quotation', f));
-      if (hasInvoice) (Array.isArray(invoice) ? invoice : [invoice]).forEach(f => formData.append('invoice', f));
-      if (hasSupportingDocument) (Array.isArray(supportingDocument) ? supportingDocument : [supportingDocument]).forEach(f => formData.append('supportingDocument', f));
+      if (hasQuotation) (Array.isArray(quotation) ? quotation : [quotation]).forEach((f) => formData.append('quotation', f));
+      if (hasInvoice) (Array.isArray(invoice) ? invoice : [invoice]).forEach((f) => formData.append('invoice', f));
+      if (hasSupportingDocument) (Array.isArray(supportingDocument) ? supportingDocument : [supportingDocument]).forEach((f) => formData.append('supportingDocument', f));
       return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
         method: 'POST',
-        body: formData,
+        body: formData
       });
     }
 
@@ -146,12 +139,12 @@ export const technicianService = {
       estimatedCost: numCost,
       assigned: String(requestData?.assigned ?? ''),
       supportingDocument: undefined,
-      requireDirectorApproval: !!requestData?.requireDirectorApproval,
+      requireDirectorApproval: !!requestData?.requireDirectorApproval
     };
     return apiRequest(buildApiUrl('/api/technician/maintenance-requests'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(jsonBody),
+      body: JSON.stringify(jsonBody)
     });
   },
 
@@ -159,24 +152,20 @@ export const technicianService = {
     return apiRequest(buildApiUrl(`/api/technician/maintenance-requests/${id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updateData),
+      body: JSON.stringify(updateData)
     });
   },
-
-  // Quote APIs
   listQuotes: async (filters = {}) => {
     const queryParams = new URLSearchParams();
     if (filters.status) queryParams.append('status', filters.status);
-    
+
     const url = buildApiUrl('/api/technician/quotes');
     const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
-    
+
     return apiRequest(fullUrl, {
-      method: 'GET',
+      method: 'GET'
     });
   },
-
-  // Worker Quotes — attach a worker + quote document to a maintenance request
   addWorkerQuote: async (maintenanceId, workerName, quoteFile) => {
     const formData = new FormData();
     formData.append('workerName', workerName);
@@ -185,27 +174,23 @@ export const technicianService = {
     }
     return apiRequest(buildApiUrl(`/api/technician/maintenance-requests/${maintenanceId}/worker-quotes`), {
       method: 'POST',
-      body: formData,
+      body: formData
     });
   },
 
   getWorkerQuotes: async (maintenanceId) => {
     return apiRequest(buildApiUrl(`/api/technician/maintenance-requests/${maintenanceId}/worker-quotes`), {
-      method: 'GET',
+      method: 'GET'
     });
   },
-
-  // Properties
   getProperties: async () => {
     return apiRequest(buildApiUrl('/api/technician/properties'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
-
-  // Tenants
   getTenants: async () => {
     return apiRequest(buildApiUrl('/api/technician/tenants'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
 
@@ -213,11 +198,9 @@ export const technicianService = {
     return apiRequest(buildApiUrl('/api/technician/quotes'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(quoteData),
+      body: JSON.stringify(quoteData)
     });
   },
-
-  // Submit a quote with optional document uploads (invoice, quotation, supporting doc)
   submitQuoteWithFiles: async ({ maintenanceId, property, issue, amount, problem, invoice, quotation, supportingDocument }) => {
     const fd = new FormData();
     fd.append('maintenanceId', String(maintenanceId));
@@ -226,39 +209,35 @@ export const technicianService = {
     fd.append('amount', String(amount || 0));
     fd.append('problem', problem || '');
     fd.append('recipient', 'management@example.com');
-    (Array.isArray(invoice) ? invoice : (invoice ? [invoice] : [])).forEach(f => fd.append('invoice', f));
-    (Array.isArray(quotation) ? quotation : (quotation ? [quotation] : [])).forEach(f => fd.append('quotation', f));
-    (Array.isArray(supportingDocument) ? supportingDocument : (supportingDocument ? [supportingDocument] : [])).forEach(f => fd.append('supportingDocument', f));
+    (Array.isArray(invoice) ? invoice : invoice ? [invoice] : []).forEach((f) => fd.append('invoice', f));
+    (Array.isArray(quotation) ? quotation : quotation ? [quotation] : []).forEach((f) => fd.append('quotation', f));
+    (Array.isArray(supportingDocument) ? supportingDocument : supportingDocument ? [supportingDocument] : []).forEach((f) => fd.append('supportingDocument', f));
     return apiRequest(buildApiUrl('/api/technician/quotes'), {
       method: 'POST',
-      body: fd,
+      body: fd
     });
   },
-
-  // Progress APIs
   getWorkProgress: async (filters = {}) => {
     const queryParams = new URLSearchParams();
     if (filters.status) queryParams.append('status', filters.status);
     if (filters.priority) queryParams.append('priority', filters.priority);
-    
+
     const url = buildApiUrl('/api/technician/progress');
     const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
-    
+
     return apiRequest(fullUrl, {
-      method: 'GET',
+      method: 'GET'
     });
   },
 
   getRepairProgressReport: async () => {
     return apiRequest(buildApiUrl('/api/technician/progress/report'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
-
-  // Task APIs
   listTasks: async () => {
     return apiRequest(buildApiUrl('/api/technician/tasks'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
 
@@ -278,13 +257,13 @@ export const technicianService = {
       });
       return apiRequest(buildApiUrl('/api/technician/tasks'), {
         method: 'POST',
-        body: formData,
+        body: formData
       });
     }
     return apiRequest(buildApiUrl('/api/technician/tasks'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...taskData, estimatedHours: hours, estimatedCost: cost }),
+      body: JSON.stringify({ ...taskData, estimatedHours: hours, estimatedCost: cost })
     });
   },
 
@@ -292,19 +271,15 @@ export const technicianService = {
     return apiRequest(buildApiUrl(`/api/technician/tasks/${id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updateData),
+      body: JSON.stringify(updateData)
     });
   },
-
-  // Get advertisements
   getAdvertisements: async () => {
     return apiRequest(buildApiUrl('/api/technician/advertisements'));
   },
-
-  // Technician Contacts Management
   getTechnicianContacts: async () => {
     return apiRequest(buildApiUrl('/api/technician/technician-contacts'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
 
@@ -323,9 +298,9 @@ export const technicianService = {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        ...buildAuthHeaders(),
+        ...buildAuthHeaders()
       },
-      body: formData,
+      body: formData
     });
 
     if (!response.ok) {
@@ -351,9 +326,9 @@ export const technicianService = {
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
-        ...buildAuthHeaders(),
+        ...buildAuthHeaders()
       },
-      body: formData,
+      body: formData
     });
 
     if (!response.ok) {
@@ -366,39 +341,33 @@ export const technicianService = {
 
   deleteTechnicianContact: async (id) => {
     return apiRequest(buildApiUrl(`/api/technician/technician-contacts/${id}`), {
-      method: 'DELETE',
+      method: 'DELETE'
     });
   },
-
-  // State of Entry and Exit
   getStateOfEntry: async () => {
     return apiRequest(buildApiUrl('/api/technician/state-entry'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
 
   getStateOfExit: async () => {
     return apiRequest(buildApiUrl('/api/technician/state-exit'), {
-      method: 'GET',
+      method: 'GET'
     });
   },
-
-  // History
   getHistory: async (filters = {}) => {
     const queryParams = new URLSearchParams();
     if (filters.date) queryParams.append('date', filters.date);
     if (filters.type) queryParams.append('type', filters.type);
     if (filters.property) queryParams.append('property', filters.property);
-    
+
     const url = buildApiUrl('/api/technician/history');
     const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
-    
+
     return apiRequest(fullUrl, {
-      method: 'GET',
+      method: 'GET'
     });
   },
-
-  // Cost of Work (owners = landlords)
   getCostOfWorkOwners: async () => {
     const primaryUrl = buildApiUrl('/api/technician/cost-of-work/owners');
     try {
@@ -422,7 +391,7 @@ export const technicianService = {
             numberOfBuildings: l.numberOfBuildings ?? l.NumberOfBuildings ?? 0,
             numberOfProperty: l.numberOfProperty ?? l.NumberOfProperty ?? l.totalProperties ?? l.propertiesCount ?? 0,
             numberOfWork: l.numberOfWork ?? l.NumberOfWork ?? 0,
-            totalCost: l.totalCost ?? l.TotalCost ?? 0,
+            totalCost: l.totalCost ?? l.TotalCost ?? 0
           }));
         } catch {
           try {
@@ -438,7 +407,7 @@ export const technicianService = {
               numberOfBuildings: l.numberOfBuildings ?? l.NumberOfBuildings ?? 0,
               numberOfProperty: l.numberOfProperty ?? l.NumberOfProperty ?? l.totalProperties ?? l.propertiesCount ?? 0,
               numberOfWork: l.numberOfWork ?? l.NumberOfWork ?? 0,
-              totalCost: l.totalCost ?? l.TotalCost ?? 0,
+              totalCost: l.totalCost ?? l.TotalCost ?? 0
             }));
           } catch {
             return [];
@@ -466,7 +435,7 @@ export const technicianService = {
             address: p.address ?? p.Address ?? '',
             Address: p.Address ?? p.address ?? '',
             numberOfWork: p.numberOfWork ?? p.NumberOfWork ?? 0,
-            description: p.description ?? p.Description ?? (p.name || p.Name || '') + (p.address || p.Address ? ` – ${p.address || p.Address}` : ''),
+            description: p.description ?? p.Description ?? (p.name || p.Name || '') + (p.address || p.Address ? ` – ${p.address || p.Address}` : '')
           }));
         } catch {
           return [];
@@ -490,5 +459,5 @@ export const technicianService = {
       }
       throw err;
     }
-  },
+  }
 };

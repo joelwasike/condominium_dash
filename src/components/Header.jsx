@@ -5,10 +5,8 @@ import './Header.css';
 
 const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
   const navigate = useNavigate();
-  
-  // Get user info from localStorage
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  
+
   const getRoleDisplayName = (role) => {
     const roleMap = {
       'tenant': 'Tenant',
@@ -24,11 +22,8 @@ const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
 
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
-    // Update localStorage with new role
     const updatedUser = { ...user, role: newRole };
     localStorage.setItem('user', JSON.stringify(updatedUser));
-    
-    // Navigate to the appropriate dashboard
     const roleRoutes = {
       'tenant': '/tenant',
       'admin': '/administrative',
@@ -38,7 +33,7 @@ const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
       'landlord': '/landlord',
       'superadmin': '/super-admin'
     };
-    
+
     if (roleRoutes[newRole]) {
       navigate(roleRoutes[newRole]);
     }
@@ -57,9 +52,8 @@ const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
       </div>
       
       <div className="header-right">
-        {/* Company and Role Display */}
-        {userCompany && (
-          <div className="user-info-display">
+        {userCompany &&
+        <div className="user-info-display">
             <div className="company-info">
               <Building2 size={16} />
               <span className="company-name">{userCompany}</span>
@@ -69,7 +63,7 @@ const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
               <span className="role-name">{getRoleDisplayName(userRole)}</span>
             </div>
           </div>
-        )}
+        }
 
         <button className="notification-button">
           <Bell size={20} />
@@ -81,11 +75,11 @@ const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
             <User size={20} />
             <span>{user.name || 'User'}</span>
           </button>
-          <select 
-            value={userRole} 
+          <select
+            value={userRole}
             onChange={handleRoleChange}
-            className="role-selector"
-          >
+            className="role-selector">
+            
             <option value="tenant">Tenant</option>
             <option value="admin">Administrative Agent</option>
             <option value="accounting">Accounting</option>
@@ -99,8 +93,8 @@ const Header = ({ userRole, onLogout, onMenuClick, userCompany, userName }) => {
           </button>
         </div>
       </div>
-    </header>
-  );
+    </header>);
+
 };
 
 export default Header;

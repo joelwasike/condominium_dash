@@ -12,17 +12,17 @@ const styles = {
     overflow: 'hidden',
     position: 'relative',
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'column'
   },
   viewport: {
     position: 'relative',
     flex: 1,
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   track: {
     display: 'flex',
     height: '100%',
-    transition: 'transform 0.5s ease-in-out',
+    transition: 'transform 0.5s ease-in-out'
   },
   slide: {
     width: '100%',
@@ -33,7 +33,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   image: {
     width: '100%',
@@ -41,7 +41,7 @@ const styles = {
     objectFit: 'cover',
     display: 'block',
     position: 'absolute',
-    inset: 0,
+    inset: 0
   },
   overlay: {
     position: 'absolute',
@@ -50,14 +50,14 @@ const styles = {
     right: 0,
     background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
     padding: '40px 28px 20px',
-    color: '#fff',
+    color: '#fff'
   },
   title: {
     margin: '0 0 6px',
     fontSize: '1.15rem',
     fontWeight: 700,
     color: '#fff',
-    textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+    textShadow: '0 1px 3px rgba(0,0,0,0.3)'
   },
   text: {
     margin: 0,
@@ -67,7 +67,7 @@ const styles = {
     display: '-webkit-box',
     WebkitLineClamp: 2,
     WebkitBoxOrient: 'vertical',
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   noImage: {
     padding: '40px 28px',
@@ -77,20 +77,20 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    background: 'linear-gradient(135deg, #f8fafc, #e2e8f0)',
+    background: 'linear-gradient(135deg, #f8fafc, #e2e8f0)'
   },
   noImageTitle: {
     margin: '0 0 8px',
     fontSize: '1.1rem',
     fontWeight: 600,
-    color: '#1e293b',
+    color: '#1e293b'
   },
   noImageText: {
     margin: 0,
     fontSize: '0.85rem',
     color: '#64748b',
     lineHeight: 1.5,
-    maxWidth: '300px',
+    maxWidth: '300px'
   },
   indicators: {
     display: 'flex',
@@ -102,14 +102,14 @@ const styles = {
     left: 0,
     right: 0,
     background: 'linear-gradient(transparent, rgba(0,0,0,0.3))',
-    zIndex: 2,
+    zIndex: 2
   },
   dot: {
     height: '8px',
     borderRadius: '4px',
     border: 'none',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
+    transition: 'all 0.3s ease'
   },
   counter: {
     position: 'absolute',
@@ -121,15 +121,15 @@ const styles = {
     fontWeight: 600,
     padding: '4px 10px',
     borderRadius: '99px',
-    zIndex: 2,
-  },
+    zIndex: 2
+  }
 };
 
 export default function AdCarousel({
   advertisements = [],
   currentAdIndex = 0,
   setCurrentAdIndex,
-  carouselIntervalRef,
+  carouselIntervalRef
 }) {
   if (!advertisements.length) return null;
 
@@ -146,42 +146,39 @@ export default function AdCarousel({
   return (
     <div style={styles.wrapper}>
       <div style={styles.viewport}>
-        {/* Counter badge */}
-        {advertisements.length > 1 && (
-          <span style={styles.counter}>
+        {advertisements.length > 1 &&
+        <span style={styles.counter}>
             {currentAdIndex + 1} / {advertisements.length}
           </span>
-        )}
-
-        {/* Track — each slide is exactly 100% wide */}
+        }
         <div
           style={{
             ...styles.track,
-            transform: `translateX(-${currentAdIndex * 100}%)`,
-          }}
-        >
+            transform: `translateX(-${currentAdIndex * 100}%)`
+          }}>
+          
           {advertisements.map((ad, index) => {
             const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-            const fullImageUrl = imageUrl
-              ? imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`
-              : null;
+            const fullImageUrl = imageUrl ?
+            imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}` :
+            null;
             const title = ad.Title || ad.title || 'Untitled Advertisement';
             const text = ad.Text || ad.text || ad.description || ad.Description || '';
 
             return (
               <div key={`slide-${ad.ID || ad.id || index}`} style={styles.slide}>
-                {fullImageUrl ? (
-                  <>
+                {fullImageUrl ?
+                <>
                     <img
-                      src={fullImageUrl}
-                      alt={title}
-                      style={styles.image}
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'none';
-                        e.target.parentElement.querySelector('[data-fallback]').style.display = 'flex';
-                      }}
-                    />
+                    src={fullImageUrl}
+                    alt={title}
+                    style={styles.image}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'none';
+                      e.target.parentElement.querySelector('[data-fallback]').style.display = 'flex';
+                    }} />
+                  
                     <div style={styles.overlay}>
                       <h3 style={styles.title}>{title}</h3>
                       {text && <p style={styles.text}>{text}</p>}
@@ -190,35 +187,33 @@ export default function AdCarousel({
                       <h3 style={styles.noImageTitle}>{title}</h3>
                       {text && <p style={styles.noImageText}>{text}</p>}
                     </div>
-                  </>
-                ) : (
-                  <div style={styles.noImage}>
+                  </> :
+
+                <div style={styles.noImage}>
                     <h3 style={styles.noImageTitle}>{title}</h3>
                     {text && <p style={styles.noImageText}>{text}</p>}
                   </div>
-                )}
-              </div>
-            );
+                }
+              </div>);
+
           })}
         </div>
+        {advertisements.length > 1 &&
+        <div style={styles.indicators}>
+            {advertisements.map((_, index) =>
+          <button
+            key={`dot-${index}`}
+            onClick={() => goTo(index)}
+            style={{
+              ...styles.dot,
+              width: index === currentAdIndex ? '24px' : '8px',
+              backgroundColor: index === currentAdIndex ? '#fff' : 'rgba(255,255,255,0.5)'
+            }} />
 
-        {/* Dot indicators */}
-        {advertisements.length > 1 && (
-          <div style={styles.indicators}>
-            {advertisements.map((_, index) => (
-              <button
-                key={`dot-${index}`}
-                onClick={() => goTo(index)}
-                style={{
-                  ...styles.dot,
-                  width: index === currentAdIndex ? '24px' : '8px',
-                  backgroundColor: index === currentAdIndex ? '#fff' : 'rgba(255,255,255,0.5)',
-                }}
-              />
-            ))}
+          )}
           </div>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }

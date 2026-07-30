@@ -15,20 +15,20 @@ const buttonBase = {
   borderRadius: '999px',
   border: 'none',
   fontWeight: 800,
-  cursor: 'pointer',
+  cursor: 'pointer'
 };
 const modeBtn = (active) => ({
   ...buttonBase,
   background: active ? '#0b1a7a' : '#eef2ff',
   color: active ? '#fff' : '#0b1a7a',
-  border: active ? '1px solid #0b1a7a' : '1px solid #c7d2fe',
+  border: active ? '1px solid #0b1a7a' : '1px solid #c7d2fe'
 });
 const saveBtn = (disabled) => ({
   ...buttonBase,
   background: disabled ? '#94a3b8' : '#0b1a7a',
   color: '#fff',
   minWidth: '180px',
-  cursor: disabled ? 'not-allowed' : 'pointer',
+  cursor: disabled ? 'not-allowed' : 'pointer'
 });
 const badge = (bg, color) => ({
   display: 'inline-flex',
@@ -39,7 +39,7 @@ const badge = (bg, color) => ({
   background: bg,
   color,
   fontSize: '0.76rem',
-  fontWeight: 700,
+  fontWeight: 700
 });
 
 const normalizeText = (value) => (value ?? '').toString().trim();
@@ -57,15 +57,15 @@ const getPropertyKind = (property) => normalizeType(property?.type || property?.
 const getPropertyId = (property) => property?.id ?? property?.ID ?? property?.Id ?? null;
 const getPropertyLabel = (property) => {
   const label =
-    property?.address ??
-    property?.Address ??
-    property?.name ??
-    property?.Name ??
-    property?.building ??
-    property?.Building ??
-    property?.title ??
-    property?.Title ??
-    '';
+  property?.address ??
+  property?.Address ??
+  property?.name ??
+  property?.Name ??
+  property?.building ??
+  property?.Building ??
+  property?.title ??
+  property?.Title ??
+  '';
   return normalizeText(label) || `Property #${getPropertyId(property) ?? ''}`.trim();
 };
 const getUnitLabel = (unit, index) => {
@@ -95,8 +95,8 @@ const isOccupiedProperty = (property) => {
 };
 
 const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
-  const tenants = useMemo(() => (Array.isArray(clients) ? clients : []), [clients]);
-  const props = useMemo(() => (Array.isArray(properties) ? properties : []), [properties]);
+  const tenants = useMemo(() => Array.isArray(clients) ? clients : [], [clients]);
+  const props = useMemo(() => Array.isArray(properties) ? properties : [], [properties]);
 
   const [mode, setMode] = useState('');
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
@@ -106,30 +106,30 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
   const [buildingDetailCache, setBuildingDetailCache] = useState({});
 
   const tenantOptions = useMemo(() => {
-    return tenants
-      .filter((tenant) => !isAlreadyLinkedTenant(tenant))
-      .map((tenant) => {
-        const id = tenant.id ?? tenant.ID;
-        if (id == null) return null;
-        return {
-          id: String(id),
-          label: tenant.Name || tenant.name || tenant.Email || tenant.email || `Tenant #${id}`,
-          search: `${tenant.Name || tenant.name || ''} ${tenant.Email || tenant.email || ''} ${tenant.Phone || tenant.phone || ''}`.toLowerCase(),
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.label.localeCompare(b.label));
+    return tenants.
+    filter((tenant) => !isAlreadyLinkedTenant(tenant)).
+    map((tenant) => {
+      const id = tenant.id ?? tenant.ID;
+      if (id == null) return null;
+      return {
+        id: String(id),
+        label: tenant.Name || tenant.name || tenant.Email || tenant.email || `Tenant #${id}`,
+        search: `${tenant.Name || tenant.name || ''} ${tenant.Email || tenant.email || ''} ${tenant.Phone || tenant.phone || ''}`.toLowerCase()
+      };
+    }).
+    filter(Boolean).
+    sort((a, b) => a.label.localeCompare(b.label));
   }, [tenants]);
 
   const buildingOptions = useMemo(() => {
-    return props
-      .filter((property) => getPropertyKind(property) === 'building' && isForRentProperty(property))
-      .map((property) => ({
-        id: String(getPropertyId(property)),
-        label: getPropertyLabel(property),
-      }))
-      .filter((item) => item.id !== 'null' && item.id !== 'undefined')
-      .sort((a, b) => a.label.localeCompare(b.label));
+    return props.
+    filter((property) => getPropertyKind(property) === 'building' && isForRentProperty(property)).
+    map((property) => ({
+      id: String(getPropertyId(property)),
+      label: getPropertyLabel(property)
+    })).
+    filter((item) => item.id !== 'null' && item.id !== 'undefined').
+    sort((a, b) => a.label.localeCompare(b.label));
   }, [props]);
 
   const propertyOptionsByMode = useMemo(() => {
@@ -170,7 +170,7 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
       rent: rentValue,
       currentTenant: tenantText,
       tenantId: existingTenantId ? String(existingTenantId) : '',
-      status,
+      status
     };
   };
 
@@ -186,7 +186,7 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
       rent: property?.rent ?? property?.Rent ?? property?.rentPrice ?? property?.RentPrice ?? '',
       currentTenant: tenantText,
       tenantId: existingTenantId ? String(existingTenantId) : '',
-      status: normalizeType(property?.status || property?.Status || property?.statut) || 'vacant',
+      status: normalizeType(property?.status || property?.Status || property?.statut) || 'vacant'
     };
   };
 
@@ -206,13 +206,13 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
 
       const property = props.find((item) => String(getPropertyId(item)) === String(buildingId));
       const units = Array.isArray(detail?.units) ? detail.units : [];
-      const nextRows = units
-        .filter((unit) => {
-          const status = getUnitStatus(unit);
-          const tenantText = getUnitTenantText(unit) || getPropertyTenantText(property);
-          return status !== 'occupied' && status !== 'active' && !tenantText;
-        })
-        .map((unit, index) => buildRowFromUnit(unit, property || {}, buildingId, index));
+      const nextRows = units.
+      filter((unit) => {
+        const status = getUnitStatus(unit);
+        const tenantText = getUnitTenantText(unit) || getPropertyTenantText(property);
+        return status !== 'occupied' && status !== 'active' && !tenantText;
+      }).
+      map((unit, index) => buildRowFromUnit(unit, property || {}, buildingId, index));
       setRows(nextRows);
     } catch (error) {
       console.error('Failed to load building units:', error);
@@ -239,15 +239,15 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
       modeProperties.forEach((property, index) => {
         const propertyUnits = Array.isArray(property?.units) ? property.units : [];
         if (propertyUnits.length > 0) {
-          propertyUnits
-            .filter((unit) => {
-              const status = getUnitStatus(unit);
-              const tenantText = getUnitTenantText(unit) || getPropertyTenantText(property);
-              return status !== 'occupied' && status !== 'active' && !tenantText;
-            })
-            .forEach((unit, unitIndex) => {
-              nextRows.push(buildRowFromUnit(unit, property, getPropertyId(property), `${index}-${unitIndex}`));
-            });
+          propertyUnits.
+          filter((unit) => {
+            const status = getUnitStatus(unit);
+            const tenantText = getUnitTenantText(unit) || getPropertyTenantText(property);
+            return status !== 'occupied' && status !== 'active' && !tenantText;
+          }).
+          forEach((unit, unitIndex) => {
+            nextRows.push(buildRowFromUnit(unit, property, getPropertyId(property), `${index}-${unitIndex}`));
+          });
         } else {
           if (!isOccupiedProperty(property)) {
             nextRows.push(buildRowFromProperty(property, index));
@@ -259,10 +259,10 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
     }
 
     setRows([]);
-  }, [mode, selectedBuildingId, propertyOptionsByMode, buildingDetailCache]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode, selectedBuildingId, propertyOptionsByMode, buildingDetailCache]);
 
   const updateRow = (rowId, patch) => {
-    setRows((prev) => prev.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
+    setRows((prev) => prev.map((row) => row.id === rowId ? { ...row, ...patch } : row));
   };
 
   const canSave = rows.some((row) => row.tenantId) && !saving && !loadingRows;
@@ -285,7 +285,7 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
             clientId: Number(row.tenantId),
             propertyId: Number(row.propertyId),
             unitId: row.unitId ? Number(row.unitId) : null,
-            forceMove: true,
+            forceMove: true
           });
           updateRow(row.id, { status: 'linked', error: '' });
           successCount += 1;
@@ -318,48 +318,48 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
       </div>
 
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
-        <button type="button" style={modeBtn(mode === 'building')} onClick={() => { setMode('building'); setSelectedBuildingId(buildingOptions[0]?.id || ''); }}>
+        <button type="button" style={modeBtn(mode === 'building')} onClick={() => {setMode('building');setSelectedBuildingId(buildingOptions[0]?.id || '');}}>
           Building
         </button>
-        <button type="button" style={modeBtn(mode === 'apartment')} onClick={() => { setMode('apartment'); setSelectedBuildingId(''); }}>
+        <button type="button" style={modeBtn(mode === 'apartment')} onClick={() => {setMode('apartment');setSelectedBuildingId('');}}>
           Apartments
         </button>
-        <button type="button" style={modeBtn(mode === 'villa')} onClick={() => { setMode('villa'); setSelectedBuildingId(''); }}>
+        <button type="button" style={modeBtn(mode === 'villa')} onClick={() => {setMode('villa');setSelectedBuildingId('');}}>
           Villa
         </button>
       </div>
 
       <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        {mode === 'building' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'center' }}>
+        {mode === 'building' &&
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'center' }}>
             <select
-              style={select}
-              value={selectedBuildingId}
-              onChange={(e) => setSelectedBuildingId(e.target.value)}
-            >
+            style={select}
+            value={selectedBuildingId}
+            onChange={(e) => setSelectedBuildingId(e.target.value)}>
+            
               <option value="">{buildingOptions.length > 0 ? 'Select a building' : 'No building found'}</option>
-              {buildingOptions.map((option) => (
-                <option key={option.id} value={option.id}>
+              {buildingOptions.map((option) =>
+            <option key={option.id} value={option.id}>
                   {option.label}
                 </option>
-              ))}
+            )}
             </select>
             <div style={badge('#eff6ff', '#1d4ed8')}>Units auto-list below</div>
           </div>
-        )}
+        }
 
-        {mode && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        {mode &&
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
             <div>
               <strong style={{ color: '#0f172a' }}>{modeLabel}</strong>
               <div style={{ ...sub, margin: '4px 0 0' }}>
-                {mode === 'building' && !selectedBuildingId
-                  ? 'Choose a building to load its apartments.'
-                  : rows.length > 0
-                    ? `${rows.length} item(s) ready for assignment.`
-                    : loadingRows
-                      ? 'Loading rows...'
-                      : 'No rent-managed properties found for this selection.'}
+                {mode === 'building' && !selectedBuildingId ?
+              'Choose a building to load its apartments.' :
+              rows.length > 0 ?
+              `${rows.length} item(s) ready for assignment.` :
+              loadingRows ?
+              'Loading rows...' :
+              'No rent-managed properties found for this selection.'}
               </div>
             </div>
             <div style={badge('#f8fafc', '#334155')}>
@@ -367,10 +367,10 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
               Rent only
             </div>
           </div>
-        )}
+        }
 
-        {mode && rows.length > 0 && (
-          <div style={{ overflowX: 'auto', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+        {mode && rows.length > 0 &&
+        <div style={{ overflowX: 'auto', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
@@ -382,8 +382,8 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id} style={{ borderTop: '1px solid #e2e8f0' }}>
+                {rows.map((row) =>
+              <tr key={row.id} style={{ borderTop: '1px solid #e2e8f0' }}>
                     <td style={{ padding: '14px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <strong style={{ color: '#0f172a' }}>{row.label}</strong>
@@ -401,51 +401,51 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
                     </td>
                     <td style={{ padding: '14px' }}>
                       <select
-                        style={select}
-                        value={row.tenantId}
-                        onChange={(e) => updateRow(row.id, { tenantId: e.target.value })}
-                      >
+                    style={select}
+                    value={row.tenantId}
+                    onChange={(e) => updateRow(row.id, { tenantId: e.target.value })}>
+                    
                         <option value="">Select tenant</option>
-                        {tenantOptions.map((tenant) => (
-                          <option key={tenant.id} value={tenant.id}>
+                        {tenantOptions.map((tenant) =>
+                    <option key={tenant.id} value={tenant.id}>
                             {tenant.label}
                           </option>
-                        ))}
+                    )}
                       </select>
                     </td>
                     <td style={{ padding: '14px' }}>
-                      {row.status === 'occupied' ? (
-                        <span style={badge('#dcfce7', '#166534')}>Occupied</span>
-                      ) : row.status === 'vacant' ? (
-                        <span style={badge('#fef3c7', '#92400e')}>Vacant</span>
-                      ) : (
-                        <span style={badge('#f1f5f9', '#475569')}>{row.status || 'Pending'}</span>
-                      )}
+                      {row.status === 'occupied' ?
+                  <span style={badge('#dcfce7', '#166534')}>Occupied</span> :
+                  row.status === 'vacant' ?
+                  <span style={badge('#fef3c7', '#92400e')}>Vacant</span> :
+
+                  <span style={badge('#f1f5f9', '#475569')}>{row.status || 'Pending'}</span>
+                  }
                     </td>
                   </tr>
-                ))}
+              )}
               </tbody>
             </table>
           </div>
-        )}
+        }
 
-        {!mode && (
-          <div style={{ padding: '22px', borderRadius: '16px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#475569' }}>
+        {!mode &&
+        <div style={{ padding: '22px', borderRadius: '16px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#475569' }}>
             Select <strong>Building</strong>, <strong>Apartments</strong>, or <strong>Villa</strong> to auto-list the rent-managed units and assign tenants.
           </div>
-        )}
+        }
 
-        {mode && !loadingRows && rows.length === 0 && (
-          <div style={{ padding: '22px', borderRadius: '16px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#475569' }}>
+        {mode && !loadingRows && rows.length === 0 &&
+        <div style={{ padding: '22px', borderRadius: '16px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#475569' }}>
             No eligible rent-managed units found for this selection.
           </div>
-        )}
+        }
 
-        {mode && rows.some((row) => row.error) && (
-          <div style={{ padding: '14px 16px', borderRadius: '12px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b' }}>
+        {mode && rows.some((row) => row.error) &&
+        <div style={{ padding: '14px 16px', borderRadius: '12px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b' }}>
             Some rows failed to link. Review the row-level errors after saving.
           </div>
-        )}
+        }
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '6px' }}>
           <button type="button" style={saveBtn(!canSave)} onClick={saveAll} disabled={!canSave}>
@@ -454,8 +454,8 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
           </button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default LinkFastTab;

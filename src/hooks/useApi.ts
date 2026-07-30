@@ -10,13 +10,11 @@ interface MutationVariables {
 interface UseApiMutationOptions extends Omit<UseMutationOptions<any, Error, MutationVariables>, 'mutationFn'> {
   invalidateKeys?: (string | string[])[];
 }
-
-// Generic query hook for GET requests
 export function useApiQuery(
-  key: string | string[],
-  endpoint: string,
-  options: Partial<UseQueryOptions<any, Error>> & { enabled?: boolean } = {}
-) {
+key: string | string[],
+endpoint: string,
+options: Partial<UseQueryOptions<any, Error>> & {enabled?: boolean;} = {})
+{
   const isDemoMode = localStorage.getItem('demo_mode') === 'true';
 
   return useQuery({
@@ -25,12 +23,10 @@ export function useApiQuery(
       const url = buildApiUrl(endpoint);
       return apiRequest(url);
     },
-    enabled: !isDemoMode && (options.enabled !== false),
-    ...options,
+    enabled: !isDemoMode && options.enabled !== false,
+    ...options
   });
 }
-
-// Generic mutation hook for POST/PUT/DELETE
 export function useApiMutation(endpoint: string, options: UseApiMutationOptions = {}) {
   const queryClient = useQueryClient();
 
@@ -49,11 +45,11 @@ export function useApiMutation(endpoint: string, options: UseApiMutationOptions 
     },
     onSuccess: () => {
       if (options.invalidateKeys) {
-        options.invalidateKeys.forEach(key => {
+        options.invalidateKeys.forEach((key) => {
           queryClient.invalidateQueries({ queryKey: Array.isArray(key) ? key : [key] });
         });
       }
     },
-    ...options,
+    ...options
   });
 }

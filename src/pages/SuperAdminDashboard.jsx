@@ -19,8 +19,8 @@ import {
   RefreshCw,
   Upload,
   Image,
-  Eye
-} from 'lucide-react';
+  Eye } from
+'lucide-react';
 import { CLOUDINARY_CONFIG } from '../config/cloudinary';
 import {
   AreaChart,
@@ -30,8 +30,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
-} from 'recharts';
+  ResponsiveContainer } from
+'recharts';
 import { superAdminService } from '../services/superAdminService';
 import { API_CONFIG } from '../config/api';
 import { isDemoMode, getSuperAdminDemoData } from '../utils/demoData';
@@ -44,14 +44,12 @@ import { t, getLanguage } from '../utils/i18n';
 import '../components/RoleLayout.css';
 import './SuperAdminDashboard.css';
 import '../pages/TechnicianDashboard.css';
-
-/* ─── inline style helpers ─── */
 const cardBase = {
   background: '#fff',
   borderRadius: '20px',
   boxShadow: '0 2px 12px rgba(15,23,42,0.06)',
   border: '1px solid #f1f5f9',
-  padding: '24px',
+  padding: '24px'
 };
 
 const metricCardStyle = (accentColor) => ({
@@ -59,7 +57,7 @@ const metricCardStyle = (accentColor) => ({
   borderLeft: `4px solid ${accentColor}`,
   display: 'flex',
   flexDirection: 'column',
-  gap: '6px',
+  gap: '6px'
 });
 
 const metricLabel = { margin: 0, fontSize: '0.82rem', color: '#64748b', fontWeight: 500 };
@@ -68,11 +66,11 @@ const metricValue = { margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#1
 const statusPill = (status) => {
   const s = (status || '').toLowerCase();
   if (s === 'active' || s === 'paid' || s === 'approved' || s === 'completed')
-    return { display: 'inline-block', padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, background: '#dcfce7', color: '#166534' };
+  return { display: 'inline-block', padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, background: '#dcfce7', color: '#166534' };
   if (s === 'inactive' || s === 'deactivated' || s === 'cancelled')
-    return { display: 'inline-block', padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, background: '#fee2e2', color: '#991b1b' };
+  return { display: 'inline-block', padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, background: '#fee2e2', color: '#991b1b' };
   if (s === 'pending' || s === 'overdue' || s === 'en attente')
-    return { display: 'inline-block', padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, background: '#fef9c3', color: '#854d0e' };
+  return { display: 'inline-block', padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, background: '#fef9c3', color: '#854d0e' };
   return { display: 'inline-block', padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, background: '#f1f5f9', color: '#475569' };
 };
 
@@ -93,7 +91,7 @@ const formGroupStyle = { marginBottom: '16px' };
 const searchBarStyle = {
   display: 'flex', alignItems: 'center', gap: '8px',
   background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px',
-  padding: '8px 14px', flex: 1, maxWidth: '360px',
+  padding: '8px 14px', flex: 1, maxWidth: '360px'
 };
 
 const SuperAdminDashboard = () => {
@@ -101,8 +99,6 @@ const SuperAdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const carouselIntervalRef = useRef(null);
-
-  // Core data
   const [overviewStats, setOverviewStats] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [agencyAdmins, setAgencyAdmins] = useState([]);
@@ -112,25 +108,19 @@ const SuperAdminDashboard = () => {
   const [agencyPayments, setAgencyPayments] = useState([]);
   const [selectedAdminId, setSelectedAdminId] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
-
-  // UI / filters
   const [companiesSearch, setCompaniesSearch] = useState('');
   const [companiesStatusFilter, setCompaniesStatusFilter] = useState('all');
   const [directorsSearch, setDirectorsSearch] = useState('');
   const [newAd, setNewAd] = useState({ title: '', text: '', link: '', image: null });
   const [chatInput, setChatInput] = useState('');
-
-  // Company Modal
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
   const [companyForm, setCompanyForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '', logoURL: '', subscriptionFee: '', subscriptionCurrency: 'XOF' });
   const [logoUploading, setLogoUploading] = useState(false);
-
-  // Company Details (deep view)
   const [showCompanyDetails, setShowCompanyDetails] = useState(false);
   const [companyDetailsLoading, setCompanyDetailsLoading] = useState(false);
   const [companyDetails, setCompanyDetails] = useState(null);
-  const [companyDetailsTab, setCompanyDetailsTab] = useState('overview'); // overview | users | payments | expenses | deposits | subscription
+  const [companyDetailsTab, setCompanyDetailsTab] = useState('overview');
 
   const openCompanyDetails = async (company) => {
     const companyId = company?.ID || company?.id;
@@ -141,7 +131,6 @@ const SuperAdminDashboard = () => {
     setCompanyDetails(null);
     try {
       if (isDemoMode()) {
-        // Demo: best-effort from existing data
         setCompanyDetails({ company, users: [], stats: {}, recent: { tenantPayments: [], expenses: [], deposits: [] }, subscriptionPayments: [] });
       } else {
         const details = await superAdminService.getCompanyDetails(companyId);
@@ -174,11 +163,11 @@ const SuperAdminDashboard = () => {
       formData.append('folder', 'agency-logos');
       const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`, {
         method: 'POST',
-        body: formData,
+        body: formData
       });
       const data = await res.json();
       if (data.secure_url) {
-        setCompanyForm(prev => ({ ...prev, logoURL: data.secure_url }));
+        setCompanyForm((prev) => ({ ...prev, logoURL: data.secure_url }));
         addNotification('Logo uploaded!', 'success');
       } else {
         throw new Error(data.error?.message || 'Upload failed');
@@ -190,19 +179,15 @@ const SuperAdminDashboard = () => {
       setLogoUploading(false);
     }
   };
-
-  // Agency Admin Modal
   const [showAgencyAdminModal, setShowAgencyAdminModal] = useState(false);
   const [editingAgencyAdmin, setEditingAgencyAdmin] = useState(null);
   const [agencyAdminForm, setAgencyAdminForm] = useState({ name: '', email: '', company: '', role: 'agency_director', password: '', subscriptionFee: '', subscriptionCurrency: 'XOF' });
-
-  // Notifications
   const [notifications, setNotifications] = useState([]);
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = Date.now();
-    setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 3000);
+    setNotifications((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setNotifications((prev) => prev.filter((n) => n.id !== id)), 3000);
   }, []);
 
   const handleLogout = () => {
@@ -211,8 +196,6 @@ const SuperAdminDashboard = () => {
     localStorage.removeItem('demo_mode');
     window.location.href = '/';
   };
-
-  /* ─── data loading ─── */
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -232,14 +215,14 @@ const SuperAdminDashboard = () => {
       }
 
       const [overview, companiesData, adminsData, financial, adsData, subscriptionsData, paymentsData] = await Promise.all([
-        superAdminService.getOverview().catch(() => null),
-        superAdminService.getCompanies().catch(() => []),
-        superAdminService.getAgencyAdmins().catch(() => []),
-        superAdminService.getFinancialOverview().catch(() => null),
-        superAdminService.getAdvertisements().catch(() => []),
-        superAdminService.getSubscriptions().catch(() => []),
-        superAdminService.getAgencyPayments().catch(() => []),
-      ]);
+      superAdminService.getOverview().catch(() => null),
+      superAdminService.getCompanies().catch(() => []),
+      superAdminService.getAgencyAdmins().catch(() => []),
+      superAdminService.getFinancialOverview().catch(() => null),
+      superAdminService.getAdvertisements().catch(() => []),
+      superAdminService.getSubscriptions().catch(() => []),
+      superAdminService.getAgencyPayments().catch(() => [])]
+      );
 
       setOverviewStats(overview);
       setCompanies(Array.isArray(companiesData) ? companiesData : []);
@@ -267,25 +250,21 @@ const SuperAdminDashboard = () => {
     }
   }, [addNotification]);
 
-  useEffect(() => { loadData(); }, [loadData]);
-
-  /* ─── tabs config ─── */
+  useEffect(() => {loadData();}, [loadData]);
   const tabs = useMemo(() => [
-    { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'companies', label: 'Companies', icon: Building2 },
-    { id: 'directors', label: 'Directors', icon: Users },
-    { id: 'financial', label: 'Financial', icon: DollarSign },
-    { id: 'ads', label: 'Advertisements', icon: Megaphone },
-    { id: 'chat', label: 'Messages', icon: MessageCircle },
-    { id: 'settings', label: 'Settings', icon: Settings },
-  ], []);
+  { id: 'overview', label: 'Overview', icon: BarChart3 },
+  { id: 'companies', label: 'Companies', icon: Building2 },
+  { id: 'directors', label: 'Directors', icon: Users },
+  { id: 'financial', label: 'Financial', icon: DollarSign },
+  { id: 'ads', label: 'Advertisements', icon: Megaphone },
+  { id: 'chat', label: 'Messages', icon: MessageCircle },
+  { id: 'settings', label: 'Settings', icon: Settings }],
+  []);
 
   const layoutMenu = useMemo(() =>
-    tabs.map(tab => ({ ...tab, onSelect: () => setActiveTab(tab.id), active: activeTab === tab.id })),
-    [tabs, activeTab]
+  tabs.map((tab) => ({ ...tab, onSelect: () => setActiveTab(tab.id), active: activeTab === tab.id })),
+  [tabs, activeTab]
   );
-
-  /* ─── chart data helpers ─── */
   const revenueChartData = useMemo(() => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
     const totalRev = overviewStats?.totalRevenue || financialData?.totalRevenue || 0;
@@ -293,22 +272,21 @@ const SuperAdminDashboard = () => {
     return months.map((month, i) => ({
       month,
       revenue: Math.round(totalRev * (0.6 + i * 0.08)),
-      payments: Math.round(totalPay * (0.5 + i * 0.1)),
+      payments: Math.round(totalPay * (0.5 + i * 0.1))
     }));
   }, [overviewStats, financialData]);
 
-  /* ═════════════════════════════════════════════════
-     1. OVERVIEW TAB
-  ═════════════════════════════════════════════════ */
+
+
+
   const renderOverview = () => {
     const totalAgencies = overviewStats?.totalAgencies || companies.length || 0;
-    const activeAgencies = overviewStats?.activeAgencies || companies.filter(c => (c.Status || c.status || '').toLowerCase() === 'active').length || 0;
+    const activeAgencies = overviewStats?.activeAgencies || companies.filter((c) => (c.Status || c.status || '').toLowerCase() === 'active').length || 0;
     const totalRevenue = overviewStats?.totalRevenue || financialData?.totalRevenue || 0;
     const pendingPayments = overviewStats?.pendingPayments || 0;
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Metric cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
           <div style={metricCardStyle('#3b82f6')}>
             <p style={metricLabel}>Total Agencies</p>
@@ -318,7 +296,7 @@ const SuperAdminDashboard = () => {
           <div style={metricCardStyle('#10b981')}>
             <p style={metricLabel}>Active Agencies</p>
             <p style={metricValue}>{activeAgencies}</p>
-            <p style={{ margin: 0, fontSize: '0.78rem', color: '#10b981' }}>{totalAgencies > 0 ? Math.round((activeAgencies / totalAgencies) * 100) : 0}% active</p>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: '#10b981' }}>{totalAgencies > 0 ? Math.round(activeAgencies / totalAgencies * 100) : 0}% active</p>
           </div>
           <div style={metricCardStyle('#8b5cf6')}>
             <p style={metricLabel}>Total Revenue</p>
@@ -331,8 +309,6 @@ const SuperAdminDashboard = () => {
             <p style={{ margin: 0, fontSize: '0.78rem', color: '#f59e0b' }}>Awaiting settlement</p>
           </div>
         </div>
-
-        {/* Revenue chart */}
         <div style={{ ...cardBase, padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
@@ -358,8 +334,8 @@ const SuperAdminDashboard = () => {
                 <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
                 <Tooltip
                   contentStyle={{ backgroundColor: 'rgba(255,255,255,0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', padding: '8px 12px' }}
-                  formatter={(value, name) => [`${value.toLocaleString()} CFA`, name === 'revenue' ? 'Revenue' : 'Payments']}
-                />
+                  formatter={(value, name) => [`${value.toLocaleString()} CFA`, name === 'revenue' ? 'Revenue' : 'Payments']} />
+                
                 <Legend wrapperStyle={{ paddingTop: '10px' }} iconType="line" />
                 <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={3} fill="url(#saColorRevenue)" dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} name="Revenue" />
                 <Area type="monotone" dataKey="payments" stroke="#10b981" strokeWidth={3} fill="url(#saColorPayments)" dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} name="Payments" />
@@ -367,8 +343,6 @@ const SuperAdminDashboard = () => {
             </ResponsiveContainer>
           </div>
         </div>
-
-        {/* Agency subscriptions table */}
         <div style={cardBase}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
@@ -390,13 +364,13 @@ const SuperAdminDashboard = () => {
               <tbody>
                 {(companies.length > 0 ? companies : []).map((company, index) => {
                   const companyId = company.ID || company.id;
-                  const sub = subscriptions.find(s => (s.agencyId || s.companyId) === companyId);
+                  const sub = subscriptions.find((s) => (s.agencyId || s.companyId) === companyId);
                   const acctStatus = company.Status || company.status || 'Active';
                   const subStatus = sub?.paymentStatus || sub?.status || company.SubscriptionStatus || 'Paid';
                   return (
                     <tr key={`overview-co-${companyId || index}`} style={trHover}
-                      onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                       <td style={tdStyle}>
                         <span style={{ fontWeight: 600, color: '#1e293b' }}>{company.Name || company.name || 'N/A'}</span>
                       </td>
@@ -404,35 +378,35 @@ const SuperAdminDashboard = () => {
                       <td style={tdStyle}><span style={statusPill(acctStatus)}>{acctStatus}</span></td>
                       <td style={tdStyle}><span style={statusPill(subStatus)}>{subStatus}</span></td>
                       <td style={tdStyle}>{(sub?.amount || company.SubscriptionAmount || 0).toLocaleString()} CFA</td>
-                    </tr>
-                  );
+                    </tr>);
+
                 })}
-                {companies.length === 0 && (
-                  <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No agency data available.</td></tr>
-                )}
+                {companies.length === 0 &&
+                <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No agency data available.</td></tr>
+                }
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
-  /* ═════════════════════════════════════════════════
-     2. COMPANIES TAB
-  ═════════════════════════════════════════════════ */
+
+
+
   const filteredCompanies = useMemo(() => {
     let list = companies || [];
     if (companiesSearch) {
       const q = companiesSearch.toLowerCase();
-      list = list.filter(c =>
-        (c.Name || c.name || '').toLowerCase().includes(q) ||
-        (c.Email || c.email || '').toLowerCase().includes(q) ||
-        (c.Phone || c.phone || '').toLowerCase().includes(q)
+      list = list.filter((c) =>
+      (c.Name || c.name || '').toLowerCase().includes(q) ||
+      (c.Email || c.email || '').toLowerCase().includes(q) ||
+      (c.Phone || c.phone || '').toLowerCase().includes(q)
       );
     }
     if (companiesStatusFilter !== 'all') {
-      list = list.filter(c => (c.Status || c.status || '').toLowerCase() === companiesStatusFilter);
+      list = list.filter((c) => (c.Status || c.status || '').toLowerCase() === companiesStatusFilter);
     }
     return list;
   }, [companies, companiesSearch, companiesStatusFilter]);
@@ -453,7 +427,7 @@ const SuperAdminDashboard = () => {
       licenseNumber: company.LicenseNumber || company.licenseNumber || '',
       logoURL: company.LogoURL || company.logoURL || '',
       subscriptionFee: (company.subscriptionFee ?? company.SubscriptionFee ?? '')?.toString?.() || '',
-      subscriptionCurrency: company.subscriptionCurrency || company.SubscriptionCurrency || 'XOF',
+      subscriptionCurrency: company.subscriptionCurrency || company.SubscriptionCurrency || 'XOF'
     });
     setShowCompanyModal(true);
   };
@@ -508,8 +482,8 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  const renderCompanies = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+  const renderCompanies = () =>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700, color: '#1e293b' }}>Companies / Agencies</h2>
@@ -519,18 +493,18 @@ const SuperAdminDashboard = () => {
           <div style={searchBarStyle}>
             <Search size={16} color="#94a3b8" />
             <input
-              type="text"
-              placeholder="Search agencies..."
-              value={companiesSearch}
-              onChange={(e) => setCompaniesSearch(e.target.value)}
-              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.88rem', flex: 1 }}
-            />
+            type="text"
+            placeholder="Search agencies..."
+            value={companiesSearch}
+            onChange={(e) => setCompaniesSearch(e.target.value)}
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.88rem', flex: 1 }} />
+          
           </div>
           <select
-            value={companiesStatusFilter}
-            onChange={(e) => setCompaniesStatusFilter(e.target.value)}
-            style={{ ...inputStyle, width: 'auto', minWidth: '140px' }}
-          >
+          value={companiesStatusFilter}
+          onChange={(e) => setCompaniesStatusFilter(e.target.value)}
+          style={{ ...inputStyle, width: 'auto', minWidth: '140px' }}>
+          
             <option value="all">All Statuses</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -556,14 +530,14 @@ const SuperAdminDashboard = () => {
             </thead>
             <tbody>
               {filteredCompanies.map((company, index) => {
-                const companyId = company.ID || company.id;
-                const status = company.Status || company.status || 'Active';
-                const subStatus = company.SubscriptionStatus || company.subscriptionStatus || '-';
-                const isActive = status.toLowerCase() === 'active';
-                return (
-                  <tr key={`company-${companyId || index}`} style={trHover}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              const companyId = company.ID || company.id;
+              const status = company.Status || company.status || 'Active';
+              const subStatus = company.SubscriptionStatus || company.subscriptionStatus || '-';
+              const isActive = status.toLowerCase() === 'active';
+              return (
+                <tr key={`company-${companyId || index}`} style={trHover}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                     <td style={tdStyle}>
                       <span style={{ fontWeight: 600, color: '#1e293b' }}>{company.Name || company.name}</span>
                       {company.LicenseNumber && <br />}
@@ -584,47 +558,45 @@ const SuperAdminDashboard = () => {
                         <button style={{ ...btnSmall, background: '#fee2e2', color: '#dc2626' }} onClick={() => handleDeleteCompany(company)} title="Delete"><Trash2 size={14} /></button>
                       </div>
                     </td>
-                  </tr>
-                );
-              })}
-              {filteredCompanies.length === 0 && (
-                <tr><td colSpan={7} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No agencies found.</td></tr>
-              )}
+                  </tr>);
+
+            })}
+              {filteredCompanies.length === 0 &&
+            <tr><td colSpan={7} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No agencies found.</td></tr>
+            }
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Company Modal */}
       <Modal isOpen={showCompanyModal} onClose={() => setShowCompanyModal(false)} title={editingCompany ? 'Edit Agency' : 'Add Agency'} size="md">
         <form onSubmit={handleSubmitCompany}>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Company Name *</label>
-            <input style={inputStyle} type="text" value={companyForm.name} onChange={(e) => setCompanyForm(prev => ({ ...prev, name: e.target.value }))} required placeholder="Agency name" />
+            <input style={inputStyle} type="text" value={companyForm.name} onChange={(e) => setCompanyForm((prev) => ({ ...prev, name: e.target.value }))} required placeholder="Agency name" />
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Email *</label>
-            <input style={inputStyle} type="email" value={companyForm.email} onChange={(e) => setCompanyForm(prev => ({ ...prev, email: e.target.value }))} required placeholder="company@email.com" />
+            <input style={inputStyle} type="email" value={companyForm.email} onChange={(e) => setCompanyForm((prev) => ({ ...prev, email: e.target.value }))} required placeholder="company@email.com" />
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Phone</label>
-            <input style={inputStyle} type="text" value={companyForm.phone} onChange={(e) => setCompanyForm(prev => ({ ...prev, phone: e.target.value }))} placeholder="+237 600 000 000" />
+            <input style={inputStyle} type="text" value={companyForm.phone} onChange={(e) => setCompanyForm((prev) => ({ ...prev, phone: e.target.value }))} placeholder="+237 600 000 000" />
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Address</label>
-            <input style={inputStyle} type="text" value={companyForm.address} onChange={(e) => setCompanyForm(prev => ({ ...prev, address: e.target.value }))} placeholder="Company address" />
+            <input style={inputStyle} type="text" value={companyForm.address} onChange={(e) => setCompanyForm((prev) => ({ ...prev, address: e.target.value }))} placeholder="Company address" />
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>License Number</label>
-            <input style={inputStyle} type="text" value={companyForm.licenseNumber} onChange={(e) => setCompanyForm(prev => ({ ...prev, licenseNumber: e.target.value }))} placeholder="License / Registration number" />
+            <input style={inputStyle} type="text" value={companyForm.licenseNumber} onChange={(e) => setCompanyForm((prev) => ({ ...prev, licenseNumber: e.target.value }))} placeholder="License / Registration number" />
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Monthly Subscription Fee</label>
-            <input style={inputStyle} type="number" min="0" step="1" value={companyForm.subscriptionFee} onChange={(e) => setCompanyForm(prev => ({ ...prev, subscriptionFee: e.target.value }))} placeholder="e.g., 30000" />
+            <input style={inputStyle} type="number" min="0" step="1" value={companyForm.subscriptionFee} onChange={(e) => setCompanyForm((prev) => ({ ...prev, subscriptionFee: e.target.value }))} placeholder="e.g., 30000" />
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Subscription Currency</label>
-            <select style={inputStyle} value={companyForm.subscriptionCurrency} onChange={(e) => setCompanyForm(prev => ({ ...prev, subscriptionCurrency: e.target.value }))}>
+            <select style={inputStyle} value={companyForm.subscriptionCurrency} onChange={(e) => setCompanyForm((prev) => ({ ...prev, subscriptionCurrency: e.target.value }))}>
               <option value="XOF">XOF</option>
               <option value="USD">USD</option>
               <option value="KES">KES</option>
@@ -633,44 +605,44 @@ const SuperAdminDashboard = () => {
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Agency Logo</label>
-            {companyForm.logoURL ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <img src={companyForm.logoURL} alt="Agency logo" style={{ width: '64px', height: '64px', objectFit: 'contain', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff' }} onError={(e) => { e.target.src = ''; e.target.style.display = 'none'; }} />
+            {companyForm.logoURL ?
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <img src={companyForm.logoURL} alt="Agency logo" style={{ width: '64px', height: '64px', objectFit: 'contain', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff' }} onError={(e) => {e.target.src = '';e.target.style.display = 'none';}} />
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: '0 0 4px', fontSize: '0.85rem', fontWeight: 600, color: '#10b981' }}>Logo uploaded</p>
                   <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8', wordBreak: 'break-all' }}>{companyForm.logoURL.substring(companyForm.logoURL.lastIndexOf('/') + 1).substring(0, 40)}...</p>
                 </div>
-                <button type="button" onClick={() => setCompanyForm(prev => ({ ...prev, logoURL: '' }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px' }}>
+                <button type="button" onClick={() => setCompanyForm((prev) => ({ ...prev, logoURL: '' }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px' }}>
                   <XCircle size={20} />
                 </button>
-              </div>
-            ) : (
-              <label style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                padding: '24px 16px', borderRadius: '12px', border: '2px dashed #d1d5db',
-                background: logoUploading ? '#f1f5f9' : '#fafbfc', cursor: logoUploading ? 'wait' : 'pointer',
-                transition: 'all 0.2s', gap: '8px',
-              }}
-                onMouseEnter={(e) => { if (!logoUploading) e.currentTarget.style.borderColor = '#3b82f6'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; }}
-              >
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files[0]) handleLogoUpload(e.target.files[0]); }} disabled={logoUploading} />
-                {logoUploading ? (
-                  <>
+              </div> :
+
+          <label style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '24px 16px', borderRadius: '12px', border: '2px dashed #d1d5db',
+            background: logoUploading ? '#f1f5f9' : '#fafbfc', cursor: logoUploading ? 'wait' : 'pointer',
+            transition: 'all 0.2s', gap: '8px'
+          }}
+          onMouseEnter={(e) => {if (!logoUploading) e.currentTarget.style.borderColor = '#3b82f6';}}
+          onMouseLeave={(e) => {e.currentTarget.style.borderColor = '#d1d5db';}}>
+            
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {if (e.target.files[0]) handleLogoUpload(e.target.files[0]);}} disabled={logoUploading} />
+                {logoUploading ?
+            <>
                     <RefreshCw size={28} style={{ color: '#3b82f6', animation: 'spin 1s linear infinite' }} />
                     <span style={{ fontSize: '0.85rem', color: '#3b82f6', fontWeight: 500 }}>Uploading...</span>
-                  </>
-                ) : (
-                  <>
+                  </> :
+
+            <>
                     <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Image size={24} style={{ color: '#3b82f6' }} />
                     </div>
                     <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>Click to upload logo</span>
                     <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>JPG, PNG up to 5MB</span>
                   </>
-                )}
+            }
               </label>
-            )}
+          }
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
             <button type="button" style={btnOutline} onClick={() => setShowCompanyModal(false)}>Cancel</button>
@@ -678,21 +650,18 @@ const SuperAdminDashboard = () => {
           </div>
         </form>
       </Modal>
-
-      {/* Company Details Modal */}
       <Modal
-        isOpen={showCompanyDetails}
-        onClose={() => { setShowCompanyDetails(false); setCompanyDetails(null); }}
-        title={`Company Details${companyDetails?.company?.Name ? ` — ${companyDetails.company.Name}` : ''}`}
-        size="xl"
-      >
-        {companyDetailsLoading ? (
-          <div style={{ padding: '16px', color: '#64748b' }}>Loading company details…</div>
-        ) : !companyDetails ? (
-          <div style={{ padding: '16px', color: '#64748b' }}>No data.</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Summary */}
+      isOpen={showCompanyDetails}
+      onClose={() => {setShowCompanyDetails(false);setCompanyDetails(null);}}
+      title={`Company Details${companyDetails?.company?.Name ? ` — ${companyDetails.company.Name}` : ''}`}
+      size="xl">
+      
+        {companyDetailsLoading ?
+      <div style={{ padding: '16px', color: '#64748b' }}>Loading company details…</div> :
+      !companyDetails ?
+      <div style={{ padding: '16px', color: '#64748b' }}>No data.</div> :
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
               <div style={{ ...cardBase, padding: '14px' }}>
                 <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Users</div>
@@ -721,37 +690,33 @@ const SuperAdminDashboard = () => {
                 </div>
               </div>
             </div>
-
-            {/* Tabs */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {[
-                { key: 'overview', label: 'Overview' },
-                { key: 'users', label: 'Users' },
-                { key: 'payments', label: 'Payments' },
-                { key: 'expenses', label: 'Expenses' },
-                { key: 'deposits', label: 'Deposits' },
-                { key: 'subscription', label: 'Subscription' },
-              ].map(ti => (
-                <button
-                  key={ti.key}
-                  type="button"
-                  onClick={() => setCompanyDetailsTab(ti.key)}
-                  style={{
-                    ...btnSmall,
-                    padding: '8px 12px',
-                    background: companyDetailsTab === ti.key ? '#eff6ff' : '#f8fafc',
-                    color: companyDetailsTab === ti.key ? '#1d4ed8' : '#334155',
-                    border: companyDetailsTab === ti.key ? '1px solid #bfdbfe' : '1px solid #e2e8f0'
-                  }}
-                >
+          { key: 'overview', label: 'Overview' },
+          { key: 'users', label: 'Users' },
+          { key: 'payments', label: 'Payments' },
+          { key: 'expenses', label: 'Expenses' },
+          { key: 'deposits', label: 'Deposits' },
+          { key: 'subscription', label: 'Subscription' }].
+          map((ti) =>
+          <button
+            key={ti.key}
+            type="button"
+            onClick={() => setCompanyDetailsTab(ti.key)}
+            style={{
+              ...btnSmall,
+              padding: '8px 12px',
+              background: companyDetailsTab === ti.key ? '#eff6ff' : '#f8fafc',
+              color: companyDetailsTab === ti.key ? '#1d4ed8' : '#334155',
+              border: companyDetailsTab === ti.key ? '1px solid #bfdbfe' : '1px solid #e2e8f0'
+            }}>
+            
                   {ti.label}
                 </button>
-              ))}
+          )}
             </div>
-
-            {/* Content */}
-            {companyDetailsTab === 'overview' && (
-              <div style={{ ...cardBase, padding: '14px' }}>
+            {companyDetailsTab === 'overview' &&
+        <div style={{ ...cardBase, padding: '14px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
                   <div>
                     <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Name</div>
@@ -780,23 +745,23 @@ const SuperAdminDashboard = () => {
                     </div>
                   </div>
                 </div>
-                {Array.isArray(companyDetails.stats?.usersByRole) && companyDetails.stats.usersByRole.length > 0 && (
-                  <div style={{ marginTop: '14px' }}>
+                {Array.isArray(companyDetails.stats?.usersByRole) && companyDetails.stats.usersByRole.length > 0 &&
+          <div style={{ marginTop: '14px' }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px', color: '#0f172a' }}>Users by role</div>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {companyDetails.stats.usersByRole.map((rc, idx) => (
-                        <div key={`${rc.role || rc.Role}-${idx}`} style={{ padding: '6px 10px', borderRadius: '999px', background: '#f1f5f9', border: '1px solid #e2e8f0', fontSize: '0.8rem', color: '#334155' }}>
+                      {companyDetails.stats.usersByRole.map((rc, idx) =>
+              <div key={`${rc.role || rc.Role}-${idx}`} style={{ padding: '6px 10px', borderRadius: '999px', background: '#f1f5f9', border: '1px solid #e2e8f0', fontSize: '0.8rem', color: '#334155' }}>
                           <strong>{rc.role || rc.Role}</strong>: {rc.count ?? rc.Count ?? 0}
                         </div>
-                      ))}
+              )}
                     </div>
                   </div>
-                )}
+          }
               </div>
-            )}
+        }
 
-            {companyDetailsTab === 'users' && (
-              <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
+            {companyDetailsTab === 'users' &&
+        <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={tableStyle}>
                     <thead>
@@ -809,26 +774,26 @@ const SuperAdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {(companyDetails.users || []).map(u => (
-                        <tr key={`co-user-${u.id}`} style={trHover}>
+                      {(companyDetails.users || []).map((u) =>
+                <tr key={`co-user-${u.id}`} style={trHover}>
                           <td style={tdStyle}><span style={{ fontWeight: 700 }}>{u.name}</span></td>
                           <td style={tdStyle}>{u.email}</td>
                           <td style={tdStyle}><span style={statusPill(u.role)}>{u.role}</span></td>
                           <td style={tdStyle}><span style={statusPill(u.status)}>{u.status}</span></td>
                           <td style={tdStyle}>{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : '-'}</td>
                         </tr>
-                      ))}
-                      {(companyDetails.users || []).length === 0 && (
-                        <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No users found for this company.</td></tr>
-                      )}
+                )}
+                      {(companyDetails.users || []).length === 0 &&
+                <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No users found for this company.</td></tr>
+                }
                     </tbody>
                   </table>
                 </div>
               </div>
-            )}
+        }
 
-            {companyDetailsTab === 'payments' && (
-              <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
+            {companyDetailsTab === 'payments' &&
+        <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={tableStyle}>
                     <thead>
@@ -842,8 +807,8 @@ const SuperAdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {(companyDetails.recent?.tenantPayments || []).map(p => (
-                        <tr key={`co-pay-${p.ID || p.id}`} style={trHover}>
+                      {(companyDetails.recent?.tenantPayments || []).map((p) =>
+                <tr key={`co-pay-${p.ID || p.id}`} style={trHover}>
                           <td style={tdStyle}>{p.Tenant || p.tenant || '-'}</td>
                           <td style={tdStyle}>{p.Property || p.property || '-'}</td>
                           <td style={tdStyle}>{Number(p.Amount || p.amount || 0).toLocaleString()} XOF</td>
@@ -851,18 +816,18 @@ const SuperAdminDashboard = () => {
                           <td style={tdStyle}><span style={statusPill(p.Status || p.status || '-')}>{p.Status || p.status || '-'}</span></td>
                           <td style={tdStyle}>{p.Date ? new Date(p.Date).toLocaleString() : '-'}</td>
                         </tr>
-                      ))}
-                      {(companyDetails.recent?.tenantPayments || []).length === 0 && (
-                        <tr><td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No tenant payments.</td></tr>
-                      )}
+                )}
+                      {(companyDetails.recent?.tenantPayments || []).length === 0 &&
+                <tr><td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No tenant payments.</td></tr>
+                }
                     </tbody>
                   </table>
                 </div>
               </div>
-            )}
+        }
 
-            {companyDetailsTab === 'expenses' && (
-              <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
+            {companyDetailsTab === 'expenses' &&
+        <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={tableStyle}>
                     <thead>
@@ -875,26 +840,26 @@ const SuperAdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {(companyDetails.recent?.expenses || []).map(e => (
-                        <tr key={`co-exp-${e.ID || e.id}`} style={trHover}>
+                      {(companyDetails.recent?.expenses || []).map((e) =>
+                <tr key={`co-exp-${e.ID || e.id}`} style={trHover}>
                           <td style={tdStyle}>{e.Category || e.category || '-'}</td>
                           <td style={tdStyle}>{e.Building || e.building || '-'}</td>
                           <td style={tdStyle}>{Number(e.Amount || e.amount || 0).toLocaleString()} XOF</td>
                           <td style={tdStyle}><span style={statusPill(e.Status || e.status || '-')}>{e.Status || e.status || '-'}</span></td>
                           <td style={tdStyle}>{e.Date ? new Date(e.Date).toLocaleString() : '-'}</td>
                         </tr>
-                      ))}
-                      {(companyDetails.recent?.expenses || []).length === 0 && (
-                        <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No expenses.</td></tr>
-                      )}
+                )}
+                      {(companyDetails.recent?.expenses || []).length === 0 &&
+                <tr><td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No expenses.</td></tr>
+                }
                     </tbody>
                   </table>
                 </div>
               </div>
-            )}
+        }
 
-            {companyDetailsTab === 'deposits' && (
-              <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
+            {companyDetailsTab === 'deposits' &&
+        <div style={{ ...cardBase, padding: 0, overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={tableStyle}>
                     <thead>
@@ -908,8 +873,8 @@ const SuperAdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {(companyDetails.recent?.deposits || []).map(d => (
-                        <tr key={`co-dep-${d.ID || d.id}`} style={trHover}>
+                      {(companyDetails.recent?.deposits || []).map((d) =>
+                <tr key={`co-dep-${d.ID || d.id}`} style={trHover}>
                           <td style={tdStyle}>{d.Tenant || d.tenant || '-'}</td>
                           <td style={tdStyle}>{d.Property || d.property || '-'}</td>
                           <td style={tdStyle}>{Number(d.Amount || d.amount || 0).toLocaleString()} XOF</td>
@@ -917,18 +882,18 @@ const SuperAdminDashboard = () => {
                           <td style={tdStyle}><span style={statusPill(d.Status || d.status || '-')}>{d.Status || d.status || '-'}</span></td>
                           <td style={tdStyle}>{d.CreatedAt ? new Date(d.CreatedAt).toLocaleString() : '-'}</td>
                         </tr>
-                      ))}
-                      {(companyDetails.recent?.deposits || []).length === 0 && (
-                        <tr><td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No security deposits.</td></tr>
-                      )}
+                )}
+                      {(companyDetails.recent?.deposits || []).length === 0 &&
+                <tr><td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '28px' }}>No security deposits.</td></tr>
+                }
                     </tbody>
                   </table>
                 </div>
               </div>
-            )}
+        }
 
-            {companyDetailsTab === 'subscription' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+            {companyDetailsTab === 'subscription' &&
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
                 <div style={{ ...cardBase, padding: '14px' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>Subscription Summary</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -964,40 +929,40 @@ const SuperAdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {(companyDetails.subscriptionPayments || []).map(p => (
-                          <tr key={`co-sub-${p.ID || p.id}`} style={trHover}>
+                        {(companyDetails.subscriptionPayments || []).map((p) =>
+                  <tr key={`co-sub-${p.ID || p.id}`} style={trHover}>
                             <td style={tdStyle}>{Number(p.Amount || p.amount || 0).toLocaleString()} {p.Currency || p.currency || 'XOF'}</td>
                             <td style={tdStyle}>{p.Provider || p.provider || '-'}</td>
                             <td style={tdStyle}><span style={statusPill(p.Status || p.status || '-')}>{p.Status || p.status || '-'}</span></td>
                             <td style={tdStyle}>{p.PaymentDate ? new Date(p.PaymentDate).toLocaleString() : '-'}</td>
                           </tr>
-                        ))}
-                        {(companyDetails.subscriptionPayments || []).length === 0 && (
-                          <tr><td colSpan={4} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '22px' }}>No subscription payments yet.</td></tr>
-                        )}
+                  )}
+                        {(companyDetails.subscriptionPayments || []).length === 0 &&
+                  <tr><td colSpan={4} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '22px' }}>No subscription payments yet.</td></tr>
+                  }
                       </tbody>
                     </table>
                   </div>
                 </div>
               </div>
-            )}
+        }
           </div>
-        )}
+      }
       </Modal>
-    </div>
-  );
+    </div>;
 
-  /* ═════════════════════════════════════════════════
-     3. DIRECTORS TAB
-  ═════════════════════════════════════════════════ */
+
+
+
+
   const filteredDirectors = useMemo(() => {
     const base = agencyAdmins || [];
     if (!directorsSearch) return base;
     const q = directorsSearch.toLowerCase();
-    return base.filter(a =>
-      (a.Name || a.name || '').toLowerCase().includes(q) ||
-      (a.Email || a.email || '').toLowerCase().includes(q) ||
-      (a.Company || a.company || '').toLowerCase().includes(q)
+    return base.filter((a) =>
+    (a.Name || a.name || '').toLowerCase().includes(q) ||
+    (a.Email || a.email || '').toLowerCase().includes(q) ||
+    (a.Company || a.company || '').toLowerCase().includes(q)
     );
   }, [agencyAdmins, directorsSearch]);
 
@@ -1018,7 +983,7 @@ const SuperAdminDashboard = () => {
       role,
       password: '',
       subscriptionFee: (companyDetails.subscriptionFee ?? companyDetails.SubscriptionFee ?? '')?.toString?.() || '',
-      subscriptionCurrency: companyDetails.subscriptionCurrency || companyDetails.SubscriptionCurrency || 'XOF',
+      subscriptionCurrency: companyDetails.subscriptionCurrency || companyDetails.SubscriptionCurrency || 'XOF'
     });
     setShowAgencyAdminModal(true);
   };
@@ -1036,7 +1001,7 @@ const SuperAdminDashboard = () => {
         await superAdminService.updateUser(editingAgencyAdmin.ID || editingAgencyAdmin.id, userData);
         addNotification('Director updated successfully!', 'success');
       } else {
-        if (!agencyAdminForm.password) { addNotification('Password is required', 'warning'); return; }
+        if (!agencyAdminForm.password) {addNotification('Password is required', 'warning');return;}
         userData.password = agencyAdminForm.password;
         await superAdminService.addUser(userData);
         addNotification('Director created successfully!', 'success');
@@ -1061,8 +1026,8 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  const renderDirectors = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+  const renderDirectors = () =>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700, color: '#1e293b' }}>Agency Directors</h2>
@@ -1093,14 +1058,14 @@ const SuperAdminDashboard = () => {
             </thead>
             <tbody>
               {filteredDirectors.map((admin, index) => {
-                const companyName = admin.companyDetails?.name || admin.CompanyDetails?.name || admin.Company || admin.company || 'N/A';
-                const status = admin.Status || admin.status || 'Active';
-                const role = admin.Role || admin.role || 'agency_director';
-                const roleLabel = role === 'superadmin' ? 'Super Admin' : role === 'agency_director' ? 'Agency Director' : role;
-                return (
-                  <tr key={`dir-${admin.ID || admin.id || index}`} style={trHover}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              const companyName = admin.companyDetails?.name || admin.CompanyDetails?.name || admin.Company || admin.company || 'N/A';
+              const status = admin.Status || admin.status || 'Active';
+              const role = admin.Role || admin.role || 'agency_director';
+              const roleLabel = role === 'superadmin' ? 'Super Admin' : role === 'agency_director' ? 'Agency Director' : role;
+              return (
+                <tr key={`dir-${admin.ID || admin.id || index}`} style={trHover}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                     <td style={tdStyle}>{index + 1}</td>
                     <td style={tdStyle}><span style={{ fontWeight: 600, color: '#1e293b' }}>{admin.Name || admin.name}</span></td>
                     <td style={tdStyle}>{admin.Email || admin.email}</td>
@@ -1117,57 +1082,55 @@ const SuperAdminDashboard = () => {
                         <button style={{ ...btnSmall, background: '#fee2e2', color: '#dc2626' }} onClick={() => handleDeleteDirector(admin)} title="Delete"><Trash2 size={14} /></button>
                       </div>
                     </td>
-                  </tr>
-                );
-              })}
-              {filteredDirectors.length === 0 && (
-                <tr><td colSpan={7} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No directors found.</td></tr>
-              )}
+                  </tr>);
+
+            })}
+              {filteredDirectors.length === 0 &&
+            <tr><td colSpan={7} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No directors found.</td></tr>
+            }
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Director Modal */}
       <Modal isOpen={showAgencyAdminModal} onClose={() => setShowAgencyAdminModal(false)} title={editingAgencyAdmin ? 'Edit Director' : 'Add Director'} size="md">
         <form onSubmit={handleSubmitDirector}>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Name *</label>
-            <input style={inputStyle} type="text" value={agencyAdminForm.name} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, name: e.target.value }))} required placeholder="Director name" />
+            <input style={inputStyle} type="text" value={agencyAdminForm.name} onChange={(e) => setAgencyAdminForm((prev) => ({ ...prev, name: e.target.value }))} required placeholder="Director name" />
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Email *</label>
-            <input style={inputStyle} type="email" value={agencyAdminForm.email} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, email: e.target.value }))} required placeholder="email@example.com" />
+            <input style={inputStyle} type="email" value={agencyAdminForm.email} onChange={(e) => setAgencyAdminForm((prev) => ({ ...prev, email: e.target.value }))} required placeholder="email@example.com" />
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Company *</label>
-            {companies.length > 0 ? (
-              <select style={inputStyle} value={agencyAdminForm.company} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, company: e.target.value }))} required>
+            {companies.length > 0 ?
+          <select style={inputStyle} value={agencyAdminForm.company} onChange={(e) => setAgencyAdminForm((prev) => ({ ...prev, company: e.target.value }))} required>
                 <option value="">Select a company</option>
-                {companies.map((c, i) => (
-                  <option key={`co-opt-${c.ID || c.id || i}`} value={c.Name || c.name}>{c.Name || c.name}</option>
-                ))}
-              </select>
-            ) : (
-              <input style={inputStyle} type="text" value={agencyAdminForm.company} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, company: e.target.value }))} required placeholder="Company name" />
+                {companies.map((c, i) =>
+            <option key={`co-opt-${c.ID || c.id || i}`} value={c.Name || c.name}>{c.Name || c.name}</option>
             )}
+              </select> :
+
+          <input style={inputStyle} type="text" value={agencyAdminForm.company} onChange={(e) => setAgencyAdminForm((prev) => ({ ...prev, company: e.target.value }))} required placeholder="Company name" />
+          }
           </div>
           <div style={formGroupStyle}>
             <label style={labelStyle}>Role *</label>
-            <select style={inputStyle} value={agencyAdminForm.role} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, role: e.target.value }))} required>
+            <select style={inputStyle} value={agencyAdminForm.role} onChange={(e) => setAgencyAdminForm((prev) => ({ ...prev, role: e.target.value }))} required>
               <option value="agency_director">Agency Director</option>
               <option value="superadmin">Super Admin</option>
             </select>
           </div>
-          {agencyAdminForm.role === 'agency_director' && (
-            <>
+          {agencyAdminForm.role === 'agency_director' &&
+        <>
               <div style={formGroupStyle}>
                 <label style={labelStyle}>Monthly Subscription Fee</label>
-                <input style={inputStyle} type="number" min="0" step="1" value={agencyAdminForm.subscriptionFee} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, subscriptionFee: e.target.value }))} placeholder="e.g., 30000" />
+                <input style={inputStyle} type="number" min="0" step="1" value={agencyAdminForm.subscriptionFee} onChange={(e) => setAgencyAdminForm((prev) => ({ ...prev, subscriptionFee: e.target.value }))} placeholder="e.g., 30000" />
               </div>
               <div style={formGroupStyle}>
                 <label style={labelStyle}>Subscription Currency</label>
-                <select style={inputStyle} value={agencyAdminForm.subscriptionCurrency} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, subscriptionCurrency: e.target.value }))}>
+                <select style={inputStyle} value={agencyAdminForm.subscriptionCurrency} onChange={(e) => setAgencyAdminForm((prev) => ({ ...prev, subscriptionCurrency: e.target.value }))}>
                   <option value="XOF">XOF</option>
                   <option value="USD">USD</option>
                   <option value="KES">KES</option>
@@ -1175,10 +1138,10 @@ const SuperAdminDashboard = () => {
                 </select>
               </div>
             </>
-          )}
+        }
           <div style={formGroupStyle}>
             <label style={labelStyle}>Password {editingAgencyAdmin ? '(leave blank to keep current)' : '*'}</label>
-            <input style={inputStyle} type="password" value={agencyAdminForm.password} onChange={(e) => setAgencyAdminForm(prev => ({ ...prev, password: e.target.value }))} required={!editingAgencyAdmin} placeholder={editingAgencyAdmin ? 'New password (optional)' : 'Enter password'} />
+            <input style={inputStyle} type="password" value={agencyAdminForm.password} onChange={(e) => setAgencyAdminForm((prev) => ({ ...prev, password: e.target.value }))} required={!editingAgencyAdmin} placeholder={editingAgencyAdmin ? 'New password (optional)' : 'Enter password'} />
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
             <button type="button" style={btnOutline} onClick={() => setShowAgencyAdminModal(false)}>Cancel</button>
@@ -1186,21 +1149,20 @@ const SuperAdminDashboard = () => {
           </div>
         </form>
       </Modal>
-    </div>
-  );
+    </div>;
 
-  /* ═════════════════════════════════════════════════
-     4. FINANCIAL TAB
-  ═════════════════════════════════════════════════ */
+
+
+
+
   const renderFinancial = () => {
     const totalRevenue = financialData?.totalRevenue || overviewStats?.totalRevenue || 0;
-    const activeSubs = subscriptions.filter(s => (s.status || s.paymentStatus || '').toLowerCase() === 'active' || (s.status || s.paymentStatus || '').toLowerCase() === 'paid').length || overviewStats?.activeSubscriptions || 0;
-    const overduePay = subscriptions.filter(s => (s.status || s.paymentStatus || '').toLowerCase() === 'overdue' || (s.status || s.paymentStatus || '').toLowerCase() === 'pending').length || overviewStats?.overduePayments || 0;
+    const activeSubs = subscriptions.filter((s) => (s.status || s.paymentStatus || '').toLowerCase() === 'active' || (s.status || s.paymentStatus || '').toLowerCase() === 'paid').length || overviewStats?.activeSubscriptions || 0;
+    const overduePay = subscriptions.filter((s) => (s.status || s.paymentStatus || '').toLowerCase() === 'overdue' || (s.status || s.paymentStatus || '').toLowerCase() === 'pending').length || overviewStats?.overduePayments || 0;
     const netProfit = financialData?.netProfit || 0;
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Summary cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
           <div style={metricCardStyle('#3b82f6')}>
             <p style={metricLabel}>Total Revenue</p>
@@ -1219,8 +1181,6 @@ const SuperAdminDashboard = () => {
             <p style={metricValue}>{netProfit.toLocaleString()} CFA</p>
           </div>
         </div>
-
-        {/* Revenue chart */}
         <div style={cardBase}>
           <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Revenue Trend</h3>
           <div style={{ width: '100%', height: 250 }}>
@@ -1237,15 +1197,13 @@ const SuperAdminDashboard = () => {
                 <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
                 <Tooltip
                   contentStyle={{ backgroundColor: 'rgba(255,255,255,0.95)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', padding: '8px 12px' }}
-                  formatter={(value) => [`${value.toLocaleString()} CFA`, 'Revenue']}
-                />
+                  formatter={(value) => [`${value.toLocaleString()} CFA`, 'Revenue']} />
+                
                 <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={3} fill="url(#saFinRevenue)" dot={{ fill: '#8b5cf6', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7 }} name="Revenue" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
-
-        {/* Subscription payments table */}
         <div style={cardBase}>
           <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Subscription Payments</h3>
           <div style={{ overflowX: 'auto' }}>
@@ -1260,31 +1218,29 @@ const SuperAdminDashboard = () => {
               </thead>
               <tbody>
                 {(subscriptions.length > 0 ? subscriptions : companies).map((item, index) => {
-                  const agency = item.agencyId ? companies.find(c => (c.ID || c.id) === item.agencyId) : item;
+                  const agency = item.agencyId ? companies.find((c) => (c.ID || c.id) === item.agencyId) : item;
                   const payDate = item.paymentDate || item.dueDate || item.createdAt || item.CreatedAt || agency?.CreatedAt;
                   const payStatus = item.paymentStatus || item.status || 'Paid';
                   return (
                     <tr key={`fin-sub-${item.id || item.ID || index}`} style={trHover}
-                      onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                       <td style={tdStyle}><span style={{ fontWeight: 600 }}>{agency?.Name || agency?.name || item.agencyName || 'N/A'}</span></td>
                       <td style={tdStyle}>{payDate ? new Date(payDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</td>
                       <td style={tdStyle}><span style={statusPill(payStatus)}>{payStatus}</span></td>
                       <td style={tdStyle}>{(item.amount || item.subscriptionAmount || agency?.SubscriptionAmount || 0).toLocaleString()} CFA</td>
-                    </tr>
-                  );
+                    </tr>);
+
                 })}
-                {subscriptions.length === 0 && companies.length === 0 && (
-                  <tr><td colSpan={4} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No payment records.</td></tr>
-                )}
+                {subscriptions.length === 0 && companies.length === 0 &&
+                <tr><td colSpan={4} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No payment records.</td></tr>
+                }
               </tbody>
             </table>
           </div>
         </div>
-
-        {/* Agency payments table */}
-        {agencyPayments.length > 0 && (
-          <div style={cardBase}>
+        {agencyPayments.length > 0 &&
+        <div style={cardBase}>
             <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Agency Payment Records</h3>
             <div style={{ overflowX: 'auto' }}>
               <table style={tableStyle}>
@@ -1299,31 +1255,31 @@ const SuperAdminDashboard = () => {
                 </thead>
                 <tbody>
                   {agencyPayments.map((payment, index) => {
-                    const pStatus = payment.status || payment.Status || 'Completed';
-                    return (
-                      <tr key={`ap-${payment.id || payment.ID || index}`} style={trHover}
-                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  const pStatus = payment.status || payment.Status || 'Completed';
+                  return (
+                    <tr key={`ap-${payment.id || payment.ID || index}`} style={trHover}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                         <td style={tdStyle}>{payment.agencyName || payment.AgencyName || 'N/A'}</td>
                         <td style={tdStyle}>{payment.reference || payment.Reference || '-'}</td>
                         <td style={tdStyle}>{payment.createdAt || payment.CreatedAt ? new Date(payment.createdAt || payment.CreatedAt).toLocaleDateString() : '-'}</td>
                         <td style={tdStyle}><span style={statusPill(pStatus)}>{pStatus}</span></td>
                         <td style={tdStyle}>{(payment.amount || payment.Amount || 0).toLocaleString()} CFA</td>
-                      </tr>
-                    );
-                  })}
+                      </tr>);
+
+                })}
                 </tbody>
               </table>
             </div>
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
-  /* ═════════════════════════════════════════════════
-     5. ADVERTISEMENTS TAB
-  ═════════════════════════════════════════════════ */
+
+
+
   const [adPublishing, setAdPublishing] = useState(false);
   const [adImagePreview, setAdImagePreview] = useState(null);
   const adFileRef = useRef(null);
@@ -1339,25 +1295,25 @@ const SuperAdminDashboard = () => {
       addNotification('Image must be under 10MB', 'error');
       return;
     }
-    setNewAd(prev => ({ ...prev, image: file }));
+    setNewAd((prev) => ({ ...prev, image: file }));
     const reader = new FileReader();
     reader.onload = (e) => setAdImagePreview(e.target.result);
     reader.readAsDataURL(file);
   };
 
-	  const handleCreateAd = async (e) => {
-	    e.preventDefault();
-	    if (!newAd.title || !newAd.text) { addNotification('Please provide a title and description.', 'warning'); return; }
-	    if (!newAd.image) { addNotification('Please upload an image.', 'warning'); return; }
-	    setAdPublishing(true);
-	    try {
-	      await superAdminService.createAdvertisement(newAd);
-	      addNotification('Advertisement published!', 'success');
-	      setNewAd({ title: '', text: '', link: '', image: null });
-	      setAdImagePreview(null);
-	      if (adFileRef.current) adFileRef.current.value = '';
-	      await loadData();
-	    } catch (error) {
+  const handleCreateAd = async (e) => {
+    e.preventDefault();
+    if (!newAd.title || !newAd.text) {addNotification('Please provide a title and description.', 'warning');return;}
+    if (!newAd.image) {addNotification('Please upload an image.', 'warning');return;}
+    setAdPublishing(true);
+    try {
+      await superAdminService.createAdvertisement(newAd);
+      addNotification('Advertisement published!', 'success');
+      setNewAd({ title: '', text: '', link: '', image: null });
+      setAdImagePreview(null);
+      if (adFileRef.current) adFileRef.current.value = '';
+      await loadData();
+    } catch (error) {
       console.error('Error creating ad:', error);
       addNotification(error.message || 'Failed to create advertisement', 'error');
     } finally {
@@ -1365,17 +1321,14 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  const renderAds = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Header */}
+  const renderAds = () =>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
         <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700, color: '#1e293b' }}>Advertisements</h2>
         <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
           Manage global advertisements visible to all agencies ({ads.length} active)
         </p>
       </div>
-
-	      {/* Create Ad card */}
 	      <div style={{ ...cardBase, background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)', border: '1px solid #dbeafe' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1389,114 +1342,109 @@ const SuperAdminDashboard = () => {
 
         <form onSubmit={handleCreateAd} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 	          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-	            {/* Left: Text fields */}
 	            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 	              <div>
 	                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Title</label>
                 <input
-                  style={inputStyle}
-                  type="text"
-                  placeholder="e.g. New Year Promotion"
-                  value={newAd.title}
-                  onChange={(e) => setNewAd(prev => ({ ...prev, title: e.target.value }))}
-                />
+                style={inputStyle}
+                type="text"
+                placeholder="e.g. New Year Promotion"
+                value={newAd.title}
+                onChange={(e) => setNewAd((prev) => ({ ...prev, title: e.target.value }))} />
+              
               </div>
 	              <div>
 	                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Description</label>
 	                <textarea
-	                  style={{ ...inputStyle, minHeight: '120px', resize: 'vertical' }}
-	                  placeholder="Describe the advertisement..."
-	                  value={newAd.text}
-	                  onChange={(e) => setNewAd(prev => ({ ...prev, text: e.target.value }))}
-	                />
+                style={{ ...inputStyle, minHeight: '120px', resize: 'vertical' }}
+                placeholder="Describe the advertisement..."
+                value={newAd.text}
+                onChange={(e) => setNewAd((prev) => ({ ...prev, text: e.target.value }))} />
+              
 	              </div>
 	              <div>
 	                <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Property Link (optional)</label>
 	                <input
-	                  style={inputStyle}
-	                  type="url"
-	                  placeholder="https://example.com/property/123"
-	                  value={newAd.link || ''}
-	                  onChange={(e) => setNewAd(prev => ({ ...prev, link: e.target.value }))}
-	                />
+                style={inputStyle}
+                type="url"
+                placeholder="https://example.com/property/123"
+                value={newAd.link || ''}
+                onChange={(e) => setNewAd((prev) => ({ ...prev, link: e.target.value }))} />
+              
 	              </div>
 	            </div>
-
-            {/* Right: Image upload */}
             <div>
               <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Image</label>
-              {adImagePreview ? (
-                <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '2px solid #e2e8f0', height: '200px' }}>
+              {adImagePreview ?
+            <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '2px solid #e2e8f0', height: '200px' }}>
                   <img src={adImagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <button
-                    type="button"
-                    onClick={() => { setNewAd(prev => ({ ...prev, image: null })); setAdImagePreview(null); if (adFileRef.current) adFileRef.current.value = ''; }}
-                    style={{
-                      position: 'absolute', top: '8px', right: '8px', width: '32px', height: '32px', borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
-                    }}
-                  >
+                type="button"
+                onClick={() => {setNewAd((prev) => ({ ...prev, image: null }));setAdImagePreview(null);if (adFileRef.current) adFileRef.current.value = '';}}
+                style={{
+                  position: 'absolute', top: '8px', right: '8px', width: '32px', height: '32px', borderRadius: '50%',
+                  background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                }}>
+                
                     ×
                   </button>
                   <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem' }}>
                     {newAd.image?.name}
                   </div>
-                </div>
-              ) : (
-                <label
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    height: '200px', borderRadius: '14px', border: '2px dashed #cbd5e1',
-                    background: '#fff', cursor: 'pointer', transition: 'all 0.2s', gap: '10px',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#f0f7ff'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; }}
-                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#f0f7ff'; }}
-                  onDragLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; }}
-                  onDrop={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; if (e.dataTransfer.files[0]) handleAdImageSelect(e.dataTransfer.files[0]); }}
-                >
-                  <input ref={adFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files[0]) handleAdImageSelect(e.target.files[0]); }} />
+                </div> :
+
+            <label
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                height: '200px', borderRadius: '14px', border: '2px dashed #cbd5e1',
+                background: '#fff', cursor: 'pointer', transition: 'all 0.2s', gap: '10px'
+              }}
+              onMouseEnter={(e) => {e.currentTarget.style.borderColor = '#3b82f6';e.currentTarget.style.background = '#f0f7ff';}}
+              onMouseLeave={(e) => {e.currentTarget.style.borderColor = '#cbd5e1';e.currentTarget.style.background = '#fff';}}
+              onDragOver={(e) => {e.preventDefault();e.currentTarget.style.borderColor = '#3b82f6';e.currentTarget.style.background = '#f0f7ff';}}
+              onDragLeave={(e) => {e.currentTarget.style.borderColor = '#cbd5e1';e.currentTarget.style.background = '#fff';}}
+              onDrop={(e) => {e.preventDefault();e.currentTarget.style.borderColor = '#cbd5e1';e.currentTarget.style.background = '#fff';if (e.dataTransfer.files[0]) handleAdImageSelect(e.dataTransfer.files[0]);}}>
+              
+                  <input ref={adFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {if (e.target.files[0]) handleAdImageSelect(e.target.files[0]);}} />
                   <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Upload size={24} style={{ color: '#3b82f6' }} />
                   </div>
                   <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>Drop image here or click to browse</span>
                   <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>JPG, PNG, GIF, WebP — max 10MB</span>
                 </label>
-              )}
+            }
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
             <button type="submit" disabled={adPublishing} style={{
-              ...btnPrimary,
-              opacity: adPublishing ? 0.7 : 1,
-              cursor: adPublishing ? 'wait' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 28px',
-            }}>
+            ...btnPrimary,
+            opacity: adPublishing ? 0.7 : 1,
+            cursor: adPublishing ? 'wait' : 'pointer',
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 28px'
+          }}>
               {adPublishing ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Megaphone size={16} />}
               {adPublishing ? 'Publishing...' : 'Publish Advertisement'}
             </button>
           </div>
         </form>
       </div>
+      {ads.length > 0 ?
+    <AdvertisementsList advertisements={ads} /> :
 
-      {/* Existing ads */}
-      {ads.length > 0 ? (
-        <AdvertisementsList advertisements={ads} />
-      ) : (
-        <div style={{ ...cardBase, textAlign: 'center', padding: '48px 20px', color: '#94a3b8' }}>
+    <div style={{ ...cardBase, textAlign: 'center', padding: '48px 20px', color: '#94a3b8' }}>
           <Megaphone size={40} style={{ color: '#cbd5e1', marginBottom: '12px' }} />
           <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: '#64748b' }}>No advertisements yet</p>
           <p style={{ margin: 0, fontSize: '0.85rem' }}>Create your first advertisement above to reach all agencies.</p>
         </div>
-      )}
-    </div>
-  );
+    }
+    </div>;
 
-  /* ═════════════════════════════════════════════════
-     6. MESSAGES TAB
-  ═════════════════════════════════════════════════ */
+
+
+
+
   const loadChatForAdmin = useCallback(async (adminId) => {
     try {
       setSelectedAdminId(adminId);
@@ -1514,9 +1462,9 @@ const SuperAdminDashboard = () => {
     const storedUser = localStorage.getItem('user');
     let currentUserId = null;
     if (storedUser) {
-      try { const user = JSON.parse(storedUser); currentUserId = user.id || user.ID; } catch (e) { /* ignore */ }
+      try {const user = JSON.parse(storedUser);currentUserId = user.id || user.ID;} catch (e) {}
     }
-    if (!currentUserId) { addNotification('Unable to identify current user. Please log in again.', 'error'); return; }
+    if (!currentUserId) {addNotification('Unable to identify current user. Please log in again.', 'error');return;}
 
     const content = chatInput.trim();
     setChatInput('');
@@ -1530,49 +1478,47 @@ const SuperAdminDashboard = () => {
   };
 
   const chatUsers = useMemo(() =>
-    (agencyAdmins || []).map(admin => ({
-      userId: admin.ID || admin.id,
-      name: admin.Name || admin.name || 'Unknown',
-      email: admin.Email || admin.email || '',
-      role: admin.Role || admin.role || 'agency_director',
-      company: admin.Company || admin.company || '',
-    })),
-    [agencyAdmins]
+  (agencyAdmins || []).map((admin) => ({
+    userId: admin.ID || admin.id,
+    name: admin.Name || admin.name || 'Unknown',
+    email: admin.Email || admin.email || '',
+    role: admin.Role || admin.role || 'agency_director',
+    company: admin.Company || admin.company || ''
+  })),
+  [agencyAdmins]
   );
 
-  const renderChat = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+  const renderChat = () =>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
       <MessagingPanel
-        chatUsers={chatUsers}
-        selectedUserId={selectedAdminId}
-        chatMessages={chatMessages}
-        chatInput={chatInput}
-        setChatInput={setChatInput}
-        loadChatForUser={loadChatForAdmin}
-        handleSendMessage={handleSendMessage}
-        messagesEndRef={messagesEndRef}
-      />
-    </div>
-  );
+      chatUsers={chatUsers}
+      selectedUserId={selectedAdminId}
+      chatMessages={chatMessages}
+      chatInput={chatInput}
+      setChatInput={setChatInput}
+      loadChatForUser={loadChatForAdmin}
+      handleSendMessage={handleSendMessage}
+      messagesEndRef={messagesEndRef} />
+    
+    </div>;
 
-  /* ─── render switch ─── */
   const renderContent = (tabId = activeTab) => {
     if (loading && tabId === 'overview') {
       return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: '#64748b' }}>
           <RefreshCw size={20} style={{ marginRight: '8px', animation: 'spin 1s linear infinite' }} /> Loading data...
-        </div>
-      );
+        </div>);
+
     }
     switch (tabId) {
-      case 'overview': return renderOverview();
-      case 'companies': return renderCompanies();
-      case 'directors': return renderDirectors();
-      case 'financial': return renderFinancial();
-      case 'ads': return renderAds();
-      case 'chat': return renderChat();
-      case 'settings': return <div className="embedded-settings"><SettingsPage /></div>;
-      default: return renderOverview();
+      case 'overview':return renderOverview();
+      case 'companies':return renderCompanies();
+      case 'directors':return renderDirectors();
+      case 'financial':return renderFinancial();
+      case 'ads':return renderAds();
+      case 'chat':return renderChat();
+      case 'settings':return <div className="embedded-settings"><SettingsPage /></div>;
+      default:return renderOverview();
     }
   };
 
@@ -1583,37 +1529,36 @@ const SuperAdminDashboard = () => {
         menu={layoutMenu}
         activeId={activeTab}
         onActiveChange={setActiveTab}
-        onLogout={handleLogout}
-      >
-        {({ activeId }) => (
-          <div className="content-body super-admin-content">
+        onLogout={handleLogout}>
+        
+        {({ activeId }) =>
+        <div className="content-body super-admin-content">
             {renderContent(activeId)}
           </div>
-        )}
+        }
       </RoleLayout>
-      {/* Notification toasts */}
       <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 10000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {notifications.map(notification => (
-          <div key={`notification-${notification.id}`} style={{
-            padding: '12px 20px',
-            borderRadius: '10px',
-            color: '#fff',
-            fontSize: '0.88rem',
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            background: notification.type === 'success' ? '#16a34a' : notification.type === 'error' ? '#dc2626' : notification.type === 'warning' ? '#f59e0b' : '#3b82f6',
-            animation: 'slideIn 0.3s ease',
-          }}>
+        {notifications.map((notification) =>
+        <div key={`notification-${notification.id}`} style={{
+          padding: '12px 20px',
+          borderRadius: '10px',
+          color: '#fff',
+          fontSize: '0.88rem',
+          fontWeight: 500,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          background: notification.type === 'success' ? '#16a34a' : notification.type === 'error' ? '#dc2626' : notification.type === 'warning' ? '#f59e0b' : '#3b82f6',
+          animation: 'slideIn 0.3s ease'
+        }}>
             <span>{notification.message}</span>
-            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, padding: 0 }}>×</button>
+            <button onClick={() => setNotifications((prev) => prev.filter((n) => n.id !== notification.id))} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, padding: 0 }}>×</button>
           </div>
-        ))}
+        )}
       </div>
-    </>
-  );
+    </>);
+
 };
 
 export default SuperAdminDashboard;

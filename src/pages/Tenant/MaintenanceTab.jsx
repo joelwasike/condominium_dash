@@ -17,8 +17,8 @@ const emptyState = { padding: '48px 20px', textAlign: 'center', color: '#94a3b8'
 const MaintenanceTab = ({
   loading, maintenanceRequests, setShowMaintenanceModal,
   setSelectedMaintenanceRequest, setShowMaintenanceViewModal
-}) => (
-  <div style={card}>
+}) =>
+<div style={card}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
       <div>
         <h2 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>Maintenance Requests</h2>
@@ -30,12 +30,12 @@ const MaintenanceTab = ({
       </button>
     </div>
 
-    {loading ? (
-      <div style={emptyState}>Loading maintenance requests...</div>
-    ) : maintenanceRequests.length === 0 ? (
-      <div style={emptyState}>No maintenance requests found</div>
-    ) : (
-      <div style={{ overflowX: 'auto' }}>
+    {loading ?
+  <div style={emptyState}>Loading maintenance requests...</div> :
+  maintenanceRequests.length === 0 ?
+  <div style={emptyState}>No maintenance requests found</div> :
+
+  <div style={{ overflowX: 'auto' }}>
         <table style={tableStyle}>
           <thead>
             <tr>
@@ -49,18 +49,18 @@ const MaintenanceTab = ({
           </thead>
           <tbody>
             {maintenanceRequests.map((request, index) => {
-              const priority = request.Priority || request.priority || 'Medium';
-              const status = request.Status || request.status || 'Pending';
-              return (
-                <tr key={request.ID || request.id || `request-${index}`}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = ''; }}
-                >
+          const priority = request.Priority || request.priority || 'Medium';
+          const status = request.Status || request.status || 'Pending';
+          return (
+            <tr key={request.ID || request.id || `request-${index}`}
+            onMouseEnter={(e) => {e.currentTarget.style.background = '#f8fafc';}}
+            onMouseLeave={(e) => {e.currentTarget.style.background = '';}}>
+              
                   <td style={tdStyle}>{index + 1}</td>
                   <td style={tdStyle}>
                     <div>
                       <span style={{ fontWeight: 600, color: '#1e293b', display: 'block' }}>{request.Issue || request.Title || request.title || 'Maintenance Request'}</span>
-                      {request.Description && (<span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{request.Description || request.description}</span>)}
+                      {request.Description && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{request.Description || request.description}</span>}
                     </div>
                   </td>
                   <td style={tdStyle}><span style={statusPill(priority)}>{priority}</span></td>
@@ -68,22 +68,22 @@ const MaintenanceTab = ({
                   <td style={tdStyle}><span style={statusPill(status)}>{status}</span></td>
                   <td style={{ ...tdStyle, width: '100px' }}>
                     <button
-                      onClick={() => { setSelectedMaintenanceRequest(request); setShowMaintenanceViewModal(true); }}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
-                    >
+                  onClick={() => {setSelectedMaintenanceRequest(request);setShowMaintenanceViewModal(true);}}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                  onMouseEnter={(e) => {e.currentTarget.style.background = '#eff6ff';}}
+                  onMouseLeave={(e) => {e.currentTarget.style.background = '#fff';}}>
+                  
                       View
                     </button>
                   </td>
-                </tr>
-              );
-            })}
+                </tr>);
+
+        })}
           </tbody>
         </table>
       </div>
-    )}
-  </div>
-);
+  }
+  </div>;
+
 
 export default MaintenanceTab;

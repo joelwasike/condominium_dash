@@ -34,7 +34,7 @@ const OwnerPaymentsTab = (props) => {
     setSelectedLandlord,
     setLandlordProperties,
     setShowLandlordPaymentModal,
-    transferToLandlord,
+    transferToLandlord
   } = props;
 
   const [ownersSummary, setOwnersSummary] = useState([]);
@@ -99,9 +99,9 @@ const OwnerPaymentsTab = (props) => {
       return cL && (cL === owner || cL.toLowerCase() === owner.toLowerCase());
     });
     const merged = [
-      ...ownerPayments.map((p) => ({ ...p, _type: 'payout', _date: p.Date || p.date || p.CreatedAt || p.createdAt })),
-      ...ownerCollections.map((c) => ({ ...c, _type: 'collection', _date: c.Date || c.date || c.CreatedAt || c.createdAt })),
-    ].sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
+    ...ownerPayments.map((p) => ({ ...p, _type: 'payout', _date: p.Date || p.date || p.CreatedAt || p.createdAt })),
+    ...ownerCollections.map((c) => ({ ...c, _type: 'collection', _date: c.Date || c.date || c.CreatedAt || c.createdAt }))].
+    sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
 
     if (merged.length === 0) return <div className="no-data">No transactions for this owner.</div>;
 
@@ -120,7 +120,7 @@ const OwnerPaymentsTab = (props) => {
           <tbody>
             {merged.map((item, idx) => {
               const isCollection = item._type === 'collection';
-              const amount = isCollection ? (item.Amount || item.amount || 0) : (item.NetAmount || item.netAmount || 0);
+              const amount = isCollection ? item.Amount || item.amount || 0 : item.NetAmount || item.netAmount || 0;
               const date = item._date ? new Date(item._date).toLocaleDateString() : 'N/A';
               const building = item.Building || item.building || '—';
               const status = item.Status || item.status || (isCollection ? 'Collected' : '—');
@@ -136,13 +136,13 @@ const OwnerPaymentsTab = (props) => {
                     {money(amount)}
                   </td>
                   <td>{status}</td>
-                </tr>
-              );
+                </tr>);
+
             })}
           </tbody>
         </table>
-      </div>
-    );
+      </div>);
+
   };
 
   const filteredLandlordPayments = useMemo(() => {
@@ -164,12 +164,12 @@ const OwnerPaymentsTab = (props) => {
       return true;
     });
   }, [
-    landlordPayments,
-    ownerPaymentsLandlordFilter,
-    ownerPaymentsBuildingFilter,
-    ownerPaymentsStartDate,
-    ownerPaymentsEndDate,
-  ]);
+  landlordPayments,
+  ownerPaymentsLandlordFilter,
+  ownerPaymentsBuildingFilter,
+  ownerPaymentsStartDate,
+  ownerPaymentsEndDate]
+  );
 
   return (
     <div>
@@ -185,43 +185,43 @@ const OwnerPaymentsTab = (props) => {
           </div>
         </div>
 
-        {selectedOwnerForPaymentsHistory ? (
-          <div>
+        {selectedOwnerForPaymentsHistory ?
+        <div>
             <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button
-                type="button"
-                className="sa-outline-button"
-                onClick={() => setSelectedOwnerForPaymentsHistory(null)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              >
+              type="button"
+              className="sa-outline-button"
+              onClick={() => setSelectedOwnerForPaymentsHistory(null)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              
                 <ArrowLeft size={16} /> Back to {ownerView === 'owners' ? 'owners' : 'payments'}
               </button>
               <h3 style={{ margin: 0 }}>{selectedOwnerForPaymentsHistory} - Transaction History</h3>
             </div>
             {renderOwnerTransactionHistory(selectedOwnerForPaymentsHistory)}
-          </div>
-        ) : ownerView === 'owners' ? (
-          <div>
+          </div> :
+        ownerView === 'owners' ?
+        <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
               <button type="button" className="sa-outline-button" onClick={() => setShowOwnerRentSummary((v) => !v)}>
                 Expected rents vs received
               </button>
             </div>
 
-            {showOwnerRentSummary && (
-              <div className="sa-section-card" style={{ marginBottom: '18px' }}>
+            {showOwnerRentSummary &&
+          <div className="sa-section-card" style={{ marginBottom: '18px' }}>
                 <div className="sa-section-header">
                   <div>
                     <h3 style={{ margin: 0 }}>Expected rents per owner vs. rents received</h3>
                     <p style={{ margin: '4px 0 0 0', color: '#6b7280' }}>This month</p>
                   </div>
                 </div>
-                {ownersSummaryLoading ? (
-                  <div className="loading">Loading owners summary...</div>
-                ) : ownersRows.length === 0 ? (
-                  <div className="no-data">No owners found.</div>
-                ) : (
-                  <div className="sa-table-wrapper">
+                {ownersSummaryLoading ?
+            <div className="loading">Loading owners summary...</div> :
+            ownersRows.length === 0 ?
+            <div className="no-data">No owners found.</div> :
+
+            <div className="sa-table-wrapper">
                     <table className="sa-table">
                       <thead>
                         <tr>
@@ -233,29 +233,29 @@ const OwnerPaymentsTab = (props) => {
                       </thead>
                       <tbody>
                         {ownersRows.map((r) => {
-                          const unpaidOwner = Math.max(0, Number(r.expectedRents || 0) - Number(r.collectedRents || 0));
-                          return (
-                            <tr key={r.key}>
+                    const unpaidOwner = Math.max(0, Number(r.expectedRents || 0) - Number(r.collectedRents || 0));
+                    return (
+                      <tr key={r.key}>
                               <td><span className="sa-cell-title">{r.ownerName}</span></td>
                               <td>{money(r.expectedRents)}</td>
                               <td style={{ color: '#059669', fontWeight: 700 }}>{money(r.collectedRents)}</td>
                               <td style={{ color: '#dc2626', fontWeight: 700 }}>{money(unpaidOwner)}</td>
-                            </tr>
-                          );
-                        })}
+                            </tr>);
+
+                  })}
                       </tbody>
                     </table>
                   </div>
-                )}
+            }
               </div>
-            )}
+          }
 
-            {ownerBalancesLoading || ownersSummaryLoading ? (
-              <div className="loading">Loading owners...</div>
-            ) : ownerBalancesOwners.length === 0 ? (
-              <div className="no-data">No owners found.</div>
-                ) : (
-                  <div className="sa-table-wrapper">
+            {ownerBalancesLoading || ownersSummaryLoading ?
+          <div className="loading">Loading owners...</div> :
+          ownerBalancesOwners.length === 0 ?
+          <div className="no-data">No owners found.</div> :
+
+          <div className="sa-table-wrapper">
                     <table className="sa-table">
                       <thead>
                         <tr>
@@ -271,24 +271,24 @@ const OwnerPaymentsTab = (props) => {
                       </thead>
                       <tbody>
                         {ownerBalancesOwners.map((owner, index) => {
-                      const ownerId = owner.ID || owner.id;
-                      const name = owner.Name || owner.name || owner.Landlord || owner.landlord || 'N/A';
-                          const summary = (ownerId && summaryByOwnerId.get(String(ownerId))) || summaryByOwnerName.get(String(name).toLowerCase());
-                          const expected = summary?.expectedRents ?? summary?.ExpectedRents ?? 0;
-                          const collected = summary?.collectedRents ?? summary?.CollectedRents ?? 0;
-                          const exp = summary?.expensesAmount ?? summary?.ExpensesAmount ?? 0;
-                          const agencyCommission = summary?.agencyCommission ?? summary?.AgencyCommission ?? 0;
-                          const amountToBePaid = summary?.amountToBePaid ?? summary?.AmountToBePaid ?? summary?.amountToBeRepaid ?? summary?.AmountToBeRepaid ?? 0;
-                          const period = summary?.period ?? summary?.Period ?? 'This month';
-                          return (
-                            <tr
-                              key={ownerId || index}
-                              onClick={() => setSelectedOwnerForPaymentsHistory(name)}
-                              style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForPaymentsHistory(name); } }}
-                            >
+                  const ownerId = owner.ID || owner.id;
+                  const name = owner.Name || owner.name || owner.Landlord || owner.landlord || 'N/A';
+                  const summary = ownerId && summaryByOwnerId.get(String(ownerId)) || summaryByOwnerName.get(String(name).toLowerCase());
+                  const expected = summary?.expectedRents ?? summary?.ExpectedRents ?? 0;
+                  const collected = summary?.collectedRents ?? summary?.CollectedRents ?? 0;
+                  const exp = summary?.expensesAmount ?? summary?.ExpensesAmount ?? 0;
+                  const agencyCommission = summary?.agencyCommission ?? summary?.AgencyCommission ?? 0;
+                  const amountToBePaid = summary?.amountToBePaid ?? summary?.AmountToBePaid ?? summary?.amountToBeRepaid ?? summary?.AmountToBeRepaid ?? 0;
+                  const period = summary?.period ?? summary?.Period ?? 'This month';
+                  return (
+                    <tr
+                      key={ownerId || index}
+                      onClick={() => setSelectedOwnerForPaymentsHistory(name)}
+                      style={{ cursor: 'pointer' }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();setSelectedOwnerForPaymentsHistory(name);}}}>
+                      
                               <td><span className="sa-cell-title">{name}</span></td>
                               <td>{money(expected)}</td>
                               <td>{money(collected)}</td>
@@ -298,26 +298,26 @@ const OwnerPaymentsTab = (props) => {
                               <td>{period}</td>
                               <td className="table-menu" onClick={(e) => e.stopPropagation()}>
                                 <button
-                                  className="table-action-button edit"
-                                  onClick={() => {
-                                    setSelectedLandlord(owner);
-                                setLandlordProperties(null);
-                                setShowLandlordPaymentModal(true);
-                              }}
-                            >
+                          className="table-action-button edit"
+                          onClick={() => {
+                            setSelectedLandlord(owner);
+                            setLandlordProperties(null);
+                            setShowLandlordPaymentModal(true);
+                          }}>
+                          
                               Record Payment
                             </button>
                           </td>
-                        </tr>
-                      );
-                    })}
+                        </tr>);
+
+                })}
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="sa-section-card">
+          }
+          </div> :
+
+        <div className="sa-section-card">
             <div className="sa-section-header">
               <div>
                 <h3 style={{ margin: 0 }}>Owner payments</h3>
@@ -332,10 +332,10 @@ const OwnerPaymentsTab = (props) => {
               </div>
             </div>
 
-            {filteredLandlordPayments.length === 0 ? (
-              <div className="no-data">No owner payments found.</div>
-            ) : (
-              <div className="sa-table-wrapper">
+            {filteredLandlordPayments.length === 0 ?
+          <div className="no-data">No owner payments found.</div> :
+
+          <div className="sa-table-wrapper">
                 <table className="sa-table">
                   <thead>
                     <tr>
@@ -351,19 +351,19 @@ const OwnerPaymentsTab = (props) => {
                   </thead>
                   <tbody>
                     {filteredLandlordPayments.map((payment, index) => {
-                      const landlordName = payment.Landlord || payment.landlord || 'N/A';
-                      const status = (payment.Status || 'unknown').toLowerCase();
-                      const needsApproval = ['pending', 'pending approval', 'pending director approval', 'pending_approval'].includes(status);
-                      const isDirector = (JSON.parse(localStorage.getItem('user') || '{}').role || '').toLowerCase() === 'agency_director';
-                      return (
-                        <tr
-                          key={payment.ID || payment.id || index}
-                          onClick={() => setSelectedOwnerForPaymentsHistory(landlordName)}
-                          style={{ cursor: 'pointer' }}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOwnerForPaymentsHistory(landlordName); } }}
-                        >
+                  const landlordName = payment.Landlord || payment.landlord || 'N/A';
+                  const status = (payment.Status || 'unknown').toLowerCase();
+                  const needsApproval = ['pending', 'pending approval', 'pending director approval', 'pending_approval'].includes(status);
+                  const isDirector = (JSON.parse(localStorage.getItem('user') || '{}').role || '').toLowerCase() === 'agency_director';
+                  return (
+                    <tr
+                      key={payment.ID || payment.id || index}
+                      onClick={() => setSelectedOwnerForPaymentsHistory(landlordName)}
+                      style={{ cursor: 'pointer' }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();setSelectedOwnerForPaymentsHistory(landlordName);}}}>
+                      
                           <td><span className="sa-cell-title">{landlordName}</span></td>
                           <td>{payment.Building || payment.building || 'N/A'}</td>
                           <td>{money(payment.NetAmount ?? payment.netAmount ?? 0)}</td>
@@ -373,51 +373,51 @@ const OwnerPaymentsTab = (props) => {
                           <td><span className={`sa-status-pill ${(payment.Status || 'unknown').toLowerCase()}`}>{payment.Status || 'Unknown'}</span></td>
                           <td className="table-menu" onClick={(e) => e.stopPropagation()}>
                             <div className="sa-row-actions">
-                              {needsApproval && isDirector ? (
-                                <button
-                                  className="table-action-button edit"
-                                  onClick={(e2) => {
-                                    e2.stopPropagation();
-                                    (async () => {
-                                      try {
-                                        setLoading(true);
-                                        await accountingService.approveLandlordPayment(payment.ID);
-                                        const updated = await accountingService.getLandlordPayments();
-                                        setLandlordPayments(Array.isArray(updated) ? updated : (updated?.payments ?? updated?.landlordPayments ?? []));
-                                        addNotification('Payment approved by director', 'success');
-                                      } catch (err) {
-                                        addNotification(err.message || 'Failed to approve', 'error');
-                                      } finally {
-                                        setLoading(false);
-                                      }
-                                    })();
-                                  }}
-                                >
+                              {needsApproval && isDirector ?
+                          <button
+                            className="table-action-button edit"
+                            onClick={(e2) => {
+                              e2.stopPropagation();
+                              (async () => {
+                                try {
+                                  setLoading(true);
+                                  await accountingService.approveLandlordPayment(payment.ID);
+                                  const updated = await accountingService.getLandlordPayments();
+                                  setLandlordPayments(Array.isArray(updated) ? updated : updated?.payments ?? updated?.landlordPayments ?? []);
+                                  addNotification('Payment approved by director', 'success');
+                                } catch (err) {
+                                  addNotification(err.message || 'Failed to approve', 'error');
+                                } finally {
+                                  setLoading(false);
+                                }
+                              })();
+                            }}>
+                            
                                   Approve
-                                </button>
-                              ) : status !== 'paid' && status !== 'completed' && !needsApproval ? (
-                                <button className="table-action-button edit" onClick={(e2) => { e2.stopPropagation(); transferToLandlord(payment.ID); }}>
+                                </button> :
+                          status !== 'paid' && status !== 'completed' && !needsApproval ?
+                          <button className="table-action-button edit" onClick={(e2) => {e2.stopPropagation();transferToLandlord(payment.ID);}}>
                                   Mark Completed
-                                </button>
-                              ) : status === 'paid' || status === 'completed' ? (
-                                <span className="sa-status-pill success" style={{ padding: '4px 12px' }}>Completed</span>
-                              ) : (
-                                <span className="sa-status-pill" style={{ padding: '4px 12px' }}>Pending Approval</span>
-                              )}
+                                </button> :
+                          status === 'paid' || status === 'completed' ?
+                          <span className="sa-status-pill success" style={{ padding: '4px 12px' }}>Completed</span> :
+
+                          <span className="sa-status-pill" style={{ padding: '4px 12px' }}>Pending Approval</span>
+                          }
                             </div>
                           </td>
-                        </tr>
-                      );
-                    })}
+                        </tr>);
+
+                })}
                   </tbody>
                 </table>
               </div>
-            )}
+          }
           </div>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 OwnerPaymentsTab.LandlordModal = (props) => {
@@ -426,11 +426,11 @@ OwnerPaymentsTab.LandlordModal = (props) => {
   const [propertiesLoading, setPropertiesLoading] = useState(false);
 
   const fetchOwnerProperties = async (ownerId) => {
-    if (!ownerId) { setOwnerProperties([]); return; }
+    if (!ownerId) {setOwnerProperties([]);return;}
     try {
       setPropertiesLoading(true);
       const data = await accountingService.getLandlordProperties(ownerId);
-      const list = Array.isArray(data) ? data : (data?.properties ?? []);
+      const list = Array.isArray(data) ? data : data?.properties ?? [];
       setOwnerProperties(list);
     } catch {
       setOwnerProperties([]);
@@ -440,9 +440,8 @@ OwnerPaymentsTab.LandlordModal = (props) => {
   };
 
   useEffect(() => {
-    const id = selectedLandlord ? (selectedLandlord.id || selectedLandlord.ID) : null;
+    const id = selectedLandlord ? selectedLandlord.id || selectedLandlord.ID : null;
     fetchOwnerProperties(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLandlord?.id, selectedLandlord?.ID]);
 
   return (
@@ -460,7 +459,7 @@ OwnerPaymentsTab.LandlordModal = (props) => {
               const formData = new FormData(e.target);
               const ownersForModal = ownerBalancesOwners.length > 0 ? ownerBalancesOwners : landlords;
               const ownerObj = ownersForModal.find((o) => String(o.id || o.ID) === String(formData.get('landlord')));
-              const landlordName = ownerObj ? (ownerObj.Name || ownerObj.name || ownerObj.Landlord || ownerObj.landlord || '') : '';
+              const landlordName = ownerObj ? ownerObj.Name || ownerObj.name || ownerObj.Landlord || ownerObj.landlord || '' : '';
               if (!landlordName) {
                 addNotification('Please select an owner', 'error');
                 setLoading(false);
@@ -469,7 +468,7 @@ OwnerPaymentsTab.LandlordModal = (props) => {
               const newPayment = await accountingService.recordLandlordPayment({
                 landlord: landlordName,
                 building: formData.get('building'),
-                netAmount: parseFloat(formData.get('netAmount')),
+                netAmount: parseFloat(formData.get('netAmount'))
               });
               setLandlordPayments((prev) => [newPayment, ...prev]);
               addNotification('Landlord payment recorded successfully!', 'success');
@@ -488,44 +487,44 @@ OwnerPaymentsTab.LandlordModal = (props) => {
               <select
                 name="landlord"
                 required
-                defaultValue={selectedLandlord ? (selectedLandlord.id || selectedLandlord.ID) : ''}
+                defaultValue={selectedLandlord ? selectedLandlord.id || selectedLandlord.ID : ''}
                 onChange={(e) => {
                   const id = e.target.value;
                   const ownersForModal = ownerBalancesOwners.length > 0 ? ownerBalancesOwners : landlords;
                   const owner = ownersForModal.find((o) => String(o.id || o.ID) === id) || null;
                   setSelectedLandlord(owner);
                   fetchOwnerProperties(id);
-                }}
-              >
+                }}>
+                
                 <option value="">Select Owner</option>
-                {(ownerBalancesOwners.length > 0 ? ownerBalancesOwners : landlords).map((o) => (
-                  <option key={o.id || o.ID} value={o.id || o.ID}>
+                {(ownerBalancesOwners.length > 0 ? ownerBalancesOwners : landlords).map((o) =>
+                <option key={o.id || o.ID} value={o.id || o.ID}>
                     {o.Name || o.name || o.Landlord || o.landlord || 'N/A'} {o.Email || o.email ? `(${o.Email || o.email})` : ''}
                   </option>
-                ))}
+                )}
               </select>
             </div>
             <div className="form-group">
               <label>Building / Property *</label>
-              {propertiesLoading ? (
-                <select name="building" required disabled><option value="">Loading properties…</option></select>
-              ) : ownerProperties.length > 0 ? (
-                <select name="building" required defaultValue="">
+              {propertiesLoading ?
+              <select name="building" required disabled><option value="">Loading properties…</option></select> :
+              ownerProperties.length > 0 ?
+              <select name="building" required defaultValue="">
                   <option value="">Select property</option>
                   {ownerProperties.map((item, idx) => {
-                    const prop = item.property ?? item.Property ?? item;
-                    const addr = prop.Address ?? prop.address ?? prop.Name ?? prop.name ?? '';
-                    const propId = prop.ID ?? prop.id ?? idx;
-                    return <option key={propId} value={addr}>{addr}</option>;
-                  })}
-                </select>
-              ) : (
-                <select name="building" required defaultValue="">
+                  const prop = item.property ?? item.Property ?? item;
+                  const addr = prop.Address ?? prop.address ?? prop.Name ?? prop.name ?? '';
+                  const propId = prop.ID ?? prop.id ?? idx;
+                  return <option key={propId} value={addr}>{addr}</option>;
+                })}
+                </select> :
+
+              <select name="building" required defaultValue="">
                   <option value="">
                     {selectedLandlord ? 'No properties connected to this owner' : 'Select an owner first'}
                   </option>
                 </select>
-              )}
+              }
             </div>
             <div className="form-group">
               <label>Net Amount (XOF) *</label>
@@ -538,8 +537,8 @@ OwnerPaymentsTab.LandlordModal = (props) => {
           </form>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default OwnerPaymentsTab;

@@ -24,8 +24,8 @@ import {
   History,
   LogOut,
   ClipboardList,
-  FileSpreadsheet
-} from 'lucide-react';
+  FileSpreadsheet } from
+'lucide-react';
 import RoleLayout from '../../components/RoleLayout';
 import SettingsPage from '../SettingsPage';
 import Modal from '../../components/Modal';
@@ -41,24 +41,24 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { t, getLanguage } from '../../utils/i18n';
 
 const INDIVIDUAL_DOCUMENTS = [
-  { key: 'id_document', label: 'CNI, passport or identity certificate' },
-  { key: 'employment_contract', label: 'Employment contract' },
-  { key: 'work_certificate', label: 'Certificate of work' },
-  { key: 'pay_slips', label: 'Last three pay slips' },
-  { key: 'last_utility_receipt', label: 'Last receipt (CIE or SODECI)' },
-  { key: 'last_rent_receipts', label: 'Last rent receipts' },
-  { key: 'rib', label: 'RIB' },
-];
+{ key: 'id_document', label: 'CNI, passport or identity certificate' },
+{ key: 'employment_contract', label: 'Employment contract' },
+{ key: 'work_certificate', label: 'Certificate of work' },
+{ key: 'pay_slips', label: 'Last three pay slips' },
+{ key: 'last_utility_receipt', label: 'Last receipt (CIE or SODECI)' },
+{ key: 'last_rent_receipts', label: 'Last rent receipts' },
+{ key: 'rib', label: 'RIB' }];
+
 
 const COMPANY_DOCUMENTS = [
-  { key: 'manager_id_document', label: 'CNI, passport or identity certificate of the manager' },
-  { key: 'commercial_register', label: 'Commercial register' },
-  { key: 'dfe', label: 'DFE' },
-  { key: 'arf', label: 'ARF' },
-  { key: 'manager_commitment_letter', label: 'Letter of commitment from the manager on the payment of rent' },
-  { key: 'manager_pay_slips', label: 'Last three payslips of the manager' },
-  { key: 'manager_rib', label: 'RIB of the manager' },
-];
+{ key: 'manager_id_document', label: 'CNI, passport or identity certificate of the manager' },
+{ key: 'commercial_register', label: 'Commercial register' },
+{ key: 'dfe', label: 'DFE' },
+{ key: 'arf', label: 'ARF' },
+{ key: 'manager_commitment_letter', label: 'Letter of commitment from the manager on the payment of rent' },
+{ key: 'manager_pay_slips', label: 'Last three payslips of the manager' },
+{ key: 'manager_rib', label: 'RIB of the manager' }];
+
 
 const normalizeText = (value) => (value ?? '').toString().trim();
 const normalizeLower = (value) => normalizeText(value).toLowerCase();
@@ -93,8 +93,6 @@ const AdministrativeDashboard = () => {
   const [editClientDocsLoading, setEditClientDocsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  
-  // API Data States
   const [overviewData, setOverviewData] = useState(null);
   const [inboxDocs, setInboxDocs] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -106,16 +104,14 @@ const AdministrativeDashboard = () => {
   const [advertisements, setAdvertisements] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
-  const [clients, setClients] = useState([]); // Clients for pending approval table
-  const [properties, setProperties] = useState([]); // Properties for statistics
+  const [clients, setClients] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [landlords, setLandlords] = useState([]);
-  const [visits, setVisits] = useState([]); // Visits data
-  const [negotiations, setNegotiations] = useState([]); // Negotiations data
-  const [transfers, setTransfers] = useState([]); // Transfer requests
-  const [transferTab, setTransferTab] = useState('pending'); // 'approved', 'pending', 'rejected'
-  const [leaseTab, setLeaseTab] = useState('active'); // 'active', 'pending', 'expired'
-  
-  // New state for restructured sections
+  const [visits, setVisits] = useState([]);
+  const [negotiations, setNegotiations] = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [transferTab, setTransferTab] = useState('pending');
+  const [leaseTab, setLeaseTab] = useState('active');
   const [newClients, setNewClients] = useState([]);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [newClientForm, setNewClientForm] = useState({
@@ -150,7 +146,7 @@ const AdministrativeDashboard = () => {
   const [checklistClient, setChecklistClient] = useState(null);
   const [checklistDocuments, setChecklistDocuments] = useState([]);
   const [checklistDocsLoading, setChecklistDocsLoading] = useState(false);
-  const [clientStatusFilter, setClientStatusFilter] = useState(''); // 'in-progress', 'accepted', 'refused'
+  const [clientStatusFilter, setClientStatusFilter] = useState('');
   const [clientSearchText, setClientSearchText] = useState('');
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [bulkImportFile, setBulkImportFile] = useState(null);
@@ -162,15 +158,15 @@ const AdministrativeDashboard = () => {
   const [editLeaseDocumentFile, setEditLeaseDocumentFile] = useState(null);
   const editLeaseFileInputRef = useRef(null);
   const [mutationSearchText, setMutationSearchText] = useState('');
-  const [mutationTab, setMutationTab] = useState('receipt'); // 'receipt', 'in-progress', 'accepted', 'refused'
+  const [mutationTab, setMutationTab] = useState('receipt');
   const [terminations, setTerminations] = useState([]);
   const [terminationSearchText, setTerminationSearchText] = useState('');
-  const [terminationTab, setTerminationTab] = useState('receipt'); // 'receipt', 'pending', 'made'
+  const [terminationTab, setTerminationTab] = useState('receipt');
   const [showTerminationDetailModal, setShowTerminationDetailModal] = useState(false);
   const [selectedTerminationForDetail, setSelectedTerminationForDetail] = useState(null);
   const [showTransferDocsModal, setShowTransferDocsModal] = useState(false);
   const [selectedTransferForDocs, setSelectedTransferForDocs] = useState(null);
-  const [inventoryList, setInventoryList] = useState([]); // State of Entry / Exit filled by technicians
+  const [inventoryList, setInventoryList] = useState([]);
   const [historyData, setHistoryData] = useState({
     clients: [],
     leases: [],
@@ -185,7 +181,7 @@ const AdministrativeDashboard = () => {
 
   const selectedClient = useMemo(() => {
     if (!clientDocForm.clientId) return null;
-    return newClients.find(client => String(client.ID || client.id) === String(clientDocForm.clientId)) || null;
+    return newClients.find((client) => String(client.ID || client.id) === String(clientDocForm.clientId)) || null;
   }, [clientDocForm.clientId, newClients]);
 
   const openUploadForClient = (client) => {
@@ -253,16 +249,15 @@ const AdministrativeDashboard = () => {
     setEditClientDocFiles({});
     setEditClientExistingDocuments([]);
     setShowEditClientModal(true);
-    const tenantName = type === 'company' ? (client.CompanyName || client.companyName || '') : (client.Name || client.name || '');
+    const tenantName = type === 'company' ? client.CompanyName || client.companyName || '' : client.Name || client.name || '';
     if (tenantName) {
       setEditClientDocsLoading(true);
       try {
         const docs = await adminService.getDocuments({ tenant: tenantName });
         const docsList = Array.isArray(docs) ? docs : [];
         setEditClientExistingDocuments(docsList);
-        // Pre-select the property that was used when uploading this client's documents
         const docWithProperty = docsList.find((d) => (d.Property || d.property || '').trim() !== '');
-        const propertyFromDoc = docWithProperty ? (docWithProperty.Property || docWithProperty.property) : '';
+        const propertyFromDoc = docWithProperty ? docWithProperty.Property || docWithProperty.property : '';
         if (propertyFromDoc) {
           setEditClientForm((prev) => ({ ...prev, property: propertyFromDoc }));
         }
@@ -288,7 +283,7 @@ const AdministrativeDashboard = () => {
         companyName: editClientForm.companyName,
         address: editClientForm.address,
         registrationNumber: editClientForm.registrationNumber,
-        contactPerson: editClientForm.contactPerson,
+        contactPerson: editClientForm.contactPerson
       });
       const tenantName = editClientForm.type === 'company' ? editClientForm.companyName : editClientForm.name;
       const docList = editClientForm.type === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS;
@@ -298,7 +293,7 @@ const AdministrativeDashboard = () => {
             tenant: tenantName,
             property: editClientForm.property || undefined,
             type: doc.label,
-            file: editClientDocFiles[doc.key],
+            file: editClientDocFiles[doc.key]
           });
         }
       }
@@ -314,8 +309,6 @@ const AdministrativeDashboard = () => {
       setLoading(false);
     }
   };
-  
-  // Filter states
   const [documentStatusFilter, setDocumentStatusFilter] = useState('');
   const [documentTypeFilter, setDocumentTypeFilter] = useState('');
   const [documentTenantFilter, setDocumentTenantFilter] = useState('');
@@ -327,8 +320,6 @@ const AdministrativeDashboard = () => {
     rent: '',
     landlord: ''
   });
-
-  // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
@@ -338,25 +329,19 @@ const AdministrativeDashboard = () => {
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setNotifications(prev => [...prev, { id, message, type }]);
+    setNotifications((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 3000);
   }, []);
-
-  // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
-
-  // Auto-scroll when messages change
   useEffect(() => {
     if (chatMessages.length > 0) {
       scrollToBottom();
     }
   }, [chatMessages, scrollToBottom]);
-
-  // Load chat for a specific user
   const loadChatForUser = useCallback(async (userId) => {
     if (!userId) return;
 
@@ -364,10 +349,10 @@ const AdministrativeDashboard = () => {
       setSelectedUserId(userId);
       if (String(userId).startsWith('group:')) return;
       const messages = await messagingService.getConversation(userId);
-      
+
       const normalizedMessages = Array.isArray(messages) ? messages : [];
       setChatMessages(normalizedMessages);
-      
+
       try {
         await messagingService.markMessagesAsRead(userId);
       } catch (readError) {
@@ -379,8 +364,6 @@ const AdministrativeDashboard = () => {
       setChatMessages([]);
     }
   }, [addNotification]);
-
-  // Load users for messaging
   const loadUsers = useCallback(async () => {
     if (isLoadingUsersRef.current) {
       return;
@@ -389,16 +372,16 @@ const AdministrativeDashboard = () => {
     try {
       isLoadingUsersRef.current = true;
       const users = await messagingService.getUsers();
-      
+
       let usersArray = [];
       if (Array.isArray(users)) {
         usersArray = users;
       } else if (users && Array.isArray(users.users)) {
         usersArray = users.users;
       } else if (users && typeof users === 'object') {
-        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+        usersArray = Object.values(users).find((val) => Array.isArray(val)) || [];
       }
-      
+
       const storedUser = localStorage.getItem('user');
       let currentUserId = null;
       if (storedUser) {
@@ -409,59 +392,49 @@ const AdministrativeDashboard = () => {
           console.error('Error parsing stored user:', error);
         }
       }
-      
-      const chatUsersList = usersArray
-        .filter(user => {
-          const userId = user.id || user.ID;
-          const userIdStr = userId ? String(userId) : null;
-          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-          return userIdStr && userIdStr !== currentUserIdStr;
-        })
-        .map(user => {
-          const userId = user.id || user.ID;
-          return {
-            userId: userId,
-            name: user.name || user.Name || 'User',
-            email: user.email || user.Email || '',
-            role: user.role || user.Role || '',
-            company: user.company || user.Company || '',
-            status: user.status || user.Status || 'Active',
-            unreadCount: 0
-          };
-        })
-        .sort((a, b) => {
-          const nameA = (a.name || '').toLowerCase();
-          const nameB = (b.name || '').toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
-      
-      // Get conversations to update unread counts and include users who have messaged but aren't in users list
+
+      const chatUsersList = usersArray.
+      filter((user) => {
+        const userId = user.id || user.ID;
+        const userIdStr = userId ? String(userId) : null;
+        const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+        return userIdStr && userIdStr !== currentUserIdStr;
+      }).
+      map((user) => {
+        const userId = user.id || user.ID;
+        return {
+          userId: userId,
+          name: user.name || user.Name || 'User',
+          email: user.email || user.Email || '',
+          role: user.role || user.Role || '',
+          company: user.company || user.Company || '',
+          status: user.status || user.Status || 'Active',
+          unreadCount: 0
+        };
+      }).
+      sort((a, b) => {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
       try {
         const conversations = await messagingService.getConversations();
         if (Array.isArray(conversations)) {
-          // Create a map of existing users by ID for quick lookup
           const existingUsersMap = new Map();
-          chatUsersList.forEach(u => {
+          chatUsersList.forEach((u) => {
             existingUsersMap.set(String(u.userId), u);
           });
-          
-          // Process conversations to update unread counts and add missing users
-          conversations.forEach(conv => {
+          conversations.forEach((conv) => {
             const convUserId = String(conv.userId || conv.userID);
             const existingUser = existingUsersMap.get(convUserId);
-            
+
             if (existingUser) {
-              // Update unread count for existing user
               if (conv.unreadCount) {
                 existingUser.unreadCount = conv.unreadCount;
               }
             } else {
-              // User has a conversation but isn't in the users list - add them
-              // This handles cases where users from other companies or roles have messaged
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
-              
-              // Only add if it's not the current user
               const currentUserIdStr = currentUserId ? String(currentUserId) : null;
               if (userId && String(userId) !== currentUserIdStr) {
                 const newUser = {
@@ -479,8 +452,6 @@ const AdministrativeDashboard = () => {
               }
             }
           });
-          
-          // Re-sort after adding new users
           chatUsersList.sort((a, b) => {
             const nameA = (a.name || '').toLowerCase();
             const nameB = (b.name || '').toLowerCase();
@@ -490,10 +461,10 @@ const AdministrativeDashboard = () => {
       } catch (convError) {
         console.error('Error loading conversations for unread counts:', convError);
       }
-      
+
       setChatUsers(chatUsersList);
-      
-      setSelectedUserId(prevSelected => {
+
+      setSelectedUserId((prevSelected) => {
         if (chatUsersList.length > 0 && !prevSelected) {
           const firstUserId = chatUsersList[0].userId;
           setTimeout(() => {
@@ -503,7 +474,7 @@ const AdministrativeDashboard = () => {
         }
         return prevSelected;
       });
-      
+
       if (chatUsersList.length === 0) {
         addNotification('No users available for messaging', 'info');
       }
@@ -515,14 +486,11 @@ const AdministrativeDashboard = () => {
       isLoadingUsersRef.current = false;
     }
   }, [loadChatForUser, addNotification]);
-
-  // Load data from APIs
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       if (isDemoMode()) {
-        // Use demo data
         const demoData = getAdministrativeDemoData();
         setOverviewData(demoData.overview);
         setInboxDocs([]);
@@ -539,55 +507,55 @@ const AdministrativeDashboard = () => {
         setLoading(false);
         return;
       }
-      
+
       const [
-        overview,
-        inboxData,
-        documentsData,
-        utilitiesData,
-        debtsData,
-        remindersData,
-        leasesData,
-        paymentFollowUpsData,
-        clientsData,
-          propertiesData,
-        landlordsData,
-        visitsData,
-        negotiationsData,
-        transfersData,
-        newClientsData,
-        terminationsData,
-        inventoryData,
-          historyDataRes
-      ] = await Promise.all([
-        adminService.getOverview().catch(() => null),
-        adminService.getInbox().catch(() => ({ items: [] })),
-        adminService.getDocuments({
-          status: documentStatusFilter || undefined,
-          tenant: documentTenantFilter || undefined,
-          type: documentTypeFilter || undefined,
-        }).catch(() => []),
-        adminService.getUtilities({
-          status: utilityStatusFilter || undefined,
-        }).catch(() => ({ items: [] })),
-        adminService.getDebts().catch(() => ({ items: [] })),
-        adminService.getReminders().catch(() => []),
-        adminService.getLeases({
-          status: leaseStatusFilter || undefined,
-        }).catch(() => []),
-        adminService.getPendingPaymentFollowUps().catch(() => []),
-        adminService.getClients().catch(() => []),
-          adminService.getProperties().catch(() => []),
-        adminService.getLandlords().catch(() => []),
-        adminService.getVisits().catch(() => []),
-        adminService.getNegotiations().catch(() => []),
-        adminService.getTransfers().catch(() => []),
-        adminService.getNewClients().catch(() => []),
-        adminService.getTerminations().catch(() => []),
-        adminService.getInventory().catch(() => []),
-        adminService.getHistory().catch(() => ({ clients: [], leases: [], mutations: [], terminations: [] }))
-      ]);
-      
+      overview,
+      inboxData,
+      documentsData,
+      utilitiesData,
+      debtsData,
+      remindersData,
+      leasesData,
+      paymentFollowUpsData,
+      clientsData,
+      propertiesData,
+      landlordsData,
+      visitsData,
+      negotiationsData,
+      transfersData,
+      newClientsData,
+      terminationsData,
+      inventoryData,
+      historyDataRes] =
+      await Promise.all([
+      adminService.getOverview().catch(() => null),
+      adminService.getInbox().catch(() => ({ items: [] })),
+      adminService.getDocuments({
+        status: documentStatusFilter || undefined,
+        tenant: documentTenantFilter || undefined,
+        type: documentTypeFilter || undefined
+      }).catch(() => []),
+      adminService.getUtilities({
+        status: utilityStatusFilter || undefined
+      }).catch(() => ({ items: [] })),
+      adminService.getDebts().catch(() => ({ items: [] })),
+      adminService.getReminders().catch(() => []),
+      adminService.getLeases({
+        status: leaseStatusFilter || undefined
+      }).catch(() => []),
+      adminService.getPendingPaymentFollowUps().catch(() => []),
+      adminService.getClients().catch(() => []),
+      adminService.getProperties().catch(() => []),
+      adminService.getLandlords().catch(() => []),
+      adminService.getVisits().catch(() => []),
+      adminService.getNegotiations().catch(() => []),
+      adminService.getTransfers().catch(() => []),
+      adminService.getNewClients().catch(() => []),
+      adminService.getTerminations().catch(() => []),
+      adminService.getInventory().catch(() => []),
+      adminService.getHistory().catch(() => ({ clients: [], leases: [], mutations: [], terminations: [] }))]
+      );
+
       setOverviewData(overview);
       setInboxDocs(inboxData.items || []);
       setDocuments(Array.isArray(documentsData) ? documentsData : []);
@@ -602,13 +570,9 @@ const AdministrativeDashboard = () => {
       setVisits(Array.isArray(visitsData) ? visitsData : []);
       setNegotiations(Array.isArray(negotiationsData) ? negotiationsData : []);
       setTransfers(Array.isArray(transfersData) ? transfersData : []);
-      
-      // Set new data
       setNewClients(Array.isArray(newClientsData) ? newClientsData : []);
       setTerminations(Array.isArray(terminationsData) ? terminationsData : []);
       setInventoryList(Array.isArray(inventoryData) ? inventoryData : []);
-      
-      // Set history data
       if (historyDataRes && typeof historyDataRes === 'object') {
         setHistoryData({
           clients: Array.isArray(historyDataRes.clients) ? historyDataRes.clients : [],
@@ -626,13 +590,9 @@ const AdministrativeDashboard = () => {
       setLoading(false);
     }
   }, [addNotification, documentStatusFilter, documentTypeFilter, documentTenantFilter, utilityStatusFilter, leaseStatusFilter]);
-
-  // Load data on component mount
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  // Reload transfers when tab changes
   useEffect(() => {
     if (activeTab === 'transfers') {
       const loadTransfers = async () => {
@@ -648,8 +608,6 @@ const AdministrativeDashboard = () => {
       loadTransfers();
     }
   }, [transferTab, activeTab]);
-
-  // Reload leases when tab changes
   useEffect(() => {
     if (activeTab === 'leases') {
       const loadLeases = async () => {
@@ -664,16 +622,11 @@ const AdministrativeDashboard = () => {
       loadLeases();
     }
   }, [leaseTab, activeTab]);
-
-  // Load advertisements when advertisements or overview tab is active
   useEffect(() => {
     if (activeTab === 'advertisements' || activeTab === 'overview') {
       loadAdvertisements();
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
-  // Load users when chat tab is active
+  }, [activeTab]);
   useEffect(() => {
     if (activeTab === 'chat' && !isLoadingUsersRef.current) {
       loadUsers();
@@ -682,17 +635,17 @@ const AdministrativeDashboard = () => {
 
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: 'Overview', icon: FileText },
-      { id: 'new-client', label: 'New Client', icon: UserPlus },
-      { id: 'lease-contract', label: 'Lease Contract', icon: FileCheck },
-      { id: 'demand-mutation', label: 'Demand of Mutation', icon: ArrowRightLeft },
-      { id: 'termination', label: 'Termination', icon: LogOut },
-      { id: 'history', label: 'History', icon: History },
-      { id: 'reports', label: 'Report', icon: TrendingUp },
-      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
-      { id: 'chat', label: 'Messages', icon: MessageCircle },
-      { id: 'settings', label: 'Profile Settings', icon: Settings }
-    ],
+    { id: 'overview', label: 'Overview', icon: FileText },
+    { id: 'new-client', label: 'New Client', icon: UserPlus },
+    { id: 'lease-contract', label: 'Lease Contract', icon: FileCheck },
+    { id: 'demand-mutation', label: 'Demand of Mutation', icon: ArrowRightLeft },
+    { id: 'termination', label: 'Termination', icon: LogOut },
+    { id: 'history', label: 'History', icon: History },
+    { id: 'reports', label: 'Report', icon: TrendingUp },
+    { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
+    { id: 'chat', label: 'Messages', icon: MessageCircle },
+    { id: 'settings', label: 'Profile Settings', icon: Settings }],
+
     []
   );
 
@@ -710,15 +663,15 @@ const AdministrativeDashboard = () => {
         console.error('Error parsing stored user:', error);
       }
     }
-    
+
     if (!currentUserId) {
       addNotification('Unable to identify current user. Please log in again.', 'error');
       return;
     }
-    
+
     const content = chatInput.trim();
     const tempMessageId = `temp-${Date.now()}`;
-    
+
     const optimisticMessage = {
       id: tempMessageId,
       ID: tempMessageId,
@@ -730,28 +683,28 @@ const AdministrativeDashboard = () => {
       Content: content,
       CreatedAt: new Date().toISOString(),
       FromUserId: currentUserId,
-      ToUserId: selectedUserId,
+      ToUserId: selectedUserId
     };
-    
-    setChatMessages(prev => [...prev, optimisticMessage]);
+
+    setChatMessages((prev) => [...prev, optimisticMessage]);
     setChatInput('');
-    
+
     try {
       const response = await messagingService.sendMessage({
         toUserId: selectedUserId,
-        content: content,
+        content: content
       });
-      
-      setChatMessages(prev => {
-        const filtered = prev.filter(msg => msg.id !== tempMessageId);
+
+      setChatMessages((prev) => {
+        const filtered = prev.filter((msg) => msg.id !== tempMessageId);
         return [...filtered, response];
       });
-      
+
       await loadChatForUser(selectedUserId);
     } catch (error) {
       console.error('Error sending message:', error);
       addNotification(error.message || 'Failed to send message', 'error');
-      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      setChatMessages((prev) => prev.filter((msg) => msg.id !== tempMessageId));
       setChatInput(content);
     }
   };
@@ -927,25 +880,23 @@ const AdministrativeDashboard = () => {
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const newClientsCount = newClients.filter(c => { const d = c.registrationDate || c.RegistrationDate || c.createdAt || c.CreatedAt; return d && new Date(d) >= currentMonthStart; }).length;
-    const transfersAccepted = transfers.filter(t => ['approved','accepted'].includes((t.status||t.Status||'').toLowerCase())).length;
-    const terminationsAccepted = terminations.filter(t => ['accepted','completed'].includes((t.status||t.Status||'').toLowerCase())).length;
-    const leasesCompleted = leases.filter(l => ['completed','valid','active'].includes((l.status||l.Status||'').toLowerCase())).length;
-    const leasesInProgress = leases.filter(l => ['pending','in-progress','draft'].includes((l.status||l.Status||'').toLowerCase())).length;
+    const newClientsCount = newClients.filter((c) => {const d = c.registrationDate || c.RegistrationDate || c.createdAt || c.CreatedAt;return d && new Date(d) >= currentMonthStart;}).length;
+    const transfersAccepted = transfers.filter((t) => ['approved', 'accepted'].includes((t.status || t.Status || '').toLowerCase())).length;
+    const terminationsAccepted = terminations.filter((t) => ['accepted', 'completed'].includes((t.status || t.Status || '').toLowerCase())).length;
+    const leasesCompleted = leases.filter((l) => ['completed', 'valid', 'active'].includes((l.status || l.Status || '').toLowerCase())).length;
+    const leasesInProgress = leases.filter((l) => ['pending', 'in-progress', 'draft'].includes((l.status || l.Status || '').toLowerCase())).length;
     const totalDocs = documents.length;
-    const pendingDocs = documents.filter(d => (d.Status || d.status || '').toLowerCase() === 'pending').length;
-
-    // Chart data — document processing over last 6 months
+    const pendingDocs = documents.filter((d) => (d.Status || d.status || '').toLowerCase() === 'pending').length;
     const chartData = (() => {
       const months = [];
       for (let i = 5; i >= 0; i--) {
-        const d = new Date(); d.setMonth(d.getMonth() - i);
-        const mKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        const mDocs = documents.filter(doc => { const dt = doc.CreatedAt || doc.createdAt || doc.SubmittedAt; return dt && dt.startsWith(mKey); });
+        const d = new Date();d.setMonth(d.getMonth() - i);
+        const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const mDocs = documents.filter((doc) => {const dt = doc.CreatedAt || doc.createdAt || doc.SubmittedAt;return dt && dt.startsWith(mKey);});
         months.push({
           month: d.toLocaleDateString('en-US', { month: 'short' }),
           submitted: mDocs.length || Math.round(Math.random() * 8 + 2),
-          approved: mDocs.filter(dc => (dc.Status||dc.status||'').toLowerCase() === 'approved').length || Math.round(Math.random() * 6 + 1),
+          approved: mDocs.filter((dc) => (dc.Status || dc.status || '').toLowerCase() === 'approved').length || Math.round(Math.random() * 6 + 1)
         });
       }
       return months;
@@ -953,26 +904,25 @@ const AdministrativeDashboard = () => {
 
     const card = { background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' };
     const metricCards = [
-      { label: 'New Clients', sub: 'This month', value: stats.numberOfNewClients || newClientsCount || 0, icon: UserPlus, color: '#3b82f6', bg: 'linear-gradient(135deg,#3b82f6,#2563eb)', white: true, tab: 'new-client' },
-      { label: 'Transfers Accepted', sub: 'Approved', value: stats.transferRequestsAccepted || transfersAccepted, icon: ArrowRightLeft, color: '#10b981', tab: 'demand-mutation' },
-      { label: 'Terminations', sub: 'Completed', value: stats.terminationRequestsAccepted || terminationsAccepted, icon: LogOut, color: '#f59e0b', tab: 'termination' },
-      { label: 'Leases Active', sub: 'Valid contracts', value: stats.leaseContractsCompleted || leasesCompleted, icon: FileCheck, color: '#10b981', tab: 'lease-contract' },
-      { label: 'Leases Pending', sub: 'In progress', value: stats.leaseContractsInProgress || leasesInProgress, icon: Clock, color: '#f59e0b', tab: 'lease-contract' },
-      { label: 'Documents', sub: `${pendingDocs} pending`, value: totalDocs, icon: FileText, color: '#8b5cf6', tab: 'document-verification' },
-    ];
+    { label: 'New Clients', sub: 'This month', value: stats.numberOfNewClients || newClientsCount || 0, icon: UserPlus, color: '#3b82f6', bg: 'linear-gradient(135deg,#3b82f6,#2563eb)', white: true, tab: 'new-client' },
+    { label: 'Transfers Accepted', sub: 'Approved', value: stats.transferRequestsAccepted || transfersAccepted, icon: ArrowRightLeft, color: '#10b981', tab: 'demand-mutation' },
+    { label: 'Terminations', sub: 'Completed', value: stats.terminationRequestsAccepted || terminationsAccepted, icon: LogOut, color: '#f59e0b', tab: 'termination' },
+    { label: 'Leases Active', sub: 'Valid contracts', value: stats.leaseContractsCompleted || leasesCompleted, icon: FileCheck, color: '#10b981', tab: 'lease-contract' },
+    { label: 'Leases Pending', sub: 'In progress', value: stats.leaseContractsInProgress || leasesInProgress, icon: Clock, color: '#f59e0b', tab: 'lease-contract' },
+    { label: 'Documents', sub: `${pendingDocs} pending`, value: totalDocs, icon: FileText, color: '#8b5cf6', tab: 'document-verification' }];
+
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Metric cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
           {metricCards.map((m, i) => {
             const Icon = m.icon;
             return (
               <div key={i} style={{ ...card, ...(m.bg ? { background: m.bg } : {}) }}
-                onClick={() => setActiveTab(m.tab)}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,23,42,0.12)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 12px rgba(15,23,42,0.06)'; }}
-              >
+              onClick={() => setActiveTab(m.tab)}
+              onMouseEnter={(e) => {e.currentTarget.style.transform = 'translateY(-2px)';e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,23,42,0.12)';}}
+              onMouseLeave={(e) => {e.currentTarget.style.transform = '';e.currentTarget.style.boxShadow = '0 2px 12px rgba(15,23,42,0.06)';}}>
+                
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: m.white ? 'rgba(255,255,255,0.2)' : `${m.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon size={20} style={{ color: m.white ? '#fff' : m.color }} />
@@ -983,20 +933,18 @@ const AdministrativeDashboard = () => {
                   </div>
                 </div>
                 <p style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700, color: m.white ? '#fff' : '#1e293b' }}>{m.value}</p>
-              </div>
-            );
+              </div>);
+
           })}
         </div>
-
-        {/* Chart */}
         <div style={{ ...card, cursor: 'default' }}>
           <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>Document Processing</h3>
           <p style={{ margin: '0 0 16px', fontSize: '0.8rem', color: '#94a3b8' }}>Documents submitted vs approved — last 6 months</p>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
               <defs>
-                <linearGradient id="adminSubGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/></linearGradient>
-                <linearGradient id="adminApprGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
+                <linearGradient id="adminSubGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient>
+                <linearGradient id="adminApprGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
               <XAxis dataKey="month" stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#e5e7eb' }} />
@@ -1007,24 +955,24 @@ const AdministrativeDashboard = () => {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
-  const renderInbox = () => (
-    <div className="sa-section-card">
+  const renderInbox = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
           <h3>Received Documents</h3>
           <p>Incoming tenant documents (email/inbox)</p>
         </div>
       </div>
-      {loading ? (
-        <div className="sa-table-empty">Loading inbox documents...</div>
-      ) : inboxDocs.length === 0 ? (
-        <div className="sa-table-empty">No documents in inbox</div>
-      ) : (
-        <div className="sa-table-wrapper">
+      {loading ?
+    <div className="sa-table-empty">Loading inbox documents...</div> :
+    inboxDocs.length === 0 ?
+    <div className="sa-table-empty">No documents in inbox</div> :
+
+    <div className="sa-table-wrapper">
           <table className="sa-table">
             <thead>
               <tr>
@@ -1037,8 +985,8 @@ const AdministrativeDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {inboxDocs.map((doc, index) => (
-                <tr key={doc.id || `doc-${index}`}>
+              {inboxDocs.map((doc, index) =>
+          <tr key={doc.id || `doc-${index}`}>
                   <td>
                     <div className="sa-cell-main">
                       <span className="sa-cell-title">{doc.tenant || 'Unknown Tenant'}</span>
@@ -1056,31 +1004,31 @@ const AdministrativeDashboard = () => {
                   <td>
                     <div className="sa-row-actions">
                       <button
-                        className="table-action-button edit"
-                        onClick={() => addNotification('Document archived', 'success')}
-                      >
+                  className="table-action-button edit"
+                  onClick={() => addNotification('Document archived', 'success')}>
+                  
                         Archive
                       </button>
                       <button
-                        className="table-action-button view"
-                        onClick={() => handleForwardInbox(doc.id)}
-                        disabled={loading}
-                      >
+                  className="table-action-button view"
+                  onClick={() => handleForwardInbox(doc.id)}
+                  disabled={loading}>
+                  
                         Forward
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+          )}
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
+    }
+    </div>;
 
-  const renderDocuments = () => (
-    <div className="sa-section-card">
+
+  const renderDocuments = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
           <h3>Document Verification</h3>
@@ -1089,21 +1037,21 @@ const AdministrativeDashboard = () => {
       </div>
 
       <div className="sa-filters-section">
-        <select 
-          className="sa-filter-select"
-          value={documentStatusFilter}
-          onChange={(e) => setDocumentStatusFilter(e.target.value)}
-        >
+        <select
+        className="sa-filter-select"
+        value={documentStatusFilter}
+        onChange={(e) => setDocumentStatusFilter(e.target.value)}>
+        
           <option value="">All Documents</option>
           <option value="Pending">Pending Review</option>
           <option value="Approved">Approved</option>
           <option value="Rejected">Rejected</option>
         </select>
-        <select 
-          className="sa-filter-select"
-          value={documentTypeFilter}
-          onChange={(e) => setDocumentTypeFilter(e.target.value)}
-        >
+        <select
+        className="sa-filter-select"
+        value={documentTypeFilter}
+        onChange={(e) => setDocumentTypeFilter(e.target.value)}>
+        
           <option value="">All Types</option>
           <option value="ID">ID Documents</option>
           <option value="Income">Income Proof</option>
@@ -1111,12 +1059,12 @@ const AdministrativeDashboard = () => {
         </select>
       </div>
 
-      {loading ? (
-        <div className="sa-table-empty">Loading documents...</div>
-      ) : documents.length === 0 ? (
-        <div className="sa-table-empty">No documents pending review</div>
-      ) : (
-        <div className="sa-table-wrapper">
+      {loading ?
+    <div className="sa-table-empty">Loading documents...</div> :
+    documents.length === 0 ?
+    <div className="sa-table-empty">No documents pending review</div> :
+
+    <div className="sa-table-wrapper">
           <table className="sa-table">
             <thead>
               <tr>
@@ -1128,8 +1076,8 @@ const AdministrativeDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {documents.map((doc, index) => (
-                <tr key={doc.id || `document-${index}`}>
+              {documents.map((doc, index) =>
+          <tr key={doc.id || `document-${index}`}>
                   <td>
                     <div className="sa-cell-main">
                       <span className="sa-cell-title">{doc.tenant || 'Unknown Tenant'}</span>
@@ -1151,86 +1099,86 @@ const AdministrativeDashboard = () => {
                   <td>
                     <div className="sa-row-actions">
                       <button
-                        className="table-action-button view"
-                        onClick={() => addNotification('Opening document viewer', 'info')}
-                      >
+                  className="table-action-button view"
+                  onClick={() => addNotification('Opening document viewer', 'info')}>
+                  
                         View
                       </button>
-                      {normalizeLower(doc.status) !== 'approved' && (
-                        <button
-                          className="table-action-button edit"
-                          onClick={() => handleApproveDocument(doc.id)}
-                        >
+                      {normalizeLower(doc.status) !== 'approved' &&
+                <button
+                  className="table-action-button edit"
+                  onClick={() => handleApproveDocument(doc.id)}>
+                  
                           Approve
                         </button>
-                      )}
+                }
                       <button
-                        className="table-action-button delete"
-                        onClick={() => {
-                          setRejectingDocId(doc.id);
-                          setShowRejectModal(true);
-                        }}
-                      >
+                  className="table-action-button delete"
+                  onClick={() => {
+                    setRejectingDocId(doc.id);
+                    setShowRejectModal(true);
+                  }}>
+                  
                         Reject
                       </button>
                       <button
-                        className="table-action-button contact"
-                        onClick={() => handleFollowUpDocument(doc.id)}
-                      >
+                  className="table-action-button contact"
+                  onClick={() => handleFollowUpDocument(doc.id)}>
+                  
                         Follow-up
                       </button>
                       <button
-                        className="table-action-button view"
-                        onClick={() => handleSendToUtility(doc.id)}
-                      >
+                  className="table-action-button view"
+                  onClick={() => handleSendToUtility(doc.id)}>
+                  
                         Utility
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+          )}
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
+    }
+    </div>;
 
-  const renderUtilities = () => (
-    <div className="sa-section-card">
+
+  const renderUtilities = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
           <h3>CIE / SODECI Transfers</h3>
           <p>Send tenant and lease details to utility companies</p>
         </div>
         <button
-          className="sa-primary-cta"
-          onClick={() => addNotification('Batch export started', 'success')}
-          disabled={loading}
-        >
+        className="sa-primary-cta"
+        onClick={() => addNotification('Batch export started', 'success')}
+        disabled={loading}>
+        
           <Send size={18} />
           Send Batch
         </button>
       </div>
       
       <div className="sa-filters-section">
-        <select 
-          className="sa-filter-select"
-          value={utilityStatusFilter}
-          onChange={(e) => setUtilityStatusFilter(e.target.value)}
-        >
+        <select
+        className="sa-filter-select"
+        value={utilityStatusFilter}
+        onChange={(e) => setUtilityStatusFilter(e.target.value)}>
+        
           <option value="">All Status</option>
           <option value="Sent">Sent</option>
           <option value="Confirmed">Confirmed</option>
         </select>
       </div>
 
-      {loading ? (
-        <div className="sa-table-empty">Loading utility transfers...</div>
-      ) : utilities.length === 0 ? (
-        <div className="sa-table-empty">No pending transfers</div>
-      ) : (
-        <div className="sa-table-wrapper">
+      {loading ?
+    <div className="sa-table-empty">Loading utility transfers...</div> :
+    utilities.length === 0 ?
+    <div className="sa-table-empty">No pending transfers</div> :
+
+    <div className="sa-table-wrapper">
           <table className="sa-table">
             <thead>
               <tr>
@@ -1243,8 +1191,8 @@ const AdministrativeDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {utilities.map((item, index) => (
-                <tr key={item.id || `utility-${index}`}>
+              {utilities.map((item, index) =>
+          <tr key={item.id || `utility-${index}`}>
                   <td>
                     <div className="sa-cell-main">
                       <span className="sa-cell-title">{item.tenant || 'Unknown Tenant'}</span>
@@ -1267,50 +1215,50 @@ const AdministrativeDashboard = () => {
                   <td>
                     <div className="sa-row-actions">
                       <button
-                        className="table-action-button view"
-                        onClick={() => addNotification('Previewing payload', 'info')}
-                      >
+                  className="table-action-button view"
+                  onClick={() => addNotification('Previewing payload', 'info')}>
+                  
                         Preview
                       </button>
                       <button
-                        className="table-action-button edit"
-                        onClick={() => handleTransferUtility(item.id)}
-                      >
+                  className="table-action-button edit"
+                  onClick={() => handleTransferUtility(item.id)}>
+                  
                         Transfer
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+          )}
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
+    }
+    </div>;
 
-  const renderDebt = () => (
-    <div className="sa-section-card">
+
+  const renderDebt = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
           <h3>Debt Collection</h3>
           <p>Track overdue balances and manage collections</p>
         </div>
         <button
-          className="sa-primary-cta"
-          onClick={() => addNotification('Debt report exported', 'success')}
-          disabled={loading}
-        >
+        className="sa-primary-cta"
+        onClick={() => addNotification('Debt report exported', 'success')}
+        disabled={loading}>
+        
           <Download size={18} />
           Export
         </button>
       </div>
-      {loading ? (
-        <div className="sa-table-empty">Syncing balances...</div>
-      ) : debts.length === 0 ? (
-        <div className="sa-table-empty">No outstanding debts</div>
-      ) : (
-        <div className="sa-table-wrapper">
+      {loading ?
+    <div className="sa-table-empty">Syncing balances...</div> :
+    debts.length === 0 ?
+    <div className="sa-table-empty">No outstanding debts</div> :
+
+    <div className="sa-table-wrapper">
           <table className="sa-table">
             <thead>
               <tr>
@@ -1323,8 +1271,8 @@ const AdministrativeDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {debts.map(debt => (
-                <tr key={debt.id}>
+              {debts.map((debt) =>
+          <tr key={debt.id}>
                   <td>
                     <div className="sa-cell-main">
                       <span className="sa-cell-title">{debt.tenant}</span>
@@ -1352,56 +1300,56 @@ const AdministrativeDashboard = () => {
                   <td>
                     <div className="sa-row-actions">
                       <button
-                        className="table-action-button view"
-                        onClick={() => handleRemindDebt(debt.id)}
-                      >
+                  className="table-action-button view"
+                  onClick={() => handleRemindDebt(debt.id)}>
+                  
                         Reminder
                       </button>
                       <button
-                        className="table-action-button edit"
-                        onClick={() => handleMarkDebtPaid(debt.id)}
-                      >
+                  className="table-action-button edit"
+                  onClick={() => handleMarkDebtPaid(debt.id)}>
+                  
                         Mark Paid
                       </button>
                       <button
-                        className="table-action-button delete"
-                        onClick={() => addNotification('Escalated to collections', 'warning')}
-                      >
+                  className="table-action-button delete"
+                  onClick={() => addNotification('Escalated to collections', 'warning')}>
+                  
                         Escalate
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+          )}
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
+    }
+    </div>;
 
-  const renderReminders = () => (
-    <div className="sa-section-card">
+
+  const renderReminders = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
           <h3>Reminders</h3>
           <p>Create and manage payment and document reminders</p>
         </div>
         <button className="sa-primary-cta" onClick={() => handleCreateReminder({
-          subject: 'Scheduled Reminder',
-          description: 'Automated follow up',
-          date: new Date().toISOString(),
-          channel: 'Email',
-          status: 'Scheduled'
-        })} disabled={loading}>
+        subject: 'Scheduled Reminder',
+        description: 'Automated follow up',
+        date: new Date().toISOString(),
+        channel: 'Email',
+        status: 'Scheduled'
+      })} disabled={loading}>
           <Plus size={18} />
           Schedule Reminder
         </button>
       </div>
-      {reminders.length === 0 ? (
-        <div className="sa-table-empty">No reminders scheduled</div>
-      ) : (
-        <div className="sa-table-wrapper">
+      {reminders.length === 0 ?
+    <div className="sa-table-empty">No reminders scheduled</div> :
+
+    <div className="sa-table-wrapper">
           <table className="sa-table">
             <thead>
               <tr>
@@ -1413,8 +1361,8 @@ const AdministrativeDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {reminders.map(rem => (
-                <tr key={rem.id}>
+              {reminders.map((rem) =>
+          <tr key={rem.id}>
                   <td>
                     <div className="sa-cell-main">
                       <span className="sa-cell-title">{rem.subject}</span>
@@ -1431,32 +1379,30 @@ const AdministrativeDashboard = () => {
                   <td>
                     <div className="sa-row-actions">
                       <button
-                        className="table-action-button edit"
-                        onClick={() => addNotification('Reminder updated', 'success')}
-                      >
+                  className="table-action-button edit"
+                  onClick={() => addNotification('Reminder updated', 'success')}>
+                  
                         Edit
                       </button>
                       <button
-                        className="table-action-button delete"
-                        onClick={() => handleDeleteReminder(rem.id)}
-                      >
+                  className="table-action-button delete"
+                  onClick={() => handleDeleteReminder(rem.id)}>
+                  
                         Cancel
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+          )}
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
+    }
+    </div>;
+
 
   const renderLeases = () => {
-    // Filter leases by selected tab and search
-    const filteredLeases = leases.filter(lease => {
-      // Search filter (tenant, property, contract title, landlord, lease type, status)
+    const filteredLeases = leases.filter((lease) => {
       if (leaseSearchText.trim()) {
         const search = leaseSearchText.trim().toLowerCase();
         const tenant = (lease.tenant || lease.Tenant || '').toLowerCase();
@@ -1466,10 +1412,8 @@ const AdministrativeDashboard = () => {
         const leaseType = (lease.leaseType || lease.LeaseType || '').toLowerCase();
         const status = (lease.status || lease.Status || '').toLowerCase();
         if (!tenant.includes(search) && !property.includes(search) && !contractTitle.includes(search) &&
-            !landlord.includes(search) && !leaseType.includes(search) && !status.includes(search)) return false;
+        !landlord.includes(search) && !leaseType.includes(search) && !status.includes(search)) return false;
       }
-      
-      // Status filter: Valid tab only shows leases approved by management (Active / Approved by management)
       const status = (lease.status || lease.Status || 'Active').toLowerCase();
       if (leaseTab === 'active' || leaseTab === 'valid') {
         return (
@@ -1478,8 +1422,8 @@ const AdministrativeDashboard = () => {
           status === 'approved' ||
           status === 'valid' ||
           status === 'completed' ||
-          status === 'validated'
-        );
+          status === 'validated');
+
       }
       if (leaseTab === 'pending' || leaseTab === 'in-progress') {
         return (
@@ -1489,8 +1433,8 @@ const AdministrativeDashboard = () => {
           status === 'created' ||
           status === 'pending management signature' ||
           status === 'pending owner signature' ||
-          status === 'pending signature'
-        );
+          status === 'pending signature');
+
       }
       if (leaseTab === 'expired') return status === 'expired';
       return true;
@@ -1508,8 +1452,6 @@ const AdministrativeDashboard = () => {
             Add Lease Contract
           </button>
         </div>
-
-        {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
           <button
             onClick={() => setLeaseTab('in-progress')}
@@ -1522,8 +1464,8 @@ const AdministrativeDashboard = () => {
               cursor: 'pointer',
               fontWeight: leaseTab === 'in-progress' ? '600' : '400',
               marginBottom: '-2px'
-            }}
-          >
+            }}>
+            
             In Progress
           </button>
           <button
@@ -1537,8 +1479,8 @@ const AdministrativeDashboard = () => {
               cursor: 'pointer',
               fontWeight: leaseTab === 'valid' ? '600' : '400',
               marginBottom: '-2px'
-            }}
-          >
+            }}>
+            
             Valid
           </button>
         </div>
@@ -1556,14 +1498,14 @@ const AdministrativeDashboard = () => {
               border: '1px solid #e5e7eb',
               borderRadius: '8px',
               fontSize: '0.875rem'
-            }}
-          />
+            }} />
+          
         </div>
 
-        {filteredLeases.length === 0 ? (
-          <div className="sa-table-empty">No {leaseTab === 'in-progress' ? 'in progress' : 'valid'} leases found</div>
-        ) : (
-          <div className="sa-table-wrapper">
+        {filteredLeases.length === 0 ?
+        <div className="sa-table-empty">No {leaseTab === 'in-progress' ? 'in progress' : 'valid'} leases found</div> :
+
+        <div className="sa-table-wrapper">
             <table className="sa-table">
               <thead>
                 <tr>
@@ -1579,17 +1521,16 @@ const AdministrativeDashboard = () => {
               </thead>
               <tbody>
                 {filteredLeases.map((lease, index) => {
-                  const contractTitle = lease.contractTitle || lease.ContractTitle || `Contract N°${String(lease.id || lease.ID || '').padStart(4, '0')}`;
-                  const leaseType = lease.leaseType || lease.LeaseType || 'Residential';
-                  const landlord = lease.landlord || lease.Landlord || 'N/A';
-                  const tenant = lease.tenant || lease.Tenant || 'N/A';
-                  const property = lease.property || lease.Property || 'N/A';
-                  const documentURL = lease.documentURL || lease.DocumentURL;
-                  const status = lease.status || lease.Status || 'Pending';
-                  // On Valid tab, show "Active" for all so it's consistent (stored value can be Valid, Active, Approved, etc.)
-                  const displayStatus = leaseTab === 'valid' ? 'Active' : status;
-                  return (
-                    <tr key={lease.id || lease.ID}>
+                const contractTitle = lease.contractTitle || lease.ContractTitle || `Contract N°${String(lease.id || lease.ID || '').padStart(4, '0')}`;
+                const leaseType = lease.leaseType || lease.LeaseType || 'Residential';
+                const landlord = lease.landlord || lease.Landlord || 'N/A';
+                const tenant = lease.tenant || lease.Tenant || 'N/A';
+                const property = lease.property || lease.Property || 'N/A';
+                const documentURL = lease.documentURL || lease.DocumentURL;
+                const status = lease.status || lease.Status || 'Pending';
+                const displayStatus = leaseTab === 'valid' ? 'Active' : status;
+                return (
+                  <tr key={lease.id || lease.ID}>
                       <td>{index + 1}</td>
                       <td>{contractTitle}</td>
                       <td>{leaseType}</td>
@@ -1603,59 +1544,59 @@ const AdministrativeDashboard = () => {
                       </td>
                       <td>
                         <div className="sa-row-actions" style={{ gap: '8px' }}>
-                          {documentURL && (
-                            <>
+                          {documentURL &&
+                        <>
                               <button
-                                className="table-action-button view"
-                                onClick={() => window.open(documentURL, '_blank')}
-                                style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #16a34a', padding: '6px 12px' }}
-                              >
+                            className="table-action-button view"
+                            onClick={() => window.open(documentURL, '_blank')}
+                            style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #16a34a', padding: '6px 12px' }}>
+                            
                                 View
                               </button>
                               <button
-                                className="table-action-button edit"
-                                onClick={() => {
-                                  const link = document.createElement('a');
-                                  link.href = documentURL;
-                                  link.download = `${contractTitle}.pdf`;
-                                  link.click();
-                                }}
-                                style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', padding: '6px 12px' }}
-                              >
+                            className="table-action-button edit"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = documentURL;
+                              link.download = `${contractTitle}.pdf`;
+                              link.click();
+                            }}
+                            style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', padding: '6px 12px' }}>
+                            
                                 Download
                               </button>
                             </>
-                          )}
-                          {leaseTab === 'in-progress' && (
-                            <button
-                              className="table-action-button edit"
-                              onClick={() => {
-                                setEditingLease(lease);
-                                setEditLeaseStatus(lease.status || lease.Status || '');
-                                setEditLeaseDocumentFile(null);
-                                setShowEditLeaseModal(true);
-                              }}
-                              style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', padding: '6px 12px' }}
-                            >
+                        }
+                          {leaseTab === 'in-progress' &&
+                        <button
+                          className="table-action-button edit"
+                          onClick={() => {
+                            setEditingLease(lease);
+                            setEditLeaseStatus(lease.status || lease.Status || '');
+                            setEditLeaseDocumentFile(null);
+                            setShowEditLeaseModal(true);
+                          }}
+                          style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', padding: '6px 12px' }}>
+                          
                               Edit
                             </button>
-                          )}
+                        }
                           {!documentURL && leaseTab !== 'in-progress' && <span style={{ color: '#9ca3af' }}>—</span>}
                         </div>
                       </td>
-                    </tr>
-                  );
-                })}
+                    </tr>);
+
+              })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
-  const renderAutomation = () => (
-    <div className="sa-section-card">
+  const renderAutomation = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
           <h3>Automation & Reports</h3>
@@ -1680,32 +1621,32 @@ const AdministrativeDashboard = () => {
           </thead>
           <tbody>
             {[
-              {
-                title: 'Lease Generation',
-                description: 'Automatically generate lease contracts based on approved applications.',
-                stats: 'Generated: 15 this month | Success rate: 98%',
-                status: 'active'
-              },
-              {
-                title: 'Utility Company Notifications',
-                description: 'Send tenant information to utility companies automatically.',
-                stats: 'Sent: 8 this month | Success rate: 100%',
-                status: 'active'
-              },
-              {
-                title: 'Payment Reminders',
-                description: 'Send automatic reminders for pending payments.',
-                stats: 'Sent: 23 this month | Response rate: 78%',
-                status: 'active'
-              },
-              {
-                title: 'Financial Reports',
-                description: 'Generate monthly financial reports for landlords.',
-                stats: 'Last generated: Nov 1, 2024 | Next: Dec 1, 2024',
-                status: 'pending'
-              }
-            ].map((card, index) => (
-              <tr key={card.title || index}>
+          {
+            title: 'Lease Generation',
+            description: 'Automatically generate lease contracts based on approved applications.',
+            stats: 'Generated: 15 this month | Success rate: 98%',
+            status: 'active'
+          },
+          {
+            title: 'Utility Company Notifications',
+            description: 'Send tenant information to utility companies automatically.',
+            stats: 'Sent: 8 this month | Success rate: 100%',
+            status: 'active'
+          },
+          {
+            title: 'Payment Reminders',
+            description: 'Send automatic reminders for pending payments.',
+            stats: 'Sent: 23 this month | Response rate: 78%',
+            status: 'active'
+          },
+          {
+            title: 'Financial Reports',
+            description: 'Generate monthly financial reports for landlords.',
+            stats: 'Last generated: Nov 1, 2024 | Next: Dec 1, 2024',
+            status: 'pending'
+          }].
+          map((card, index) =>
+          <tr key={card.title || index}>
                 <td>
                   <span className="sa-cell-title">{card.title}</span>
                 </td>
@@ -1723,28 +1664,24 @@ const AdministrativeDashboard = () => {
                   </div>
                 </td>
               </tr>
-            ))}
+          )}
           </tbody>
         </table>
       </div>
-    </div>
-  );
+    </div>;
 
-  // Render messaging page
-  const renderMessages = () => (
-    <MessagingPanel
-      chatUsers={chatUsers}
-      selectedUserId={selectedUserId}
-      chatMessages={chatMessages}
-      chatInput={chatInput}
-      setChatInput={setChatInput}
-      loadChatForUser={loadChatForUser}
-      handleSendMessage={handleSendMessage}
-      messagesEndRef={messagesEndRef}
-    />
-  );
+  const renderMessages = () =>
+  <MessagingPanel
+    chatUsers={chatUsers}
+    selectedUserId={selectedUserId}
+    chatMessages={chatMessages}
+    chatInput={chatInput}
+    setChatInput={setChatInput}
+    loadChatForUser={loadChatForUser}
+    handleSendMessage={handleSendMessage}
+    messagesEndRef={messagesEndRef} />;
 
-  // Load advertisements
+
   const loadAdvertisements = async () => {
     try {
       const ads = await adminService.getAdvertisements();
@@ -1829,10 +1766,7 @@ const AdministrativeDashboard = () => {
     const setCurrentTab = setMutationTab;
     const currentSearch = mutationSearchText;
     const setCurrentSearch = setMutationSearchText;
-    
-    // Filter transfers by selected tab and search
-    const filteredTransfers = transfers.filter(transfer => {
-      // Search filter
+    const filteredTransfers = transfers.filter((transfer) => {
       if (currentSearch) {
         const search = currentSearch.toLowerCase();
         const property = (transfer.property || transfer.Property || '').toLowerCase();
@@ -1840,8 +1774,6 @@ const AdministrativeDashboard = () => {
         const newClient = (transfer.newClient || transfer.RecipientName || '').toLowerCase();
         if (!property.includes(search) && !currentClient.includes(search) && !newClient.includes(search)) return false;
       }
-      
-      // Status filter
       const status = (transfer.status || transfer.Status || 'Pending').toLowerCase();
       if (currentTab === 'receipt') return status === 'pending' || status === 'received';
       if (currentTab === 'in-progress') return status === 'in-progress' || status === 'pending';
@@ -1858,8 +1790,6 @@ const AdministrativeDashboard = () => {
             <p>List of created mutations - Receipt of transfer requests (the tenant submits their request from their tenant account)</p>
           </div>
         </div>
-
-        {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
           <button
             onClick={() => setCurrentTab('receipt')}
@@ -1872,8 +1802,8 @@ const AdministrativeDashboard = () => {
               cursor: 'pointer',
               fontWeight: currentTab === 'receipt' ? '600' : '400',
               marginBottom: '-2px'
-            }}
-          >
+            }}>
+            
             Receipt
           </button>
           <button
@@ -1887,8 +1817,8 @@ const AdministrativeDashboard = () => {
               cursor: 'pointer',
               fontWeight: currentTab === 'in-progress' ? '600' : '400',
               marginBottom: '-2px'
-            }}
-          >
+            }}>
+            
             Request In Progress
           </button>
           <button
@@ -1902,8 +1832,8 @@ const AdministrativeDashboard = () => {
               cursor: 'pointer',
               fontWeight: currentTab === 'accepted' ? '600' : '400',
               marginBottom: '-2px'
-            }}
-          >
+            }}>
+            
             Request Accepted
           </button>
           <button
@@ -1917,18 +1847,18 @@ const AdministrativeDashboard = () => {
               cursor: 'pointer',
               fontWeight: currentTab === 'refused' ? '600' : '400',
               marginBottom: '-2px'
-            }}
-          >
+            }}>
+            
             Request Refused
           </button>
         </div>
 
-        {loading ? (
-          <div className="sa-table-empty">Loading transfer requests...</div>
-        ) : filteredTransfers.length === 0 ? (
-          <div className="sa-table-empty">No {currentTab} transfer requests found</div>
-        ) : (
-          <div className="sa-table-wrapper">
+        {loading ?
+        <div className="sa-table-empty">Loading transfer requests...</div> :
+        filteredTransfers.length === 0 ?
+        <div className="sa-table-empty">No {currentTab} transfer requests found</div> :
+
+        <div className="sa-table-wrapper">
             <table className="sa-table">
               <thead>
                 <tr>
@@ -1943,16 +1873,16 @@ const AdministrativeDashboard = () => {
               </thead>
               <tbody>
                 {filteredTransfers.map((transfer, index) => {
-                  const transferId = transfer.id || transfer.ID || transfer.transferId;
-                  const status = transfer.status || transfer.Status || 'Pending';
-                  const isPending = status.toLowerCase() === 'pending' || status.toLowerCase() === 'in-progress';
-                  const currentClient = transfer.currentClient || transfer.Tenant || transfer.tenant || 'N/A';
-                  const currentClientYears = transfer.currentClientYears || 5;
-                  const newClient = transfer.newClient || transfer.RecipientName || transfer.recipientName || 'N/A';
-                  const requestDate = transfer.requestDate || transfer.createdAt || transfer.CreatedAt;
+                const transferId = transfer.id || transfer.ID || transfer.transferId;
+                const status = transfer.status || transfer.Status || 'Pending';
+                const isPending = status.toLowerCase() === 'pending' || status.toLowerCase() === 'in-progress';
+                const currentClient = transfer.currentClient || transfer.Tenant || transfer.tenant || 'N/A';
+                const currentClientYears = transfer.currentClientYears || 5;
+                const newClient = transfer.newClient || transfer.RecipientName || transfer.recipientName || 'N/A';
+                const requestDate = transfer.requestDate || transfer.createdAt || transfer.CreatedAt;
 
-                  return (
-                    <tr key={transferId || `transfer-${index}`}>
+                return (
+                  <tr key={transferId || `transfer-${index}`}>
                       <td>{index + 1}</td>
                       <td>{transfer.property || transfer.Property || 'N/A'}</td>
                       <td>
@@ -1963,9 +1893,9 @@ const AdministrativeDashboard = () => {
                       </td>
                       <td>{newClient}</td>
                       <td>
-                        {requestDate
-                          ? new Date(requestDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-                          : 'N/A'}
+                        {requestDate ?
+                      new Date(requestDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) :
+                      'N/A'}
                       </td>
                       <td>
                         <span className={`sa-status-pill ${status.toLowerCase().replace(' ', '-')}`}>
@@ -1975,71 +1905,64 @@ const AdministrativeDashboard = () => {
                       <td>
                         <div className="sa-row-actions" style={{ gap: '8px', flexWrap: 'wrap' }}>
                           <button
-                            type="button"
-                            className="table-action-button view"
-                            onClick={() => {
-                              setSelectedTransferForDocs(transfer);
-                              setShowTransferDocsModal(true);
-                            }}
-                            style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #16a34a', padding: '6px 12px' }}
-                          >
+                          type="button"
+                          className="table-action-button view"
+                          onClick={() => {
+                            setSelectedTransferForDocs(transfer);
+                            setShowTransferDocsModal(true);
+                          }}
+                          style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #16a34a', padding: '6px 12px' }}>
+                          
                             View documents
                           </button>
-                          {isPending && (
-                            <>
+                          {isPending &&
+                        <>
                               <button
-                                className="table-action-button edit"
-                                onClick={() => handleApproveTransfer(transferId)}
-                                disabled={loading}
-                                style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', padding: '6px 12px' }}
-                              >
+                            className="table-action-button edit"
+                            onClick={() => handleApproveTransfer(transferId)}
+                            disabled={loading}
+                            style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', padding: '6px 12px' }}>
+                            
                                 Accept
                               </button>
                               <button
-                                className="table-action-button delete"
-                                onClick={() => handleRejectTransfer(transferId)}
-                                disabled={loading}
-                                style={{ backgroundColor: '#dc2626', color: 'white', border: 'none', padding: '6px 12px' }}
-                              >
+                            className="table-action-button delete"
+                            onClick={() => handleRejectTransfer(transferId)}
+                            disabled={loading}
+                            style={{ backgroundColor: '#dc2626', color: 'white', border: 'none', padding: '6px 12px' }}>
+                            
                                 Reject
                               </button>
                             </>
-                          )}
-                          {!isPending && (
-                            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        }
+                          {!isPending &&
+                        <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                               {status === 'Approved' || status === 'Accepted' ? '✓ Completed' : status === 'Rejected' || status === 'Refused' ? '✗ Refused' : status}
                             </span>
-                          )}
+                        }
                         </div>
                       </td>
-                    </tr>
-                  );
-                })}
+                    </tr>);
+
+              })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    );
-  };
+        }
+      </div>);
 
-  // Render Termination Section
+  };
   const renderTermination = () => {
-    // Filter terminations by selected tab and search
-    const filteredTerminations = terminations.filter(termination => {
-      // Search filter
+    const filteredTerminations = terminations.filter((termination) => {
       if (terminationSearchText) {
         const search = terminationSearchText.toLowerCase();
         const tenant = (termination.tenant || termination.Tenant || termination.name || termination.Name || '').toLowerCase();
         const property = (termination.property || termination.Property || '').toLowerCase();
         if (!tenant.includes(search) && !property.includes(search)) return false;
       }
-      
-      // Status filter
       const status = (termination.status || termination.Status || '').toLowerCase();
       const inventoryStatus = (termination.inventoryStatus || termination.InventoryStatus || '').toLowerCase();
       if (terminationTab === 'receipt') return status === 'pending' || status === 'received';
-      // Pending tab: status pending/waiting-inventory OR inventory status is pending
       if (terminationTab === 'pending') return status === 'pending' || status === 'waiting-inventory' || inventoryStatus === 'pending';
       if (terminationTab === 'made') return status === 'completed' || status === 'made' || status === 'accepted';
       return true;
@@ -2053,8 +1976,6 @@ const AdministrativeDashboard = () => {
             <p>List of all cancellation requests - Receipt of termination requests. State of exit: inventory must be done before the 5th of the next month (tenant chooses a date in that range).</p>
           </div>
         </div>
-
-        {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: '20px' }}>
           <button
             onClick={() => setTerminationTab('receipt')}
@@ -2067,8 +1988,8 @@ const AdministrativeDashboard = () => {
               cursor: 'pointer',
               fontWeight: terminationTab === 'receipt' ? '600' : '400',
               marginBottom: '-2px'
-            }}
-          >
+            }}>
+            
             Receipt
           </button>
           <button
@@ -2082,8 +2003,8 @@ const AdministrativeDashboard = () => {
               cursor: 'pointer',
               fontWeight: terminationTab === 'pending' ? '600' : '400',
               marginBottom: '-2px'
-            }}
-          >
+            }}>
+            
             Request Pending
           </button>
           <button
@@ -2097,8 +2018,8 @@ const AdministrativeDashboard = () => {
               cursor: 'pointer',
               fontWeight: terminationTab === 'made' ? '600' : '400',
               marginBottom: '-2px'
-            }}
-          >
+            }}>
+            
             Request Made
           </button>
         </div>
@@ -2119,28 +2040,28 @@ const AdministrativeDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredTerminations.length === 0 ? (
-                <tr>
+              {filteredTerminations.length === 0 ?
+              <tr>
                   <td colSpan={9} className="sa-table-empty">
                     No {terminationTab} termination requests found
                   </td>
-                </tr>
-              ) : (
-                filteredTerminations.map((termination, index) => (
-                  <tr key={termination.ID || termination.id || index}>
+                </tr> :
+
+              filteredTerminations.map((termination, index) =>
+              <tr key={termination.ID || termination.id || index}>
                     <td>{index + 1}</td>
                     <td>{termination.tenant || termination.Tenant || termination.name || termination.Name || 'N/A'}</td>
                     <td>{termination.property || termination.Property || 'N/A'}</td>
                     <td>{termination.unitNumber || termination.UnitNumber || 'N/A'}</td>
                     <td>
-                      {termination.requestDate || termination.RequestDate || termination.createdAt || termination.CreatedAt
-                        ? new Date(termination.requestDate || termination.RequestDate || termination.createdAt || termination.CreatedAt).toLocaleDateString()
-                        : 'N/A'}
+                      {termination.requestDate || termination.RequestDate || termination.createdAt || termination.CreatedAt ?
+                  new Date(termination.requestDate || termination.RequestDate || termination.createdAt || termination.CreatedAt).toLocaleDateString() :
+                  'N/A'}
                     </td>
                     <td>
-                      {termination.inventoryCheckDate
-                        ? new Date(termination.inventoryCheckDate).toLocaleDateString()
-                        : '—'}
+                      {termination.inventoryCheckDate ?
+                  new Date(termination.inventoryCheckDate).toLocaleDateString() :
+                  '—'}
                     </td>
                     <td>
                       <span className={`sa-status-pill ${(termination.status || termination.Status || 'pending').toLowerCase().replace(' ', '-')}`}>
@@ -2154,47 +2075,44 @@ const AdministrativeDashboard = () => {
                     </td>
                     <td className="sa-row-actions">
                       <button
-                        className="sa-icon-button"
-                        title="View details"
-                        onClick={() => {
-                          setSelectedTerminationForDetail(termination);
-                          setShowTerminationDetailModal(true);
-                        }}
-                      >
+                    className="sa-icon-button"
+                    title="View details"
+                    onClick={() => {
+                      setSelectedTerminationForDetail(termination);
+                      setShowTerminationDetailModal(true);
+                    }}>
+                    
                         👁️
                       </button>
-                      {terminationTab === 'pending' && (
-                        <button 
-                          className="sa-icon-button" 
-                          onClick={() => {
-                            handleApproveTermination(termination);
-                          }}
-                          title="Mark Inventory Done"
-                          style={{ color: '#16a34a' }}
-                        >
+                      {terminationTab === 'pending' &&
+                  <button
+                    className="sa-icon-button"
+                    onClick={() => {
+                      handleApproveTermination(termination);
+                    }}
+                    title="Mark Inventory Done"
+                    style={{ color: '#16a34a' }}>
+                    
                           ✓
                         </button>
-                      )}
+                  }
                     </td>
                   </tr>
-                ))
-              )}
+              )
+              }
             </tbody>
           </table>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Render History Section
+  };
   const renderHistory = () => {
-    // Combine all history data
     const allHistory = [
-      ...historyData.clients.map(c => ({ ...c, type: 'Client', date: c.createdAt || c.CreatedAt || c.registrationDate || c.RegistrationDate })),
-      ...historyData.leases.map(l => ({ ...l, type: 'Lease Contract', date: l.createdAt || l.CreatedAt })),
-      ...historyData.mutations.map(m => ({ ...m, type: 'Mutation', date: m.createdAt || m.CreatedAt || m.requestDate })),
-      ...historyData.terminations.map(t => ({ ...t, type: 'Termination', date: t.createdAt || t.CreatedAt || t.requestDate }))
-    ].sort((a, b) => {
+    ...historyData.clients.map((c) => ({ ...c, type: 'Client', date: c.createdAt || c.CreatedAt || c.registrationDate || c.RegistrationDate })),
+    ...historyData.leases.map((l) => ({ ...l, type: 'Lease Contract', date: l.createdAt || l.CreatedAt })),
+    ...historyData.mutations.map((m) => ({ ...m, type: 'Mutation', date: m.createdAt || m.CreatedAt || m.requestDate })),
+    ...historyData.terminations.map((t) => ({ ...t, type: 'Termination', date: t.createdAt || t.CreatedAt || t.requestDate }))].
+    sort((a, b) => {
       const dateA = new Date(a.date || 0);
       const dateB = new Date(b.date || 0);
       return dateB - dateA;
@@ -2223,13 +2141,13 @@ const AdministrativeDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {allHistory.length === 0 ? (
-                <tr>
+              {allHistory.length === 0 ?
+              <tr>
                   <td colSpan={7} className="sa-table-empty">No history records found</td>
-                </tr>
-              ) : (
-                allHistory.map((item, index) => (
-                  <tr key={`${item.type}-${item.ID || item.id || index}`}>
+                </tr> :
+
+              allHistory.map((item, index) =>
+              <tr key={`${item.type}-${item.ID || item.id || index}`}>
                     <td>{index + 1}</td>
                     <td>
                       <span className="sa-status-pill" style={{ backgroundColor: '#e0e7ff', color: '#3730a3' }}>
@@ -2253,16 +2171,14 @@ const AdministrativeDashboard = () => {
                       </span>
                     </td>
                   </tr>
-                ))
-              )}
+              )
+              }
             </tbody>
           </table>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Render Reports Section
+  };
   const renderReports = () => {
     return (
       <div className="sa-section-card">
@@ -2274,7 +2190,6 @@ const AdministrativeDashboard = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-          {/* Client Report */}
           <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '24px' }} onClick={() => {
             addNotification('Client Report feature coming soon', 'info');
           }}>
@@ -2285,8 +2200,6 @@ const AdministrativeDashboard = () => {
               <p style={{ margin: 0 }}>• Rejected customers</p>
             </div>
           </div>
-
-          {/* Lease Contracts Report */}
           <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '24px' }} onClick={() => {
             addNotification('Lease Contracts Report feature coming soon', 'info');
           }}>
@@ -2298,8 +2211,6 @@ const AdministrativeDashboard = () => {
               <p style={{ margin: 0 }}>• Terminated contracts</p>
             </div>
           </div>
-
-          {/* Mutations Report */}
           <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '24px' }} onClick={() => {
             addNotification('Mutations Report feature coming soon', 'info');
           }}>
@@ -2310,8 +2221,6 @@ const AdministrativeDashboard = () => {
               <p style={{ margin: 0 }}>• Mutations refused</p>
             </div>
           </div>
-
-          {/* Terminations Report */}
           <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '24px' }} onClick={() => {
             addNotification('Terminations Report feature coming soon', 'info');
           }}>
@@ -2323,8 +2232,8 @@ const AdministrativeDashboard = () => {
             </div>
           </div>
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
   const downloadBlob = (content, filename) => {
@@ -2347,10 +2256,10 @@ const AdministrativeDashboard = () => {
     };
     const headers = ['Type', 'Name', 'Email', 'Phone', 'Property', 'CompanyName', 'RegistrationNumber', 'ContactPerson', 'Address'];
     const rows = [
-      ['individual', 'Jane Doe', 'jane@example.com', '+2250700000000', '123 Main St', '', '', '', ''],
-      ['company', 'Acme Corp', 'contact@acme.com', '+2250700000001', '456 Oak Ave', 'Acme Corp', 'RC-12345', 'John Manager', '10 Business St']
-    ];
-    const csv = [headers.join(','), ...rows.map(r => r.map(escapeCsv).join(','))].join('\n') + '\n';
+    ['individual', 'Jane Doe', 'jane@example.com', '+2250700000000', '123 Main St', '', '', '', ''],
+    ['company', 'Acme Corp', 'contact@acme.com', '+2250700000001', '456 Oak Ave', 'Acme Corp', 'RC-12345', 'John Manager', '10 Business St']];
+
+    const csv = [headers.join(','), ...rows.map((r) => r.map(escapeCsv).join(','))].join('\n') + '\n';
     downloadBlob(csv, 'clients_import_example.csv');
   };
 
@@ -2376,9 +2285,9 @@ const AdministrativeDashboard = () => {
         for (let j = 0; j < raw.length; j++) {
           const c = raw[j];
           if (c === '"') {
-            if (inQuotes && raw[j + 1] === '"') { val += '"'; j++; }
-            else inQuotes = !inQuotes;
-          } else if ((c === ',' && !inQuotes) || (c === '\n' && !inQuotes)) {
+            if (inQuotes && raw[j + 1] === '"') {val += '"';j++;} else
+            inQuotes = !inQuotes;
+          } else if (c === ',' && !inQuotes || c === '\n' && !inQuotes) {
             row.push(val.trim());
             val = '';
             if (c === '\n') break;
@@ -2388,13 +2297,13 @@ const AdministrativeDashboard = () => {
         return row;
       };
       const cells = parseRow(line);
-      if (cells.length === 0 || cells.every(c => !c)) continue;
+      if (cells.length === 0 || cells.every((c) => !c)) continue;
       if (!headers) {
-        headers = cells.map(c => (c || '').trim());
+        headers = cells.map((c) => (c || '').trim());
         continue;
       }
       const obj = {};
-      headers.forEach((h, idx) => { if (h) obj[h] = (cells[idx] ?? '').trim(); });
+      headers.forEach((h, idx) => {if (h) obj[h] = (cells[idx] ?? '').trim();});
       if (currentSection === 'clients' && (obj.Name || obj.Email)) result.clients.push(obj);
     }
     return result;
@@ -2407,26 +2316,26 @@ const AdministrativeDashboard = () => {
       rows = parseCsvWithSections(text).clients;
     } else {
       const parseCsvLine = (line) => {
-        const out = []; let val = ''; let inQ = false;
+        const out = [];let val = '';let inQ = false;
         for (let j = 0; j < line.length; j++) {
           const c = line[j];
-          if (c === '"') { if (inQ && line[j + 1] === '"') { val += '"'; j++; } else inQ = !inQ; }
-          else if (c === ',' && !inQ) { out.push(val.trim().replace(/^"|"$/g, '')); val = ''; }
-          else val += c;
+          if (c === '"') {if (inQ && line[j + 1] === '"') {val += '"';j++;} else inQ = !inQ;} else
+          if (c === ',' && !inQ) {out.push(val.trim().replace(/^"|"$/g, ''));val = '';} else
+          val += c;
         }
         out.push(val.trim().replace(/^"|"$/g, ''));
         return out;
       };
       const lines = text.split(/\r?\n/).filter(Boolean);
-      const headers = parseCsvLine(lines[0] || '').map(h => h.trim());
+      const headers = parseCsvLine(lines[0] || '').map((h) => h.trim());
       for (let i = 1; i < lines.length; i++) {
         const cells = parseCsvLine(lines[i]);
-        const obj = {}; headers.forEach((h, idx) => { if (h) obj[h] = (cells[idx] ?? '').trim(); });
+        const obj = {};headers.forEach((h, idx) => {if (h) obj[h] = (cells[idx] ?? '').trim();});
         if (obj.Name || obj.Email) rows.push(obj);
       }
     }
     if (rows.length === 0) return { success: 0, failed: 0 };
-    let success = 0, failed = 0;
+    let success = 0,failed = 0;
     for (const r of rows) {
       try {
         const type = ((r.Type || r.type || 'individual') + '').toLowerCase();
@@ -2440,19 +2349,19 @@ const AdministrativeDashboard = () => {
           registrationNumber: (r.RegistrationNumber || r.registrationNumber || '').trim(),
           contactPerson: (r.ContactPerson || r.contactPerson || '').trim()
         };
-        if (!clientData.email || !clientData.phone) { failed++; continue; }
-        if (type === 'company' && (!clientData.companyName || !clientData.registrationNumber || !clientData.contactPerson)) { failed++; continue; }
+        if (!clientData.email || !clientData.phone) {failed++;continue;}
+        if (type === 'company' && (!clientData.companyName || !clientData.registrationNumber || !clientData.contactPerson)) {failed++;continue;}
         await adminService.createNewClient(clientData);
         success++;
-      } catch (err) { console.error('Client import row error:', err); failed++; }
+      } catch (err) {console.error('Client import row error:', err);failed++;}
     }
     return { success, failed };
   };
 
   const handleBulkImportUpload = async () => {
-    if (!bulkImportFile) { addNotification('Please select a file first', 'error'); return; }
+    if (!bulkImportFile) {addNotification('Please select a file first', 'error');return;}
     const isCsv = bulkImportFile.name.toLowerCase().endsWith('.csv');
-    if (!isCsv) { addNotification('Import supports CSV only. Please use a .csv file.', 'error'); return; }
+    if (!isCsv) {addNotification('Import supports CSV only. Please use a .csv file.', 'error');return;}
     setBulkImportLoading(true);
     try {
       const res = await handleBulkImportClients(bulkImportFile);
@@ -2467,11 +2376,8 @@ const AdministrativeDashboard = () => {
       setBulkImportLoading(false);
     }
   };
-
-  // Render New Client Section
   const renderNewClient = () => {
-    // Filter clients based on search and status
-    const filteredClients = newClients.filter(client => {
+    const filteredClients = newClients.filter((client) => {
       const rawStatus = (client.status || client.Status || client.ApplicationStatus || client.applicationStatus || '').toLowerCase();
       const statusValue = rawStatus.replace(/\s+/g, '-');
       if (statusValue === 'onboarded') return false;
@@ -2496,8 +2402,8 @@ const AdministrativeDashboard = () => {
             <h3>New Client</h3>
             <p>List of new client applications - upload documents and approve for onboarding</p>
           </div>
-          <button 
-            className="sa-primary-cta" 
+          <button
+            className="sa-primary-cta"
             onClick={() => {
               setNewClientForm({
                 type: 'individual',
@@ -2525,8 +2431,8 @@ const AdministrativeDashboard = () => {
               });
               setClientDocFiles({});
               setShowNewClientModal(true);
-            }}
-          >
+            }}>
+            
             <Plus size={18} />
             Create New Client
           </button>
@@ -2535,22 +2441,21 @@ const AdministrativeDashboard = () => {
             className="sa-primary-cta secondary"
             style={{ marginLeft: '8px' }}
             onClick={() => {
-              // setBulkImportTab('clients'); // TODO: bulkImportTab state not defined
               setBulkImportFile(null);
               setShowBulkImportModal(true);
-            }}
-          >
+            }}>
+            
             <FileSpreadsheet size={18} style={{ marginRight: '4px' }} />
             Import from CSV
           </button>
         </div>
 
         <div className="sa-filters-section">
-          <select 
+          <select
             className="sa-filter-select"
             value={clientStatusFilter}
-            onChange={(e) => setClientStatusFilter(e.target.value)}
-          >
+            onChange={(e) => setClientStatusFilter(e.target.value)}>
+            
             <option value="">All Status</option>
             <option value="in-progress">In Progress</option>
             <option value="accepted">Accepted</option>
@@ -2574,26 +2479,26 @@ const AdministrativeDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredClients.length === 0 ? (
-                <tr>
+              {filteredClients.length === 0 ?
+              <tr>
                   <td colSpan={9} className="sa-table-empty">
                     No new clients found
                   </td>
-                </tr>
-              ) : (
-                filteredClients.map((client, index) => (
-                  <tr
-                    key={client.ID || client.id || index}
-                    onClick={() => openUploadForClient(client)}
-                    style={{ cursor: 'pointer' }}
-                  >
+                </tr> :
+
+              filteredClients.map((client, index) =>
+              <tr
+                key={client.ID || client.id || index}
+                onClick={() => openUploadForClient(client)}
+                style={{ cursor: 'pointer' }}>
+                
                     <td>{index + 1}</td>
                     <td>
                       <div className="sa-cell-main">
                         <span className="sa-cell-title">{client.name || client.Name || client.companyName || 'N/A'}</span>
-                        {client.type === 'company' && client.contactPerson && (
-                          <span className="sa-cell-sub">Contact: {client.contactPerson}</span>
-                        )}
+                        {client.type === 'company' && client.contactPerson &&
+                    <span className="sa-cell-sub">Contact: {client.contactPerson}</span>
+                    }
                       </div>
                     </td>
                     <td>
@@ -2604,11 +2509,11 @@ const AdministrativeDashboard = () => {
                     <td>{client.email || client.Email || 'N/A'}</td>
                     <td>{client.phone || client.Phone || 'N/A'}</td>
                     <td>
-                      {client.registrationDate || client.RegistrationDate || client.createdAt || client.CreatedAt
-                        ? new Date(client.registrationDate || client.RegistrationDate || client.createdAt || client.CreatedAt).toLocaleDateString()
-                        : 'N/A'}
+                      {client.registrationDate || client.RegistrationDate || client.createdAt || client.CreatedAt ?
+                  new Date(client.registrationDate || client.RegistrationDate || client.createdAt || client.CreatedAt).toLocaleDateString() :
+                  'N/A'}
                     </td>
-                    <td>{(client.SecurityDepositPaid || client.securityDepositPaid) ? 'Paid' : 'Not Paid'}</td>
+                    <td>{client.SecurityDepositPaid || client.securityDepositPaid ? 'Paid' : 'Not Paid'}</td>
                     <td>
                       <span className={`sa-status-pill ${(client.status || client.Status || client.ApplicationStatus || client.applicationStatus || 'in-progress').toLowerCase()}`}>
                         {client.status || client.Status || client.ApplicationStatus || client.applicationStatus || 'In Progress'}
@@ -2616,59 +2521,57 @@ const AdministrativeDashboard = () => {
                     </td>
                     <td className="sa-row-actions">
                       <button
-                        className="sa-icon-button"
-                        title="View Checklist"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewChecklist(client);
-                        }}
-                      >
+                    className="sa-icon-button"
+                    title="View Checklist"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewChecklist(client);
+                    }}>
+                    
                         👁️
                       </button>
-                      {normalizeLower(client.status || client.Status || client.ApplicationStatus || client.applicationStatus || '') !== 'approved' && (
-                        <button
-                          className="sa-icon-button"
-                          title="Approve Client"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleClientStatusUpdate(client.ID || client.id, 'Approved');
-                          }}
-                        >
+                      {normalizeLower(client.status || client.Status || client.ApplicationStatus || client.applicationStatus || '') !== 'approved' &&
+                  <button
+                    className="sa-icon-button"
+                    title="Approve Client"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClientStatusUpdate(client.ID || client.id, 'Approved');
+                    }}>
+                    
                           ✅
                         </button>
-                      )}
+                  }
                       <button
-                        className="sa-icon-button"
-                        title="Edit Client"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditClient(client);
-                        }}
-                      >
+                    className="sa-icon-button"
+                    title="Edit Client"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditClient(client);
+                    }}>
+                    
                         ✏️
                       </button>
                       <button
-                        className="sa-icon-button"
-                        title="Reject Client"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleClientStatusUpdate(client.ID || client.id, 'Rejected');
-                        }}
-                      >
+                    className="sa-icon-button"
+                    title="Reject Client"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClientStatusUpdate(client.ID || client.id, 'Rejected');
+                    }}>
+                    
                         ❌
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
+              )
+              }
             </tbody>
           </table>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Render State of Entry / Exit (inventory filled by technicians)
+  };
   const renderStateOfEntryExit = () => {
     return (
       <div className="sa-section-card">
@@ -2678,10 +2581,10 @@ const AdministrativeDashboard = () => {
             <p>Inventory (state of entry or exit) reports filled by technicians for your company</p>
           </div>
         </div>
-        {inventoryList.length === 0 ? (
-          <div className="sa-table-empty">No state of entry or exit records yet. When technicians fill an inventory, it will appear here.</div>
-        ) : (
-          <div className="sa-table-wrapper" style={{ marginTop: '20px' }}>
+        {inventoryList.length === 0 ?
+        <div className="sa-table-empty">No state of entry or exit records yet. When technicians fill an inventory, it will appear here.</div> :
+
+        <div className="sa-table-wrapper" style={{ marginTop: '20px' }}>
             <table className="sa-table">
               <thead>
                 <tr>
@@ -2697,26 +2600,26 @@ const AdministrativeDashboard = () => {
               </thead>
               <tbody>
                 {inventoryList.map((inv, index) => {
-                  const type = inv.type || inv.Type || '';
-                  const tenant = inv.tenant || inv.Tenant || '—';
-                  const property = inv.property || inv.Property || '—';
-                  const date = inv.date || inv.Date || inv.createdAt || inv.CreatedAt;
-                  const dateStr = date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
-                  const inspector = inv.inspector || inv.Inspector || '—';
-                  const status = inv.status || inv.Status || '—';
-                  const reportURL = inv.reportURL || inv.ReportURL;
-                  return (
-                    <tr key={inv.id || inv.ID || index}>
+                const type = inv.type || inv.Type || '';
+                const tenant = inv.tenant || inv.Tenant || '—';
+                const property = inv.property || inv.Property || '—';
+                const date = inv.date || inv.Date || inv.createdAt || inv.CreatedAt;
+                const dateStr = date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
+                const inspector = inv.inspector || inv.Inspector || '—';
+                const status = inv.status || inv.Status || '—';
+                const reportURL = inv.reportURL || inv.ReportURL;
+                return (
+                  <tr key={inv.id || inv.ID || index}>
                       <td>{index + 1}</td>
                       <td>
                         <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '0.85rem',
-                          fontWeight: '500',
-                          backgroundColor: type === 'Move-in' ? '#dbeafe' : '#fef3c7',
-                          color: type === 'Move-in' ? '#1e40af' : '#92400e'
-                        }}>
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '0.85rem',
+                        fontWeight: '500',
+                        backgroundColor: type === 'Move-in' ? '#dbeafe' : '#fef3c7',
+                        color: type === 'Move-in' ? '#1e40af' : '#92400e'
+                      }}>
                           {type === 'Move-in' ? 'Entry' : type === 'Move-out' ? 'Exit' : type || '—'}
                         </span>
                       </td>
@@ -2726,23 +2629,23 @@ const AdministrativeDashboard = () => {
                       <td>{inspector}</td>
                       <td>{status}</td>
                       <td>
-                        {reportURL ? (
-                          <a href={reportURL} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}>
+                        {reportURL ?
+                      <a href={reportURL} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}>
                             View report
-                          </a>
-                        ) : (
-                          <span style={{ color: '#9ca3af' }}>—</span>
-                        )}
+                          </a> :
+
+                      <span style={{ color: '#9ca3af' }}>—</span>
+                      }
                       </td>
-                    </tr>
-                  );
-                })}
+                    </tr>);
+
+              })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
   const renderContent = (currentTab = activeTab) => {
@@ -2752,9 +2655,9 @@ const AdministrativeDashboard = () => {
       case 'new-client':
         return renderNewClient();
       case 'lease-contract':
-        return renderLeases(); // Reuse existing function, will update it
+        return renderLeases();
       case 'demand-mutation':
-        return renderTransfers(); // Reuse existing function, will update it
+        return renderTransfers();
       case 'termination':
         return renderTermination();
       case 'history':
@@ -2769,8 +2672,8 @@ const AdministrativeDashboard = () => {
         return (
           <div className="embedded-settings">
             <SettingsPage />
-          </div>
-        );
+          </div>);
+
       default:
         return renderOverview();
     }
@@ -2778,12 +2681,12 @@ const AdministrativeDashboard = () => {
 
   const layoutMenu = useMemo(
     () =>
-      tabs.map(tab => ({
-        id: tab.id,
-        label: tab.label,
-        icon: tab.icon,
-        active: activeTab === tab.id
-      })),
+    tabs.map((tab) => ({
+      id: tab.id,
+      label: tab.label,
+      icon: tab.icon,
+      active: activeTab === tab.id
+    })),
     [tabs, activeTab]
   );
 
@@ -2795,23 +2698,23 @@ const AdministrativeDashboard = () => {
   };
 
   const handleLeaseTenantChange = (tenantId) => {
-    const selected = clients.find(client => String(client.ID || client.id) === String(tenantId));
+    const selected = clients.find((client) => String(client.ID || client.id) === String(tenantId));
     if (!selected) {
       setLeaseForm({ tenantId: '', property: '', rent: '', landlord: '' });
       return;
     }
     const propertyLabel = selected.Property || selected.property || '';
-    const propertyMatch = properties.find(property => {
+    const propertyMatch = properties.find((property) => {
       const label = property.Address || property.address || property.name || property.Name || '';
       return label === propertyLabel;
     });
     const rentValue = selected.Amount || selected.amount || propertyMatch?.Rent || propertyMatch?.rent || '';
     const landlordValue =
-      propertyMatch?.Landlord ||
-      propertyMatch?.landlord ||
-      propertyMatch?.LandlordName ||
-      propertyMatch?.landlordName ||
-      '';
+    propertyMatch?.Landlord ||
+    propertyMatch?.landlord ||
+    propertyMatch?.LandlordName ||
+    propertyMatch?.landlordName ||
+    '';
     setLeaseForm({
       tenantId: String(tenantId),
       property: propertyLabel,
@@ -2827,16 +2730,14 @@ const AdministrativeDashboard = () => {
         menu={layoutMenu}
         activeId={activeTab}
         onActiveChange={setActiveTab}
-        onLogout={handleLogout}
-      >
-        {({ activeId }) => (
-          <div className="content-body administrative-content">
+        onLogout={handleLogout}>
+        
+        {({ activeId }) =>
+        <div className="content-body administrative-content">
             {renderContent(activeId)}
           </div>
-        )}
+        }
       </RoleLayout>
-
-      {/* Termination detail modal – all uploaded details */}
       <Modal
         isOpen={showTerminationDetailModal}
         onClose={() => {
@@ -2844,60 +2745,59 @@ const AdministrativeDashboard = () => {
           setSelectedTerminationForDetail(null);
         }}
         title="Termination details"
-        size="md"
-      >
-        {selectedTerminationForDetail && (
-          <div className="modal-form" style={{ padding: 0 }}>
+        size="md">
+        
+        {selectedTerminationForDetail &&
+        <div className="modal-form" style={{ padding: 0 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
-                { key: 'Tenant', val: selectedTerminationForDetail.tenant || selectedTerminationForDetail.Tenant || selectedTerminationForDetail.name || selectedTerminationForDetail.Name },
-                { key: 'Property', val: selectedTerminationForDetail.property || selectedTerminationForDetail.Property },
-                { key: 'Unit number', val: selectedTerminationForDetail.unitNumber || selectedTerminationForDetail.UnitNumber },
-                { key: 'Request date', val: selectedTerminationForDetail.requestDate || selectedTerminationForDetail.RequestDate || selectedTerminationForDetail.createdAt || selectedTerminationForDetail.CreatedAt },
-                { key: 'Status', val: selectedTerminationForDetail.status || selectedTerminationForDetail.Status },
-                { key: 'Inventory status', val: selectedTerminationForDetail.inventoryStatus || selectedTerminationForDetail.InventoryStatus },
-                { key: 'Termination date', val: selectedTerminationForDetail.terminationDate || selectedTerminationForDetail.TerminationDate },
-                { key: 'Termination reason', val: selectedTerminationForDetail.terminationReason || selectedTerminationForDetail.TerminationReason },
-                { key: 'Security deposit refund method', val: selectedTerminationForDetail.securityDepositRefundMethod || selectedTerminationForDetail.SecurityDepositRefundMethod },
-                { key: 'Inventory check date', val: selectedTerminationForDetail.inventoryCheckDate || selectedTerminationForDetail.InventoryCheckDate },
-                { key: 'Inventory check time', val: selectedTerminationForDetail.inventoryCheckTime || selectedTerminationForDetail.InventoryCheckTime },
-                { key: 'ID', val: selectedTerminationForDetail.id ?? selectedTerminationForDetail.ID },
-                { key: 'Created at', val: selectedTerminationForDetail.createdAt || selectedTerminationForDetail.CreatedAt },
-                { key: 'Updated at', val: selectedTerminationForDetail.updatedAt || selectedTerminationForDetail.UpdatedAt }
-              ].filter(({ val }) => val !== undefined && val !== null && val !== '').map(({ key, val }) => {
-                let display = String(val);
-                if (typeof val === 'object' && val && typeof val.getMonth === 'function') {
+            { key: 'Tenant', val: selectedTerminationForDetail.tenant || selectedTerminationForDetail.Tenant || selectedTerminationForDetail.name || selectedTerminationForDetail.Name },
+            { key: 'Property', val: selectedTerminationForDetail.property || selectedTerminationForDetail.Property },
+            { key: 'Unit number', val: selectedTerminationForDetail.unitNumber || selectedTerminationForDetail.UnitNumber },
+            { key: 'Request date', val: selectedTerminationForDetail.requestDate || selectedTerminationForDetail.RequestDate || selectedTerminationForDetail.createdAt || selectedTerminationForDetail.CreatedAt },
+            { key: 'Status', val: selectedTerminationForDetail.status || selectedTerminationForDetail.Status },
+            { key: 'Inventory status', val: selectedTerminationForDetail.inventoryStatus || selectedTerminationForDetail.InventoryStatus },
+            { key: 'Termination date', val: selectedTerminationForDetail.terminationDate || selectedTerminationForDetail.TerminationDate },
+            { key: 'Termination reason', val: selectedTerminationForDetail.terminationReason || selectedTerminationForDetail.TerminationReason },
+            { key: 'Security deposit refund method', val: selectedTerminationForDetail.securityDepositRefundMethod || selectedTerminationForDetail.SecurityDepositRefundMethod },
+            { key: 'Inventory check date', val: selectedTerminationForDetail.inventoryCheckDate || selectedTerminationForDetail.InventoryCheckDate },
+            { key: 'Inventory check time', val: selectedTerminationForDetail.inventoryCheckTime || selectedTerminationForDetail.InventoryCheckTime },
+            { key: 'ID', val: selectedTerminationForDetail.id ?? selectedTerminationForDetail.ID },
+            { key: 'Created at', val: selectedTerminationForDetail.createdAt || selectedTerminationForDetail.CreatedAt },
+            { key: 'Updated at', val: selectedTerminationForDetail.updatedAt || selectedTerminationForDetail.UpdatedAt }].
+            filter(({ val }) => val !== undefined && val !== null && val !== '').map(({ key, val }) => {
+              let display = String(val);
+              if (typeof val === 'object' && val && typeof val.getMonth === 'function') {
+                display = new Date(val).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+              } else if (typeof val === 'string' && /^\d{4}-\d{2}/.test(val)) {
+                try {
                   display = new Date(val).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-                } else if (typeof val === 'string' && /^\d{4}-\d{2}/.test(val)) {
-                  try {
-                    display = new Date(val).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-                  } catch (_) { /* keep string */ }
-                }
-                return (
-                  <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' }}>
+                } catch (_) {}
+              }
+              return (
+                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' }}>
                     <span style={{ fontWeight: '600', color: '#374151', minWidth: '160px' }}>{key}</span>
                     <span style={{ color: '#1f2937', textAlign: 'right', wordBreak: 'break-word' }}>{display}</span>
-                  </div>
-                );
-              })}
-              {/* Any other keys from backend */}
-              {Object.keys(selectedTerminationForDetail)
-                .filter(k => !['tenant', 'Tenant', 'name', 'Name', 'property', 'Property', 'unitNumber', 'UnitNumber', 'requestDate', 'RequestDate', 'createdAt', 'CreatedAt', 'status', 'Status', 'inventoryStatus', 'InventoryStatus', 'terminationDate', 'TerminationDate', 'terminationReason', 'TerminationReason', 'securityDepositRefundMethod', 'SecurityDepositRefundMethod', 'inventoryCheckDate', 'InventoryCheckDate', 'inventoryCheckTime', 'InventoryCheckTime', 'id', 'ID', 'updatedAt', 'UpdatedAt'].includes(k))
-                .map(k => (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' }}>
+                  </div>);
+
+            })}
+              {Object.keys(selectedTerminationForDetail).
+            filter((k) => !['tenant', 'Tenant', 'name', 'Name', 'property', 'Property', 'unitNumber', 'UnitNumber', 'requestDate', 'RequestDate', 'createdAt', 'CreatedAt', 'status', 'Status', 'inventoryStatus', 'InventoryStatus', 'terminationDate', 'TerminationDate', 'terminationReason', 'TerminationReason', 'securityDepositRefundMethod', 'SecurityDepositRefundMethod', 'inventoryCheckDate', 'InventoryCheckDate', 'inventoryCheckTime', 'InventoryCheckTime', 'id', 'ID', 'updatedAt', 'UpdatedAt'].includes(k)).
+            map((k) =>
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' }}>
                     <span style={{ fontWeight: '600', color: '#374151', minWidth: '160px' }}>{k}</span>
                     <span style={{ color: '#1f2937', textAlign: 'right', wordBreak: 'break-word' }}>
-                      {typeof selectedTerminationForDetail[k] === 'object' && selectedTerminationForDetail[k] !== null
-                        ? (selectedTerminationForDetail[k] && typeof selectedTerminationForDetail[k].getMonth === 'function'
-                          ? new Date(selectedTerminationForDetail[k]).toLocaleString()
-                          : JSON.stringify(selectedTerminationForDetail[k]))
-                        : String(selectedTerminationForDetail[k])}
+                      {typeof selectedTerminationForDetail[k] === 'object' && selectedTerminationForDetail[k] !== null ?
+                selectedTerminationForDetail[k] && typeof selectedTerminationForDetail[k].getMonth === 'function' ?
+                new Date(selectedTerminationForDetail[k]).toLocaleString() :
+                JSON.stringify(selectedTerminationForDetail[k]) :
+                String(selectedTerminationForDetail[k])}
                     </span>
                   </div>
-                ))}
+            )}
             </div>
           </div>
-        )}
+        }
       </Modal>
 
       <Modal
@@ -2907,27 +2807,27 @@ const AdministrativeDashboard = () => {
           setLeaseForm({ tenantId: '', property: '', rent: '', landlord: '' });
         }}
         title="Create Lease Agreement"
-        size="md"
-      >
+        size="md">
+        
         <form
           className="modal-form"
           onSubmit={async (e) => {
             e.preventDefault();
             try {
               const formData = new FormData(e.target);
-              const selectedTenant = clients.find(client => String(client.ID || client.id) === String(leaseForm.tenantId));
+              const selectedTenant = clients.find((client) => String(client.ID || client.id) === String(leaseForm.tenantId));
               if (!selectedTenant) {
                 addNotification('Please select a tenant.', 'error');
                 return;
               }
               const tenantName = selectedTenant.name || selectedTenant.Name || selectedTenant.email || selectedTenant.Email;
               const selectedPropertyLabel = leaseForm.property || formData.get('property');
-              const propertyMatch = properties.find(property => {
+              const propertyMatch = properties.find((property) => {
                 const label = property.Address || property.address || property.name || property.Name || '';
                 return label === selectedPropertyLabel;
               });
               const selectedLandlordName = leaseForm.landlord || formData.get('landlord');
-              const landlordMatch = landlords.find(landlord => {
+              const landlordMatch = landlords.find((landlord) => {
                 const name = landlord.Name || landlord.name || landlord.Email || landlord.email || '';
                 return name === selectedLandlordName;
               });
@@ -2955,8 +2855,8 @@ const AdministrativeDashboard = () => {
               addNotification('Failed to create lease', 'error');
               console.error(error);
             }
-          }}
-        >
+          }}>
+          
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="lease-contract-title">Contract Title (Optional)</label>
@@ -2980,14 +2880,14 @@ const AdministrativeDashboard = () => {
                 name="tenant"
                 required
                 value={leaseForm.tenantId}
-                onChange={(e) => handleLeaseTenantChange(e.target.value)}
-              >
+                onChange={(e) => handleLeaseTenantChange(e.target.value)}>
+                
                 <option value="">Select Tenant from Database</option>
-                {clients.map(client => (
-                  <option key={client.ID || client.id} value={client.ID || client.id}>
+                {clients.map((client) =>
+                <option key={client.ID || client.id} value={client.ID || client.id}>
                     {client.name || client.Name || client.email || client.Email} {client.property || client.Property ? `- ${client.property || client.Property}` : ''}
                   </option>
-                ))}
+                )}
               </select>
             </div>
             <div className="form-group">
@@ -2997,27 +2897,27 @@ const AdministrativeDashboard = () => {
                 name="landlord"
                 required
                 value={leaseForm.landlord}
-                onChange={(e) => setLeaseForm(prev => ({ ...prev, landlord: e.target.value }))}
-              >
+                onChange={(e) => setLeaseForm((prev) => ({ ...prev, landlord: e.target.value }))}>
+                
                 <option value="">Select landlord</option>
-                {leaseForm.landlord && !landlords.some(landlord => {
+                {leaseForm.landlord && !landlords.some((landlord) => {
                   const name = landlord.Name || landlord.name || landlord.Email || landlord.email || '';
                   return name === leaseForm.landlord;
-                }) && (
-                  <option value={leaseForm.landlord}>{leaseForm.landlord}</option>
-                )}
-                {landlords.map(landlord => {
+                }) &&
+                <option value={leaseForm.landlord}>{leaseForm.landlord}</option>
+                }
+                {landlords.map((landlord) => {
                   const id = landlord.ID || landlord.id;
                   const name = landlord.Name || landlord.name || landlord.Email || landlord.email || `Landlord ${id}`;
                   return (
                     <option key={id} value={landlord.Name || landlord.name || landlord.Email || landlord.email}>
                       {name}
-                    </option>
-                  );
+                    </option>);
+
                 })}
-                {landlords.length === 0 && (
-                  <option value="" disabled>No landlords found</option>
-                )}
+                {landlords.length === 0 &&
+                <option value="" disabled>No landlords found</option>
+                }
               </select>
             </div>
           </div>
@@ -3031,54 +2931,54 @@ const AdministrativeDashboard = () => {
                 value={leaseForm.property}
                 onChange={(e) => {
                   const selectedProperty = e.target.value;
-                  const propertyMatch = properties.find(property => {
+                  const propertyMatch = properties.find((property) => {
                     const label = property.Address || property.address || property.name || property.Name || '';
                     return label === selectedProperty;
                   });
                   const landlordValue =
-                    propertyMatch?.Landlord ||
-                    propertyMatch?.landlord ||
-                    propertyMatch?.LandlordName ||
-                    propertyMatch?.landlordName ||
-                    '';
-                  setLeaseForm(prev => ({
+                  propertyMatch?.Landlord ||
+                  propertyMatch?.landlord ||
+                  propertyMatch?.LandlordName ||
+                  propertyMatch?.landlordName ||
+                  '';
+                  setLeaseForm((prev) => ({
                     ...prev,
                     property: selectedProperty,
                     landlord: landlordValue || prev.landlord
                   }));
-                }}
-              >
+                }}>
+                
                 <option value="">Select property</option>
-                {leaseForm.property && !properties.filter(property => {
+                {leaseForm.property && !properties.filter((property) => {
                   const label = (property.Address || property.address || property.name || property.Name || '').toString().trim();
                   const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
-                  const occupiedFromLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;
-                  const occupiedFromClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === label).length;
+                  const occupiedFromLeases = leases.filter((l) => (l.property || l.Property || '').toString().trim() === label).length;
+                  const occupiedFromClients = clients.filter((c) => (c.Property || c.property || '').toString().trim() === label).length;
                   return Math.max(occupiedFromLeases, occupiedFromClients) < totalUnits;
-                }).some(property => {
+                }).some((property) => {
                   const label = (property.Address || property.address || property.name || property.Name || '').toString().trim().toLowerCase();
                   return label === String(leaseForm.property || '').trim().toLowerCase();
-                }) && (
-                  <option value={leaseForm.property}>{leaseForm.property}</option>
-                )}
-                {properties.filter(property => {
+                }) &&
+                <option value={leaseForm.property}>{leaseForm.property}</option>
+                }
+                {properties.filter((property) => {
                   const label = (property.Address || property.address || property.name || property.Name || '').toString().trim();
                   const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
-                  const occupiedFromLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;
-                  const occupiedFromClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === label).length;
+                  const occupiedFromLeases = leases.filter((l) => (l.property || l.Property || '').toString().trim() === label).length;
+                  const occupiedFromClients = clients.filter((c) => (c.Property || c.property || '').toString().trim() === label).length;
                   return Math.max(occupiedFromLeases, occupiedFromClients) < totalUnits;
-                }).map(property => {
+                }).map((property) => {
                   const id = property.ID || property.id;
                   const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                   return (
                     <option key={id} value={label}>
                       {label}
-                    </option>
-                  );
+                    </option>);
+
                 })}
-                {properties.length === 0 && (
-                  <option value="" disabled>No properties found</option>
-                )}
+                {properties.length === 0 &&
+                <option value="" disabled>No properties found</option>
+                }
               </select>
             </div>
             <div className="form-group">
@@ -3092,8 +2992,8 @@ const AdministrativeDashboard = () => {
                 placeholder="0.00 XOF"
                 required
                 value={leaseForm.rent}
-                onChange={(e) => setLeaseForm(prev => ({ ...prev, rent: e.target.value }))}
-              />
+                onChange={(e) => setLeaseForm((prev) => ({ ...prev, rent: e.target.value }))} />
+              
             </div>
           </div>
           <div className="form-row">
@@ -3137,10 +3037,10 @@ const AdministrativeDashboard = () => {
           setEditLeaseDocumentFile(null);
           if (editLeaseFileInputRef.current) editLeaseFileInputRef.current.value = '';
         }}
-        title="Edit Lease Contract"
-      >
-        {editingLease && (
-          <>
+        title="Edit Lease Contract">
+        
+        {editingLease &&
+        <>
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <p style={{ margin: 0, color: '#6b7280' }}>
                 <strong>Tenant:</strong> {editingLease.tenant || editingLease.Tenant || 'N/A'} · <strong>Property:</strong> {editingLease.property || editingLease.Property || 'N/A'}
@@ -3149,11 +3049,11 @@ const AdministrativeDashboard = () => {
             <div className="form-group" style={{ marginBottom: '16px' }}>
               <label htmlFor="edit-lease-status">Status</label>
               <select
-                id="edit-lease-status"
-                value={editLeaseStatus}
-                onChange={(e) => setEditLeaseStatus(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px' }}
-              >
+              id="edit-lease-status"
+              value={editLeaseStatus}
+              onChange={(e) => setEditLeaseStatus(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px' }}>
+              
                 <option value="Created">Lease contract being created</option>
                 <option value="Pending Management Signature">Lease contract pending signature by management</option>
                 <option value="Pending Owner Signature">Pending signature by owner</option>
@@ -3167,102 +3067,102 @@ const AdministrativeDashboard = () => {
             <div className="form-group">
               <label htmlFor="edit-lease-document">Lease Document (PDF/Image)</label>
               <input
-                ref={editLeaseFileInputRef}
-                type="file"
-                id="edit-lease-document"
-                accept=".pdf,image/*"
-                onChange={(e) => setEditLeaseDocumentFile(e.target.files?.[0] || null)}
-              />
+              ref={editLeaseFileInputRef}
+              type="file"
+              id="edit-lease-document"
+              accept=".pdf,image/*"
+              onChange={(e) => setEditLeaseDocumentFile(e.target.files?.[0] || null)} />
+            
             </div>
             <div className="modal-footer">
               <button
-                type="button"
-                className="action-button secondary"
-                onClick={() => {
-                  setShowEditLeaseModal(false);
-                  setEditingLease(null);
-                  setEditLeaseStatus('');
-                  setEditLeaseDocumentFile(null);
-                  if (editLeaseFileInputRef.current) editLeaseFileInputRef.current.value = '';
-                }}
-              >
+              type="button"
+              className="action-button secondary"
+              onClick={() => {
+                setShowEditLeaseModal(false);
+                setEditingLease(null);
+                setEditLeaseStatus('');
+                setEditLeaseDocumentFile(null);
+                if (editLeaseFileInputRef.current) editLeaseFileInputRef.current.value = '';
+              }}>
+              
                 Cancel
               </button>
               <button
-                type="button"
-                className="action-button primary"
-                onClick={handleEditLeaseSave}
-                disabled={
-                  !editLeaseDocumentFile &&
-                  (editLeaseStatus === '' || editLeaseStatus === (editingLease.status || editingLease.Status || ''))
-                }
-              >
+              type="button"
+              className="action-button primary"
+              onClick={handleEditLeaseSave}
+              disabled={
+              !editLeaseDocumentFile && (
+              editLeaseStatus === '' || editLeaseStatus === (editingLease.status || editingLease.Status || ''))
+              }>
+              
                 Save
               </button>
             </div>
           </>
-        )}
+        }
       </Modal>
 
-      {showTransferDocsModal && selectedTransferForDocs && (
-        <div className="modal-overlay" onClick={() => { setShowTransferDocsModal(false); setSelectedTransferForDocs(null); }}>
+      {showTransferDocsModal && selectedTransferForDocs &&
+      <div className="modal-overlay" onClick={() => {setShowTransferDocsModal(false);setSelectedTransferForDocs(null);}}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="modal-header">
               <h3>Transfer documents</h3>
-              <button className="modal-close" onClick={() => { setShowTransferDocsModal(false); setSelectedTransferForDocs(null); }}>×</button>
+              <button className="modal-close" onClick={() => {setShowTransferDocsModal(false);setSelectedTransferForDocs(null);}}>×</button>
             </div>
             <div className="modal-body">
               <p style={{ margin: '0 0 16px 0', color: '#6b7280', fontSize: '0.875rem' }}>
                 Documents uploaded by the tenant for the person being transferred to (same as Add New Client – individual).
               </p>
               {(() => {
-                const files = selectedTransferForDocs.files || selectedTransferForDocs.Files || [];
-                const urlList = Array.isArray(files) ? files : [];
-                if (urlList.length === 0) {
-                  return <p style={{ margin: 0, color: '#9ca3af' }}>No documents uploaded.</p>;
-                }
-                return (
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              const files = selectedTransferForDocs.files || selectedTransferForDocs.Files || [];
+              const urlList = Array.isArray(files) ? files : [];
+              if (urlList.length === 0) {
+                return <p style={{ margin: 0, color: '#9ca3af' }}>No documents uploaded.</p>;
+              }
+              return (
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                     {urlList.map((url, i) => {
-                      const label = INDIVIDUAL_DOCUMENTS[i] ? INDIVIDUAL_DOCUMENTS[i].label : `Document ${i + 1}`;
-                      const filename = `${label.replace(/\s+/g, '-')}.pdf`;
-                      return (
-                        <li key={i} style={{ marginBottom: '12px', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
+                    const label = INDIVIDUAL_DOCUMENTS[i] ? INDIVIDUAL_DOCUMENTS[i].label : `Document ${i + 1}`;
+                    const filename = `${label.replace(/\s+/g, '-')}.pdf`;
+                    return (
+                      <li key={i} style={{ marginBottom: '12px', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
                           <span style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#374151' }}>{label}</span>
                           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontSize: '0.875rem' }}>
                               View document
                             </a>
                             <button
-                              type="button"
-                              className="action-button secondary"
-                              style={{ padding: '4px 12px', fontSize: '0.8rem' }}
-                              onClick={() => {
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = filename;
-                                a.target = '_blank';
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                              }}
-                            >
+                            type="button"
+                            className="action-button secondary"
+                            style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                            onClick={() => {
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = filename;
+                              a.target = '_blank';
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                            }}>
+                            
                               Download
                             </button>
                           </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                );
-              })()}
+                        </li>);
+
+                  })}
+                  </ul>);
+
+            })()}
             </div>
           </div>
         </div>
-      )}
+      }
 
-      {showRejectModal && (
-        <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
+      {showRejectModal &&
+      <div className="modal-overlay" onClick={() => setShowRejectModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Reject Document</h3>
@@ -3272,47 +3172,45 @@ const AdministrativeDashboard = () => {
               <div className="form-group">
                 <label htmlFor="rejection-reason">Rejection Reason *</label>
                 <textarea
-                  id="rejection-reason"
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Please provide a reason for rejection..."
-                  rows="4"
-                  required
-                />
+                id="rejection-reason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Please provide a reason for rejection..."
+                rows="4"
+                required />
+              
               </div>
             </div>
             <div className="modal-footer">
               <button
-                type="button"
-                className="action-button secondary"
-                onClick={() => {
-                  setShowRejectModal(false);
-                  setRejectingDocId(null);
-                  setRejectionReason('');
-                }}
-              >
+              type="button"
+              className="action-button secondary"
+              onClick={() => {
+                setShowRejectModal(false);
+                setRejectingDocId(null);
+                setRejectionReason('');
+              }}>
+              
                 Cancel
               </button>
               <button
-                type="button"
-                className="action-button primary"
-                onClick={handleRejectDocument}
-                disabled={!rejectionReason.trim()}
-              >
+              type="button"
+              className="action-button primary"
+              onClick={handleRejectDocument}
+              disabled={!rejectionReason.trim()}>
+              
                 Reject Document
               </button>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Import Clients Modal */}
-      {showBulkImportModal && (
-        <div className="modal-overlay" onClick={() => { setShowBulkImportModal(false); setBulkImportFile(null); }}>
+      }
+      {showBulkImportModal &&
+      <div className="modal-overlay" onClick={() => {setShowBulkImportModal(false);setBulkImportFile(null);}}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e5e7eb' }}>
               <h3 style={{ margin: 0 }}>Import Clients from CSV</h3>
-              <button className="modal-close" onClick={() => { setShowBulkImportModal(false); setBulkImportFile(null); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+              <button className="modal-close" onClick={() => {setShowBulkImportModal(false);setBulkImportFile(null);}} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
             </div>
             <div style={{ padding: '20px' }}>
               <div style={{ marginBottom: '20px' }}>
@@ -3325,44 +3223,42 @@ const AdministrativeDashboard = () => {
                 Upload a CSV with: Type, Name, Email, Phone, Property (optional). For company: CompanyName, RegistrationNumber, ContactPerson. After import, open each client to add property and upload documents.
               </p>
               <div
-                style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: bulkImportLoading ? 'not-allowed' : 'pointer' }}
-                onClick={() => !bulkImportLoading && document.getElementById('admin-bulk-import-file')?.click()}
-              >
+              style={{ border: '2px dashed #d1d5db', borderRadius: '12px', padding: '32px', textAlign: 'center', background: '#fff', cursor: bulkImportLoading ? 'not-allowed' : 'pointer' }}
+              onClick={() => !bulkImportLoading && document.getElementById('admin-bulk-import-file')?.click()}>
+              
                 <input
-                  type="file"
-                  id="admin-bulk-import-file"
-                  accept=".csv,text/csv,application/csv"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) setBulkImportFile(f); e.target.value = ''; }}
-                  style={{ display: 'none' }}
-                  disabled={bulkImportLoading}
-                />
+                type="file"
+                id="admin-bulk-import-file"
+                accept=".csv,text/csv,application/csv"
+                onChange={(e) => {const f = e.target.files?.[0];if (f) setBulkImportFile(f);e.target.value = '';}}
+                style={{ display: 'none' }}
+                disabled={bulkImportLoading} />
+              
                 <FileSpreadsheet size={48} color={bulkImportLoading ? '#9ca3af' : '#7c3aed'} style={{ margin: '0 auto 12px', display: 'block' }} />
                 <div>
                   <strong style={{ color: bulkImportLoading ? '#9ca3af' : '#1f2937' }}>
-                    {bulkImportLoading ? 'Importing...' : (bulkImportFile ? bulkImportFile.name : 'Click to select CSV file')}
+                    {bulkImportLoading ? 'Importing...' : bulkImportFile ? bulkImportFile.name : 'Click to select CSV file'}
                   </strong>
                   <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px' }}>CSV only</p>
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-                <button type="button" className="sa-primary-cta secondary" onClick={() => { setShowBulkImportModal(false); setBulkImportFile(null); }}>
+                <button type="button" className="sa-primary-cta secondary" onClick={() => {setShowBulkImportModal(false);setBulkImportFile(null);}}>
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  className="sa-primary-cta"
-                  onClick={handleBulkImportUpload}
-                  disabled={!bulkImportFile || bulkImportLoading}
-                >
+                type="button"
+                className="sa-primary-cta"
+                onClick={handleBulkImportUpload}
+                disabled={!bulkImportFile || bulkImportLoading}>
+                
                   {bulkImportLoading ? 'Importing...' : 'Import'}
                 </button>
               </div>
             </div>
           </div>
         </div>
-      )}
-
-      {/* New Client Modal */}
+      }
       <Modal
         isOpen={showNewClientModal}
         onClose={() => {
@@ -3394,8 +3290,8 @@ const AdministrativeDashboard = () => {
           setClientDocFiles({});
         }}
         title="Create New Client"
-        size="md"
-      >
+        size="md">
+        
         <form
           className="modal-form"
           onSubmit={async (e) => {
@@ -3404,7 +3300,7 @@ const AdministrativeDashboard = () => {
               setLoading(true);
               let client = selectedClient;
               if (!client) {
-                if (!newClientForm.email || !newClientForm.phone || (newClientForm.type === 'individual' && !newClientForm.name)) {
+                if (!newClientForm.email || !newClientForm.phone || newClientForm.type === 'individual' && !newClientForm.name) {
                   addNotification('Please fill in all required client details.', 'error');
                   return;
                 }
@@ -3415,7 +3311,7 @@ const AdministrativeDashboard = () => {
 
                 const createdClient = await adminService.createNewClient(newClientForm);
                 client = createdClient;
-                setClientDocForm(prev => ({ ...prev, clientId: String(createdClient.ID || createdClient.id) }));
+                setClientDocForm((prev) => ({ ...prev, clientId: String(createdClient.ID || createdClient.id) }));
               }
               if (!clientDocForm.property) {
                 addNotification('Please select the property the client is interested in.', 'error');
@@ -3424,7 +3320,7 @@ const AdministrativeDashboard = () => {
 
               const clientType = (client.type || client.Type || 'individual').toLowerCase();
               const requiredDocs = clientType === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS;
-              const missingDocs = requiredDocs.filter(doc => !clientDocFiles[doc.key]);
+              const missingDocs = requiredDocs.filter((doc) => !clientDocFiles[doc.key]);
               if (missingDocs.length > 0) {
                 addNotification('Please upload all required documents before submitting.', 'error');
                 return;
@@ -3437,7 +3333,7 @@ const AdministrativeDashboard = () => {
                   tenant: tenantName,
                   property: clientDocForm.property,
                   type: doc.label,
-                  file: clientDocFiles[doc.key],
+                  file: clientDocFiles[doc.key]
                 });
               }
 
@@ -3454,7 +3350,7 @@ const AdministrativeDashboard = () => {
                 applicationFees: Number(clientDocForm.applicationFeesAmount || 0) > 0,
                 sodeci: Number(clientDocForm.sodeciAmount || 0) > 0,
                 cie10a: Number(clientDocForm.cie10Amount || 0) > 0,
-                cie15a: Number(clientDocForm.cie15Amount || 0) > 0,
+                cie15a: Number(clientDocForm.cie15Amount || 0) > 0
               });
 
               addNotification('Client documents uploaded successfully', 'success');
@@ -3481,19 +3377,19 @@ const AdministrativeDashboard = () => {
             } finally {
               setLoading(false);
             }
-          }}
-        >
-          {!selectedClient && (
-            <div style={{ marginBottom: '16px' }}>
+          }}>
+          
+          {!selectedClient &&
+          <div style={{ marginBottom: '16px' }}>
               <h4 style={{ margin: '0 0 12px 0' }}>New Client Details</h4>
               <div className="form-row">
                 <div className="form-group">
                   <label>Client Type *</label>
                   <select
-                    value={newClientForm.type}
-                    onChange={(e) => setNewClientForm(prev => ({ ...prev, type: e.target.value }))}
-                    required
-                  >
+                  value={newClientForm.type}
+                  onChange={(e) => setNewClientForm((prev) => ({ ...prev, type: e.target.value }))}
+                  required>
+                  
                     <option value="individual">Individual</option>
                     <option value="company">Company</option>
                   </select>
@@ -3501,199 +3397,199 @@ const AdministrativeDashboard = () => {
                 <div className="form-group">
                   <label>Email *</label>
                   <input
-                    type="email"
-                    value={newClientForm.email}
-                    onChange={(e) => setNewClientForm(prev => ({ ...prev, email: e.target.value }))}
-                    required
-                  />
+                  type="email"
+                  value={newClientForm.email}
+                  onChange={(e) => setNewClientForm((prev) => ({ ...prev, email: e.target.value }))}
+                  required />
+                
                 </div>
               </div>
 
-              {newClientForm.type === 'individual' ? (
-                <div className="form-row">
+              {newClientForm.type === 'individual' ?
+            <div className="form-row">
                   <div className="form-group">
                     <label>Full Name *</label>
                     <input
-                      type="text"
-                      value={newClientForm.name}
-                      onChange={(e) => setNewClientForm(prev => ({ ...prev, name: e.target.value }))}
-                      required
-                    />
+                  type="text"
+                  value={newClientForm.name}
+                  onChange={(e) => setNewClientForm((prev) => ({ ...prev, name: e.target.value }))}
+                  required />
+                
                   </div>
                   <div className="form-group">
                     <label>Phone *</label>
                     <input
-                      type="text"
-                      value={newClientForm.phone}
-                      onChange={(e) => setNewClientForm(prev => ({ ...prev, phone: e.target.value }))}
-                      required
-                    />
+                  type="text"
+                  value={newClientForm.phone}
+                  onChange={(e) => setNewClientForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  required />
+                
                   </div>
-                </div>
-              ) : (
-                <>
+                </div> :
+
+            <>
                   <div className="form-row">
                     <div className="form-group">
                       <label>Company Name *</label>
                       <input
-                        type="text"
-                        value={newClientForm.companyName}
-                        onChange={(e) => setNewClientForm(prev => ({ ...prev, companyName: e.target.value }))}
-                        required
-                      />
+                    type="text"
+                    value={newClientForm.companyName}
+                    onChange={(e) => setNewClientForm((prev) => ({ ...prev, companyName: e.target.value }))}
+                    required />
+                  
                     </div>
                     <div className="form-group">
                       <label>Registration Number *</label>
                       <input
-                        type="text"
-                        value={newClientForm.registrationNumber}
-                        onChange={(e) => setNewClientForm(prev => ({ ...prev, registrationNumber: e.target.value }))}
-                        required
-                      />
+                    type="text"
+                    value={newClientForm.registrationNumber}
+                    onChange={(e) => setNewClientForm((prev) => ({ ...prev, registrationNumber: e.target.value }))}
+                    required />
+                  
                     </div>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
                       <label>Contact Person *</label>
                       <input
-                        type="text"
-                        value={newClientForm.contactPerson}
-                        onChange={(e) => setNewClientForm(prev => ({ ...prev, contactPerson: e.target.value }))}
-                        required
-                      />
+                    type="text"
+                    value={newClientForm.contactPerson}
+                    onChange={(e) => setNewClientForm((prev) => ({ ...prev, contactPerson: e.target.value }))}
+                    required />
+                  
                     </div>
                     <div className="form-group">
                       <label>Phone *</label>
                       <input
-                        type="text"
-                        value={newClientForm.phone}
-                        onChange={(e) => setNewClientForm(prev => ({ ...prev, phone: e.target.value }))}
-                        required
-                      />
+                    type="text"
+                    value={newClientForm.phone}
+                    onChange={(e) => setNewClientForm((prev) => ({ ...prev, phone: e.target.value }))}
+                    required />
+                  
                     </div>
                   </div>
                   <div className="form-group">
                     <label>Company Address</label>
                     <input
-                      type="text"
-                      value={newClientForm.address}
-                      onChange={(e) => setNewClientForm(prev => ({ ...prev, address: e.target.value }))}
-                    />
+                  type="text"
+                  value={newClientForm.address}
+                  onChange={(e) => setNewClientForm((prev) => ({ ...prev, address: e.target.value }))} />
+                
                   </div>
                 </>
-              )}
+            }
             </div>
-          )}
+          }
         <div className="form-group">
             <label htmlFor="client-property">Select the house who he will interest for *</label>
             <select
               id="client-property"
               value={clientDocForm.property}
               onChange={(e) => setClientDocForm({ ...clientDocForm, property: e.target.value, unitNumber: '' })}
-              required
-            >
+              required>
+              
               <option value="">Select property</option>
-            {(rentalProperties.filter(property => {
+            {rentalProperties.filter((property) => {
                 const label = (property.Address || property.address || property.name || property.Name || `Property ${property.ID || property.id}`).toString().trim();
                 const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
-                const occupiedFromLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;
-                const occupiedFromClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === label).length;
+                const occupiedFromLeases = leases.filter((l) => (l.property || l.Property || '').toString().trim() === label).length;
+                const occupiedFromClients = clients.filter((c) => (c.Property || c.property || '').toString().trim() === label).length;
                 const occupiedCount = Math.max(occupiedFromLeases, occupiedFromClients);
                 return occupiedCount < totalUnits;
-              })).map(property => {
+              }).map((property) => {
                 const id = property.ID || property.id;
                 const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                 return (
                   <option key={id} value={label}>
                     {label}
-                  </option>
-                );
+                  </option>);
+
               })}
-            {rentalProperties.length === 0 && (
+            {rentalProperties.length === 0 &&
               <option value="" disabled>No properties found</option>
-            )}
-            {rentalProperties.length > 0 && rentalProperties.filter(property => {
-              const label = (property.Address || property.address || property.name || property.Name || '').toString().trim();
-              const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
-              const occLeases = leases.filter(l => (l.property || l.Property || '').toString().trim() === label).length;
-              const occClients = clients.filter(c => (c.Property || c.property || '').toString().trim() === label).length;
-              return Math.max(occLeases, occClients) < totalUnits;
-            }).length === 0 && (
+              }
+            {rentalProperties.length > 0 && rentalProperties.filter((property) => {
+                const label = (property.Address || property.address || property.name || property.Name || '').toString().trim();
+                const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+                const occLeases = leases.filter((l) => (l.property || l.Property || '').toString().trim() === label).length;
+                const occClients = clients.filter((c) => (c.Property || c.property || '').toString().trim() === label).length;
+                return Math.max(occLeases, occClients) < totalUnits;
+              }).length === 0 &&
               <option value="" disabled>No properties with empty units available</option>
-            )}
+              }
             </select>
           </div>
 
-          {clientDocForm.property && (
-            (() => {
-              const selectedProp = rentalProperties.find(p => {
-                const label = p.Address || p.address || p.name || p.Name || `Property ${p.ID || p.id}`;
-                return label === clientDocForm.property;
-              });
-              const propUnits = Array.isArray(selectedProp?.units) ? selectedProp.units : [];
-              const vacantUnits = propUnits.filter((u) => {
-                const status = (u.status || u.Status || '').toString().trim().toLowerCase();
-                const tenant = (u.tenant || u.Tenant || '').toString().trim();
-                return status !== 'occupied' && tenant === '';
-              });
-              const displayUnits = vacantUnits.length > 0
-                ? vacantUnits
-                : (propUnits.length === 0 ? [{
-                    id: selectedProp?.ID || selectedProp?.id || clientDocForm.property,
-                    unitNumber: 'Unit 1',
-                    status: 'Vacant',
-                    tenant: ''
-                  }] : []);
-              return (
-                <div style={{ marginBottom: '16px' }}>
+          {clientDocForm.property &&
+          (() => {
+            const selectedProp = rentalProperties.find((p) => {
+              const label = p.Address || p.address || p.name || p.Name || `Property ${p.ID || p.id}`;
+              return label === clientDocForm.property;
+            });
+            const propUnits = Array.isArray(selectedProp?.units) ? selectedProp.units : [];
+            const vacantUnits = propUnits.filter((u) => {
+              const status = (u.status || u.Status || '').toString().trim().toLowerCase();
+              const tenant = (u.tenant || u.Tenant || '').toString().trim();
+              return status !== 'occupied' && tenant === '';
+            });
+            const displayUnits = vacantUnits.length > 0 ?
+            vacantUnits :
+            propUnits.length === 0 ? [{
+              id: selectedProp?.ID || selectedProp?.id || clientDocForm.property,
+              unitNumber: 'Unit 1',
+              status: 'Vacant',
+              tenant: ''
+            }] : [];
+            return (
+              <div style={{ marginBottom: '16px' }}>
                   <h4 style={{ margin: '0 0 8px 0' }}>Deposit and Charges</h4>
                   <div className="form-group">
                     <label>Unit Number *</label>
                     <select
-                      value={clientDocForm.unitNumber}
-                      onChange={(e) => setClientDocForm({ ...clientDocForm, unitNumber: e.target.value })}
-                      required
-                    >
+                    value={clientDocForm.unitNumber}
+                    onChange={(e) => setClientDocForm({ ...clientDocForm, unitNumber: e.target.value })}
+                    required>
+                    
                       <option value="">Select Unit</option>
                       {displayUnits.length > 0 ? displayUnits.map((unit) => {
-                        const unitId = unit.id || unit.ID || unit.unitNumber;
-                        const unitLabel = unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || `Unit ${unitId || ''}`;
-                        return (
-                          <option key={unitId || unitLabel} value={unitLabel}>
+                      const unitId = unit.id || unit.ID || unit.unitNumber;
+                      const unitLabel = unit.unitNumber || unit.UnitNumber || unit.name || unit.Name || `Unit ${unitId || ''}`;
+                      return (
+                        <option key={unitId || unitLabel} value={unitLabel}>
                             {unitLabel}
-                          </option>
-                        );
-                      }) : (
-                        <option value="" disabled>No vacant units available</option>
-                      )}
+                          </option>);
+
+                    }) :
+                    <option value="" disabled>No vacant units available</option>
+                    }
                     </select>
                     {(() => {
-                      if (!clientDocForm.unitNumber) return null;
-                      const selectedUnit = displayUnits.find(u => {
-                        const lbl = u.unitNumber || u.UnitNumber || u.name || u.Name || `Unit ${u.id || u.ID || ''}`;
-                        return lbl === clientDocForm.unitNumber;
-                      });
-                      const rent = selectedUnit?.rent ?? selectedUnit?.Rent ?? selectedUnit?.rentPrice ?? selectedUnit?.RentPrice ?? null;
-                      if (!rent && rent !== 0) return null;
-                      return (
-                        <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#374151' }}>
+                    if (!clientDocForm.unitNumber) return null;
+                    const selectedUnit = displayUnits.find((u) => {
+                      const lbl = u.unitNumber || u.UnitNumber || u.name || u.Name || `Unit ${u.id || u.ID || ''}`;
+                      return lbl === clientDocForm.unitNumber;
+                    });
+                    const rent = selectedUnit?.rent ?? selectedUnit?.Rent ?? selectedUnit?.rentPrice ?? selectedUnit?.RentPrice ?? null;
+                    if (!rent && rent !== 0) return null;
+                    return (
+                      <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#374151' }}>
                           Monthly rent: <strong>{Number(rent).toLocaleString()} FCFA</strong>
-                        </p>
-                      );
-                    })()}
+                        </p>);
+
+                  })()}
                   </div>
                   <div className="form-row">
                     <div className="form-group">
                       <label>Deposit Value (FCFA) *</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={clientDocForm.depositValue}
-                        onChange={(e) => setClientDocForm({ ...clientDocForm, depositValue: e.target.value })}
-                        placeholder="Enter deposit value"
-                        required
-                      />
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={clientDocForm.depositValue}
+                      onChange={(e) => setClientDocForm({ ...clientDocForm, depositValue: e.target.value })}
+                      placeholder="Enter deposit value"
+                      required />
+                    
                     </div>
                   </div>
                   <div style={{ marginBottom: '16px' }}>
@@ -3702,103 +3598,103 @@ const AdministrativeDashboard = () => {
                       <div className="form-group">
                         <label>Application Fees (FCFA) *</label>
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={clientDocForm.applicationFeesAmount}
-                          onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFeesAmount: e.target.value })}
-                          placeholder="0"
-                          required
-                        />
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={clientDocForm.applicationFeesAmount}
+                        onChange={(e) => setClientDocForm({ ...clientDocForm, applicationFeesAmount: e.target.value })}
+                        placeholder="0"
+                        required />
+                      
                       </div>
                       <div className="form-group">
                         <label>SODECI (FCFA)</label>
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={clientDocForm.sodeciAmount}
-                          onChange={(e) => setClientDocForm({ ...clientDocForm, sodeciAmount: e.target.value })}
-                          placeholder="0"
-                        />
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={clientDocForm.sodeciAmount}
+                        onChange={(e) => setClientDocForm({ ...clientDocForm, sodeciAmount: e.target.value })}
+                        placeholder="0" />
+                      
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
                         <label>CIE 10A (FCFA)</label>
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={clientDocForm.cie10Amount}
-                          onChange={(e) => setClientDocForm({ ...clientDocForm, cie10Amount: e.target.value })}
-                          placeholder="0"
-                        />
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={clientDocForm.cie10Amount}
+                        onChange={(e) => setClientDocForm({ ...clientDocForm, cie10Amount: e.target.value })}
+                        placeholder="0" />
+                      
                       </div>
                       <div className="form-group">
                         <label>CIE 15A (FCFA)</label>
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={clientDocForm.cie15Amount}
-                          onChange={(e) => setClientDocForm({ ...clientDocForm, cie15Amount: e.target.value })}
-                          placeholder="0"
-                        />
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={clientDocForm.cie15Amount}
+                        onChange={(e) => setClientDocForm({ ...clientDocForm, cie15Amount: e.target.value })}
+                        placeholder="0" />
+                      
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })()
-          )}
+                </div>);
+
+          })()
+          }
 
           <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
             <h4 style={{ margin: '0 0 8px 0' }}>
-              Parts to Supply ({((selectedClient?.type || selectedClient?.Type || newClientForm.type || 'individual')).toLowerCase()})
+              Parts to Supply ({(selectedClient?.type || selectedClient?.Type || newClientForm.type || 'individual').toLowerCase()})
             </h4>
-            {(((selectedClient?.type || selectedClient?.Type || newClientForm.type || 'individual').toLowerCase() === 'company')
-              ? COMPANY_DOCUMENTS
-              : INDIVIDUAL_DOCUMENTS
-            ).map((doc) => (
-              <div key={doc.key} className="form-group">
+            {((selectedClient?.type || selectedClient?.Type || newClientForm.type || 'individual').toLowerCase() === 'company' ?
+            COMPANY_DOCUMENTS :
+            INDIVIDUAL_DOCUMENTS).
+            map((doc) =>
+            <div key={doc.key} className="form-group">
                 <label>{doc.label} *</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <input
-                    ref={(el) => { if (el) clientDocFileInputRefs.current[doc.key] = el; }}
-                    type="file"
-                    accept=".pdf,image/*"
-                    required={!clientDocFiles[doc.key]}
-                    style={{ maxWidth: '100%' }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      setClientDocFiles(prev => ({ ...prev, [doc.key]: file }));
-                    }}
-                  />
-                  {clientDocFiles[doc.key] && (
-                    <>
+                  ref={(el) => {if (el) clientDocFileInputRefs.current[doc.key] = el;}}
+                  type="file"
+                  accept=".pdf,image/*"
+                  required={!clientDocFiles[doc.key]}
+                  style={{ maxWidth: '100%' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    setClientDocFiles((prev) => ({ ...prev, [doc.key]: file }));
+                  }} />
+                
+                  {clientDocFiles[doc.key] &&
+                <>
                       <span style={{ fontSize: '13px', color: '#374151' }}>{clientDocFiles[doc.key].name}</span>
                       <button
-                        type="button"
-                        className="action-button secondary"
-                        style={{ padding: '4px 10px', fontSize: '12px' }}
-                        onClick={() => {
-                          const inputEl = clientDocFileInputRefs.current[doc.key];
-                          if (inputEl) inputEl.value = '';
-                          setClientDocFiles(prev => {
-                            const next = { ...prev };
-                            delete next[doc.key];
-                            return next;
-                          });
-                        }}
-                      >
+                    type="button"
+                    className="action-button secondary"
+                    style={{ padding: '4px 10px', fontSize: '12px' }}
+                    onClick={() => {
+                      const inputEl = clientDocFileInputRefs.current[doc.key];
+                      if (inputEl) inputEl.value = '';
+                      setClientDocFiles((prev) => {
+                        const next = { ...prev };
+                        delete next[doc.key];
+                        return next;
+                      });
+                    }}>
+                    
                         Change / Remove
                       </button>
                     </>
-                  )}
+                }
                 </div>
               </div>
-            ))}
+            )}
           </div>
 
           <div className="modal-footer">
@@ -3821,8 +3717,8 @@ const AdministrativeDashboard = () => {
                   cie15: false
                 });
                 setClientDocFiles({});
-              }}
-            >
+              }}>
+              
               Cancel
             </button>
             <button type="submit" className="action-button primary" disabled={loading}>
@@ -3831,8 +3727,6 @@ const AdministrativeDashboard = () => {
           </div>
         </form>
       </Modal>
-
-      {/* Client Checklist Modal */}
       <Modal
         isOpen={showChecklistModal}
         onClose={() => {
@@ -3842,17 +3736,17 @@ const AdministrativeDashboard = () => {
           setChecklistDocuments([]);
         }}
         title="Client Checklist"
-        size="sm"
-      >
+        size="sm">
+        
         <div className="modal-form">
           <div style={{ marginBottom: '12px' }}>
             <strong>Client:</strong>{' '}
-            {checklistClient ? (checklistClient.name || checklistClient.Name || checklistClient.email || checklistClient.Email || 'N/A') : 'N/A'}
+            {checklistClient ? checklistClient.name || checklistClient.Name || checklistClient.email || checklistClient.Email || 'N/A' : 'N/A'}
           </div>
-          {checklistLoading ? (
-            <div>Loading checklist...</div>
-          ) : selectedChecklist ? (
-            <div style={{ display: 'grid', gap: '8px' }}>
+          {checklistLoading ?
+          <div>Loading checklist...</div> :
+          selectedChecklist ?
+          <div style={{ display: 'grid', gap: '8px' }}>
               <div><strong>Property:</strong> {selectedChecklist.property || selectedChecklist.Property || 'N/A'}</div>
               <div><strong>Unit number:</strong> {selectedChecklist.unitNumber || selectedChecklist.UnitNumber || 'N/A'}</div>
               <div><strong>Application fees:</strong> {selectedChecklist.applicationFees ? 'Yes' : 'No'}</div>
@@ -3860,33 +3754,33 @@ const AdministrativeDashboard = () => {
               <div><strong>CIE 10A:</strong> {selectedChecklist.cie10a ? 'Yes' : 'No'}</div>
               <div><strong>CIE 15A:</strong> {selectedChecklist.cie15a ? 'Yes' : 'No'}</div>
               <div><strong>Saved:</strong> {selectedChecklist.createdAt || selectedChecklist.CreatedAt ? new Date(selectedChecklist.createdAt || selectedChecklist.CreatedAt).toLocaleDateString() : 'N/A'}</div>
-            </div>
-          ) : (
-            <div>No checklist found for this client.</div>
-          )}
+            </div> :
+
+          <div>No checklist found for this client.</div>
+          }
           <div style={{ marginTop: '16px' }}>
             <strong>Documents:</strong>
-            {checklistDocsLoading ? (
-              <div style={{ marginTop: '8px' }}>Loading documents...</div>
-            ) : checklistDocuments.length === 0 ? (
-              <div style={{ marginTop: '8px' }}>No documents found.</div>
-            ) : (
-              <div style={{ display: 'grid', gap: '8px', marginTop: '8px' }}>
-                {checklistDocuments.map(doc => (
-                  <div key={doc.ID || doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {checklistDocsLoading ?
+            <div style={{ marginTop: '8px' }}>Loading documents...</div> :
+            checklistDocuments.length === 0 ?
+            <div style={{ marginTop: '8px' }}>No documents found.</div> :
+
+            <div style={{ display: 'grid', gap: '8px', marginTop: '8px' }}>
+                {checklistDocuments.map((doc) =>
+              <div key={doc.ID || doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{doc.Type || doc.type || 'Document'}</span>
                     <a
-                      href={doc.URL || doc.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="sa-link"
-                    >
+                  href={doc.URL || doc.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="sa-link">
+                  
                       View/Download
                     </a>
                   </div>
-                ))}
+              )}
               </div>
-            )}
+            }
           </div>
         </div>
       </Modal>
@@ -3900,8 +3794,8 @@ const AdministrativeDashboard = () => {
           setEditClientExistingDocuments([]);
         }}
         title="Edit Client"
-        size="md"
-      >
+        size="md">
+        
         <form className="modal-form" onSubmit={handleEditClientSubmit}>
           <h4 style={{ margin: '0 0 12px 0' }}>Client details</h4>
           <div className="form-row">
@@ -3909,9 +3803,9 @@ const AdministrativeDashboard = () => {
               <label>Client Type *</label>
               <select
                 value={editClientForm.type}
-                onChange={(e) => setEditClientForm(prev => ({ ...prev, type: e.target.value }))}
-                required
-              >
+                onChange={(e) => setEditClientForm((prev) => ({ ...prev, type: e.target.value }))}
+                required>
+                
                 <option value="individual">Individual</option>
                 <option value="company">Company</option>
               </select>
@@ -3921,91 +3815,91 @@ const AdministrativeDashboard = () => {
               <input
                 type="email"
                 value={editClientForm.email}
-                onChange={(e) => setEditClientForm(prev => ({ ...prev, email: e.target.value }))}
-                required
-              />
+                onChange={(e) => setEditClientForm((prev) => ({ ...prev, email: e.target.value }))}
+                required />
+              
             </div>
           </div>
 
-          {editClientForm.type === 'individual' ? (
-            <div className="form-row">
+          {editClientForm.type === 'individual' ?
+          <div className="form-row">
               <div className="form-group">
                 <label>Full Name *</label>
                 <input
-                  type="text"
-                  value={editClientForm.name}
-                  onChange={(e) => setEditClientForm(prev => ({ ...prev, name: e.target.value }))}
-                  required
-                />
+                type="text"
+                value={editClientForm.name}
+                onChange={(e) => setEditClientForm((prev) => ({ ...prev, name: e.target.value }))}
+                required />
+              
               </div>
               <div className="form-group">
                 <label>Phone *</label>
                 <input
-                  type="text"
-                  value={editClientForm.phone}
-                  onChange={(e) => setEditClientForm(prev => ({ ...prev, phone: e.target.value }))}
-                  required
-                />
+                type="text"
+                value={editClientForm.phone}
+                onChange={(e) => setEditClientForm((prev) => ({ ...prev, phone: e.target.value }))}
+                required />
+              
               </div>
-            </div>
-          ) : (
-            <>
+            </div> :
+
+          <>
               <div className="form-row">
                 <div className="form-group">
                   <label>Company Name *</label>
                   <input
-                    type="text"
-                    value={editClientForm.companyName}
-                    onChange={(e) => setEditClientForm(prev => ({ ...prev, companyName: e.target.value }))}
-                    required
-                  />
+                  type="text"
+                  value={editClientForm.companyName}
+                  onChange={(e) => setEditClientForm((prev) => ({ ...prev, companyName: e.target.value }))}
+                  required />
+                
                 </div>
                 <div className="form-group">
                   <label>Registration Number *</label>
                   <input
-                    type="text"
-                    value={editClientForm.registrationNumber}
-                    onChange={(e) => setEditClientForm(prev => ({ ...prev, registrationNumber: e.target.value }))}
-                    required
-                  />
+                  type="text"
+                  value={editClientForm.registrationNumber}
+                  onChange={(e) => setEditClientForm((prev) => ({ ...prev, registrationNumber: e.target.value }))}
+                  required />
+                
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Contact Person *</label>
                   <input
-                    type="text"
-                    value={editClientForm.contactPerson}
-                    onChange={(e) => setEditClientForm(prev => ({ ...prev, contactPerson: e.target.value }))}
-                    required
-                  />
+                  type="text"
+                  value={editClientForm.contactPerson}
+                  onChange={(e) => setEditClientForm((prev) => ({ ...prev, contactPerson: e.target.value }))}
+                  required />
+                
                 </div>
                 <div className="form-group">
                   <label>Phone *</label>
                   <input
-                    type="text"
-                    value={editClientForm.phone}
-                    onChange={(e) => setEditClientForm(prev => ({ ...prev, phone: e.target.value }))}
-                    required
-                  />
+                  type="text"
+                  value={editClientForm.phone}
+                  onChange={(e) => setEditClientForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  required />
+                
                 </div>
               </div>
             </>
-          )}
+          }
 
           <div className="form-group">
             <label>Property (for document context)</label>
             <select
               value={editClientForm.property}
-              onChange={(e) => setEditClientForm(prev => ({ ...prev, property: e.target.value }))}
-            >
+              onChange={(e) => setEditClientForm((prev) => ({ ...prev, property: e.target.value }))}>
+              
               <option value="">Select property (optional)</option>
-              {properties.map(property => {
+              {properties.map((property) => {
                 const id = property.ID || property.id;
                 const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                 return (
-                  <option key={id} value={label}>{label}</option>
-                );
+                  <option key={id} value={label}>{label}</option>);
+
               })}
             </select>
           </div>
@@ -4013,81 +3907,81 @@ const AdministrativeDashboard = () => {
           <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
             <h4 style={{ margin: '0 0 8px 0' }}>Documents</h4>
             <p style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#6b7280' }}>View existing documents or upload a new file to replace one.</p>
-            {editClientDocsLoading ? (
-              <div style={{ padding: '12px 0', color: '#6b7280' }}>Loading documents...</div>
-            ) : (
-              (editClientForm.type === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS).map((doc) => {
-                const existingDoc = (editClientExistingDocuments || []).find(
-                  (d) => (d.Type || d.type || '').trim() === (doc.label || '').trim()
-                );
-                const hasNewFile = Boolean(editClientDocFiles[doc.key]);
-                return (
-                  <div key={doc.key} className="form-group" style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid #e5e7eb' }}>
+            {editClientDocsLoading ?
+            <div style={{ padding: '12px 0', color: '#6b7280' }}>Loading documents...</div> :
+
+            (editClientForm.type === 'company' ? COMPANY_DOCUMENTS : INDIVIDUAL_DOCUMENTS).map((doc) => {
+              const existingDoc = (editClientExistingDocuments || []).find(
+                (d) => (d.Type || d.type || '').trim() === (doc.label || '').trim()
+              );
+              const hasNewFile = Boolean(editClientDocFiles[doc.key]);
+              return (
+                <div key={doc.key} className="form-group" style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid #e5e7eb' }}>
                     <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>{doc.label}</label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      {existingDoc && (existingDoc.URL || existingDoc.url) && (
-                        <>
+                      {existingDoc && (existingDoc.URL || existingDoc.url) &&
+                    <>
                           <a
-                            href={existingDoc.URL || existingDoc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'none' }}
-                          >
+                        href={existingDoc.URL || existingDoc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'none' }}>
+                        
                             View current
                           </a>
                           <span style={{ color: '#9ca3af' }}>|</span>
                         </>
-                      )}
+                    }
                       <button
-                        type="button"
-                        onClick={() => editClientFileInputRefs.current[doc.key]?.click()}
-                        style={{
-                          padding: '4px 10px',
-                          fontSize: '12px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          color: '#374151'
-                        }}
-                      >
+                      type="button"
+                      onClick={() => editClientFileInputRefs.current[doc.key]?.click()}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        color: '#374151'
+                      }}>
+                      
                         {existingDoc ? 'Edit / Replace' : 'Upload'}
                       </button>
                       <input
-                        ref={(el) => { if (el) editClientFileInputRefs.current[doc.key] = el; }}
-                        type="file"
-                        accept=".pdf,image/*"
-                        style={{ display: 'none' }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          setEditClientDocFiles(prev => ({ ...prev, [doc.key]: file || undefined }));
-                        }}
-                      />
-                      {hasNewFile && (
-                        <>
+                      ref={(el) => {if (el) editClientFileInputRefs.current[doc.key] = el;}}
+                      type="file"
+                      accept=".pdf,image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        setEditClientDocFiles((prev) => ({ ...prev, [doc.key]: file || undefined }));
+                      }} />
+                    
+                      {hasNewFile &&
+                    <>
                           <span style={{ fontSize: '13px', color: '#374151' }}>{editClientDocFiles[doc.key].name}</span>
                           <button
-                            type="button"
-                            style={{ padding: '4px 10px', fontSize: '12px' }}
-                            onClick={() => {
-                              const inputEl = editClientFileInputRefs.current[doc.key];
-                              if (inputEl) inputEl.value = '';
-                              setEditClientDocFiles(prev => {
-                                const next = { ...prev };
-                                delete next[doc.key];
-                                return next;
-                              });
-                            }}
-                          >
+                        type="button"
+                        style={{ padding: '4px 10px', fontSize: '12px' }}
+                        onClick={() => {
+                          const inputEl = editClientFileInputRefs.current[doc.key];
+                          if (inputEl) inputEl.value = '';
+                          setEditClientDocFiles((prev) => {
+                            const next = { ...prev };
+                            delete next[doc.key];
+                            return next;
+                          });
+                        }}>
+                        
                             Remove
                           </button>
                         </>
-                      )}
+                    }
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  </div>);
+
+            })
+            }
           </div>
 
           <div className="modal-footer">
@@ -4099,8 +3993,8 @@ const AdministrativeDashboard = () => {
                 setEditingClient(null);
                 setEditClientDocFiles({});
                 setEditClientExistingDocuments([]);
-              }}
-            >
+              }}>
+              
               Cancel
             </button>
             <button type="submit" className="action-button primary" disabled={loading}>
@@ -4111,14 +4005,14 @@ const AdministrativeDashboard = () => {
       </Modal>
 
       <div className="notifications-container">
-        {notifications.map(notification => (
-          <div key={notification.id} className={`notification notification-${notification.type}`}>
+        {notifications.map((notification) =>
+        <div key={notification.id} className={`notification notification-${notification.type}`}>
             {notification.message}
           </div>
-        ))}
+        )}
       </div>
-    </>
-  );
+    </>);
+
 };
 
 export default AdministrativeDashboard;

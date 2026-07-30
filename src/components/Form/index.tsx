@@ -2,8 +2,6 @@ import React from 'react';
 import { useForm, Controller, UseFormReturn, FieldValues, FieldErrors, UseFormRegister } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { ZodType } from 'zod';
-
-// Reusable form wrapper with Zod validation
 interface FormProps {
   schema?: ZodType<any>;
   defaultValues?: Record<string, any>;
@@ -17,17 +15,15 @@ export function Form({ schema, defaultValues, onSubmit, children, className, sty
   const methods = useForm({
     resolver: schema ? zodResolver(schema) : undefined,
     defaultValues,
-    mode: 'onBlur',
+    mode: 'onBlur'
   });
 
   return (
     <form onSubmit={methods.handleSubmit(onSubmit)} className={className} style={style} noValidate>
       {typeof children === 'function' ? children(methods) : children}
-    </form>
-  );
-}
+    </form>);
 
-// Text input field with error display
+}
 interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   name: string;
   label?: string;
@@ -39,14 +35,14 @@ interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function FormField({ name, label, type = 'text', placeholder, required, register, errors, ...props }: FormFieldProps) {
-  const error = errors?.[name] as { message?: string } | undefined;
+  const error = errors?.[name] as {message?: string;} | undefined;
   return (
     <div style={{ marginBottom: '12px' }}>
-      {label && (
-        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+      {label &&
+      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
           {label}{required && <span style={{ color: '#ef4444' }}> *</span>}
         </label>
-      )}
+      }
       <input
         type={type}
         placeholder={placeholder}
@@ -58,18 +54,16 @@ export function FormField({ name, label, type = 'text', placeholder, required, r
           borderRadius: '8px',
           fontSize: '14px',
           outline: 'none',
-          boxSizing: 'border-box',
+          boxSizing: 'border-box'
         }}
-        {...props}
-      />
-      {error && (
-        <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', margin: '4px 0 0' }}>{error.message}</p>
-      )}
-    </div>
-  );
-}
+        {...props} />
+      
+      {error &&
+      <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', margin: '4px 0 0' }}>{error.message}</p>
+      }
+    </div>);
 
-// Select field with error display
+}
 interface SelectOption {
   value: string;
   label: string;
@@ -86,14 +80,14 @@ interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> 
 }
 
 export function FormSelect({ name, label, options, required, register, errors, placeholder, ...props }: FormSelectProps) {
-  const error = errors?.[name] as { message?: string } | undefined;
+  const error = errors?.[name] as {message?: string;} | undefined;
   return (
     <div style={{ marginBottom: '12px' }}>
-      {label && (
-        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+      {label &&
+      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
           {label}{required && <span style={{ color: '#ef4444' }}> *</span>}
         </label>
-      )}
+      }
       <select
         {...register(name)}
         style={{
@@ -104,23 +98,21 @@ export function FormSelect({ name, label, options, required, register, errors, p
           fontSize: '14px',
           outline: 'none',
           boxSizing: 'border-box',
-          backgroundColor: 'white',
+          backgroundColor: 'white'
         }}
-        {...props}
-      >
+        {...props}>
+        
         {placeholder && <option value="">{placeholder}</option>}
-        {options.map(opt => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
+        {options.map((opt) =>
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+        )}
       </select>
-      {error && (
-        <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', margin: '4px 0 0' }}>{error.message}</p>
-      )}
-    </div>
-  );
-}
+      {error &&
+      <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', margin: '4px 0 0' }}>{error.message}</p>
+      }
+    </div>);
 
-// Textarea field with error display
+}
 interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   name: string;
   label?: string;
@@ -132,14 +124,14 @@ interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaEle
 }
 
 export function FormTextarea({ name, label, placeholder, required, register, errors, rows = 3, ...props }: FormTextareaProps) {
-  const error = errors?.[name] as { message?: string } | undefined;
+  const error = errors?.[name] as {message?: string;} | undefined;
   return (
     <div style={{ marginBottom: '12px' }}>
-      {label && (
-        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+      {label &&
+      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
           {label}{required && <span style={{ color: '#ef4444' }}> *</span>}
         </label>
-      )}
+      }
       <textarea
         placeholder={placeholder}
         rows={rows}
@@ -152,18 +144,16 @@ export function FormTextarea({ name, label, placeholder, required, register, err
           fontSize: '14px',
           outline: 'none',
           resize: 'vertical',
-          boxSizing: 'border-box',
+          boxSizing: 'border-box'
         }}
-        {...props}
-      />
-      {error && (
-        <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', margin: '4px 0 0' }}>{error.message}</p>
-      )}
-    </div>
-  );
-}
+        {...props} />
+      
+      {error &&
+      <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', margin: '4px 0 0' }}>{error.message}</p>
+      }
+    </div>);
 
-// Submit button
+}
 interface FormSubmitButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children?: React.ReactNode;
   loading?: boolean;
@@ -184,13 +174,13 @@ export function FormSubmitButton({ children = 'Submit', loading, style: customSt
         fontSize: '14px',
         fontWeight: '600',
         cursor: loading ? 'not-allowed' : 'pointer',
-        ...customStyle,
+        ...customStyle
       }}
-      {...props}
-    >
+      {...props}>
+      
       {loading ? 'Saving...' : children}
-    </button>
-  );
+    </button>);
+
 }
 
 export { useForm, Controller } from 'react-hook-form';

@@ -9,16 +9,16 @@ const SystemDashboard = () => {
 
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: 'Overview', icon: TrendingUp },
-      { id: 'automation', label: 'Automation', icon: Settings },
-      { id: 'alerts', label: 'Alerts', icon: Bell },
-      { id: 'kpis', label: 'Real-time KPIs', icon: Database }
-    ],
+    { id: 'overview', label: 'Overview', icon: TrendingUp },
+    { id: 'automation', label: 'Automation', icon: Settings },
+    { id: 'alerts', label: 'Alerts', icon: Bell },
+    { id: 'kpis', label: 'Real-time KPIs', icon: Database }],
+
     []
   );
 
-  const renderOverview = () => (
-    <div className="overview-section panel">
+  const renderOverview = () =>
+  <div className="overview-section panel">
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon">
@@ -99,11 +99,11 @@ const SystemDashboard = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 
-  const renderAutomation = () => (
-    <div className="automation-section panel">
+
+  const renderAutomation = () =>
+  <div className="automation-section panel">
       <div className="section-header">
         <h3>Automation & Processing</h3>
         <p>Manage automated workflows and system processes</p>
@@ -190,11 +190,11 @@ const SystemDashboard = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 
-  const renderAlerts = () => (
-    <div className="alerts-section panel">
+
+  const renderAlerts = () =>
+  <div className="alerts-section panel">
       <div className="section-header">
         <h3>System Alerts & Notifications</h3>
         <p>Monitor and manage system-generated alerts</p>
@@ -267,11 +267,11 @@ const SystemDashboard = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 
-  const renderKPIs = () => (
-    <div className="kpis-section panel">
+
+  const renderKPIs = () =>
+  <div className="kpis-section panel">
       <div className="section-header">
         <h3>Real-time Key Performance Indicators</h3>
         <p>Live updates of critical business metrics</p>
@@ -327,8 +327,8 @@ const SystemDashboard = () => {
         </button>
         <span className="last-updated">Last updated: 2 minutes ago</span>
       </div>
-    </div>
-  );
+    </div>;
+
 
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
@@ -347,11 +347,11 @@ const SystemDashboard = () => {
 
   const layoutMenu = useMemo(
     () =>
-      tabs.map(tab => ({
-        ...tab,
-        onSelect: () => setActiveTab(tab.id),
-        active: activeTab === tab.id
-      })),
+    tabs.map((tab) => ({
+      ...tab,
+      onSelect: () => setActiveTab(tab.id),
+      active: activeTab === tab.id
+    })),
     [tabs, activeTab]
   );
 
@@ -369,15 +369,15 @@ const SystemDashboard = () => {
       onActiveChange={setActiveTab}
       onLogout={handleLogout}
       title="System Dashboard"
-      subtitle="Automated workflows, alerts, and real-time KPI monitoring"
-    >
-      {({ activeId }) => (
-        <div className="content-body system-content">
+      subtitle="Automated workflows, alerts, and real-time KPI monitoring">
+      
+      {({ activeId }) =>
+      <div className="content-body system-content">
           {renderContent(activeId || activeTab)}
         </div>
-      )}
-    </RoleLayout>
-  );
+      }
+    </RoleLayout>);
+
 };
 
 export default SystemDashboard;

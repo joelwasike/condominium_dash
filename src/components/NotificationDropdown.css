@@ -196,8 +196,6 @@
 .notification-preferences-button:hover {
   background: #e7eaff;
 }
-
-/* Mobile responsiveness */
 @media (max-width: 768px) {
   .notification-dropdown {
     width: 320px;

@@ -71,7 +71,7 @@ const PropertyManagementTab = ({
   handleViewBuilding,
   handleViewVilla,
   handleViewLand,
-  parseUnitPictures,
+  parseUnitPictures
 }) => {
   const [selectedPropertyIds, setSelectedPropertyIds] = useState([]);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
@@ -108,7 +108,7 @@ const PropertyManagementTab = ({
 
   const toggleSelectOne = (id) => {
     if (id == null) return;
-    setSelectedPropertyIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelectedPropertyIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
 
   const openBulkDelete = () => {
@@ -134,8 +134,6 @@ const PropertyManagementTab = ({
       const failedCount = res?.failedCount ?? (Array.isArray(res?.failed) ? res.failed.length : 0);
       if (deletedCount > 0) addNotification(`Deleted ${deletedCount} propert${deletedCount === 1 ? 'y' : 'ies'}.`, 'success');
       if (failedCount > 0) addNotification(`${failedCount} deletion(s) failed.`, 'error');
-
-      // Refresh data depending on current view
       if (pmView === 'owner-detail' && pmOwnerId) {
         const data = await salesManagerService.getOwnerAssets(pmOwnerId);
         setOwnerAssets(data);
@@ -150,14 +148,10 @@ const PropertyManagementTab = ({
       setBulkDeleteSubmitting(false);
     }
   };
-
-  // Filter owners by search (member name)
   const searchLower = (propertyManagementSearch || '').trim().toLowerCase();
-  const filteredOwners = searchLower
-    ? owners.filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower))
-    : owners;
-
-  // Building management view
+  const filteredOwners = searchLower ?
+  owners.filter((o) => (o.name || o.Name || '').toLowerCase().includes(searchLower)) :
+  owners;
   if (pmView === 'building-detail' && buildingDetail) {
     const units = buildingDetail.units || [];
     const totalApartments = buildingDetail.totalApartments ?? units.length;
@@ -184,8 +178,8 @@ const PropertyManagementTab = ({
             <table style={tableStyle}>
               <thead><tr><th style={thStyle}>Appartements</th><th style={thStyle}>Type</th><th style={thStyle}>tenant</th><th style={thStyle}>price of rent</th><th style={thStyle}>Enter date</th><th style={thStyle}>Statut</th><th style={thStyle}>Actions</th></tr></thead>
               <tbody>
-                {units.map((row, i) => (
-                  <tr key={row.id || i}>
+                {units.map((row, i) =>
+                <tr key={row.id || i}>
                     <td style={tdStyle}>{row.unitNumber || row.name || `Appartment ${i + 1}`}</td>
                     <td style={tdStyle}>{row.type || '—'}</td>
                     <td style={tdStyle}>{row.tenant || '—'}</td>
@@ -194,28 +188,26 @@ const PropertyManagementTab = ({
                     <td style={tdStyle}>{row.status || row.statut || '—'}</td>
                     <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button type="button" style={actionBtn('#3b82f6')} onClick={() => { setViewingUnit(row); setShowViewApartmentModal(true); }}>View</button>
-                        <button type="button" style={actionBtn('#6366f1')} onClick={() => { setEditingUnit(row); setEditApartmentPictures(parseUnitPictures(row.picture)); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }} title="Edit apartment details">Edit</button>
+                        <button type="button" style={actionBtn('#3b82f6')} onClick={() => {setViewingUnit(row);setShowViewApartmentModal(true);}}>View</button>
+                        <button type="button" style={actionBtn('#6366f1')} onClick={() => {setEditingUnit(row);setEditApartmentPictures(parseUnitPictures(row.picture));setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString());setShowEditApartmentModal(true);}} title="Edit apartment details">Edit</button>
                         <button type="button" style={actionBtn('#ef4444')} onClick={async (e) => {
-                          e.stopPropagation();
-                          const label = row.unitNumber || row.name || `Apartment ${i + 1}`;
-                          if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
-                          setPmLoading(true);
-                          try { await salesManagerService.deletePropertyUnit(pmPropertyId, row.id); addNotification('Unit deleted successfully', 'success'); const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId); setBuildingDetail(data); } catch (err) { addNotification(err.message || 'Failed to delete unit', 'error'); } finally { setPmLoading(false); }
-                        }} disabled={pmLoading}>Delete</button>
+                        e.stopPropagation();
+                        const label = row.unitNumber || row.name || `Apartment ${i + 1}`;
+                        if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
+                        setPmLoading(true);
+                        try {await salesManagerService.deletePropertyUnit(pmPropertyId, row.id);addNotification('Unit deleted successfully', 'success');const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);setBuildingDetail(data);} catch (err) {addNotification(err.message || 'Failed to delete unit', 'error');} finally {setPmLoading(false);}
+                      }} disabled={pmLoading}>Delete</button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    );
-  }
+      </div>);
 
-  // Villa management view
+  }
   if (pmView === 'villa-detail' && buildingDetail) {
     const units = buildingDetail.units || [];
     const images = buildingDetail.images || [];
@@ -240,8 +232,8 @@ const PropertyManagementTab = ({
             <table style={tableStyle}>
               <thead><tr><th style={thStyle}>Villa</th><th style={thStyle}>Type</th><th style={thStyle}>tenant</th><th style={thStyle}>price of rent</th><th style={thStyle}>Enter date</th><th style={thStyle}>Statut</th><th style={thStyle}>Actions</th></tr></thead>
               <tbody>
-                {units.map((row, i) => (
-                  <tr key={row.id || i}>
+                {units.map((row, i) =>
+                <tr key={row.id || i}>
                     <td style={tdStyle}>VILLA</td>
                     <td style={tdStyle}>{row.type || '—'}</td>
                     <td style={tdStyle}>{row.tenant || '—'}</td>
@@ -250,33 +242,31 @@ const PropertyManagementTab = ({
                     <td style={tdStyle}>{row.status || row.statut || '—'}</td>
                     <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button type="button" style={actionBtn('#3b82f6')} onClick={() => { setViewingUnit(row); setShowViewApartmentModal(true); }}>View</button>
-                        <button type="button" style={actionBtn('#6366f1')} onClick={() => { setEditingUnit(row); setEditApartmentPictures(parseUnitPictures(row.picture)); setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString()); setShowEditApartmentModal(true); }} title="Edit apartment details">Edit</button>
+                        <button type="button" style={actionBtn('#3b82f6')} onClick={() => {setViewingUnit(row);setShowViewApartmentModal(true);}}>View</button>
+                        <button type="button" style={actionBtn('#6366f1')} onClick={() => {setEditingUnit(row);setEditApartmentPictures(parseUnitPictures(row.picture));setEditApartmentStatusChoice((row.status || row.statut || 'Vacant').toString());setShowEditApartmentModal(true);}} title="Edit apartment details">Edit</button>
                         <button type="button" style={actionBtn('#ef4444')} onClick={async (e) => {
-                          e.stopPropagation();
-                          const label = row.unitNumber || row.name || `Unit ${i + 1}`;
-                          if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
-                          setPmLoading(true);
-                          try { await salesManagerService.deletePropertyUnit(pmPropertyId, row.id); addNotification('Unit deleted successfully', 'success'); const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId); setBuildingDetail(data); } catch (err) { addNotification(err.message || 'Failed to delete unit', 'error'); } finally { setPmLoading(false); }
-                        }} disabled={pmLoading}>Delete</button>
+                        e.stopPropagation();
+                        const label = row.unitNumber || row.name || `Unit ${i + 1}`;
+                        if (!window.confirm(`Delete "${label}"? This will remove the unit. If it had a tenant, they will be set to Inactive. This cannot be undone.`)) return;
+                        setPmLoading(true);
+                        try {await salesManagerService.deletePropertyUnit(pmPropertyId, row.id);addNotification('Unit deleted successfully', 'success');const data = await salesManagerService.getPropertyBuildingDetail(pmPropertyId);setBuildingDetail(data);} catch (err) {addNotification(err.message || 'Failed to delete unit', 'error');} finally {setPmLoading(false);}
+                      }} disabled={pmLoading}>Delete</button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    );
-  }
+      </div>);
 
-  // Land detail view
+  }
   if (pmView === 'land-detail' && landDetail) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <button type="button" style={backBtn} onClick={() => { setPmView('owner-detail'); setLandDetail(null); }}>
+          <button type="button" style={backBtn} onClick={() => {setPmView('owner-detail');setLandDetail(null);}}>
             <ArrowLeft size={18} /> Back
           </button>
           <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b' }}>Land: {pmBuildingName}</h2>
@@ -287,11 +277,9 @@ const PropertyManagementTab = ({
           <p style={{ margin: '0 0 10px', fontSize: '0.9rem', color: '#334155' }}><strong>Statut:</strong> {landDetail.statut || 'For sell'}</p>
           <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155' }}><strong>Price:</strong> {typeof landDetail.rentPrice === 'number' ? landDetail.rentPrice.toLocaleString() : landDetail.rentPrice ?? '—'}</p>
         </div>
-      </div>
-    );
-  }
+      </div>);
 
-  // Owner assets view
+  }
   if (pmView === 'owner-detail' && ownerAssets) {
     const assets = (ownerAssets.assets || []).filter(matchesCategory);
     const assetIds = assets.map((a) => a.id ?? a.ID).filter((id) => id != null);
@@ -299,25 +287,25 @@ const PropertyManagementTab = ({
 
     const handleAssetClick = (asset) => {
       const type = (asset.type || '').toLowerCase();
-      if (type === 'building') handleViewBuilding(asset);
-      else if (type === 'villa') handleViewVilla(asset);
-      else if (type === 'land') handleViewLand(asset);
-      else handleViewBuilding(asset);
+      if (type === 'building') handleViewBuilding(asset);else
+      if (type === 'villa') handleViewVilla(asset);else
+      if (type === 'land') handleViewLand(asset);else
+      handleViewBuilding(asset);
     };
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <button type="button" style={backBtn} onClick={() => { setPmView('list'); setOwnerAssets(null); setPmOwnerId(null); setPmOwnerName(''); }}>
+          <button type="button" style={backBtn} onClick={() => {setPmView('list');setOwnerAssets(null);setPmOwnerId(null);setPmOwnerName('');}}>
             <ArrowLeft size={18} /> Back
           </button>
           <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b' }}>{pmOwnerName} assets management</h2>
         </div>
         <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
-          {selectedPropertyIds.length > 0 && (
-            <button type="button" style={{ ...btnOutline, borderColor: '#fecaca', color: '#b91c1c' }} onClick={openBulkDelete}>
+          {selectedPropertyIds.length > 0 &&
+          <button type="button" style={{ ...btnOutline, borderColor: '#fecaca', color: '#b91c1c' }} onClick={openBulkDelete}>
               Delete selected ({selectedPropertyIds.length})
             </button>
-          )}
+          }
           <button type="button" style={btnPrimary} onClick={() => setShowAddBuildingModal(true)}>ADD BUILDING</button>
           <button type="button" style={btnPrimary} onClick={() => setShowAddApartmentModal(true)}>ADD APPARTMENT</button>
           <button type="button" style={btnPrimary} onClick={() => setShowAddVillaModal(true)}>ADD VILLA</button>
@@ -335,7 +323,7 @@ const PropertyManagementTab = ({
               <thead>
                 <tr>
                   <th style={thStyle} onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" checked={allSelected} onChange={(e) => { e.stopPropagation(); toggleSelectMany(assetIds); }} aria-label="Select all properties" />
+                    <input type="checkbox" checked={allSelected} onChange={(e) => {e.stopPropagation();toggleSelectMany(assetIds);}} aria-label="Select all properties" />
                   </th>
                   <th style={thStyle}>PROPERTY</th>
                   <th style={thStyle}>APPARTMENTS</th>
@@ -347,17 +335,17 @@ const PropertyManagementTab = ({
                 </tr>
               </thead>
               <tbody>
-                {assets.map((row) => (
-                  <tr key={row.id ?? row.ID} style={{ cursor: 'pointer' }} onClick={() => handleAssetClick(row)}>
+                {assets.map((row) =>
+                <tr key={row.id ?? row.ID} style={{ cursor: 'pointer' }} onClick={() => handleAssetClick(row)}>
                     <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                      {(() => { const rid = row.id ?? row.ID; return (
-                      <input
-                        type="checkbox"
-                        checked={rid != null && selectedPropertyIds.includes(rid)}
-                        onChange={(e) => { e.stopPropagation(); toggleSelectOne(rid); }}
-                        aria-label={`Select property ${row.name || row.building || rid}`}
-                      />
-                      ); })()}
+                      {(() => {const rid = row.id ?? row.ID;return (
+                        <input
+                          type="checkbox"
+                          checked={rid != null && selectedPropertyIds.includes(rid)}
+                          onChange={(e) => {e.stopPropagation();toggleSelectOne(rid);}}
+                          aria-label={`Select property ${row.name || row.building || rid}`} />);
+
+                    })()}
                     </td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: '#1e293b' }}>{row.name || row.building || '—'}</td>
                     <td style={tdStyle}>{row.apartmentsDisplay ?? row.apartments ?? '—'}</td>
@@ -368,21 +356,21 @@ const PropertyManagementTab = ({
                     <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button type="button" style={actionBtn('#3b82f6')} onClick={async () => {
-                          setPmLoading(true);
-                          try { const full = await salesManagerService.getProperty(row.id); setSelectedPropertyDetail(full); } catch (err) { addNotification('Failed to load property details', 'error'); } finally { setPmLoading(false); }
-                        }} disabled={pmLoading}>View</button>
+                        setPmLoading(true);
+                        try {const full = await salesManagerService.getProperty(row.id);setSelectedPropertyDetail(full);} catch (err) {addNotification('Failed to load property details', 'error');} finally {setPmLoading(false);}
+                      }} disabled={pmLoading}>View</button>
                         <button type="button" style={actionBtn('#22c55e')} onClick={() => openEditPropertyModal(row)}>Edit</button>
                         <button type="button" style={actionBtn('#ef4444')} onClick={async (e) => {
-                          e.stopPropagation();
-                          const name = row.name || row.building || row.address || 'this property';
-                          if (!window.confirm(`Delete "${name}"? This will remove the property and all its units. This action cannot be undone.`)) return;
-                          setPmLoading(true);
-                          try { await salesManagerService.deleteProperty(row.id); addNotification('Property deleted successfully', 'success'); const data = await salesManagerService.getOwnerAssets(pmOwnerId); setOwnerAssets(data); await loadData(); } catch (err) { addNotification(err.message || 'Failed to delete property', 'error'); } finally { setPmLoading(false); }
-                        }} disabled={pmLoading}>Delete</button>
+                        e.stopPropagation();
+                        const name = row.name || row.building || row.address || 'this property';
+                        if (!window.confirm(`Delete "${name}"? This will remove the property and all its units. This action cannot be undone.`)) return;
+                        setPmLoading(true);
+                        try {await salesManagerService.deleteProperty(row.id);addNotification('Property deleted successfully', 'success');const data = await salesManagerService.getOwnerAssets(pmOwnerId);setOwnerAssets(data);await loadData();} catch (err) {addNotification(err.message || 'Failed to delete property', 'error');} finally {setPmLoading(false);}
+                      }} disabled={pmLoading}>Delete</button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -391,10 +379,10 @@ const PropertyManagementTab = ({
 
         <Modal
           isOpen={showBulkDeleteModal}
-          onClose={() => { if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false); }}
+          onClose={() => {if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false);}}
           title="Confirm bulk property deletion"
-          size="sm"
-        >
+          size="sm">
+          
           <p style={{ marginTop: 0, color: '#6b7280', fontSize: '0.9rem' }}>
             You are about to permanently delete <strong>{selectedPropertyIds.length}</strong> propert{selectedPropertyIds.length === 1 ? 'y' : 'ies'}. Enter your password to continue.
           </p>
@@ -405,8 +393,8 @@ const PropertyManagementTab = ({
               onChange={(e) => setBulkDeletePassword(e.target.value)}
               placeholder="Your password"
               style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-              disabled={bulkDeleteSubmitting}
-            />
+              disabled={bulkDeleteSubmitting} />
+            
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button type="button" style={btnOutline} onClick={() => setShowBulkDeleteModal(false)} disabled={bulkDeleteSubmitting}>Cancel</button>
               <button type="button" style={{ ...btnPrimary, background: '#dc2626' }} onClick={confirmBulkDelete} disabled={bulkDeleteSubmitting || !bulkDeletePassword.trim()}>
@@ -415,11 +403,9 @@ const PropertyManagementTab = ({
             </div>
           </div>
         </Modal>
-      </div>
-    );
-  }
+      </div>);
 
-  // Property Management entry - owners list
+  }
   const unassignedProperties = properties.filter((p) => !getPropertyOwnerId(p) && matchesCategory(p));
   const unassignedIds = unassignedProperties.map((p) => p.id ?? p.ID).filter((id) => id != null);
   const allUnassignedSelected = unassignedIds.length > 0 && unassignedIds.every((id) => selectedPropertyIds.includes(id));
@@ -428,10 +414,10 @@ const PropertyManagementTab = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
         <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b' }}>PROPERTY MANAGEMENT</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <button type="button" style={btnPrimary} onClick={() => { setSelectedPropertyType(''); setCreatePropertyImages([]); setShowCreatePropertyModal(true); }}>
+          <button type="button" style={btnPrimary} onClick={() => {setSelectedPropertyType('');setCreatePropertyImages([]);setShowCreatePropertyModal(true);}}>
             <Plus size={18} /> Add Property
           </button>
-          <button type="button" style={{ ...btnOutline, display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => { setPropertyImportFile(null); setShowPropertyImportModal(true); }}>
+          <button type="button" style={{ ...btnOutline, display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => {setPropertyImportFile(null);setShowPropertyImportModal(true);}}>
             <FileSpreadsheet size={18} /> Bulk Import
           </button>
           <div style={{ position: 'relative' }}>
@@ -462,33 +448,33 @@ const PropertyManagementTab = ({
                     <td style={tdStyle}>{owner.propertyForSell ?? 0}</td>
                     <td style={tdStyle}>{owner.propertyForManage ?? 0}</td>
                     <td style={tdStyle}>{owner.occupancy ?? '0/0'}</td>
-                    <td style={tdStyle}>{typeof (owner.expectedIncomeThisMonth ?? owner.expectedIncome ?? 0) === 'number' ? (owner.expectedIncomeThisMonth ?? owner.expectedIncome ?? 0).toLocaleString() : (owner.expectedIncomeThisMonth ?? owner.expectedIncome ?? 0)}</td>
-                    <td style={tdStyle}>{typeof (owner.expectedRentWithTenantsThisMonth ?? 0) === 'number' ? (owner.expectedRentWithTenantsThisMonth ?? 0).toLocaleString() : (owner.expectedRentWithTenantsThisMonth ?? 0)}</td>
-                    <td style={tdStyle}>{typeof (owner.incomeThisMonth ?? owner.revenue ?? 0) === 'number' ? (owner.incomeThisMonth ?? owner.revenue ?? 0).toLocaleString() : (owner.incomeThisMonth ?? owner.revenue ?? 0)}</td>
-                  </tr>
-                );
+                    <td style={tdStyle}>{typeof (owner.expectedIncomeThisMonth ?? owner.expectedIncome ?? 0) === 'number' ? (owner.expectedIncomeThisMonth ?? owner.expectedIncome ?? 0).toLocaleString() : owner.expectedIncomeThisMonth ?? owner.expectedIncome ?? 0}</td>
+                    <td style={tdStyle}>{typeof (owner.expectedRentWithTenantsThisMonth ?? 0) === 'number' ? (owner.expectedRentWithTenantsThisMonth ?? 0).toLocaleString() : owner.expectedRentWithTenantsThisMonth ?? 0}</td>
+                    <td style={tdStyle}>{typeof (owner.incomeThisMonth ?? owner.revenue ?? 0) === 'number' ? (owner.incomeThisMonth ?? owner.revenue ?? 0).toLocaleString() : owner.incomeThisMonth ?? owner.revenue ?? 0}</td>
+                  </tr>);
+
               })}
-              {filteredOwners.length === 0 && (
-                <tr><td colSpan={9} style={emptyRow}>No owners found. Ask the Agency Director to add property owners.</td></tr>
-              )}
+              {filteredOwners.length === 0 &&
+              <tr><td colSpan={9} style={emptyRow}>No owners found. Ask the Agency Director to add property owners.</td></tr>
+              }
             </tbody>
           </table>
         </div>
       </div>
 
-      {unassignedProperties.length > 0 && (
-        <div style={{ ...card, marginTop: '20px' }}>
+      {unassignedProperties.length > 0 &&
+      <div style={{ ...card, marginTop: '20px' }}>
           <div style={{ marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Properties Without Owner</h3>
                 <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>{unassignedProperties.length} properties not yet assigned to an owner</p>
               </div>
-              {selectedPropertyIds.length > 0 && (
-                <button type="button" style={{ ...btnOutline, borderColor: '#fecaca', color: '#b91c1c' }} onClick={openBulkDelete}>
+              {selectedPropertyIds.length > 0 &&
+            <button type="button" style={{ ...btnOutline, borderColor: '#fecaca', color: '#b91c1c' }} onClick={openBulkDelete}>
                   Delete selected ({selectedPropertyIds.length})
                 </button>
-              )}
+            }
             </div>
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -496,7 +482,7 @@ const PropertyManagementTab = ({
               <thead>
                 <tr>
                   <th style={thStyle} onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" checked={allUnassignedSelected} onChange={(e) => { e.stopPropagation(); toggleSelectMany(unassignedIds); }} aria-label="Select all unassigned properties" />
+                    <input type="checkbox" checked={allUnassignedSelected} onChange={(e) => {e.stopPropagation();toggleSelectMany(unassignedIds);}} aria-label="Select all unassigned properties" />
                   </th>
                   <th style={thStyle}>No</th>
                   <th style={thStyle}>Address</th>
@@ -510,16 +496,16 @@ const PropertyManagementTab = ({
               </thead>
               <tbody>
                 {unassignedProperties.map((property, index) => {
-                  const pid = property.id ?? property.ID;
-                  return (
+                const pid = property.id ?? property.ID;
+                return (
                   <tr key={`unassigned-${pid || index}`} style={{ cursor: 'pointer' }} onClick={() => setSelectedPropertyDetail(property)}>
                     <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={pid != null && selectedPropertyIds.includes(pid)}
-                        onChange={(e) => { e.stopPropagation(); toggleSelectOne(pid); }}
-                        aria-label={`Select property ${(property.Address || property.address || '').toString() || pid}`}
-                      />
+                        onChange={(e) => {e.stopPropagation();toggleSelectOne(pid);}}
+                        aria-label={`Select property ${(property.Address || property.address || '').toString() || pid}`} />
+                      
                     </td>
                     <td style={tdStyle}>{index + 1}</td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: '#1e293b' }}>{property.Address || property.address || 'N/A'}</td>
@@ -534,21 +520,21 @@ const PropertyManagementTab = ({
                         <button type="button" style={actionBtn('#6366f1')} onClick={() => openScheduleVisit(property.Address || property.address)}>Schedule</button>
                       </div>
                     </td>
-                  </tr>
-                  );
-                })}
+                  </tr>);
+
+              })}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+      }
 
       <Modal
         isOpen={showBulkDeleteModal}
-        onClose={() => { if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false); }}
+        onClose={() => {if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false);}}
         title="Confirm bulk property deletion"
-        size="sm"
-      >
+        size="sm">
+        
         <p style={{ marginTop: 0, color: '#6b7280', fontSize: '0.9rem' }}>
           You are about to permanently delete <strong>{selectedPropertyIds.length}</strong> propert{selectedPropertyIds.length === 1 ? 'y' : 'ies'}. Enter your password to continue.
         </p>
@@ -559,8 +545,8 @@ const PropertyManagementTab = ({
             onChange={(e) => setBulkDeletePassword(e.target.value)}
             placeholder="Your password"
             style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-            disabled={bulkDeleteSubmitting}
-          />
+            disabled={bulkDeleteSubmitting} />
+          
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
             <button type="button" style={btnOutline} onClick={() => setShowBulkDeleteModal(false)} disabled={bulkDeleteSubmitting}>Cancel</button>
             <button type="button" style={{ ...btnPrimary, background: '#dc2626' }} onClick={confirmBulkDelete} disabled={bulkDeleteSubmitting || !bulkDeletePassword.trim()}>
@@ -569,8 +555,8 @@ const PropertyManagementTab = ({
           </div>
         </div>
       </Modal>
-    </div>
-  );
+    </div>);
+
 };
 
 export default PropertyManagementTab;

@@ -59,7 +59,7 @@ const ClientsTab = ({
   tenantDetailLoading,
   addNotification,
   setEditingClient,
-  setShowEditClientModal,
+  setShowEditClientModal
 }) => {
   const [privateNoteInput, setPrivateNoteInput] = useState('');
   const [addingNote, setAddingNote] = useState(false);
@@ -69,14 +69,10 @@ const ClientsTab = ({
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [bulkDeletePassword, setBulkDeletePassword] = useState('');
   const [bulkDeleteSubmitting, setBulkDeleteSubmitting] = useState(false);
-
-  // Resolved/accurate property details for the tenant detail view
-  const [resolvedProperty, setResolvedProperty] = useState(null); // property row from /api/salesmanager/properties
-  const [resolvedUnit, setResolvedUnit] = useState(null); // unit row from building-detail
-  const [resolvedOccupancy, setResolvedOccupancy] = useState(null); // { occupied, total }
+  const [resolvedProperty, setResolvedProperty] = useState(null);
+  const [resolvedUnit, setResolvedUnit] = useState(null);
+  const [resolvedOccupancy, setResolvedOccupancy] = useState(null);
   const [resolvingProperty, setResolvingProperty] = useState(false);
-
-  // Quick actions state
   const [showSmsComposer, setShowSmsComposer] = useState(false);
   const [smsText, setSmsText] = useState('');
   const [smsSending, setSmsSending] = useState(false);
@@ -97,12 +93,12 @@ const ClientsTab = ({
     }
 
     const normalizeAddress = (value) => {
-      return value
-        .toString()
-        .toLowerCase()
-        .trim()
-        .replace(/[.,#]/g, ' ')
-        .replace(/\s+/g, ' ');
+      return value.
+      toString().
+      toLowerCase().
+      trim().
+      replace(/[.,#]/g, ' ').
+      replace(/\s+/g, ' ');
     };
 
     let cancelled = false;
@@ -110,19 +106,19 @@ const ClientsTab = ({
     (async () => {
       try {
         const list = await salesManagerService.getProperties();
-        const props = Array.isArray(list) ? list : (list?.items || list?.data || []);
+        const props = Array.isArray(list) ? list : list?.items || list?.data || [];
         const wanted = normalizeAddress(propertyAddr);
         const propRows = Array.isArray(props) ? props : [];
         const matchExact = propRows.find((p) => {
           const addr = normalizeAddress(p.address ?? p.Address ?? '');
           return addr && addr === wanted;
         });
-        const matchLoose = matchExact
-          ? null
-          : propRows.find((p) => {
-            const addr = normalizeAddress(p.address ?? p.Address ?? '');
-            return addr && (addr.includes(wanted) || wanted.includes(addr));
-          });
+        const matchLoose = matchExact ?
+        null :
+        propRows.find((p) => {
+          const addr = normalizeAddress(p.address ?? p.Address ?? '');
+          return addr && (addr.includes(wanted) || wanted.includes(addr));
+        });
         const match = matchExact || matchLoose;
 
         if (cancelled) return;
@@ -152,8 +148,6 @@ const ClientsTab = ({
           const t = (u.tenant || u.Tenant || '').toString().trim();
           return st === 'occupied' || t !== '';
         }).length;
-
-        // Villas / single-unit properties often have no unit rows; derive occupancy from property/client assignment.
         if (units.length === 0) {
           const total = Number(match.NumberOfUnits ?? match.numberOfUnits ?? match.totalUnits ?? 1) || 1;
           const status = (match.status ?? match.Status ?? '').toString().trim().toLowerCase();
@@ -167,16 +161,16 @@ const ClientsTab = ({
 
         const unitNorm = unitNumber.toLowerCase();
         const unitComparable = (v) => v.toString().trim().toLowerCase().replace(/^unit\s+/i, '').replace(/\s+/g, '');
-        const foundUnitByNumber = unitNorm
-          ? units.find((u) => {
-            const un = (u.unitNumber ?? u.UnitNumber ?? u.name ?? u.Name ?? '').toString().trim();
-            return un && unitComparable(un) === unitComparable(unitNorm);
-          })
-          : null;
+        const foundUnitByNumber = unitNorm ?
+        units.find((u) => {
+          const un = (u.unitNumber ?? u.UnitNumber ?? u.name ?? u.Name ?? '').toString().trim();
+          return un && unitComparable(un) === unitComparable(unitNorm);
+        }) :
+        null;
         const tenantName = (tenant?.Name || tenant?.name || '').toString().trim().toLowerCase();
-        const foundUnitByTenant = !foundUnitByNumber && tenantName
-          ? units.find((u) => (u.tenant || u.Tenant || '').toString().trim().toLowerCase() === tenantName)
-          : null;
+        const foundUnitByTenant = !foundUnitByNumber && tenantName ?
+        units.find((u) => (u.tenant || u.Tenant || '').toString().trim().toLowerCase() === tenantName) :
+        null;
         const foundUnit = foundUnitByNumber || foundUnitByTenant;
         setResolvedUnit(foundUnit || null);
       } catch (_) {
@@ -190,17 +184,17 @@ const ClientsTab = ({
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {cancelled = true;};
   }, [selectedTenantId, tenantDetail]);
 
-  const filteredClientIds = (Array.isArray(filteredClients) ? filteredClients : [])
-    .map((c) => (c?.id ?? c?.ID))
-    .filter((id) => id != null);
+  const filteredClientIds = (Array.isArray(filteredClients) ? filteredClients : []).
+  map((c) => c?.id ?? c?.ID).
+  filter((id) => id != null);
   const allFilteredSelected = filteredClientIds.length > 0 && filteredClientIds.every((id) => selectedClientIds.includes(id));
 
   const toggleSelectClient = (clientId) => {
     if (clientId == null) return;
-    setSelectedClientIds((prev) => (prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]));
+    setSelectedClientIds((prev) => prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]);
   };
 
   const toggleSelectAllFiltered = () => {
@@ -240,15 +234,12 @@ const ClientsTab = ({
       if (deletedCount > 0) addNotification(`Deleted ${deletedCount} tenant(s).`, 'success');
       if (failedCount > 0) addNotification(`${failedCount} deletion(s) failed.`, 'error');
       if (missingIds.length > 0) addNotification(`Some tenants were already missing (${missingIds.join(', ')}).`, 'warning');
-
-      // Refresh list (best effort)
       try {
         const clientsData = await salesManagerService.getClients();
         if (typeof setClients === 'function') {
           setClients(Array.isArray(clientsData) ? clientsData : []);
         }
       } catch (_) {
-        // ignore
       }
 
       setSelectedClientIds([]);
@@ -259,8 +250,6 @@ const ClientsTab = ({
       setBulkDeleteSubmitting(false);
     }
   };
-
-  // Tenant Detail View
   if (selectedTenantId) {
     if (tenantDetailLoading) {
       return (
@@ -268,8 +257,8 @@ const ClientsTab = ({
           <div style={{ ...card, padding: '48px', textAlign: 'center' }}>
             <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Loading tenant details...</p>
           </div>
-        </div>
-      );
+        </div>);
+
     }
     const c = tenantDetail?.client;
     if (!c) {
@@ -278,16 +267,16 @@ const ClientsTab = ({
           <button
             type="button"
             style={{ ...backBtn, marginBottom: '16px' }}
-            onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
-          >
+            onClick={() => {setSelectedTenantId(null);setTenantDetail(null);}}>
+            
             <ArrowLeft size={16} />
             Back to list
           </button>
           <div style={card}>
             <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Tenant not found or failed to load.</p>
           </div>
-        </div>
-      );
+        </div>);
+
     }
     const prop = tenantDetail?.property;
     const displayProp = resolvedProperty || prop;
@@ -325,7 +314,7 @@ const ClientsTab = ({
 
     const handleGenerateReceipt = async () => {
       const payments = tenantDetail?.payments || [];
-      const approved = payments.filter(p => (p.Status || p.status || '').toLowerCase() === 'approved');
+      const approved = payments.filter((p) => (p.Status || p.status || '').toLowerCase() === 'approved');
       const latest = approved.length > 0 ? approved[0] : payments[0];
       if (!latest) {
         addNotification('No payment found to generate a receipt', 'error');
@@ -341,7 +330,7 @@ const ClientsTab = ({
         Date: latest.Date || latest.date || latest.CreatedAt || latest.createdAt,
         ReceiptNumber: latest.ReceiptNumber || latest.receiptNumber,
         MonthlyRent: monthlyRent,
-        RentDue: tenantDetail?.accounting?.unpaidRentAmount ?? 0,
+        RentDue: tenantDetail?.accounting?.unpaidRentAmount ?? 0
       };
       try {
         await saveRentReceiptPdf({ item: receiptData, isCollection: false, filename: `receipt-${c.Name || 'tenant'}.pdf` });
@@ -375,7 +364,7 @@ const ClientsTab = ({
           tenant: c.Name || c.name || '',
           title: incidentForm.title.trim(),
           description: incidentForm.description.trim(),
-          priority: incidentForm.priority,
+          priority: incidentForm.priority
         });
         addNotification('Incident reported successfully', 'success');
         setShowIncidentModal(false);
@@ -393,8 +382,8 @@ const ClientsTab = ({
     const propertyAddr = c.Property || c.property || '—';
     const unitNumber = c.UnitNumber ?? c.unitNumber ?? '—';
     const amount = c.Amount ?? c.amount ?? 0;
-    const lastPayment = accounting.lastPaymentDate ?? accounting.LastPaymentDate
-      ?? c.LastPayment ?? c.lastPayment ?? c.LastPaymentDate ?? c.lastPaymentDate;
+    const lastPayment = accounting.lastPaymentDate ?? accounting.LastPaymentDate ??
+    c.LastPayment ?? c.lastPayment ?? c.LastPaymentDate ?? c.lastPaymentDate;
     const createdAt = c.CreatedAt ?? c.createdAt;
     const updatedAt = c.UpdatedAt ?? c.updatedAt;
 
@@ -404,8 +393,8 @@ const ClientsTab = ({
           <button
             type="button"
             style={backBtn}
-            onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}
-          >
+            onClick={() => {setSelectedTenantId(null);setTenantDetail(null);}}>
+            
             <ArrowLeft size={16} />
             Back to list
           </button>
@@ -422,12 +411,12 @@ const ClientsTab = ({
                 <span style={statusPill(status)}>
                   {status}
                 </span>
-                {propertyAddr && propertyAddr !== '—' && (
-                  <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {propertyAddr && propertyAddr !== '—' &&
+                <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <MapPin size={14} />
                     {propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
                   </span>
-                )}
+                }
               </div>
             </div>
           </div>
@@ -455,107 +444,107 @@ const ClientsTab = ({
 	              <div style={dlItem}><div style={dtStyle}>Property</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</div></div>
 	              {unitNumber && unitNumber !== '—' && <div style={dlItem}><div style={dtStyle}>Unit</div><div style={ddStyle}>{unitNumber}</div></div>}
 	              <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={{ ...ddStyle, fontWeight: 700, fontSize: '1.1rem' }}>{Number(amount).toLocaleString()} XOF</div></div>
-	              {depositPaidAmount != null && (
-	                <div style={dlItem}>
+	              {depositPaidAmount != null &&
+              <div style={dlItem}>
 	                  <div style={dtStyle}>Deposit paid amount{depositStatus ? ` (${depositStatus})` : ''}</div>
 	                  <div style={ddStyle}>{Number(depositPaidAmount).toLocaleString()} XOF</div>
 	                </div>
-	              )}
-	              {rentPaidInAdvance != null && Number(rentPaidInAdvance) > 0 && (
-	                <div style={dlItem}>
+              }
+	              {rentPaidInAdvance != null && Number(rentPaidInAdvance) > 0 &&
+              <div style={dlItem}>
 	                  <div style={dtStyle}>Rent paid in advance</div>
 	                  <div style={ddStyle}>{Number(rentPaidInAdvance).toLocaleString()} XOF</div>
 	                </div>
-	              )}
-	              {unpaidRentAmount != null && Number(unpaidRentAmount) > 0 && (
-	                <div style={dlItem}>
+              }
+	              {unpaidRentAmount != null && Number(unpaidRentAmount) > 0 &&
+              <div style={dlItem}>
 	                  <div style={dtStyle}>Unpaid rent</div>
 	                  <div style={ddStyle}>{Number(unpaidRentAmount).toLocaleString()} XOF</div>
 	                </div>
-	              )}
-	              {numberOfMonthsUnpaid != null && Number(numberOfMonthsUnpaid) > 0 && (
-	                <div style={dlItem}>
+              }
+	              {numberOfMonthsUnpaid != null && Number(numberOfMonthsUnpaid) > 0 &&
+              <div style={dlItem}>
 	                  <div style={dtStyle}>Months unpaid</div>
 	                  <div style={ddStyle}>{Number(numberOfMonthsUnpaid)}</div>
 	                </div>
-	              )}
-	              {penaltyToPay != null && Number(penaltyToPay) > 0 && (
-	                <div style={dlItem}>
+              }
+	              {penaltyToPay != null && Number(penaltyToPay) > 0 &&
+              <div style={dlItem}>
 	                  <div style={dtStyle}>Penalty to pay</div>
 	                  <div style={ddStyle}>{Number(penaltyToPay).toLocaleString()} XOF</div>
 	                </div>
-	              )}
-	              {balanceToPayEstimate != null && Number(balanceToPayEstimate) > 0 && (
-	                <div style={dlItem}>
+              }
+	              {balanceToPayEstimate != null && Number(balanceToPayEstimate) > 0 &&
+              <div style={dlItem}>
 	                  <div style={dtStyle}>Balance to pay</div>
 	                  <div style={{ ...ddStyle, fontWeight: 700 }}>{Number(balanceToPayEstimate).toLocaleString()} XOF</div>
 	                </div>
-	              )}
+              }
 	              <div style={dlItem}><div style={dtStyle}>Last payment</div><div style={ddStyle}>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</div></div>
-	              {totalRentCollected != null && (
-	                <div style={dlItem}>
+	              {totalRentCollected != null &&
+              <div style={dlItem}>
 	                  <div style={dtStyle}>Total rent collected</div>
 	                  <div style={{ ...ddStyle, fontWeight: 700, color: '#16a34a' }}>{Number(totalRentCollected).toLocaleString()} XOF</div>
 	                </div>
-	              )}
+              }
 	            </div>
 	          </div>
 
-          {displayProp && (
-            <div style={card}>
+          {displayProp &&
+          <div style={card}>
               <h3 style={sectionTitle}><Building size={18} /> Property details</h3>
               <div style={{ marginTop: '16px' }}>
                 <div style={dlItem}><div style={dtStyle}>Type</div><div style={ddStyle}>{displayProp.type || displayProp.Type || '—'}</div></div>
-                {resolvedOccupancy && (
-                  <div style={dlItem}>
+                {resolvedOccupancy &&
+              <div style={dlItem}>
                     <div style={dtStyle}>Occupancy</div>
                     <div style={ddStyle}>{resolvedOccupancy.occupied}/{resolvedOccupancy.total}</div>
                   </div>
-                )}
+              }
 
-                {resolvedUnit && (
-                  <div style={dlItem}>
+                {resolvedUnit &&
+              <div style={dlItem}>
                     <div style={dtStyle}>Unit status</div>
                     <div style={ddStyle}><span style={statusPill((resolvedUnit.status || resolvedUnit.Status || '').toLowerCase())}>{resolvedUnit.status || resolvedUnit.Status || '—'}</span></div>
                   </div>
-                )}
+              }
 
                 {(() => {
-                  const bedrooms = resolvedUnit?.bedrooms ?? resolvedUnit?.Bedrooms ?? displayProp.bedrooms ?? displayProp.Bedrooms;
-                  const bathrooms = resolvedUnit?.bathrooms ?? resolvedUnit?.Bathrooms ?? displayProp.bathrooms ?? displayProp.Bathrooms;
-                  const occupancyStatus = resolvedOccupancy
-                    ? (resolvedOccupancy.total > 0 && resolvedOccupancy.occupied >= resolvedOccupancy.total ? 'Occupied'
-                      : resolvedOccupancy.occupied === 0 ? 'Vacant'
-                        : 'Partially occupied')
-                    : (displayProp.status || displayProp.Status || '');
-                  return (
-                    <>
-                      {bedrooms != null && (
-                        <div style={dlItem}><div style={dtStyle}>Bedrooms</div><div style={ddStyle}>{bedrooms}</div></div>
-                      )}
-                      {bathrooms != null && (
-                        <div style={dlItem}><div style={dtStyle}>Bathrooms</div><div style={ddStyle}>{bathrooms}</div></div>
-                      )}
+                const bedrooms = resolvedUnit?.bedrooms ?? resolvedUnit?.Bedrooms ?? displayProp.bedrooms ?? displayProp.Bedrooms;
+                const bathrooms = resolvedUnit?.bathrooms ?? resolvedUnit?.Bathrooms ?? displayProp.bathrooms ?? displayProp.Bathrooms;
+                const occupancyStatus = resolvedOccupancy ?
+                resolvedOccupancy.total > 0 && resolvedOccupancy.occupied >= resolvedOccupancy.total ? 'Occupied' :
+                resolvedOccupancy.occupied === 0 ? 'Vacant' :
+                'Partially occupied' :
+                displayProp.status || displayProp.Status || '';
+                return (
+                  <>
+                      {bedrooms != null &&
+                    <div style={dlItem}><div style={dtStyle}>Bedrooms</div><div style={ddStyle}>{bedrooms}</div></div>
+                    }
+                      {bathrooms != null &&
+                    <div style={dlItem}><div style={dtStyle}>Bathrooms</div><div style={ddStyle}>{bathrooms}</div></div>
+                    }
                       <div style={dlItem}>
                         <div style={dtStyle}>Property status</div>
                         <div style={ddStyle}><span style={statusPill((occupancyStatus || '').toLowerCase())}>{occupancyStatus || '—'}</span></div>
                       </div>
-                      {resolvingProperty && (
-                        <div style={{ ...subText, marginTop: '6px' }}>Refreshing property details…</div>
-                      )}
-                    </>
-                  );
-                })()}
+                      {resolvingProperty &&
+                    <div style={{ ...subText, marginTop: '6px' }}>Refreshing property details…</div>
+                    }
+                    </>);
+
+              })()}
               </div>
             </div>
-          )}
+          }
 
           <div style={{ ...card, ...(alertList.length ? {} : { gridColumn: '1 / -1' }) }}>
             <h3 style={sectionTitle}><AlertTriangle size={18} /> Alerts & activity</h3>
-            {alertList.length > 0 ? (
-              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {alertList.map((alert, idx) => (
-                  <li key={alert.ID || alert.id || idx} style={alertItem}>
+            {alertList.length > 0 ?
+            <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {alertList.map((alert, idx) =>
+              <li key={alert.ID || alert.id || idx} style={alertItem}>
                     <div style={alertTitle}>{alert.Title || alert.title || 'Alert'}</div>
                     {alert.Message && <div style={{ ...subText, marginBottom: '4px' }}>{alert.Message}</div>}
                     <div style={alertMeta}>
@@ -563,70 +552,70 @@ const ClientsTab = ({
                       {alert.Amount != null && ` · ${Number(alert.Amount).toLocaleString()} XOF`}
                     </div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p style={{ ...subText, marginTop: '12px' }}>No alerts for this tenant.</p>
-            )}
+              )}
+              </ul> :
+
+            <p style={{ ...subText, marginTop: '12px' }}>No alerts for this tenant.</p>
+            }
           </div>
 
           <div style={card}>
             <h3 style={sectionTitle}><Wrench size={18} /> Maintenances requested</h3>
-            {maintenancesList.length > 0 ? (
-              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {maintenancesList.length > 0 ?
+            <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {maintenancesList.map((m, idx) => {
-                  const mid = m.ID ?? m.id;
-                  const openMaintenanceDetail = () => {
-                    if (mid == null) return;
-                    setMaintenanceDetailLoading(true);
-                    setMaintenanceDetail(null);
-                    salesManagerService.getMaintenance(mid)
-                      .then((data) => setMaintenanceDetail(data))
-                      .catch((err) => addNotification(err?.message || 'Failed to load maintenance details', 'error'))
-                      .finally(() => setMaintenanceDetailLoading(false));
-                  };
-                  return (
-                    <li
-                      key={mid ?? idx}
-                      style={{ ...alertItem, cursor: mid != null ? 'pointer' : 'default' }}
-                      role="button"
-                      tabIndex={0}
-                      onClick={openMaintenanceDetail}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMaintenanceDetail(); } }}
-                    >
+                const mid = m.ID ?? m.id;
+                const openMaintenanceDetail = () => {
+                  if (mid == null) return;
+                  setMaintenanceDetailLoading(true);
+                  setMaintenanceDetail(null);
+                  salesManagerService.getMaintenance(mid).
+                  then((data) => setMaintenanceDetail(data)).
+                  catch((err) => addNotification(err?.message || 'Failed to load maintenance details', 'error')).
+                  finally(() => setMaintenanceDetailLoading(false));
+                };
+                return (
+                  <li
+                    key={mid ?? idx}
+                    style={{ ...alertItem, cursor: mid != null ? 'pointer' : 'default' }}
+                    role="button"
+                    tabIndex={0}
+                    onClick={openMaintenanceDetail}
+                    onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();openMaintenanceDetail();}}}>
+                    
                       <div style={alertTitle}>{m.Issue || m.issue || 'Maintenance'}</div>
                       <div style={alertMeta}>
-                        {(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}
+                        {m.Status || m.status || '—'} · {m.Priority || m.priority || '—'}
                         {m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p style={{ ...subText, marginTop: '12px' }}>No maintenance requests for this tenant.</p>
-            )}
+                    </li>);
+
+              })}
+              </ul> :
+
+            <p style={{ ...subText, marginTop: '12px' }}>No maintenance requests for this tenant.</p>
+            }
           </div>
 
 	          <div style={card}>
 	            <h3 style={sectionTitle}><Receipt size={18} /> Recent payment history</h3>
-	            {paymentsList.length > 0 ? (
-	              <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-	                {paymentsList.slice(0, 5).map((p, idx) => (
-	                  <li key={p.ID || p.id || idx} style={{ ...alertItem, borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+	            {paymentsList.length > 0 ?
+            <ul style={{ margin: '16px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+	                {paymentsList.slice(0, 5).map((p, idx) =>
+              <li key={p.ID || p.id || idx} style={{ ...alertItem, borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
 	                    <div style={alertTitle}>
-	                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}
+	                      {Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {p.Status || p.status || '—'}
 	                    </div>
                     <div style={alertMeta}>
-                      {p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}
+                      {p.Date ? new Date(p.Date).toLocaleDateString() : p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—'}
                       {(p.Method || p.method) && ` · ${p.Method || p.method}`}
                     </div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p style={{ ...subText, marginTop: '12px' }}>No payment history for this tenant.</p>
-            )}
+              )}
+              </ul> :
+
+            <p style={{ ...subText, marginTop: '12px' }}>No payment history for this tenant.</p>
+            }
           </div>
 
           <div style={card}>
@@ -636,30 +625,30 @@ const ClientsTab = ({
               onChange={(e) => setPrivateNoteInput(e.target.value)}
               placeholder="Add a note for future reference (visible only to sales managers)..."
               rows={2}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginTop: '12px', marginBottom: '10px', boxSizing: 'border-box' }}
-            />
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.875rem', resize: 'vertical', marginTop: '12px', marginBottom: '10px', boxSizing: 'border-box' }} />
+            
             <button
               type="button"
               style={{ ...btnPrimary, marginBottom: '16px' }}
               onClick={handleAddPrivateNote}
-              disabled={!privateNoteInput.trim() || addingNote}
-            >
+              disabled={!privateNoteInput.trim() || addingNote}>
+              
               {addingNote ? 'Adding...' : 'Add note'}
             </button>
-            {privateNotesList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {privateNotesList.map((n) => (
-                  <li key={n.id ?? n.ID} style={{ ...alertItem, borderLeftColor: '#6366f1' }}>
+            {privateNotesList.length > 0 ?
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {privateNotesList.map((n) =>
+              <li key={n.id ?? n.ID} style={{ ...alertItem, borderLeftColor: '#6366f1' }}>
                     <div style={alertTitle}>{n.note ?? n.Note}</div>
                     <div style={alertMeta}>
-                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}
+                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : ''}
                     </div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p style={{ ...subText, marginTop: '0' }}>No private notes yet.</p>
-            )}
+              )}
+              </ul> :
+
+            <p style={{ ...subText, marginTop: '0' }}>No private notes yet.</p>
+            }
           </div>
 
           <div style={card}>
@@ -671,46 +660,44 @@ const ClientsTab = ({
               <button
                 type="button"
                 style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px', ...(showSmsComposer ? { borderColor: '#3b82f6', color: '#2563eb', background: '#eff6ff' } : {}) }}
-                onClick={() => { setShowSmsComposer(v => !v); setSmsText(''); }}
-              >
+                onClick={() => {setShowSmsComposer((v) => !v);setSmsText('');}}>
+                
                 <MessageSquare size={16} /> Send Reminder SMS
               </button>
-              <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => { setShowIncidentModal(true); setIncidentForm({ title: '', description: '', priority: 'Medium' }); }}>
+              <button type="button" style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => {setShowIncidentModal(true);setIncidentForm({ title: '', description: '', priority: 'Medium' });}}>
                 <AlertCircle size={16} /> Report Incident
               </button>
             </div>
-            {showSmsComposer && (
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {showSmsComposer &&
+            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
                   Sending to: <strong>{phone || 'No phone number saved'}</strong>
                 </div>
                 <textarea
-                  value={smsText}
-                  onChange={e => setSmsText(e.target.value)}
-                  placeholder="Type your message here..."
-                  rows={3}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.88rem', color: '#334155', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
-                />
+                value={smsText}
+                onChange={(e) => setSmsText(e.target.value)}
+                placeholder="Type your message here..."
+                rows={3}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.88rem', color: '#334155', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+              
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  <button type="button" style={{ ...btnOutline, padding: '8px 14px' }} onClick={() => { setShowSmsComposer(false); setSmsText(''); }}>Cancel</button>
+                  <button type="button" style={{ ...btnOutline, padding: '8px 14px' }} onClick={() => {setShowSmsComposer(false);setSmsText('');}}>Cancel</button>
                   <button
-                    type="button"
-                    style={{ ...btnPrimary, padding: '8px 18px', opacity: (!smsText.trim() || smsSending) ? 0.6 : 1 }}
-                    onClick={handleSendSms}
-                    disabled={!smsText.trim() || smsSending}
-                  >
+                  type="button"
+                  style={{ ...btnPrimary, padding: '8px 18px', opacity: !smsText.trim() || smsSending ? 0.6 : 1 }}
+                  onClick={handleSendSms}
+                  disabled={!smsText.trim() || smsSending}>
+                  
                     <Send size={14} /> {smsSending ? 'Sending…' : 'Send SMS'}
                   </button>
                 </div>
               </div>
-            )}
+            }
           </div>
         </div>
-
-        {/* Report Incident modal */}
-        {showIncidentModal && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => !incidentSubmitting && setShowIncidentModal(false)}>
-            <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={e => e.stopPropagation()}>
+        {showIncidentModal &&
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => !incidentSubmitting && setShowIncidentModal(false)}>
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Report Incident</h3>
                 <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowIncidentModal(false)} disabled={incidentSubmitting}>×</button>
@@ -719,30 +706,30 @@ const ClientsTab = ({
                 <div>
                   <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Title *</label>
                   <input
-                    type="text"
-                    value={incidentForm.title}
-                    onChange={e => setIncidentForm(f => ({ ...f, title: e.target.value }))}
-                    placeholder="Brief description of the issue"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
-                  />
+                  type="text"
+                  value={incidentForm.title}
+                  onChange={(e) => setIncidentForm((f) => ({ ...f, title: e.target.value }))}
+                  placeholder="Brief description of the issue"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
+                
                 </div>
                 <div>
                   <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Description</label>
                   <textarea
-                    value={incidentForm.description}
-                    onChange={e => setIncidentForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder="Provide more details..."
-                    rows={3}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.88rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
-                  />
+                  value={incidentForm.description}
+                  onChange={(e) => setIncidentForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Provide more details..."
+                  rows={3}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.88rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                
                 </div>
                 <div>
                   <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Priority</label>
                   <select
-                    value={incidentForm.priority}
-                    onChange={e => setIncidentForm(f => ({ ...f, priority: e.target.value }))}
-                    style={{ ...selectStyle, width: '100%' }}
-                  >
+                  value={incidentForm.priority}
+                  onChange={(e) => setIncidentForm((f) => ({ ...f, priority: e.target.value }))}
+                  style={{ ...selectStyle, width: '100%' }}>
+                  
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
                     <option value="High">High</option>
@@ -752,18 +739,18 @@ const ClientsTab = ({
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
                   <button type="button" style={{ ...btnOutline }} onClick={() => setShowIncidentModal(false)} disabled={incidentSubmitting}>Cancel</button>
                   <button
-                    type="button"
-                    style={{ ...btnPrimary, opacity: (!incidentForm.title.trim() || incidentSubmitting) ? 0.6 : 1 }}
-                    onClick={handleReportIncident}
-                    disabled={!incidentForm.title.trim() || incidentSubmitting}
-                  >
+                  type="button"
+                  style={{ ...btnPrimary, opacity: !incidentForm.title.trim() || incidentSubmitting ? 0.6 : 1 }}
+                  onClick={handleReportIncident}
+                  disabled={!incidentForm.title.trim() || incidentSubmitting}>
+                  
                     {incidentSubmitting ? 'Submitting…' : 'Submit'}
                   </button>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        }
 
         <div style={{ ...card, marginTop: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
@@ -778,26 +765,24 @@ const ClientsTab = ({
                 setShowEditClientModal(true);
                 setSelectedTenantId(null);
                 setTenantDetail(null);
-              }}
-            >
+              }}>
+              
               Edit tenant
             </button>
           </div>
         </div>
-
-        {/* Maintenance detail modal (when clicking a maintenance in tenant detail) */}
-        {(maintenanceDetail != null || maintenanceDetailLoading) && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => { if (!maintenanceDetailLoading) { setMaintenanceDetail(null); } }}>
+        {(maintenanceDetail != null || maintenanceDetailLoading) &&
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => {if (!maintenanceDetailLoading) {setMaintenanceDetail(null);}}}>
             <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>Maintenance request details</h3>
                 <button type="button" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8', padding: '4px' }} onClick={() => setMaintenanceDetail(null)} disabled={maintenanceDetailLoading}>x</button>
               </div>
               <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                {maintenanceDetailLoading ? (
-                  <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Loading...</p>
-                ) : maintenanceDetail ? (
-                  <div style={{ display: 'grid', gap: '12px' }}>
+                {maintenanceDetailLoading ?
+              <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Loading...</p> :
+              maintenanceDetail ?
+              <div style={{ display: 'grid', gap: '12px' }}>
                     <div><div style={dtStyle}>Property</div><div style={ddStyle}>{maintenanceDetail.property ?? maintenanceDetail.Property ?? '—'}</div></div>
                     <div><div style={dtStyle}>Tenant</div><div style={ddStyle}>{maintenanceDetail.tenant ?? maintenanceDetail.Tenant ?? '—'}</div></div>
                     <div><div style={dtStyle}>Title</div><div style={ddStyle}>{maintenanceDetail.title ?? maintenanceDetail.Title ?? maintenanceDetail.issue ?? maintenanceDetail.Issue ?? '—'}</div></div>
@@ -805,38 +790,36 @@ const ClientsTab = ({
                     <div><div style={dtStyle}>Priority</div><div style={ddStyle}><span style={statusPill((maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '').toLowerCase())}>{maintenanceDetail.priority ?? maintenanceDetail.Priority ?? '—'}</span></div></div>
                     <div><div style={dtStyle}>Status</div><div style={ddStyle}><span style={statusPill((maintenanceDetail.status ?? maintenanceDetail.Status ?? '').toLowerCase().replace(/\s+/g, '-'))}>{maintenanceDetail.status ?? maintenanceDetail.Status ?? '—'}</span></div></div>
                     {(maintenanceDetail.assigned ?? maintenanceDetail.Assigned) && <div><div style={dtStyle}>Assigned to</div><div style={ddStyle}>{maintenanceDetail.assigned ?? maintenanceDetail.Assigned}</div></div>}
-                    <div><div style={dtStyle}>Date reported</div><div style={ddStyle}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : (maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—')}</div></div>
-                    <div><div style={dtStyle}>Created</div><div style={ddStyle}>{maintenanceDetail.createdAt ? new Date(maintenanceDetail.createdAt).toLocaleString() : (maintenanceDetail.CreatedAt ? new Date(maintenanceDetail.CreatedAt).toLocaleString() : '—')}</div></div>
+                    <div><div style={dtStyle}>Date reported</div><div style={ddStyle}>{maintenanceDetail.date ? new Date(maintenanceDetail.date).toLocaleDateString() : maintenanceDetail.Date ? new Date(maintenanceDetail.Date).toLocaleDateString() : '—'}</div></div>
+                    <div><div style={dtStyle}>Created</div><div style={ddStyle}>{maintenanceDetail.createdAt ? new Date(maintenanceDetail.createdAt).toLocaleString() : maintenanceDetail.CreatedAt ? new Date(maintenanceDetail.CreatedAt).toLocaleString() : '—'}</div></div>
                     {(maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours) != null && <div><div style={dtStyle}>Estimated hours</div><div style={ddStyle}>{maintenanceDetail.estimatedHours ?? maintenanceDetail.EstimatedHours}</div></div>}
                     {(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost) != null && <div><div style={dtStyle}>Estimated cost</div><div style={ddStyle}>{(maintenanceDetail.estimatedCost ?? maintenanceDetail.EstimatedCost).toLocaleString()} XOF</div></div>}
-                    <div><div style={dtStyle}>Quote generated</div><div style={ddStyle}>{(maintenanceDetail.quoteGenerated ?? maintenanceDetail.QuoteGenerated) ? 'Yes' : 'No'}</div></div>
+                    <div><div style={dtStyle}>Quote generated</div><div style={ddStyle}>{maintenanceDetail.quoteGenerated ?? maintenanceDetail.QuoteGenerated ? 'Yes' : 'No'}</div></div>
                     {(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate) && <div><div style={dtStyle}>Work start date</div><div style={ddStyle}>{new Date(maintenanceDetail.workStartDate ?? maintenanceDetail.WorkStartDate).toLocaleDateString()}</div></div>}
                     {(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate) && <div><div style={dtStyle}>Work end date</div><div style={ddStyle}>{new Date(maintenanceDetail.workEndDate ?? maintenanceDetail.WorkEndDate).toLocaleDateString()}</div></div>}
                     {(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt) && <div><div style={dtStyle}>Completed at</div><div style={ddStyle}>{new Date(maintenanceDetail.completedAt ?? maintenanceDetail.CompletedAt).toLocaleString()}</div></div>}
-                    <div><div style={dtStyle}>Archived</div><div style={ddStyle}>{(maintenanceDetail.archived ?? maintenanceDetail.Archived) ? 'Yes' : 'No'}</div></div>
-                    {Array.isArray(maintenanceDetail.photos ?? maintenanceDetail.Photos) && (maintenanceDetail.photos ?? maintenanceDetail.Photos).length > 0 && (
-                      <div>
+                    <div><div style={dtStyle}>Archived</div><div style={ddStyle}>{maintenanceDetail.archived ?? maintenanceDetail.Archived ? 'Yes' : 'No'}</div></div>
+                    {Array.isArray(maintenanceDetail.photos ?? maintenanceDetail.Photos) && (maintenanceDetail.photos ?? maintenanceDetail.Photos).length > 0 &&
+                <div>
                         <div style={{ ...dtStyle, marginBottom: '8px' }}>Photos</div>
                         <div style={{ margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {(maintenanceDetail.photos ?? maintenanceDetail.Photos).map((url, i) => (
-                            <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                          {(maintenanceDetail.photos ?? maintenanceDetail.Photos).map((url, i) =>
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
                               <img src={url} alt={`Photo ${i + 1}`} style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
                             </a>
-                          ))}
+                    )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                ) : null}
+                }
+                  </div> :
+              null}
               </div>
             </div>
           </div>
-        )}
-      </div>
-    );
-  }
+        }
+      </div>);
 
-  // Clients list view
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
@@ -845,24 +828,24 @@ const ClientsTab = ({
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>{filteredClients.length} results found</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {selectedClientIds.length > 0 && (
-            <button
-              type="button"
-              style={{ ...btnOutline, borderColor: '#fecaca', color: '#b91c1c' }}
-              onClick={openBulkDeleteModal}
-              title="Delete selected tenants"
-            >
+          {selectedClientIds.length > 0 &&
+          <button
+            type="button"
+            style={{ ...btnOutline, borderColor: '#fecaca', color: '#b91c1c' }}
+            onClick={openBulkDeleteModal}
+            title="Delete selected tenants">
+            
               Delete selected ({selectedClientIds.length})
             </button>
-          )}
+          }
           <button
             style={btnPrimary}
             onClick={() => {
               setImportMode('manual');
               setExcelFile(null);
               setShowTenantCreationModal(true);
-            }}
-          >
+            }}>
+            
             <Plus size={16} />
             Add Tenant
           </button>
@@ -873,8 +856,8 @@ const ClientsTab = ({
               setImportMode('excel');
               setExcelFile(null);
               setShowTenantCreationModal(true);
-            }}
-          >
+            }}>
+            
             <FileSpreadsheet size={16} />
             Import from Excel
           </button>
@@ -889,21 +872,21 @@ const ClientsTab = ({
         <div style={metricCard}>
           <p style={metricLabel}>Active Tenants</p>
           <p style={metricValue}>
-            {filteredClients.filter(client => (client.Status || client.status || '').toString().toLowerCase() === 'active').length}
+            {filteredClients.filter((client) => (client.Status || client.status || '').toString().toLowerCase() === 'active').length}
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a', marginLeft: '8px' }}>+1.5%</span>
           </p>
         </div>
         <div style={metricCard}>
           <p style={metricLabel}>Overdue Accounts</p>
           <p style={metricValue}>
-            {filteredClients.filter(client => (client.Status || client.status || '').toString().toLowerCase() === 'overdue').length}
+            {filteredClients.filter((client) => (client.Status || client.status || '').toString().toLowerCase() === 'overdue').length}
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', marginLeft: '8px' }}>-1.5%</span>
           </p>
         </div>
         <div style={metricCard}>
           <p style={metricLabel}>Waiting List</p>
           <p style={metricValue}>
-            {filteredClients.filter(client => {
+            {filteredClients.filter((client) => {
               const s = (client.Status || client.status || '').toString().toLowerCase().replace(/\s+/g, ' ');
               return s === 'waiting list' || s === 'waitinglist';
             }).length}
@@ -926,8 +909,8 @@ const ClientsTab = ({
           value={clientStatusFilter}
           onChange={(e) => setClientStatusFilter(e.target.value)}
           style={selectStyle}
-          aria-label="Filter by status"
-        >
+          aria-label="Filter by status">
+          
           <option value="">All statuses</option>
           <option value="Active">Active</option>
           <option value="Overdue">Overdue</option>
@@ -940,29 +923,29 @@ const ClientsTab = ({
           value={clientSearchText}
           onChange={(e) => setClientSearchText(e.target.value)}
           style={{ ...searchBar, padding: '10px 14px' }}
-          aria-label="Search tenants"
-        />
+          aria-label="Search tenants" />
+        
         <input
           type="text"
           placeholder="Filter by property"
           value={clientPropertyFilter}
           onChange={(e) => setClientPropertyFilter(e.target.value)}
           style={{ ...searchBar, padding: '10px 14px', minWidth: '180px' }}
-          aria-label="Filter by property"
-        />
-        {(clientStatusFilter || clientPropertyFilter || clientSearchText) && (
-          <button
-            type="button"
-            style={btnOutline}
-            onClick={() => {
-              setClientStatusFilter('');
-              setClientPropertyFilter('');
-              setClientSearchText('');
-            }}
-          >
+          aria-label="Filter by property" />
+        
+        {(clientStatusFilter || clientPropertyFilter || clientSearchText) &&
+        <button
+          type="button"
+          style={btnOutline}
+          onClick={() => {
+            setClientStatusFilter('');
+            setClientPropertyFilter('');
+            setClientSearchText('');
+          }}>
+          
             Clear filters
           </button>
-        )}
+        }
       </div>
 
       <div style={card}>
@@ -978,9 +961,9 @@ const ClientsTab = ({
                   <input
                     type="checkbox"
                     checked={allFilteredSelected}
-                    onChange={(e) => { e.stopPropagation(); toggleSelectAllFiltered(); }}
-                    aria-label="Select all filtered tenants"
-                  />
+                    onChange={(e) => {e.stopPropagation();toggleSelectAllFiltered();}}
+                    aria-label="Select all filtered tenants" />
+                  
                 </th>
                 <th style={thStyle}>Client</th>
               <th style={thStyle}>Appartment</th>
@@ -992,26 +975,26 @@ const ClientsTab = ({
             </tr>
           </thead>
           <tbody>
-            {filteredClients.length > 0 ? (
-              filteredClients.map(client => {
+            {filteredClients.length > 0 ?
+              filteredClients.map((client) => {
                 const clientId = client.id ?? client.ID;
                 const isSelected = clientId != null && selectedClientIds.includes(clientId);
                 return (
-              <tr
-                key={clientId ?? client.Email ?? client.email}
-                onClick={() => clientId != null && setSelectedTenantId(clientId)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (clientId != null) setSelectedTenantId(clientId); } }}
-                style={{ cursor: clientId != null ? 'pointer' : 'default' }}
-              >
+                  <tr
+                    key={clientId ?? client.Email ?? client.email}
+                    onClick={() => clientId != null && setSelectedTenantId(clientId)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();if (clientId != null) setSelectedTenantId(clientId);}}}
+                    style={{ cursor: clientId != null ? 'pointer' : 'default' }}>
+                    
                 <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={(e) => { e.stopPropagation(); toggleSelectClient(clientId); }}
-                        aria-label={`Select tenant ${client.Name || client.name || ''}`}
-                      />
+                        onChange={(e) => {e.stopPropagation();toggleSelectClient(clientId);}}
+                        aria-label={`Select tenant ${client.Name || client.name || ''}`} />
+                      
                 </td>
                     <td style={tdStyle}>
                       <div>
@@ -1033,7 +1016,7 @@ const ClientsTab = ({
                         {client.Status || client.status || 'Unknown'}
                       </span>
                     </td>
-                    <td style={tdStyle}>{(client.LastPayment || client.lastPayment) ? new Date(client.LastPayment || client.lastPayment).toLocaleDateString() : 'N/A'}</td>
+                    <td style={tdStyle}>{client.LastPayment || client.lastPayment ? new Date(client.LastPayment || client.lastPayment).toLocaleDateString() : 'N/A'}</td>
                     <td style={tdStyle}>{(client.Amount || client.amount || 0).toLocaleString()} XOF</td>
                     <td style={tdStyle}>
                       <div>
@@ -1044,22 +1027,20 @@ const ClientsTab = ({
                     <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                       <button style={{ ...btnOutline, padding: '6px 12px' }} onClick={() => handleEditClient(client)} title="Edit">Edit</button>
                 </td>
-              </tr>
-                );
-              })
-            ) : (
+              </tr>);
+
+              }) :
+
               <tr>
                   <td colSpan={8} style={emptyRow}>No tenants found. Start the backend to see real data.</td>
               </tr>
-            )}
+              }
           </tbody>
         </table>
         </div>
       </div>
-
-      {/* Waiting List Section */}
-      {waitingListClients.length > 0 && (
-        <div style={{ ...card, marginTop: '24px' }}>
+      {waitingListClients.length > 0 &&
+      <div style={{ ...card, marginTop: '24px' }}>
           <div style={{ marginBottom: '16px' }}>
             <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Waiting List Tenants</h3>
             <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Tenants waiting for available properties.</p>
@@ -1077,8 +1058,8 @@ const ClientsTab = ({
                 </tr>
               </thead>
               <tbody>
-                {waitingListClients.map(client => (
-                  <tr key={client.ID || client.id}>
+                {waitingListClients.map((client) =>
+              <tr key={client.ID || client.id}>
                     <td style={tdStyle}><input type="checkbox" /></td>
                     <td style={tdStyle}>
                       <div>
@@ -1093,16 +1074,14 @@ const ClientsTab = ({
                       <button style={{ ...btnOutline, padding: '6px 12px' }} onClick={() => handleEditClient(client)} title="Edit">Edit</button>
                     </td>
                   </tr>
-                ))}
+              )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
-
-      {/* Unpaid Rents Section */}
-      {unpaidRents.length > 0 && (
-        <div style={{ ...card, marginTop: '24px' }}>
+      }
+      {unpaidRents.length > 0 &&
+      <div style={{ ...card, marginTop: '24px' }}>
           <div style={{ marginBottom: '16px' }}>
             <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Unpaid Rents</h3>
             <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Manage overdue payments and update payment status.</p>
@@ -1121,8 +1100,8 @@ const ClientsTab = ({
                 </tr>
               </thead>
               <tbody>
-                {unpaidRents.map(unpaid => (
-                  <tr key={unpaid.ID || unpaid.id}>
+                {unpaidRents.map((unpaid) =>
+              <tr key={unpaid.ID || unpaid.id}>
                     <td style={tdStyle}><input type="checkbox" /></td>
                     <td style={tdStyle}>
                       <div>
@@ -1138,19 +1117,19 @@ const ClientsTab = ({
                       <button style={{ ...btnOutline, padding: '6px 12px' }} onClick={() => handleEditUnpaidRent(unpaid)} title="Update Payment">Update</button>
                     </td>
                   </tr>
-                ))}
+              )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+      }
 
       <Modal
         isOpen={showBulkDeleteModal}
-        onClose={() => { if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false); }}
+        onClose={() => {if (!bulkDeleteSubmitting) setShowBulkDeleteModal(false);}}
         title="Confirm bulk tenant deletion"
-        size="sm"
-      >
+        size="sm">
+        
         <p style={{ marginTop: 0, color: '#6b7280', fontSize: '0.9rem' }}>
           You are about to permanently delete <strong>{selectedClientIds.length}</strong> tenant(s). Enter your password to continue.
         </p>
@@ -1161,30 +1140,30 @@ const ClientsTab = ({
             onChange={(e) => setBulkDeletePassword(e.target.value)}
             placeholder="Your password"
             style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-            disabled={bulkDeleteSubmitting}
-          />
+            disabled={bulkDeleteSubmitting} />
+          
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
             <button
               type="button"
               style={btnOutline}
               onClick={() => setShowBulkDeleteModal(false)}
-              disabled={bulkDeleteSubmitting}
-            >
+              disabled={bulkDeleteSubmitting}>
+              
               Cancel
             </button>
             <button
               type="button"
               style={{ ...btnPrimary, background: '#dc2626' }}
               onClick={confirmBulkDelete}
-              disabled={bulkDeleteSubmitting || !bulkDeletePassword.trim()}
-            >
+              disabled={bulkDeleteSubmitting || !bulkDeletePassword.trim()}>
+              
               {bulkDeleteSubmitting ? 'Deleting…' : 'Delete'}
             </button>
           </div>
         </div>
       </Modal>
-    </div>
-  );
+    </div>);
+
 };
 
 export default ClientsTab;

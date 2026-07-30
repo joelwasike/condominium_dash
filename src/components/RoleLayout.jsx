@@ -14,7 +14,7 @@ const roleLabels = {
   landlord: 'Landlord',
   accounting: 'Accounting',
   salesmanager: 'Sales Manager',
-  superadmin: 'Super Admin',
+  superadmin: 'Super Admin'
 };
 
 const RoleLayout = ({
@@ -32,8 +32,6 @@ const RoleLayout = ({
   onSearch,
   defaultDashboardRoute = '/'
 }) => {
-  // Auto-detect company logo from localStorage (set during login)
-  // Company logo from API always takes priority over hardcoded fallbacks
   const brand = useMemo(() => {
     const b = { ...brandProp };
     try {
@@ -42,7 +40,6 @@ const RoleLayout = ({
       if (companyLogo) {
         b.logoImage = companyLogo;
       }
-      // Use company name if available
       if (storedUser.company) {
         b.name = storedUser.company;
       }
@@ -56,13 +53,9 @@ const RoleLayout = ({
   const navigate = useNavigate();
 
   const currentActiveId = activeId !== undefined ? activeId : internalActive;
-
-  // Handle logo click to return to dashboard
   const handleLogoClick = () => {
     const userProfile = JSON.parse(localStorage.getItem('user') || '{}');
     const role = userProfile?.role;
-    
-    // Navigate to appropriate dashboard based on role
     const roleRoutes = {
       'tenant': '/tenant',
       'admin': '/administrative',
@@ -73,30 +66,25 @@ const RoleLayout = ({
       'superadmin': '/super-admin',
       'agency_director': '/agency-director'
     };
-    
+
     const route = roleRoutes[role] || defaultDashboardRoute;
     navigate(route);
-    // Reset to overview tab if possible
     if (onActiveChange && menu.length > 0) {
       onActiveChange(menu[0].id);
     }
   };
-
-  // Handle search
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
-    
+
     if (onSearch) {
       onSearch(query);
     }
   };
-
-  // Handle navigation to settings
   const handleNavigateToSettings = () => {
     const userProfile = JSON.parse(localStorage.getItem('user') || '{}');
     const role = userProfile?.role;
-    
+
     const roleRoutes = {
       'tenant': '/tenant',
       'admin': '/administrative',
@@ -107,17 +95,13 @@ const RoleLayout = ({
       'superadmin': '/super-admin',
       'agency_director': '/agency-director'
     };
-    
+
     const route = roleRoutes[role] || '/';
     navigate(`${route}?tab=settings`);
-    
-    // Try to set active tab to settings if available
     if (onActiveChange) {
       onActiveChange('settings');
     }
   };
-
-  // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 768) {
@@ -127,8 +111,6 @@ const RoleLayout = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  // Close sidebar when menu item is clicked on mobile
   const handleMenuClick = (item) => {
     if (item.onSelect) {
       item.onSelect();
@@ -139,7 +121,6 @@ const RoleLayout = ({
     if (activeId === undefined) {
       setInternalActive(item.id);
     }
-    // Close sidebar on mobile after selection
     if (window.innerWidth <= 768) {
       setSidebarOpen(false);
     }
@@ -154,11 +135,8 @@ const RoleLayout = ({
       return null;
     }
   });
-
-  // Update userProfile when localStorage changes (e.g., profile picture upload)
   useEffect(() => {
     const handleStorageChange = (e) => {
-      // Handle cross-tab storage events
       if (e && e.key === 'user') {
         try {
           const updated = JSON.parse(e.newValue || '{}');
@@ -170,7 +148,6 @@ const RoleLayout = ({
     };
 
     const handleCustomUpdate = () => {
-      // Handle custom event for same-tab updates
       try {
         const stored = localStorage.getItem('user');
         if (stored) {
@@ -181,10 +158,7 @@ const RoleLayout = ({
         console.error('Error parsing stored user:', error);
       }
     };
-
-    // Listen for storage events (from other tabs/windows)
     window.addEventListener('storage', handleStorageChange);
-    // Listen for custom event (from same tab)
     window.addEventListener('userProfileUpdated', handleCustomUpdate);
 
     return () => {
@@ -193,43 +167,42 @@ const RoleLayout = ({
     };
   }, []);
 
-  const roleLabel = userProfile?.role ? (roleLabels[userProfile.role] || userProfile.role) : 'User';
+  const roleLabel = userProfile?.role ? roleLabels[userProfile.role] || userProfile.role : 'User';
 
   return (
     <div className="role-layout technician-dashboard">
-      {/* Mobile Menu Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="mobile-sidebar-overlay" 
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {sidebarOpen &&
+      <div
+        className="mobile-sidebar-overlay"
+        onClick={() => setSidebarOpen(false)} />
+
+      }
       
       <aside className={`role-sidebar technician-sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-brand">
           <button
             className="brand-logo-button"
             onClick={handleLogoClick}
-            title={`${t('nav.dashboard')} - ${brand.name}`}
-          >
+            title={`${t('nav.dashboard')} - ${brand.name}`}>
+            
             <div className="brand-logo">
-              {brand.logoImage ? (
-                <img src={brand.logoImage} alt={brand.name || 'Brand'} />
-              ) : (
-                brand.logo
-              )}
+              {brand.logoImage ?
+              <img src={brand.logoImage} alt={brand.name || 'Brand'} /> :
+
+              brand.logo
+              }
             </div>
-            {brand.name && (
-              <div className="brand-text">
+            {brand.name &&
+            <div className="brand-text">
                 <span className="brand-name">{brand.name}</span>
                 {brand.caption && <span className="brand-caption">{brand.caption}</span>}
               </div>
-            )}
+            }
           </button>
         </div>
 
         <nav className="sidebar-menu sidebar-navigation">
-          {menu.map(item => {
+          {menu.map((item) => {
             const Icon = item.icon;
             const isActive = item.id === currentActiveId || item.active;
             return (
@@ -237,32 +210,32 @@ const RoleLayout = ({
                 key={item.id}
                 type="button"
                 className={`menu-item sidebar-item ${isActive ? 'active' : ''}`}
-                onClick={() => handleMenuClick(item)}
-              >
+                onClick={() => handleMenuClick(item)}>
+                
                 {Icon && <Icon size={20} />}
                 <span>{item.label}</span>
-              </button>
-            );
+              </button>);
+
           })}
         </nav>
 
         <div className="sidebar-footer">
-          {footerActions?.map(action => {
+          {footerActions?.map((action) => {
             const Icon = action.icon;
             return (
               <button
                 key={action.id}
                 type="button"
                 className={`footer-button ${action.variant || ''}`}
-                onClick={action.onClick}
-              >
+                onClick={action.onClick}>
+                
                 {Icon && <Icon size={18} />}
                 <span>{action.label}</span>
-              </button>
-            );
+              </button>);
+
           })}
-          {!footerActions && (
-            <>
+          {!footerActions &&
+          <>
               <button className="footer-button support sidebar-support">
                 <LifeBuoy size={18} />
                 <span>Support</span>
@@ -272,7 +245,7 @@ const RoleLayout = ({
                 <span>Sign Out</span>
               </button>
             </>
-          )}
+          }
         </div>
       </aside>
 
@@ -285,80 +258,80 @@ const RoleLayout = ({
             justifyContent: 'flex-end',
             alignItems: 'center',
             width: '100%',
-            boxSizing: 'border-box',
-          }}
-        >
+            boxSizing: 'border-box'
+          }}>
+          
           <button
             className="mobile-menu-toggle"
             style={{ marginRight: 'auto' }}
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label="Toggle menu"
-          >
+            aria-label="Toggle menu">
+            
             {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
 
-          {!hideSearch && (
-            <div className="topbar-search">
+          {!hideSearch &&
+          <div className="topbar-search">
               <Search size={18} />
               <input
-                type="text"
-                placeholder={t('common.search')}
-                value={searchQuery}
-                onChange={handleSearchChange}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && onSearch) {
-                    onSearch(searchQuery);
-                  }
-                }}
-              />
+              type="text"
+              placeholder={t('common.search')}
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && onSearch) {
+                  onSearch(searchQuery);
+                }
+              }} />
+            
             </div>
-          )}
+          }
           <div
             className="topbar-actions"
             style={{
               display: 'flex',
               alignItems: 'center',
               marginLeft: 'auto',
-              flexShrink: 0,
-            }}
-          >
+              flexShrink: 0
+            }}>
+            
             <LanguageSelector />
             
-            {headerActions?.map(action => {
+            {headerActions?.map((action) => {
               const Icon = action.icon;
               return (
                 <button key={action.id} type="button" className="icon-button" onClick={action.onClick}>
                   {Icon ? <Icon size={18} /> : action.content}
-                </button>
-              );
+                </button>);
+
             })}
-            {!headerActions && (
-              <>
+            {!headerActions &&
+            <>
                 <NotificationDropdown userId={userProfile?.id || userProfile?.ID} />
               </>
-            )}
+            }
             
             <ProfileDropdown
               userProfile={userProfile}
               onLogout={onLogout}
-              onNavigateToSettings={handleNavigateToSettings}
-            />
+              onNavigateToSettings={handleNavigateToSettings} />
+            
           </div>
         </header>
 
         <div className="role-content technician-content">
-          {(title || subtitle) && (
-            <div className="role-page-header">
+          {(title || subtitle) &&
+          <div className="role-page-header">
               {title && <h1>{title}</h1>}
               {subtitle && <p>{subtitle}</p>}
             </div>
-          )}
+          }
           {children({ activeId: currentActiveId })}
           <div className="role-content-spacer" aria-hidden="true" />
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default RoleLayout;

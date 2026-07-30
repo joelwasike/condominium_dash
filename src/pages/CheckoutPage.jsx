@@ -8,8 +8,8 @@ const CheckoutPage = () => {
         <h1>Checkout</h1>
         <p>Checkout page content coming soon...</p>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default CheckoutPage;

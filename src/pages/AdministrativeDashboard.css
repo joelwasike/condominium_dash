@@ -1,12 +1,9 @@
-/* Sales Manager Dashboard Styles – matching Super Admin Dashboard exactly */
 .administrative-content {
   padding: 24px;
   background: transparent;
   min-height: calc(100vh - 60px);
   font-family: 'Poppins', sans-serif;
 }
-
-/* === Overview (Vue d'ensemble) === */
 .sa-overview-page {
   display: flex;
   flex-direction: column;
@@ -224,9 +221,6 @@
   font-size: 0.8rem;
   color: #6b7280;
 }
-
-/* === Generic table + notification reused by new UI === */
-
 .sa-table-wrapper {
   margin-top: 8px;
 }
@@ -364,8 +358,6 @@
   background: rgba(16, 185, 129, 0.12);
   color: #047857;
 }
-
-/* === Transactions (Historique des transactions) === */
 .sa-transactions-page {
   display: flex;
   flex-direction: column;
@@ -457,8 +449,6 @@
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
-
-/* === Clients (Liste des clients) === */
 .sa-clients-page {
   display: flex;
   flex-direction: column;
@@ -548,8 +538,6 @@
   font-size: 0.8rem;
   cursor: pointer;
 }
-
-/* === Alerts Page === */
 .sa-alerts-page {
   display: flex;
   flex-direction: column;
@@ -572,8 +560,6 @@
   align-items: center;
   gap: 12px;
 }
-
-/* === Occupancy Page === */
 .sa-occupancy-page {
   display: flex;
   flex-direction: column;
@@ -596,8 +582,6 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
-
-/* Notification System */
 .notifications-container {
   position: fixed;
   top: 20px;
@@ -667,8 +651,6 @@
     opacity: 1;
   }
 }
-
-/* Responsive Notification tweaks */
 @media (max-width: 768px) {
   .notifications-container {
     top: 10px;
@@ -680,15 +662,11 @@
     max-width: none;
   }
 }
-
-/* Responsive adjustments */
 @media (max-width: 1024px) {
   .sa-overview-top {
     grid-template-columns: 1fr;
   }
 }
-
-/* === Chat Page === */
 .sa-chat-page {
   display: flex;
   width: 100%;
@@ -958,8 +936,6 @@
     grid-template-columns: 1fr;
   }
 }
-
-/* Form styles matching Super Admin */
 .sa-form {
   padding: 0;
 }
@@ -1015,8 +991,6 @@
   cursor: pointer;
   transition: all 0.2s;
 }
-
-/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1244,8 +1218,6 @@
   flex: 1;
   min-width: 220px;
 }
-
-/* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .sa-overview-metrics {
     grid-template-columns: 1fr;

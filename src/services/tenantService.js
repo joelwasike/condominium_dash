@@ -4,19 +4,16 @@ const buildAuthHeaders = () => {
   const token = localStorage.getItem('token');
   if (!token) return {};
   const tokenStr = String(token).trim();
-  const sanitizedToken = tokenStr
-    .split('')
-    .map(char => {
-      const code = char.charCodeAt(0);
-      return (code >= 32 && code <= 126) ? char : '';
-    })
-    .join('');
+  const sanitizedToken = tokenStr.
+  split('').
+  map((char) => {
+    const code = char.charCodeAt(0);
+    return code >= 32 && code <= 126 ? char : '';
+  }).
+  join('');
   return sanitizedToken ? { Authorization: sanitizedToken } : {};
 };
-
-// Tenant API Service
 export const tenantService = {
-  // Payment APIs
   recordPayment: async (paymentData) => {
     const url = buildApiUrl('/api/tenant/payments');
     return await apiRequest(url, {
@@ -24,8 +21,6 @@ export const tenantService = {
       body: JSON.stringify(paymentData)
     });
   },
-
-  // Live MoMo payment — initiates a USSD prompt on the user's phone
   payViaMoMo: async ({ provider, phone, amount, property, chargeType, otp }) => {
     const url = buildApiUrl('/api/payments/rent');
     return await apiRequest(url, {
@@ -40,16 +35,14 @@ export const tenantService = {
       })
     });
   },
-
-  // Utility bill payment flow (CIE / SODECI) via Intouch biller API
   consultUtilityBills: async ({ billType, refContrat }) => {
     const url = buildApiUrl('/api/tenant/bills/consultation');
     return await apiRequest(url, {
       method: 'POST',
       body: JSON.stringify({
         billType,
-        refContrat,
-      }),
+        refContrat
+      })
     });
   },
 
@@ -64,12 +57,10 @@ export const tenantService = {
         otp: otp || '',
         amount,
         refContrat,
-        numFacture: numFacture || '',
-      }),
+        numFacture: numFacture || ''
+      })
     });
   },
-
-  // Poll MoMo transaction status
   checkMoMoStatus: async (transactionId) => {
     const url = buildApiUrl('/api/payments/status');
     return await apiRequest(url, {
@@ -104,8 +95,6 @@ export const tenantService = {
       method: 'POST'
     });
   },
-
-  // Maintenance APIs
   createMaintenance: async (maintenanceData) => {
     const url = buildApiUrl('/api/tenant/maintenance');
     return await apiRequest(url, {
@@ -118,8 +107,6 @@ export const tenantService = {
     const url = buildApiUrl('/api/tenant/maintenance');
     return await apiRequest(url);
   },
-
-  // Overview APIs
   getOverview: async () => {
     const url = buildApiUrl('/api/tenant/overview');
     return await apiRequest(url);
@@ -129,14 +116,10 @@ export const tenantService = {
     const url = buildApiUrl('/api/tenant/lease');
     return await apiRequest(url);
   },
-
-  // Get advertisements
   getAdvertisements: async () => {
     const url = buildApiUrl('/api/tenant/advertisements');
     return await apiRequest(url);
   },
-
-  // Terminate lease
   terminateLease: async (terminationData) => {
     const url = buildApiUrl('/api/tenant/lease/terminate');
     const formData = new FormData();
@@ -153,7 +136,7 @@ export const tenantService = {
       formData.append('terminationLetter', terminationData.terminationLetter);
     }
     if (Array.isArray(terminationData.supportingDocs)) {
-      terminationData.supportingDocs.forEach(file => {
+      terminationData.supportingDocs.forEach((file) => {
         if (file) formData.append('supportingDocs', file);
       });
     }
@@ -161,9 +144,9 @@ export const tenantService = {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        ...buildAuthHeaders(),
+        ...buildAuthHeaders()
       },
-      body: formData,
+      body: formData
     });
 
     if (!response.ok) {
@@ -173,14 +156,10 @@ export const tenantService = {
 
     return await response.json();
   },
-
-  // List my transfer payment requests (history with status)
   listTransferRequests: async () => {
     const url = buildApiUrl('/api/tenant/payments/transfers');
     return await apiRequest(url);
   },
-
-  // Transfer payment request (files = array of document URLs from Cloudinary)
   transferPaymentRequest: async (transferData) => {
     const url = buildApiUrl('/api/tenant/payments/transfer');
     const body = {
@@ -201,8 +180,6 @@ export const tenantService = {
       body: JSON.stringify(body)
     });
   },
-
-  // Upload profile picture
   uploadProfilePicture: async (profilePictureURL) => {
     const url = buildApiUrl('/api/tenant/profile/picture');
     return await apiRequest(url, {
@@ -212,8 +189,6 @@ export const tenantService = {
       })
     });
   },
-
-  // Security Deposit Payment
   paySecurityDeposit: async (depositData) => {
     const url = buildApiUrl('/api/tenant/deposits/payment');
     return await apiRequest(url, {
@@ -221,20 +196,14 @@ export const tenantService = {
       body: JSON.stringify(depositData)
     });
   },
-
-  // Get security deposit status
   getSecurityDeposit: async () => {
     const url = buildApiUrl('/api/tenant/deposits');
     return await apiRequest(url);
   },
-
-  // Get technician contacts
   getTechnicianContacts: async () => {
     const url = buildApiUrl('/api/tenant/technician-contacts');
     return await apiRequest(url);
   },
-
-  // Get my state of entry/exit (inventory) records filled by technician
   getMyInventory: async () => {
     const url = buildApiUrl('/api/tenant/inventory');
     return await apiRequest(url);

@@ -15,8 +15,8 @@ export function usePagination(initialPageSize: number = 20): UsePaginationReturn
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
 
-  const nextPage = useCallback(() => setPage(p => p + 1), []);
-  const prevPage = useCallback(() => setPage(p => Math.max(1, p - 1)), []);
+  const nextPage = useCallback(() => setPage((p) => p + 1), []);
+  const prevPage = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
   const goToPage = useCallback((p: number) => setPage(p), []);
 
   const queryString = `?page=${page}&pageSize=${pageSize}`;

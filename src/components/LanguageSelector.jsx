@@ -8,9 +8,9 @@ const LanguageSelector = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const languages = [
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  ];
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' }];
+
 
   useEffect(() => {
     const handleLanguageChange = (event) => {
@@ -18,11 +18,7 @@ const LanguageSelector = () => {
       setCurrentLang(newLang);
       setIsOpen(false);
     };
-
-    // Listen for language change events
     window.addEventListener('languageChange', handleLanguageChange);
-    
-    // Also check localStorage periodically in case it was changed elsewhere
     const interval = setInterval(() => {
       const storedLang = getLanguage();
       if (storedLang !== currentLang) {
@@ -40,11 +36,10 @@ const LanguageSelector = () => {
     setLanguage(langCode);
     setCurrentLang(langCode);
     setIsOpen(false);
-    // Dispatch event to trigger re-renders in components using translations
     window.dispatchEvent(new CustomEvent('languageChange', { detail: langCode }));
   };
 
-  const currentLanguage = languages.find(lang => lang.code === currentLang) || languages[0];
+  const currentLanguage = languages.find((lang) => lang.code === currentLang) || languages[0];
 
   return (
     <div className="language-selector-wrapper">
@@ -52,38 +47,38 @@ const LanguageSelector = () => {
         className="language-selector-button"
         onClick={() => setIsOpen(!isOpen)}
         aria-label={t('language.select')}
-        title={t('language.select')}
-      >
+        title={t('language.select')}>
+        
         <Globe size={18} />
         <span className="language-flag">{currentLanguage.flag}</span>
         <span className="language-code">{currentLanguage.code.toUpperCase()}</span>
       </button>
 
-      {isOpen && (
-        <>
+      {isOpen &&
+      <>
           <div
-            className="language-selector-overlay"
-            onClick={() => setIsOpen(false)}
-          />
+          className="language-selector-overlay"
+          onClick={() => setIsOpen(false)} />
+        
           <div className="language-selector-dropdown">
-            {languages.map(lang => (
-              <button
-                key={lang.code}
-                className={`language-option ${currentLang === lang.code ? 'active' : ''}`}
-                onClick={() => handleLanguageSelect(lang.code)}
-              >
+            {languages.map((lang) =>
+          <button
+            key={lang.code}
+            className={`language-option ${currentLang === lang.code ? 'active' : ''}`}
+            onClick={() => handleLanguageSelect(lang.code)}>
+            
                 <span className="language-flag">{lang.flag}</span>
                 <span className="language-name">{lang.name}</span>
-                {currentLang === lang.code && (
-                  <Check size={16} className="check-icon" />
-                )}
+                {currentLang === lang.code &&
+            <Check size={16} className="check-icon" />
+            }
               </button>
-            ))}
+          )}
           </div>
         </>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };
 
 export default LanguageSelector;

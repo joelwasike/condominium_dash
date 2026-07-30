@@ -236,8 +236,6 @@
   font-family: 'Poppins', sans-serif;
   line-height: 1.6;
 }
-
-/* Mobile responsiveness */
 @media (max-width: 768px) {
   .form-row {
     grid-template-columns: 1fr;

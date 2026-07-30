@@ -33,7 +33,7 @@ export const buildRentReceiptContext = (tenant, paymentAmount) => {
     tenant?.balanceToPayEstimate ??
     tenant?.BalanceToPayEstimate
   );
-  const arrearsDue = directDue > 0 ? directDue : Math.max(0, (monthlyRent * monthsInArrears) - priorAdvance);
+  const arrearsDue = directDue > 0 ? directDue : Math.max(0, monthlyRent * monthsInArrears - priorAdvance);
   const totalDueBeforePayment = arrearsDue + monthlyRent;
   const rentPaidAdvance = Math.max(0, paymentAmount - totalDueBeforePayment);
   const balanceAfterPayment = Math.max(0, totalDueBeforePayment - paymentAmount);
@@ -50,7 +50,7 @@ export const buildRentReceiptContext = (tenant, paymentAmount) => {
     BalanceAfterPayment: balanceAfterPayment,
     balanceAfterPayment,
     TotalDueBeforePayment: totalDueBeforePayment,
-    totalDueBeforePayment,
+    totalDueBeforePayment
   };
 };
 

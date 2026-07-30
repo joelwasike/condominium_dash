@@ -9,18 +9,18 @@ const tdStyle = { padding: '14px 16px', fontSize: '0.88rem', color: '#334155', b
 const emptyState = { textAlign: 'center', padding: '48px 24px', color: '#94a3b8', fontSize: '0.95rem' };
 const btnPrimary = { padding: '8px 14px', borderRadius: '12px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, cursor: 'pointer' };
 const btnOutline = { padding: '8px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' };
-const btnActive  = { padding: '8px 14px', borderRadius: '12px', border: '2px solid #3b82f6', background: '#eff6ff', color: '#2563eb', fontWeight: 700, cursor: 'pointer' };
+const btnActive = { padding: '8px 14px', borderRadius: '12px', border: '2px solid #3b82f6', background: '#eff6ff', color: '#2563eb', fontWeight: 700, cursor: 'pointer' };
 const btnAllActive = { padding: '8px 14px', borderRadius: '12px', border: '2px solid #16a34a', background: '#f0fdf4', color: '#15803d', fontWeight: 700, cursor: 'pointer' };
 const pill = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '4px 12px', borderRadius: '999px', border: '2px solid #86efac', color: '#16a34a', fontWeight: 700, fontSize: '0.82rem', background: '#f0fdf4', cursor: 'pointer' };
 
 const AlertsTab = () => {
-  const [view, setView] = useState('list'); // list | detail | bulk-select | bulk-unpaid | bulk-all
+  const [view, setView] = useState('list');
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [tenants, setTenants] = useState([]);
   const [tenantsLoading, setTenantsLoading] = useState(false);
-  const [compose, setCompose] = useState(null); // { tenant, channel }
+  const [compose, setCompose] = useState(null);
   const [bulkChannel, setBulkChannel] = useState('sms');
   const [bulkSelectedIds, setBulkSelectedIds] = useState([]);
   const [bulkTenants, setBulkTenants] = useState([]);
@@ -88,8 +88,8 @@ const AlertsTab = () => {
         clientId,
         channel,
         message,
-        subject: channel === 'email' ? (subject || 'Alert') : undefined,
-        urgency: 'Low',
+        subject: channel === 'email' ? subject || 'Alert' : undefined,
+        urgency: 'Low'
       });
       await loadProperties();
       if (selectedProperty?.id || selectedProperty?.ID) {
@@ -110,7 +110,7 @@ const AlertsTab = () => {
     return (
       <div>
         <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button type="button" style={btnOutline} onClick={() => { setView('list'); setSelectedProperty(null); setTenants([]); }}>
+          <button type="button" style={btnOutline} onClick={() => {setView('list');setSelectedProperty(null);setTenants([]);}}>
             <ArrowLeft size={16} style={{ marginRight: 6 }} />
             Back
           </button>
@@ -121,47 +121,47 @@ const AlertsTab = () => {
         </div>
 
         <div style={card}>
-          {compose ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '18px', alignItems: 'start', marginBottom: '18px' }}>
+          {compose ?
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '18px', alignItems: 'start', marginBottom: '18px' }}>
               <div style={{ border: '2px solid #e5e7eb', borderRadius: '12px', padding: '14px', background: '#fff' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
                   <div style={{ fontWeight: 800, color: '#111827' }}>
                     Send via {compose.channel === 'email' ? 'Email' : 'SMS'} to {compose.tenant?.name || compose.tenant?.Name || 'Tenant'}
                   </div>
-                  <button type="button" style={btnOutline} onClick={() => { setCompose(null); setSendError(''); }} disabled={sendingId != null}>
+                  <button type="button" style={btnOutline} onClick={() => {setCompose(null);setSendError('');}} disabled={sendingId != null}>
                     Cancel
                   </button>
                 </div>
                 <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  style={{ width: '100%', minHeight: '140px', border: 'none', outline: 'none', resize: 'vertical', color: '#374151', fontSize: '0.95rem' }}
-                  placeholder="Type alert message..."
-                />
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                style={{ width: '100%', minHeight: '140px', border: 'none', outline: 'none', resize: 'vertical', color: '#374151', fontSize: '0.95rem' }}
+                placeholder="Type alert message..." />
+              
               </div>
               <div>
-                {compose.channel === 'email' ? (
-                  <>
+                {compose.channel === 'email' ?
+              <>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email subject</label>
                     <input
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      placeholder="Alert subject"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
-                    />
-                  </>
-                ) : (
-                  <div style={{ color: '#64748b', fontWeight: 700, paddingTop: 6 }}>SMS will be sent to the tenant phone number.</div>
-                )}
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Alert subject"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }} />
+                
+                  </> :
+
+              <div style={{ color: '#64748b', fontWeight: 700, paddingTop: 6 }}>SMS will be sent to the tenant phone number.</div>
+              }
                 {sendError && <div style={{ color: '#b91c1c', fontWeight: 600, marginTop: 10 }}>{sendError}</div>}
               </div>
-            </div>
-          ) : null}
+            </div> :
+          null}
 
-          {tenantsLoading ? (
-            <div style={emptyState}>Loading tenants...</div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
+          {tenantsLoading ?
+          <div style={emptyState}>Loading tenants...</div> :
+
+          <div style={{ overflowX: 'auto' }}>
               <table style={tableStyle}>
                 <thead>
                   <tr>
@@ -174,12 +174,12 @@ const AlertsTab = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedTenants.length > 0 ? (
-                    sortedTenants.map((t) => {
-                      const id = t.id || t.ID;
-                      const arrears = t.arrears ?? t.Arrears;
-                      return (
-                        <tr key={id}>
+                  {sortedTenants.length > 0 ?
+                sortedTenants.map((t) => {
+                  const id = t.id || t.ID;
+                  const arrears = t.arrears ?? t.Arrears;
+                  return (
+                    <tr key={id}>
                           <td style={tdStyle}><span style={{ fontWeight: 700, color: '#111827' }}>{t.name || t.Name || '—'}</span></td>
                           <td style={tdStyle}>{t.unitNumber || '—'}</td>
                           <td style={tdStyle}>{typeof arrears === 'number' ? `${arrears.toLocaleString()} XOF` : '—'}</td>
@@ -188,48 +188,48 @@ const AlertsTab = () => {
                           <td style={tdStyle}>
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                               <button
-                                type="button"
-                                style={{ ...btnPrimary, opacity: sendingId === id ? 0.6 : 1 }}
-                                disabled={sendingId === id}
-                                onClick={() => { setCompose({ tenant: t, channel: 'sms' }); setSendError(''); }}
-                              >
+                            type="button"
+                            style={{ ...btnPrimary, opacity: sendingId === id ? 0.6 : 1 }}
+                            disabled={sendingId === id}
+                            onClick={() => {setCompose({ tenant: t, channel: 'sms' });setSendError('');}}>
+                            
                                 SMS
                               </button>
                               <button
-                                type="button"
-                                style={{ ...btnPrimary, opacity: sendingId === id ? 0.6 : 1 }}
-                                disabled={sendingId === id}
-                                onClick={() => { setCompose({ tenant: t, channel: 'email' }); setSendError(''); }}
-                              >
+                            type="button"
+                            style={{ ...btnPrimary, opacity: sendingId === id ? 0.6 : 1 }}
+                            disabled={sendingId === id}
+                            onClick={() => {setCompose({ tenant: t, channel: 'email' });setSendError('');}}>
+                            
                                 Email
                               </button>
-                              {compose?.tenant && (compose.tenant.id || compose.tenant.ID) === id ? (
-                                <button
-                                  type="button"
-                                  style={{ ...btnPrimary, background: '#2563eb', opacity: sendingId === id ? 0.6 : 1 }}
-                                  disabled={sendingId === id}
-                                  onClick={() => sendAlert({ clientId: id, channel: compose.channel })}
-                                >
+                              {compose?.tenant && (compose.tenant.id || compose.tenant.ID) === id ?
+                          <button
+                            type="button"
+                            style={{ ...btnPrimary, background: '#2563eb', opacity: sendingId === id ? 0.6 : 1 }}
+                            disabled={sendingId === id}
+                            onClick={() => sendAlert({ clientId: id, channel: compose.channel })}>
+                            
                                   {sendingId === id ? 'Sending...' : 'Send'}
-                                </button>
-                              ) : null}
+                                </button> :
+                          null}
                             </div>
                           </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
+                        </tr>);
+
+                }) :
+
+                <tr>
                       <td colSpan={6} style={emptyState}>No unpaid tenants for this property.</td>
                     </tr>
-                  )}
+                }
                 </tbody>
               </table>
             </div>
-          )}
+          }
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (view === 'bulk-select') {
@@ -245,8 +245,8 @@ const AlertsTab = () => {
                 setBulkSelectedIds([]);
                 setBulkTenants([]);
                 setSendError('');
-              }}
-            >
+              }}>
+              
               <ArrowLeft size={16} style={{ marginRight: 6 }} />
               Back
             </button>
@@ -257,10 +257,10 @@ const AlertsTab = () => {
           </div>
 
           <div style={card}>
-            {loading ? (
-              <div style={emptyState}>Loading...</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
+            {loading ?
+            <div style={emptyState}>Loading...</div> :
+
+            <div style={{ overflowX: 'auto' }}>
                 <table style={tableStyle}>
                   <thead>
                     <tr>
@@ -271,15 +271,15 @@ const AlertsTab = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {properties.length > 0 ? (
-                      properties.map((p) => {
-                        const total = p.numberOfUnits ?? p.NumberOfUnits ?? 1;
-                        const occupied = p.occupiedUnits ?? p.OccupiedUnits ?? 0;
-                        const unpaid = p.unpaidUnits ?? p.UnpaidUnits ?? 0;
-                        const label = (p.name || p.Name || p.address || p.Address || '—').toString().trim();
-                        const addr = (p.address || p.Address || '').toString().trim();
-                        return (
-                          <tr key={p.id || p.ID || label}>
+                    {properties.length > 0 ?
+                  properties.map((p) => {
+                    const total = p.numberOfUnits ?? p.NumberOfUnits ?? 1;
+                    const occupied = p.occupiedUnits ?? p.OccupiedUnits ?? 0;
+                    const unpaid = p.unpaidUnits ?? p.UnpaidUnits ?? 0;
+                    const label = (p.name || p.Name || p.address || p.Address || '—').toString().trim();
+                    const addr = (p.address || p.Address || '').toString().trim();
+                    return (
+                      <tr key={p.id || p.ID || label}>
                             <td style={tdStyle}>
                               <div>
                                 <div style={{ fontWeight: 800, color: '#111827' }}>{label}</div>
@@ -290,40 +290,40 @@ const AlertsTab = () => {
                             <td style={tdStyle}>{`${unpaid}/${total}`}</td>
                             <td style={tdStyle}>
                               <span
-                                style={pill}
-                                role="button"
-                                tabIndex={0}
-                                onClick={async () => {
-                                  setSelectedProperty(p);
-                                  setBulkTenants([]);
-                                  setBulkSelectedIds([]);
-                                  setBulkTenantsLoading(true);
-                                  try {
-                                    const res = await salesManagerService.getAlertPropertyTenantsAll(p.id || p.ID);
-                                    setBulkTenants(Array.isArray(res) ? res : []);
-                                  } finally {
-                                    setBulkTenantsLoading(false);
-                                  }
-                                }}
-                              >
+                            style={pill}
+                            role="button"
+                            tabIndex={0}
+                            onClick={async () => {
+                              setSelectedProperty(p);
+                              setBulkTenants([]);
+                              setBulkSelectedIds([]);
+                              setBulkTenantsLoading(true);
+                              try {
+                                const res = await salesManagerService.getAlertPropertyTenantsAll(p.id || p.ID);
+                                setBulkTenants(Array.isArray(res) ? res : []);
+                              } finally {
+                                setBulkTenantsLoading(false);
+                              }
+                            }}>
+                            
                                 select
                               </span>
                             </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
+                          </tr>);
+
+                  }) :
+
+                  <tr>
                         <td colSpan={4} style={emptyState}>No properties found.</td>
                       </tr>
-                    )}
+                  }
                   </tbody>
                 </table>
               </div>
-            )}
+            }
           </div>
-        </div>
-      );
+        </div>);
+
     }
 
     const propertyTitle = selectedProperty?.name || selectedProperty?.Name || selectedProperty?.address || selectedProperty?.Address || 'Property';
@@ -339,7 +339,7 @@ const AlertsTab = () => {
     };
     const toggleOne = (id) => {
       if (!id) return;
-      setBulkSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+      setBulkSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
     };
     return (
       <div>
@@ -354,8 +354,8 @@ const AlertsTab = () => {
               setBulkTenants([]);
               setSendError('');
             }}
-            disabled={bulkSending}
-          >
+            disabled={bulkSending}>
+            
             <ArrowLeft size={16} style={{ marginRight: 6 }} />
             Back
           </button>
@@ -381,18 +381,18 @@ const AlertsTab = () => {
             </div>
           </div>
 
-          {bulkChannel === 'email' ? (
-            <div style={{ marginBottom: 12 }}>
+          {bulkChannel === 'email' ?
+          <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email subject</label>
               <input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Alert subject"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
-                disabled={bulkSending}
-              />
-            </div>
-          ) : null}
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Alert subject"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+              disabled={bulkSending} />
+            
+            </div> :
+          null}
 
           <div style={{ marginBottom: 12 }}>
             <textarea
@@ -400,8 +400,8 @@ const AlertsTab = () => {
               onChange={(e) => setMessage(e.target.value)}
               style={{ width: '100%', minHeight: '140px', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, outline: 'none', resize: 'vertical', color: '#374151', fontSize: '0.95rem' }}
               placeholder="Type alert message..."
-              disabled={bulkSending}
-            />
+              disabled={bulkSending} />
+            
             {sendError && <div style={{ color: '#b91c1c', fontWeight: 600, marginTop: 10 }}>{sendError}</div>}
           </div>
 
@@ -422,8 +422,8 @@ const AlertsTab = () => {
                     clientIds: bulkSelectedIds,
                     channel: bulkChannel,
                     message: message.trim(),
-                    subject: bulkChannel === 'email' ? (subject || 'Alert') : undefined,
-                    urgency: 'Low',
+                    subject: bulkChannel === 'email' ? subject || 'Alert' : undefined,
+                    urgency: 'Low'
                   });
                   await loadProperties();
                   setBulkSelectedIds([]);
@@ -432,16 +432,16 @@ const AlertsTab = () => {
                 } finally {
                   setBulkSending(false);
                 }
-              }}
-            >
+              }}>
+              
               {bulkSending ? 'Sending...' : 'Send to selected'}
             </button>
           </div>
 
-          {bulkTenantsLoading ? (
-            <div style={emptyState}>Loading tenants...</div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
+          {bulkTenantsLoading ?
+          <div style={emptyState}>Loading tenants...</div> :
+
+          <div style={{ overflowX: 'auto' }}>
               <table style={tableStyle}>
                 <thead>
                   <tr>
@@ -453,12 +453,12 @@ const AlertsTab = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {bulkTenants.length > 0 ? (
-                    bulkTenants.map((t) => {
-                      const id = t.id || t.ID;
-                      const unit = t.unitNumber || t.UnitNumber || '—';
-                      return (
-                        <tr key={id}>
+                  {bulkTenants.length > 0 ?
+                bulkTenants.map((t) => {
+                  const id = t.id || t.ID;
+                  const unit = t.unitNumber || t.UnitNumber || '—';
+                  return (
+                    <tr key={id}>
                           <td style={tdStyle}>
                             <input type="checkbox" checked={selectedSet.has(id)} onChange={() => toggleOne(id)} disabled={bulkSending} />
                           </td>
@@ -466,25 +466,25 @@ const AlertsTab = () => {
                           <td style={tdStyle}>{unit}</td>
                           <td style={tdStyle}>{t.phone || t.Phone || '—'}</td>
                           <td style={tdStyle}>{t.email || t.Email || '—'}</td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
+                        </tr>);
+
+                }) :
+
+                <tr>
                       <td colSpan={5} style={emptyState}>No tenants found for this property.</td>
                     </tr>
-                  )}
+                }
                 </tbody>
               </table>
             </div>
-          )}
+          }
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (view === 'bulk-unpaid') {
-    const groupTenantIds = (g) => (Array.isArray(g.tenants) ? g.tenants.map((t) => t.ID || t.id).filter(Boolean) : []);
+    const groupTenantIds = (g) => Array.isArray(g.tenants) ? g.tenants.map((t) => t.ID || t.id).filter(Boolean) : [];
     const allTenantIds = bulkUnpaidGroups.flatMap((g) => groupTenantIds(g));
     const selectedSet = new Set(bulkSelectedIds);
     const allSelected = allTenantIds.length > 0 && allTenantIds.every((id) => selectedSet.has(id));
@@ -510,8 +510,8 @@ const AlertsTab = () => {
               setBulkUnpaidGroups([]);
               setSendError('');
             }}
-            disabled={bulkSending}
-          >
+            disabled={bulkSending}>
+            
             <ArrowLeft size={16} style={{ marginRight: 6 }} />
             Back
           </button>
@@ -537,18 +537,18 @@ const AlertsTab = () => {
             </div>
           </div>
 
-          {bulkChannel === 'email' ? (
-            <div style={{ marginBottom: 12 }}>
+          {bulkChannel === 'email' ?
+          <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email subject</label>
               <input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Alert subject"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
-                disabled={bulkSending}
-              />
-            </div>
-          ) : null}
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Alert subject"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+              disabled={bulkSending} />
+            
+            </div> :
+          null}
 
           <div style={{ marginBottom: 12 }}>
             <textarea
@@ -556,8 +556,8 @@ const AlertsTab = () => {
               onChange={(e) => setMessage(e.target.value)}
               style={{ width: '100%', minHeight: '140px', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, outline: 'none', resize: 'vertical', color: '#374151', fontSize: '0.95rem' }}
               placeholder="Type alert message..."
-              disabled={bulkSending}
-            />
+              disabled={bulkSending} />
+            
             {sendError && <div style={{ color: '#b91c1c', fontWeight: 600, marginTop: 10 }}>{sendError}</div>}
           </div>
 
@@ -578,8 +578,8 @@ const AlertsTab = () => {
                     clientIds: bulkSelectedIds,
                     channel: bulkChannel,
                     message: message.trim(),
-                    subject: bulkChannel === 'email' ? (subject || 'Alert') : undefined,
-                    urgency: 'High',
+                    subject: bulkChannel === 'email' ? subject || 'Alert' : undefined,
+                    urgency: 'High'
                   });
                   await loadProperties();
                 } catch (e) {
@@ -587,19 +587,19 @@ const AlertsTab = () => {
                 } finally {
                   setBulkSending(false);
                 }
-              }}
-            >
+              }}>
+              
               {bulkSending ? 'Sending...' : 'Send to selected'}
             </button>
           </div>
 
-          {bulkUnpaidLoading ? (
-            <div style={emptyState}>Loading unpaid tenants...</div>
-          ) : (
-            <div style={{ display: 'grid', gap: 12 }}>
-              {bulkUnpaidGroups.length > 0 ? (
-                bulkUnpaidGroups.map((g, idx) => (
-                  <div key={g.propertyId || g.address || idx} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 }}>
+          {bulkUnpaidLoading ?
+          <div style={emptyState}>Loading unpaid tenants...</div> :
+
+          <div style={{ display: 'grid', gap: 12 }}>
+              {bulkUnpaidGroups.length > 0 ?
+            bulkUnpaidGroups.map((g, idx) =>
+            <div key={g.propertyId || g.address || idx} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
                       <div style={{ fontWeight: 800, color: '#111827' }}>{g.name || g.address || 'Property'}</div>
                       <button type="button" style={btnOutline} onClick={() => toggleGroup(g)} disabled={bulkSending}>
@@ -618,36 +618,36 @@ const AlertsTab = () => {
                         </thead>
                         <tbody>
                           {(g.tenants || []).map((t) => {
-                            const id = t.ID || t.id;
-                            const arrears = t.Arrears ?? t.arrears;
-                            return (
-                              <tr key={id}>
+                      const id = t.ID || t.id;
+                      const arrears = t.Arrears ?? t.arrears;
+                      return (
+                        <tr key={id}>
                                 <td style={tdStyle}>
-                                  <input type="checkbox" checked={selectedSet.has(id)} onChange={() => setBulkSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))} disabled={bulkSending} />
+                                  <input type="checkbox" checked={selectedSet.has(id)} onChange={() => setBulkSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])} disabled={bulkSending} />
                                 </td>
                                 <td style={tdStyle}>{t.Name || t.name || '—'}</td>
                                 <td style={tdStyle}>{t.UnitNumber || t.unitNumber || '—'}</td>
                                 <td style={tdStyle}>{typeof arrears === 'number' ? `${arrears.toLocaleString()} XOF` : '—'}</td>
-                              </tr>
-                            );
-                          })}
+                              </tr>);
+
+                    })}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div style={emptyState}>No unpaid tenants found.</div>
-              )}
+            ) :
+
+            <div style={emptyState}>No unpaid tenants found.</div>
+            }
             </div>
-          )}
+          }
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (view === 'bulk-all') {
-    const groupTenantIds = (g) => (Array.isArray(g.tenants) ? g.tenants.map((t) => t.ID || t.id).filter(Boolean) : []);
+    const groupTenantIds = (g) => Array.isArray(g.tenants) ? g.tenants.map((t) => t.ID || t.id).filter(Boolean) : [];
     const allTenantIds = bulkAllGroups.flatMap((g) => groupTenantIds(g));
     const selectedSet = new Set(bulkSelectedIds);
     const allSelected = allTenantIds.length > 0 && allTenantIds.every((id) => selectedSet.has(id));
@@ -675,8 +675,8 @@ const AlertsTab = () => {
               setBulkSelectedIds([]);
               setSendError('');
             }}
-            disabled={bulkSending}
-          >
+            disabled={bulkSending}>
+            
             <ArrowLeft size={16} style={{ marginRight: 6 }} />
             Back
           </button>
@@ -702,18 +702,18 @@ const AlertsTab = () => {
             </div>
           </div>
 
-          {bulkChannel === 'email' ? (
-            <div style={{ marginBottom: 12 }}>
+          {bulkChannel === 'email' ?
+          <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email subject</label>
               <input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Alert subject"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
-                disabled={bulkSending}
-              />
-            </div>
-          ) : null}
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Alert subject"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+              disabled={bulkSending} />
+            
+            </div> :
+          null}
 
           <div style={{ marginBottom: 12 }}>
             <textarea
@@ -721,8 +721,8 @@ const AlertsTab = () => {
               onChange={(e) => setMessage(e.target.value)}
               style={{ width: '100%', minHeight: '140px', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, outline: 'none', resize: 'vertical', color: '#374151', fontSize: '0.95rem' }}
               placeholder="Type alert message..."
-              disabled={bulkSending}
-            />
+              disabled={bulkSending} />
+            
             {sendError && <div style={{ color: '#b91c1c', fontWeight: 600, marginTop: 10 }}>{sendError}</div>}
           </div>
 
@@ -743,8 +743,8 @@ const AlertsTab = () => {
                     clientIds: bulkSelectedIds,
                     channel: bulkChannel,
                     message: message.trim(),
-                    subject: bulkChannel === 'email' ? (subject || 'Alert') : undefined,
-                    urgency: 'Medium',
+                    subject: bulkChannel === 'email' ? subject || 'Alert' : undefined,
+                    urgency: 'Medium'
                   });
                   await loadProperties();
                 } catch (e) {
@@ -752,19 +752,19 @@ const AlertsTab = () => {
                 } finally {
                   setBulkSending(false);
                 }
-              }}
-            >
+              }}>
+              
               {bulkSending ? 'Sending...' : 'Send to selected'}
             </button>
           </div>
 
-          {bulkAllLoading ? (
-            <div style={emptyState}>Loading tenants...</div>
-          ) : (
-            <div style={{ display: 'grid', gap: 12 }}>
-              {bulkAllGroups.length > 0 ? (
-                bulkAllGroups.map((g, idx) => (
-                  <div key={g.propertyId || g.address || idx} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 }}>
+          {bulkAllLoading ?
+          <div style={emptyState}>Loading tenants...</div> :
+
+          <div style={{ display: 'grid', gap: 12 }}>
+              {bulkAllGroups.length > 0 ?
+            bulkAllGroups.map((g, idx) =>
+            <div key={g.propertyId || g.address || idx} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
                       <div style={{ fontWeight: 800, color: '#111827' }}>{g.name || g.address || 'Property'}</div>
                       <button type="button" style={btnOutline} onClick={() => toggleGroup(g)} disabled={bulkSending}>
@@ -783,32 +783,32 @@ const AlertsTab = () => {
                         </thead>
                         <tbody>
                           {(g.tenants || []).map((t) => {
-                            const id = t.ID || t.id;
-                            const arrears = t.Arrears ?? t.arrears;
-                            return (
-                              <tr key={id}>
+                      const id = t.ID || t.id;
+                      const arrears = t.Arrears ?? t.arrears;
+                      return (
+                        <tr key={id}>
                                 <td style={tdStyle}>
-                                  <input type="checkbox" checked={selectedSet.has(id)} onChange={() => setBulkSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))} disabled={bulkSending} />
+                                  <input type="checkbox" checked={selectedSet.has(id)} onChange={() => setBulkSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])} disabled={bulkSending} />
                                 </td>
                                 <td style={tdStyle}>{t.Name || t.name || '—'}</td>
                                 <td style={tdStyle}>{t.UnitNumber || t.unitNumber || '—'}</td>
                                 <td style={tdStyle}>{typeof arrears === 'number' && arrears > 0 ? `${arrears.toLocaleString()} XOF` : '—'}</td>
-                              </tr>
-                            );
-                          })}
+                              </tr>);
+
+                    })}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div style={emptyState}>No tenants found.</div>
-              )}
+            ) :
+
+            <div style={emptyState}>No tenants found.</div>
+            }
             </div>
-          )}
+          }
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -829,9 +829,8 @@ const AlertsTab = () => {
               setSelectedProperty(null);
               setBulkTenants([]);
               setBulkSelectedIds([]);
-              // User must pick a building first: we re-use the property list below (click "see")
-            }}
-          >
+            }}>
+            
             Send alert (select tenants)
           </button>
           <button
@@ -851,8 +850,8 @@ const AlertsTab = () => {
               } finally {
                 setBulkAllLoading(false);
               }
-            }}
-          >
+            }}>
+            
             Send to all tenants (agency)
           </button>
           <button
@@ -871,15 +870,15 @@ const AlertsTab = () => {
               } finally {
                 setBulkUnpaidLoading(false);
               }
-            }}
-          >
+            }}>
+            
             Send to all unpaid tenants
           </button>
         </div>
-        {loading ? (
-          <div style={emptyState}>Loading...</div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
+        {loading ?
+        <div style={emptyState}>Loading...</div> :
+
+        <div style={{ overflowX: 'auto' }}>
             <table style={tableStyle}>
               <thead>
                 <tr>
@@ -890,72 +889,72 @@ const AlertsTab = () => {
                 </tr>
               </thead>
               <tbody>
-                {properties.length > 0 ? (
-                  properties.map((p) => {
-                    const total = p.numberOfUnits ?? p.NumberOfUnits ?? 1;
-                    const occupied = p.occupiedUnits ?? p.OccupiedUnits ?? 0;
-                    const unpaid = p.unpaidUnits ?? p.UnpaidUnits ?? 0;
-                    const label = (p.name || p.Name || p.address || p.Address || '—').toString().trim();
-                    const addr = (p.address || p.Address || '').toString().trim();
-                    return (
-                      <tr key={p.id || p.ID || label}>
+                {properties.length > 0 ?
+              properties.map((p) => {
+                const total = p.numberOfUnits ?? p.NumberOfUnits ?? 1;
+                const occupied = p.occupiedUnits ?? p.OccupiedUnits ?? 0;
+                const unpaid = p.unpaidUnits ?? p.UnpaidUnits ?? 0;
+                const label = (p.name || p.Name || p.address || p.Address || '—').toString().trim();
+                const addr = (p.address || p.Address || '').toString().trim();
+                return (
+                  <tr key={p.id || p.ID || label}>
                         <td style={tdStyle}>
                           <div>
                             <div style={{ fontWeight: 800, color: '#111827' }}>{label}</div>
-                            {addr && addr !== label ? (
-                              <div style={{ color: '#94a3b8', fontSize: '0.82rem' }}>{addr}</div>
-                            ) : null}
+                            {addr && addr !== label ?
+                        <div style={{ color: '#94a3b8', fontSize: '0.82rem' }}>{addr}</div> :
+                        null}
                           </div>
                         </td>
                         <td style={tdStyle}>{`${occupied}/${total}`}</td>
                         <td style={tdStyle}>{`${unpaid}/${total}`}</td>
                         <td style={tdStyle}>
                           <span
-                            style={pill}
-                            role="button"
-                            tabIndex={0}
-                            onClick={async () => {
-                              if (view === 'bulk-select') {
-                                setSelectedProperty(p);
-                                setBulkTenants([]);
-                                setBulkSelectedIds([]);
-                                setBulkTenantsLoading(true);
-                                try {
-                                  const res = await salesManagerService.getAlertPropertyTenantsAll(p.id || p.ID);
-                                  setBulkTenants(Array.isArray(res) ? res : []);
-                                } finally {
-                                  setBulkTenantsLoading(false);
-                                }
-                                return;
-                              }
-                              openProperty(p);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                if (view === 'bulk-select') {
-                                  e.preventDefault();
-                                }
-                              }
-                            }}
-                          >
+                        style={pill}
+                        role="button"
+                        tabIndex={0}
+                        onClick={async () => {
+                          if (view === 'bulk-select') {
+                            setSelectedProperty(p);
+                            setBulkTenants([]);
+                            setBulkSelectedIds([]);
+                            setBulkTenantsLoading(true);
+                            try {
+                              const res = await salesManagerService.getAlertPropertyTenantsAll(p.id || p.ID);
+                              setBulkTenants(Array.isArray(res) ? res : []);
+                            } finally {
+                              setBulkTenantsLoading(false);
+                            }
+                            return;
+                          }
+                          openProperty(p);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            if (view === 'bulk-select') {
+                              e.preventDefault();
+                            }
+                          }
+                        }}>
+                        
                             see
                           </span>
                         </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
+                      </tr>);
+
+              }) :
+
+              <tr>
                     <td colSpan={4} style={emptyState}>No properties found.</td>
                   </tr>
-                )}
+              }
               </tbody>
             </table>
           </div>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default AlertsTab;

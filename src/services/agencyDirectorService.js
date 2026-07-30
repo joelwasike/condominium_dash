@@ -14,7 +14,6 @@ const parseJson = async (response) => {
 
   try {
     const json = JSON.parse(text);
-    // Auto-unwrap paginated responses: {data: [...], total, page, ...} → just the array
     if (json && Array.isArray(json.data) && typeof json.total === 'number' && typeof json.page === 'number') {
       return json.data;
     }
@@ -28,48 +27,44 @@ const parseJson = async (response) => {
 const getAuthHeaders = (includeContentType = true) => {
   const token = localStorage.getItem('token');
   const headers = {};
-  
+
   if (includeContentType) {
     headers['Content-Type'] = 'application/json';
   }
-  
+
   if (token) {
     const tokenStr = String(token).trim();
-    // Sanitize token to ensure it only contains ISO-8859-1 compatible characters
-    const sanitizedToken = tokenStr
-      .split('')
-      .map(char => {
-        const code = char.charCodeAt(0);
-        return (code >= 32 && code <= 126) ? char : '';
-      })
-      .join('');
-    
+    const sanitizedToken = tokenStr.
+    split('').
+    map((char) => {
+      const code = char.charCodeAt(0);
+      return code >= 32 && code <= 126 ? char : '';
+    }).
+    join('');
+
     if (sanitizedToken && sanitizedToken.length > 0) {
       headers['Authorization'] = sanitizedToken;
     }
   }
-  
+
   return headers;
 };
 
 export const agencyDirectorService = {
-  // Overview
   getOverview: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/overview`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch overview');
     return parseJson(response);
   },
-
-  // Users
   getUsers: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/users`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch users');
     const data = await parseJson(response);
@@ -102,18 +97,16 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/users/${id}`, {
       method: 'DELETE',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to delete user');
     return parseJson(response);
   },
-
-  // Properties
   getProperties: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/properties`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch properties');
     const data = await parseJson(response);
@@ -146,52 +139,44 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/properties/${id}`, {
       method: 'DELETE',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to delete property');
     return parseJson(response);
   },
-
-  // Financial
   getFinancialOverview: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/financial`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch financial overview');
     return parseJson(response);
   },
-
-  // Works
   getWorks: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/works`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch works');
     const data = await parseJson(response);
     return data?.works || data || [];
   },
-
-  // System
   getSystemSettings: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/system`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch system settings');
     return parseJson(response);
   },
-
-  // Accounting
   getAccountingOverview: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/overview`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch accounting overview');
     return parseJson(response);
@@ -201,7 +186,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/tenant-payments`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch tenant payments');
     return parseJson(response);
@@ -211,7 +196,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/landlord-payments`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch landlord payments');
     return parseJson(response);
@@ -221,7 +206,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/collections`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch collections');
     return parseJson(response);
@@ -231,7 +216,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/expenses`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch expenses');
     return parseJson(response);
@@ -241,30 +226,28 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/revenue-by-owner`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch revenue by owner');
     const data = await parseJson(response);
-    return Array.isArray(data) ? data : (data?.revenueByOwner ?? data?.data ?? []);
+    return Array.isArray(data) ? data : data?.revenueByOwner ?? data?.data ?? [];
   },
 
   getRevenueByAgency: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/revenue-by-agency`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch revenue by agency');
     const data = await parseJson(response);
-    return Array.isArray(data) ? data : (data?.revenueByAgency ?? data?.data ?? []);
+    return Array.isArray(data) ? data : data?.revenueByAgency ?? data?.data ?? [];
   },
-
-  // Landlord Payment Management
   approveLandlordPayment: async (paymentId) => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/landlord-payments/${paymentId}/approve`, {
       method: 'POST',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) {
       const errorText = await response.text();
@@ -277,7 +260,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/landlord-payments/${paymentId}/revoke`, {
       method: 'POST',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) {
       const errorText = await response.text();
@@ -285,8 +268,6 @@ export const agencyDirectorService = {
     }
     return parseJson(response);
   },
-
-  // Subscription Payment
   paySubscription: async (paymentData) => {
     const headers = getAuthHeaders(true);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/subscription/pay`, {
@@ -314,8 +295,6 @@ export const agencyDirectorService = {
     }
     return parseJson(response);
   },
-
-  // Mobile Money subscription payment (initiates USSD prompt on director's phone)
   paySubscriptionViaMoMo: async ({ provider, phone, otp }) => {
     const headers = getAuthHeaders(true);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/subscription/pay-momo`, {
@@ -343,24 +322,20 @@ export const agencyDirectorService = {
     }
     return parseJson(response);
   },
-
-  // Get current subscription status for the Agency Director's company
   getSubscriptionStatus: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/subscription/status`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch subscription status');
     return parseJson(response);
   },
-
-  // Messaging
   getConversations: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/messages/conversations`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch conversations');
     return parseJson(response);
@@ -370,7 +345,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/messages/${userId}`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch conversation');
     return parseJson(response);
@@ -379,13 +354,13 @@ export const agencyDirectorService = {
   sendMessage: async (messagePayload) => {
     const headers = getAuthHeaders(true);
     const body = JSON.stringify(messagePayload);
-    
+
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/messages`, {
       method: 'POST',
       headers: headers,
-      body: body,
+      body: body
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Message send failed:', response.status, errorText);
@@ -396,7 +371,7 @@ export const agencyDirectorService = {
         throw new Error(`Failed to send message: ${response.status} ${response.statusText}. ${errorText}`);
       }
     }
-    
+
     return parseJson(response);
   },
 
@@ -404,18 +379,16 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/messages/inbox`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch inbox');
     return parseJson(response);
   },
-
-  // Contracts
   getLeasesAwaitingSignature: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/leases-awaiting-signature`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch leases awaiting signature');
     return parseJson(response);
@@ -425,7 +398,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/leases/${leaseId}/approve`, {
       method: 'POST',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to approve lease');
     return parseJson(response);
@@ -435,7 +408,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/expenses/${expenseId}/approve`, {
       method: 'POST',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to approve expense');
     return parseJson(response);
@@ -445,7 +418,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/expenses/${expenseId}/reject`, {
       method: 'POST',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to reject expense');
     return parseJson(response);
@@ -456,41 +429,35 @@ export const agencyDirectorService = {
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/${quoteId}/approve`, {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason })
     });
     if (!response.ok) throw new Error('Failed to approve quote');
     return parseJson(response);
   },
-
-  // Get pending payments for approval (tenant payments)
   getPendingPayments: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/payments/pending-approval`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch pending payments');
     return parseJson(response);
   },
-
-  // Get pending expenses for approval (expenses added by accountant)
   getPendingExpenses: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/expenses/pending-approval`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch pending expenses');
     const data = await parseJson(response);
-    return Array.isArray(data) ? data : (data?.expenses ?? data?.data ?? []);
+    return Array.isArray(data) ? data : data?.expenses ?? data?.data ?? [];
   },
-
-  // Approve tenant payment
   approveTenantPayment: async (paymentId) => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/payments/${paymentId}/approve`, {
       method: 'POST',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) {
       const errorText = await response.text();
@@ -498,13 +465,11 @@ export const agencyDirectorService = {
     }
     return parseJson(response);
   },
-
-  // Reject tenant payment
   rejectTenantPayment: async (paymentId) => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/accounting/payments/${paymentId}/reject`, {
       method: 'POST',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) {
       const errorText = await response.text();
@@ -512,13 +477,11 @@ export const agencyDirectorService = {
     }
     return parseJson(response);
   },
-
-  // Get pending quotes for validation
   getPendingQuotes: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/pending-validation`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch pending quotes');
     return parseJson(response);
@@ -528,7 +491,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/history`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch quote history');
     return parseJson(response);
@@ -539,18 +502,16 @@ export const agencyDirectorService = {
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/quotes/${quoteId}/reject`, {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason })
     });
     if (!response.ok) throw new Error('Failed to reject quote');
     return parseJson(response);
   },
-
-  // Maintenance Worker Quotes — validate per-worker quotes
   getMaintenanceWorkerQuotes: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/maintenance-worker-quotes`, {
       method: 'GET',
-      headers,
+      headers
     });
     if (!response.ok) throw new Error('Failed to fetch maintenance worker quotes');
     return parseJson(response);
@@ -561,7 +522,7 @@ export const agencyDirectorService = {
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/maintenance-worker-quotes/${id}/approve`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ note }),
+      body: JSON.stringify({ note })
     });
     if (!response.ok) throw new Error('Failed to approve worker quote');
     return parseJson(response);
@@ -572,7 +533,7 @@ export const agencyDirectorService = {
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/maintenance-worker-quotes/${id}/reject`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ note }),
+      body: JSON.stringify({ note })
     });
     if (!response.ok) throw new Error('Failed to reject worker quote');
     return parseJson(response);
@@ -582,36 +543,30 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch owners');
     return parseJson(response);
   },
-
-  // Get assets (properties) under management of an owner – for Properties page (owners → buildings → units)
-  // Backend returns 401 for sales manager routes when using agency director token, so try agency-director first.
   getOwnerAssets: async (ownerId) => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners/${ownerId}/properties`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch owner assets');
     return parseJson(response);
   },
-
-  // Get building/unit detail for a property
-  // Backend returns 401 for sales manager routes when using agency director token, so try agency-director first.
   getPropertyBuildingDetail: async (propertyId) => {
     const headers = getAuthHeaders(false);
     let response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/properties/${propertyId}/building-detail`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) {
       response = await fetch(`${API_CONFIG.BASE_URL}/api/salesmanager/properties/${propertyId}/building-detail`, {
         method: 'GET',
-        headers: headers,
+        headers: headers
       });
     }
     if (!response.ok) throw new Error('Failed to fetch property building detail');
@@ -644,13 +599,11 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/contracts/owners/${id}`, {
       method: 'DELETE',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to delete owner');
     return parseJson(response);
   },
-
-  // Reports
   getTransferHistory: async (filters = {}) => {
     const headers = getAuthHeaders(false);
     const params = new URLSearchParams();
@@ -660,7 +613,7 @@ export const agencyDirectorService = {
     const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/transfer-history${params.toString() ? '?' + params.toString() : ''}`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch transfer history');
     return parseJson(response);
@@ -675,7 +628,7 @@ export const agencyDirectorService = {
     const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/expenses-per-building${params.toString() ? '?' + params.toString() : ''}`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch expenses per building');
     return parseJson(response);
@@ -690,7 +643,7 @@ export const agencyDirectorService = {
     const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/expenses-per-owner${params.toString() ? '?' + params.toString() : ''}`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch expenses per owner');
     return parseJson(response);
@@ -704,7 +657,7 @@ export const agencyDirectorService = {
     const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/internal-expenses${params.toString() ? '?' + params.toString() : ''}`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch internal expenses');
     return parseJson(response);
@@ -718,7 +671,7 @@ export const agencyDirectorService = {
     const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/commissions-per-month-per-building${params.toString() ? '?' + params.toString() : ''}`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch commissions per month per building');
     return parseJson(response);
@@ -728,7 +681,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/reports/all-buildings`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch all buildings report');
     return parseJson(response);
@@ -742,21 +695,19 @@ export const agencyDirectorService = {
     const url = `${AGENCY_DIRECTOR_BASE_URL}/reports/unpaid-rent${params.toString() ? '?' + params.toString() : ''}`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch unpaid rent report');
     return parseJson(response);
   },
-
-  // Tenants
   getTenants: async (status = null) => {
     const headers = getAuthHeaders(false);
-    const url = status 
-      ? `${AGENCY_DIRECTOR_BASE_URL}/tenants?status=${status}`
-      : `${AGENCY_DIRECTOR_BASE_URL}/tenants`;
+    const url = status ?
+    `${AGENCY_DIRECTOR_BASE_URL}/tenants?status=${status}` :
+    `${AGENCY_DIRECTOR_BASE_URL}/tenants`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch tenants');
     return parseJson(response);
@@ -766,13 +717,11 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/tenants/${tenantId}/profile`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch tenant profile');
     return parseJson(response);
   },
-
-  // Annual Subscription
   payAnnualSubscription: async (paymentData) => {
     const headers = getAuthHeaders(true);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/subscription/pay-annual`, {
@@ -786,24 +735,20 @@ export const agencyDirectorService = {
     }
     return parseJson(response);
   },
-
-  // Get advertisements
   getAdvertisements: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/advertisements`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch advertisements');
     return parseJson(response);
   },
-
-  // Analytics endpoints
   getAnalyticsIndicators: async () => {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/analytics/indicators`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch analytics indicators');
     return parseJson(response);
@@ -813,7 +758,7 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/analytics/yearly-comparison`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch yearly comparison');
     return parseJson(response);
@@ -823,10 +768,10 @@ export const agencyDirectorService = {
     const headers = getAuthHeaders(false);
     const response = await fetch(`${AGENCY_DIRECTOR_BASE_URL}/analytics/monthly-comparison`, {
       method: 'GET',
-      headers: headers,
+      headers: headers
     });
     if (!response.ok) throw new Error('Failed to fetch monthly comparison');
     const data = await parseJson(response);
-    return Array.isArray(data) ? data : (data?.monthlyData ?? data?.data ?? []);
-  },
+    return Array.isArray(data) ? data : data?.monthlyData ?? data?.data ?? [];
+  }
 };

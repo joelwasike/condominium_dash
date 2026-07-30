@@ -1,4 +1,3 @@
-/* Rent Receipt - SAAF IMMO - matches user-provided template */
 :root {
   --primary-blue: #00008B;
   --light-blue: #E8F0FE;
@@ -31,8 +30,6 @@
   z-index: 0;
   white-space: nowrap;
 }
-
-/* Header Section */
 .receipt-container .header {
   display: flex;
   justify-content: space-between;
@@ -63,8 +60,6 @@
   height: auto;
   display: block;
 }
-
-/* Tenant Info Section */
 .receipt-container .info-section {
   display: flex;
   justify-content: space-between;
@@ -81,8 +76,6 @@
 .receipt-container .ref-date-details {
   text-align: right;
 }
-
-/* Table Styles */
 .receipt-container table {
   width: 100%;
   border-collapse: collapse;
@@ -126,8 +119,6 @@
   text-align: center;
   font-size: 0.9em;
 }
-
-/* Balance Section */
 .receipt-container .balance-container {
   display: flex;
   margin-top: 20px;
@@ -153,8 +144,6 @@
   padding: 0 10px;
   font-weight: bold;
 }
-
-/* Signature Section */
 .receipt-container .signature-section {
   display: flex;
   justify-content: space-around;
@@ -164,8 +153,6 @@
   position: relative;
   z-index: 1;
 }
-
-/* Footer Section */
 .receipt-container .footer {
   margin-top: 50px;
   font-size: 9px;

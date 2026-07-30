@@ -32,12 +32,10 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
   const locative = data?.Unit ?? data?.unit ?? data?.Locative ?? data?.locative ?? null;
   const method = data?.Method ?? data?.method ?? data?.PaymentMethod ?? data?.paymentMethod ?? null;
   const dateVal = data?.Date ?? data?.date;
-  const dateStr = dateVal
-    ? new Date(dateVal).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    : new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dateStr = dateVal ?
+  new Date(dateVal).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) :
+  new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const refNum = data?.ReceiptNumber ?? data?.receiptNumber ?? data?.Reference ?? data?.reference ?? `SAAF/${data?.ID ?? data?.id ?? '000'}/000`;
-
-  // Rent due = unpaid arrears before this payment.
   const storedRentDue = readMoney(
     data?.RentDue,
     data?.rentDue,
@@ -48,8 +46,6 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
     data?.Arrears,
     data?.arrears
   );
-
-  // Fixed monthly rent of the property.
   const monthlyRent = readMoney(
     data?.MonthlyRent,
     data?.monthlyRent,
@@ -62,32 +58,26 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
   );
 
   const paymentAmount = amount;
-  const rentDue = isCollection
-    ? 0
-    : (storedRentDue > 0
-      ? storedRentDue
-      : Math.max(0, (readMoney(data?.MonthsInArrears, data?.monthsInArrears) * monthlyRent) - readMoney(data?.RentPaidAdvance, data?.rentPaidAdvance)));
+  const rentDue = isCollection ?
+  0 :
+  storedRentDue > 0 ?
+  storedRentDue :
+  Math.max(0, readMoney(data?.MonthsInArrears, data?.monthsInArrears) * monthlyRent - readMoney(data?.RentPaidAdvance, data?.rentPaidAdvance));
 
-  const rentPrice = isCollection ? amount : (monthlyRent > 0 ? monthlyRent : amount);
+  const rentPrice = isCollection ? amount : monthlyRent > 0 ? monthlyRent : amount;
+  const rentPaidAdvance = isCollection ?
+  0 :
+  Math.max(0, paymentAmount - (rentDue + rentPrice));
+  const totalDueBeforePayment = isCollection ?
+  amount :
 
-  // Excess payment above arrears + the fixed monthly rent becomes advance rent.
-  const rentPaidAdvance = isCollection
-    ? 0
-    : Math.max(0, paymentAmount - (rentDue + rentPrice));
+  data?.TotalDueBeforePayment != null || data?.totalDueBeforePayment != null ?
+  readMoney(data?.TotalDueBeforePayment, data?.totalDueBeforePayment) :
+  rentDue + rentPrice;
 
-  // Total due before this payment = arrears + the fixed monthly rent.
-  const totalDueBeforePayment = isCollection
-    ? amount
-    : (
-      data?.TotalDueBeforePayment != null || data?.totalDueBeforePayment != null
-        ? readMoney(data?.TotalDueBeforePayment, data?.totalDueBeforePayment)
-        : (rentDue + rentPrice)
-    );
-
-  // Balance = what is still owed after this payment (0 when fully paid or overpaid).
-  const balanceAfter = isCollection
-    ? 0
-    : Math.max(0, totalDueBeforePayment - paymentAmount);
+  const balanceAfter = isCollection ?
+  0 :
+  Math.max(0, totalDueBeforePayment - paymentAmount);
 
   const formatAmount = (val) => toMoney(val).toLocaleString('fr-FR');
 
@@ -95,13 +85,13 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
     const methodLower = (method || '').toLowerCase();
     return PAYMENT_METHODS.map((m, i) => {
       const mLower = m.toLowerCase();
-      const isSelected = methodLower.includes(mLower) || (methodLower === 'mobile money' && mLower === 'om') || (methodLower === 'bank transfer' && mLower === 'transfer');
+      const isSelected = methodLower.includes(mLower) || methodLower === 'mobile money' && mLower === 'om' || methodLower === 'bank transfer' && mLower === 'transfer';
       return (
         <span key={m}>
           {isSelected ? <strong>{m}</strong> : m}
           {i < PAYMENT_METHODS.length - 1 ? ' | ' : ''}
-        </span>
-      );
+        </span>);
+
     });
   };
 
@@ -188,8 +178,8 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
           Tél: +225 07 04 77 51 79 - RCCM : CI-ABJ-03-2024-M-33430 ; N°CC : 1843184R - Email: info@saafimmo.ci
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default RentReceiptTemplate;

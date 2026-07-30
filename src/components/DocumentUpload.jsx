@@ -22,7 +22,7 @@ const DocumentUpload = ({ userRole, onUpload, onClose }) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFiles(e.dataTransfer.files);
     }
@@ -30,12 +30,12 @@ const DocumentUpload = ({ userRole, onUpload, onClose }) => {
 
   const handleFiles = (newFiles) => {
     const fileArray = Array.from(newFiles);
-    const validFiles = fileArray.filter(file => {
+    const validFiles = fileArray.filter((file) => {
       const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
       return validTypes.includes(file.type);
     });
-    
-    setFiles(prev => [...prev, ...validFiles]);
+
+    setFiles((prev) => [...prev, ...validFiles]);
   };
 
   const handleFileInput = (e) => {
@@ -45,22 +45,18 @@ const DocumentUpload = ({ userRole, onUpload, onClose }) => {
   };
 
   const removeFile = (index) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleUpload = async () => {
     if (files.length === 0) return;
-    
+
     setUploading(true);
-    
-    // Simulate upload process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Call the upload handler
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     if (onUpload) {
       onUpload(files, userRole);
     }
-    
+
     setUploading(false);
     setFiles([]);
     if (onClose) onClose();
@@ -87,27 +83,27 @@ const DocumentUpload = ({ userRole, onUpload, onClose }) => {
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-      >
+        onClick={() => fileInputRef.current?.click()}>
+        
         <input
           ref={fileInputRef}
           type="file"
           multiple
           accept=".pdf,.jpg,.jpeg,.png"
           onChange={handleFileInput}
-          style={{ display: 'none' }}
-        />
+          style={{ display: 'none' }} />
+        
         <Upload className="upload-icon" size={48} />
         <h5>Drag & drop files here</h5>
         <p>or click to browse</p>
         <p className="upload-hint">Supported formats: PDF, JPG, PNG (Max 10MB each)</p>
       </div>
 
-      {files.length > 0 && (
-        <div className="file-list">
+      {files.length > 0 &&
+      <div className="file-list">
           <h5>Selected Files ({files.length})</h5>
-          {files.map((file, index) => (
-            <div key={index} className="file-item">
+          {files.map((file, index) =>
+        <div key={index} className="file-item">
               <div className="file-info">
                 <FileText className="file-icon" size={20} />
                 <div className="file-details">
@@ -116,43 +112,43 @@ const DocumentUpload = ({ userRole, onUpload, onClose }) => {
                 </div>
               </div>
               <button
-                className="remove-file"
-                onClick={() => removeFile(index)}
-              >
+            className="remove-file"
+            onClick={() => removeFile(index)}>
+            
                 <X size={16} />
               </button>
             </div>
-          ))}
+        )}
         </div>
-      )}
+      }
 
       <div className="upload-actions">
         <button
           className="btn-secondary"
-          onClick={onClose}
-        >
+          onClick={onClose}>
+          
           Cancel
         </button>
         <button
           className="btn-primary"
           onClick={handleUpload}
-          disabled={files.length === 0 || uploading}
-        >
-          {uploading ? (
-            <>
+          disabled={files.length === 0 || uploading}>
+          
+          {uploading ?
+          <>
               <div className="spinner"></div>
               Uploading...
-            </>
-          ) : (
-            <>
+            </> :
+
+          <>
               <Upload size={16} />
               Upload {files.length} file{files.length !== 1 ? 's' : ''}
             </>
-          )}
+          }
         </button>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default DocumentUpload;

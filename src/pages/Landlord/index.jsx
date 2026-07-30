@@ -24,8 +24,8 @@ import {
   StickyNote,
   MessageSquare,
   AlertCircle,
-  AlertTriangle
-} from 'lucide-react';
+  AlertTriangle } from
+'lucide-react';
 import Modal from '../../components/Modal';
 import ReportSubmission from '../../components/ReportSubmission';
 import RoleLayout from '../../components/RoleLayout';
@@ -37,8 +37,8 @@ import {
   formatTenantName,
   getTransactionSignature,
   normalizeAmount,
-  normalizeText
-} from '../../utils/accountingDisplay';
+  normalizeText } from
+'../../utils/accountingDisplay';
 import '../LandlordDashboard.css';
 import '../SalesManagerDashboard.css';
 import '../../components/RoleLayout.css';
@@ -55,8 +55,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
-} from 'recharts';
+  ResponsiveContainer } from
+'recharts';
 import { landlordService } from '../../services/landlordService';
 import { messagingService } from '../../services/messagingService';
 import { API_CONFIG } from '../../config/api';
@@ -74,8 +74,6 @@ const LandlordDashboard = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
-  
-  // API Data States
   const [overviewData, setOverviewData] = useState(null);
   const [properties, setProperties] = useState([]);
   const [tenants, setTenants] = useState([]);
@@ -94,13 +92,11 @@ const LandlordDashboard = () => {
   const [advertisements, setAdvertisements] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
-
-  // Auto-slide carousel for advertisements on overview page
   useEffect(() => {
     if (activeTab === 'overview' && advertisements.length > 1) {
       carouselIntervalRef.current = setInterval(() => {
         setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
-      }, 5000); // Change slide every 5 seconds
+      }, 5000);
 
       return () => {
         if (carouselIntervalRef.current) {
@@ -114,8 +110,6 @@ const LandlordDashboard = () => {
       setCurrentAdIndex(0);
     }
   }, [activeTab, advertisements.length]);
-  
-  // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
@@ -123,8 +117,6 @@ const LandlordDashboard = () => {
   const isLoadingUsersRef = useRef(false);
   const messagesEndRef = useRef(null);
   const hasMountedRef = useRef(false);
-  
-  // Filter states
   const [netPaymentStatusFilter, setNetPaymentStatusFilter] = useState('');
   const [netPaymentStartDate, setNetPaymentStartDate] = useState('');
   const [netPaymentEndDate, setNetPaymentEndDate] = useState('');
@@ -189,42 +181,42 @@ const LandlordDashboard = () => {
       status.includes('tenanted') ||
       status.includes('partial') ||
       status.includes('rented') ||
-      Boolean(readValue(unit?.tenant, unit?.Tenant))
-    );
+      Boolean(readValue(unit?.tenant, unit?.Tenant)));
+
   };
   const getPropertyOccupancyStats = (property) => {
     const units = getPropertyUnits(property);
-    const totalUnits = units.length > 0
-      ? units.length
-      : Math.max(1, getPropertyTotalUnits(property) || 1);
-    const occupiedUnits = units.length > 0
-      ? units.reduce((count, unit) => count + (isOccupiedUnit(unit) ? 1 : 0), 0)
-      : (() => {
-          const filledUnits = normalizeAmount(readValue(
-            property?.filledUnits,
-            property?.FilledUnits,
-            property?.occupiedUnits,
-            property?.OccupiedUnits,
-            property?.occupantCount,
-            property?.OccupantCount
-          ));
-          if (filledUnits > 0) return filledUnits;
-          const occupancy = readValue(property?.occupancy, property?.Occupancy);
-          if (typeof occupancy === 'string' && occupancy.includes('/')) {
-            const [filledPart] = occupancy.split('/');
-            const parsedFilled = Number.parseInt(filledPart, 10);
-            if (!Number.isNaN(parsedFilled)) return parsedFilled;
-          }
-          const status = normalizeText(readValue(property?.Status, property?.status, property?.statut));
-          return (status === 'occupied' || Boolean(readValue(property?.tenant, property?.Tenant))) ? 1 : 0;
-        })();
+    const totalUnits = units.length > 0 ?
+    units.length :
+    Math.max(1, getPropertyTotalUnits(property) || 1);
+    const occupiedUnits = units.length > 0 ?
+    units.reduce((count, unit) => count + (isOccupiedUnit(unit) ? 1 : 0), 0) :
+    (() => {
+      const filledUnits = normalizeAmount(readValue(
+        property?.filledUnits,
+        property?.FilledUnits,
+        property?.occupiedUnits,
+        property?.OccupiedUnits,
+        property?.occupantCount,
+        property?.OccupantCount
+      ));
+      if (filledUnits > 0) return filledUnits;
+      const occupancy = readValue(property?.occupancy, property?.Occupancy);
+      if (typeof occupancy === 'string' && occupancy.includes('/')) {
+        const [filledPart] = occupancy.split('/');
+        const parsedFilled = Number.parseInt(filledPart, 10);
+        if (!Number.isNaN(parsedFilled)) return parsedFilled;
+      }
+      const status = normalizeText(readValue(property?.Status, property?.status, property?.statut));
+      return status === 'occupied' || Boolean(readValue(property?.tenant, property?.Tenant)) ? 1 : 0;
+    })();
     const safeOccupiedUnits = Math.min(occupiedUnits, totalUnits);
     const vacantUnits = Math.max(0, totalUnits - safeOccupiedUnits);
     return {
       totalUnits,
       occupiedUnits: safeOccupiedUnits,
       vacantUnits,
-      occupancyRate: totalUnits > 0 ? (safeOccupiedUnits / totalUnits) * 100 : 0,
+      occupancyRate: totalUnits > 0 ? safeOccupiedUnits / totalUnits * 100 : 0,
       occupancyLabel: `${safeOccupiedUnits}/${totalUnits}`
     };
   };
@@ -314,7 +306,7 @@ const LandlordDashboard = () => {
     );
     if (propertyName && apartmentName) return `${propertyName} App ${apartmentName}`;
     if (propertyName && buildingName && normalizeText(propertyName) !== normalizeText(buildingName)) return `${propertyName} ${buildingName}`;
-    return apartmentName ? `App ${apartmentName}` : (propertyName || buildingName || '—');
+    return apartmentName ? `App ${apartmentName}` : propertyName || buildingName || '—';
   };
   const getUnitStatusStyle = (status, isOverdue = false) => {
     const normalized = normalizeText(status);
@@ -341,7 +333,7 @@ const LandlordDashboard = () => {
     const monthsInArrears = getTenantMonthsInArrears(tenant);
     const rentInAdvance = getTenantRentInAdvance(tenant);
     if (monthlyRent > 0 && monthsInArrears > 0) {
-      return Math.max(0, (monthlyRent * monthsInArrears) - rentInAdvance);
+      return Math.max(0, monthlyRent * monthsInArrears - rentInAdvance);
     }
     return 0;
   };
@@ -367,11 +359,11 @@ const LandlordDashboard = () => {
   const getQuoteTenantDisplay = (quote) => readValue(quote?.Tenant, quote?.tenant) || 'N/A';
   const isAgencyAdminRole = (role) => {
     const normalized = normalizeText(role);
-    return normalized === 'agency admin'
-      || normalized === 'agency_admin'
-      || normalized === 'admin'
-      || normalized === 'agency-admin'
-      || normalized.includes('agency admin');
+    return normalized === 'agency admin' ||
+    normalized === 'agency_admin' ||
+    normalized === 'admin' ||
+    normalized === 'agency-admin' ||
+    normalized.includes('agency admin');
   };
   const buildTrackingSeries = (revenueRows, expensesRows, occupancyRows) => {
     const seriesMap = new Map();
@@ -395,39 +387,29 @@ const LandlordDashboard = () => {
 
     return [...seriesMap.values()].sort((a, b) => (a._index ?? 0) - (b._index ?? 0));
   };
-
-  // Property/Asset flow: buildings list → building detail (apartments, images)
-  const [pmView, setPmView] = useState('list'); // 'list' | 'building-detail' | 'villa-detail'
+  const [pmView, setPmView] = useState('list');
   const [buildingDetail, setBuildingDetail] = useState(null);
   const [pmBuildingName, setPmBuildingName] = useState('');
   const [pmPropertyId, setPmPropertyId] = useState(null);
   const [pmLoading, setPmLoading] = useState(false);
-
-  // Tenant detail (same flow as Sales Manager)
   const [selectedTenantId, setSelectedTenantId] = useState(null);
   const [tenantDetail, setTenantDetail] = useState(null);
   const [tenantDetailLoading, setTenantDetailLoading] = useState(false);
-
-  // Maintenance detail (Works & Claims - click to view full details)
   const [selectedMaintenance, setSelectedMaintenance] = useState(null);
-  // Quote detail (Pending Maintenance Quotes - click to view full details)
   const [selectedQuote, setSelectedQuote] = useState(null);
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setNotifications(prev => [...prev, { id, message, type }]);
+    setNotifications((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 3000);
   }, []);
-
-  // Load data from APIs
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
       if (isDemoMode()) {
-        // Use demo data
         const demoData = getLandlordDemoData();
         setOverviewData(demoData.overview);
         setProperties(demoData.properties);
@@ -443,30 +425,30 @@ const LandlordDashboard = () => {
         setLoading(false);
         return;
       }
-      
+
       const [overview, propertiesData, tenantsData, paymentsData, rentsData, workOrdersData, maintenancesData, claimsData, inventoryData, trackingData, expensesData, quotesData, netPaymentsData, paymentHistoryData] = await Promise.all([
-        landlordService.getOverview(),
-        landlordService.getProperties().catch(() => []),
-        landlordService.getTenants().catch(() => []),
-        landlordService.getPayments(),
-        landlordService.getRents().catch(() => null),
-        landlordService.getWorkOrders(),
-        landlordService.getMaintenances().catch(() => []),
-        landlordService.getClaims(),
-        landlordService.getInventory(),
-        landlordService.getBusinessTracking(),
-        landlordService.getExpenses({
-          property: expensePropertyFilter || undefined,
-          startDate: expenseStartDate || undefined,
-          endDate: expenseEndDate || undefined,
-        }).catch(() => []),
-        landlordService.getMaintenanceQuotes({ status: 'pending_owner_approval' }).catch(() => []),
-        landlordService.getNetPayments().catch(() => null),
-        landlordService.getPaymentHistory().catch(() => null),
-      ]);
-      
+      landlordService.getOverview(),
+      landlordService.getProperties().catch(() => []),
+      landlordService.getTenants().catch(() => []),
+      landlordService.getPayments(),
+      landlordService.getRents().catch(() => null),
+      landlordService.getWorkOrders(),
+      landlordService.getMaintenances().catch(() => []),
+      landlordService.getClaims(),
+      landlordService.getInventory(),
+      landlordService.getBusinessTracking(),
+      landlordService.getExpenses({
+        property: expensePropertyFilter || undefined,
+        startDate: expenseStartDate || undefined,
+        endDate: expenseEndDate || undefined
+      }).catch(() => []),
+      landlordService.getMaintenanceQuotes({ status: 'pending_owner_approval' }).catch(() => []),
+      landlordService.getNetPayments().catch(() => null),
+      landlordService.getPaymentHistory().catch(() => null)]
+      );
+
       setOverviewData(overview);
-      let props = Array.isArray(propertiesData) ? propertiesData : (propertiesData?.properties ?? propertiesData?.data ?? []);
+      let props = Array.isArray(propertiesData) ? propertiesData : propertiesData?.properties ?? propertiesData?.data ?? [];
       if (!Array.isArray(props)) props = [];
       if (props.length === 0) {
         try {
@@ -505,14 +487,12 @@ const LandlordDashboard = () => {
       setLoading(false);
     }
   };
-  
-  // Load net payments
   const loadNetPayments = async () => {
     try {
       const data = await landlordService.getNetPayments({
         status: netPaymentStatusFilter || undefined,
         startDate: netPaymentStartDate || undefined,
-        endDate: netPaymentEndDate || undefined,
+        endDate: netPaymentEndDate || undefined
       });
       setNetPayments(data);
     } catch (error) {
@@ -520,13 +500,11 @@ const LandlordDashboard = () => {
       addNotification('Failed to load net payments', 'error');
     }
   };
-  
-  // Load payment history
   const loadPaymentHistory = async () => {
     try {
       const data = await landlordService.getPaymentHistory({
         startDate: netPaymentStartDate || undefined,
-        endDate: netPaymentEndDate || undefined,
+        endDate: netPaymentEndDate || undefined
       });
       setPaymentHistory(data);
     } catch (error) {
@@ -534,22 +512,17 @@ const LandlordDashboard = () => {
       addNotification('Failed to load payment history', 'error');
     }
   };
-  
-  // Load advertisements when the overview is shown; the tab switch effect handles the dedicated page.
   useEffect(() => {
     if (activeTab === 'overview') {
       loadAdvertisements();
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
-  // Load expenses
+  }, [activeTab]);
   const loadExpenses = async () => {
     try {
       const data = await landlordService.getExpenses({
         property: expensePropertyFilter || undefined,
         startDate: expenseStartDate || undefined,
-        endDate: expenseEndDate || undefined,
+        endDate: expenseEndDate || undefined
       });
       setExpenses(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -557,8 +530,6 @@ const LandlordDashboard = () => {
       addNotification('Failed to load expenses', 'error');
     }
   };
-
-  // Load building expenses pending owner approval
   const loadPendingExpensesForApproval = async () => {
     try {
       const data = await landlordService.getPendingExpensesForApproval();
@@ -598,13 +569,9 @@ const LandlordDashboard = () => {
       setLoading(false);
     }
   };
-
-  // Load data on component mount
   useEffect(() => {
     loadData();
   }, []);
-
-  // Refresh the main data when the user returns to a data-heavy tab
   useEffect(() => {
     if (!hasMountedRef.current) {
       hasMountedRef.current = true;
@@ -624,26 +591,19 @@ const LandlordDashboard = () => {
     } else if (activeTab === 'advertisements') {
       loadAdvertisements();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
-  
-  // Load net payments when filters change
   useEffect(() => {
     if (activeTab === 'payments') {
       loadNetPayments();
       loadPaymentHistory();
     }
   }, [netPaymentStatusFilter, netPaymentStartDate, netPaymentEndDate, activeTab]);
-  
-  // Load expenses and pending expenses when filters change
   useEffect(() => {
     if (activeTab === 'expenses') {
       loadExpenses();
       loadPendingExpensesForApproval();
     }
   }, [expensePropertyFilter, expenseStartDate, expenseEndDate, activeTab]);
-
-  // Fetch full tenant details when a tenant is selected (same as Sales Manager)
   useEffect(() => {
     if (!selectedTenantId) {
       setTenantDetail(null);
@@ -664,10 +624,8 @@ const LandlordDashboard = () => {
       }
     };
     loadTenantDetail();
-    return () => { cancelled = true; };
+    return () => {cancelled = true;};
   }, [selectedTenantId]);
-  
-  // Load chat for a specific user
   const loadChatForUser = useCallback(async (userId) => {
     if (!userId) return;
 
@@ -675,12 +633,8 @@ const LandlordDashboard = () => {
       setSelectedUserId(userId);
       if (String(userId).startsWith('group:')) return;
       const messages = await messagingService.getConversation(userId);
-
-      // Normalize messages array
       const normalizedMessages = Array.isArray(messages) ? messages : [];
       setChatMessages(normalizedMessages);
-      
-      // Mark messages as read
       try {
         await messagingService.markMessagesAsRead(userId);
       } catch (readError) {
@@ -691,12 +645,8 @@ const LandlordDashboard = () => {
       addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
       setChatMessages([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // addNotification is stable, no need to include
-
-  // Load users for messaging (from same company)
+  }, []);
   const loadUsers = useCallback(async () => {
-    // Prevent multiple simultaneous calls
     if (isLoadingUsersRef.current) {
       console.log('Users already loading, skipping...');
       return;
@@ -705,24 +655,18 @@ const LandlordDashboard = () => {
     try {
       isLoadingUsersRef.current = true;
       console.log('Loading users for messaging...');
-      // Use the new getUsers endpoint
       const users = await messagingService.getUsers();
       console.log('Users API response:', users);
-      
-      // Handle different response formats
       let usersArray = [];
       if (Array.isArray(users)) {
         usersArray = users;
       } else if (users && Array.isArray(users.users)) {
         usersArray = users.users;
       } else if (users && typeof users === 'object') {
-        // Try to find array in response
-        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+        usersArray = Object.values(users).find((val) => Array.isArray(val)) || [];
       }
-      
+
       console.log('Processed users array:', usersArray);
-      
-      // Get current user ID to exclude from list
       const storedUser = localStorage.getItem('user');
       let currentUserId = null;
       if (storedUser) {
@@ -734,70 +678,57 @@ const LandlordDashboard = () => {
           console.error('Error parsing stored user:', error);
         }
       }
-      
-      // Map users to chat format and exclude current user
-      const chatUsersList = usersArray
-        .filter(user => {
-          const userId = user.id || user.ID;
-          const userRole = (user.role || user.Role || '').toString().toLowerCase();
-          // Convert both to strings for comparison to handle type mismatches
-          const userIdStr = userId ? String(userId) : null;
-          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-          const isNotCurrentUser = userIdStr && userIdStr !== currentUserIdStr;
-          const shouldInclude = isNotCurrentUser && isAgencyAdminRole(userRole);
-          if (!shouldInclude && userIdStr) {
-            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
-          }
-          return shouldInclude;
-        })
-        .map(user => {
-          const userId = user.id || user.ID;
-          return {
-            userId: userId,
-            name: user.name || user.Name || 'User',
-            email: user.email || user.Email || '',
-            role: user.role || user.Role || '',
-            company: user.company || user.Company || '',
-            status: user.status || user.Status || 'Active',
-            unreadCount: 0 // Will be updated from conversations if needed
-          };
-        })
-        .sort((a, b) => {
-          const nameA = (a.name || '').toLowerCase();
-          const nameB = (b.name || '').toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
-      
+      const chatUsersList = usersArray.
+      filter((user) => {
+        const userId = user.id || user.ID;
+        const userRole = (user.role || user.Role || '').toString().toLowerCase();
+        const userIdStr = userId ? String(userId) : null;
+        const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+        const isNotCurrentUser = userIdStr && userIdStr !== currentUserIdStr;
+        const shouldInclude = isNotCurrentUser && isAgencyAdminRole(userRole);
+        if (!shouldInclude && userIdStr) {
+          console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+        }
+        return shouldInclude;
+      }).
+      map((user) => {
+        const userId = user.id || user.ID;
+        return {
+          userId: userId,
+          name: user.name || user.Name || 'User',
+          email: user.email || user.Email || '',
+          role: user.role || user.Role || '',
+          company: user.company || user.Company || '',
+          status: user.status || user.Status || 'Active',
+          unreadCount: 0
+        };
+      }).
+      sort((a, b) => {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
       console.log('Final chat users list:', chatUsersList);
-      
-      // Get conversations to update unread counts and include users who have messaged but aren't in users list
       try {
         const conversations = await messagingService.getConversations();
         if (Array.isArray(conversations)) {
-          // Create a map of existing users by ID for quick lookup
           const existingUsersMap = new Map();
-          chatUsersList.forEach(u => {
+          chatUsersList.forEach((u) => {
             existingUsersMap.set(String(u.userId), u);
           });
-          
-          // Process conversations to update unread counts and add missing users
-          conversations.forEach(conv => {
+          conversations.forEach((conv) => {
             const convUserId = String(conv.userId || conv.userID);
             const existingUser = existingUsersMap.get(convUserId);
-            
+
             if (existingUser) {
-              // Update unread count for existing user
               if (conv.unreadCount) {
                 existingUser.unreadCount = conv.unreadCount;
               }
             } else {
-              // User has a conversation but isn't in the users list - add them
-              // This handles cases where users from other companies or roles have messaged
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
               const userRole = (convUser.role || convUser.Role || conv.role || '').toString().toLowerCase();
-              
-              // Only add if it's not the current user
               const currentUserIdStr = currentUserId ? String(currentUserId) : null;
               if (userId && String(userId) !== currentUserIdStr && isAgencyAdminRole(userRole)) {
                 const newUser = {
@@ -815,8 +746,6 @@ const LandlordDashboard = () => {
               }
             }
           });
-          
-          // Re-sort after adding new users
           chatUsersList.sort((a, b) => {
             const nameA = (a.name || '').toLowerCase();
             const nameB = (b.name || '').toLowerCase();
@@ -826,15 +755,11 @@ const LandlordDashboard = () => {
       } catch (convError) {
         console.error('Error loading conversations for unread counts:', convError);
       }
-      
+
       setChatUsers(chatUsersList);
-      
-      // Auto-select first user if available and no user is selected
-      // Use functional update to avoid dependency on selectedUserId
-      setSelectedUserId(prevSelected => {
+      setSelectedUserId((prevSelected) => {
         if (chatUsersList.length > 0 && !prevSelected) {
           const firstUserId = chatUsersList[0].userId;
-          // Load chat for first user asynchronously
           setTimeout(() => {
             loadChatForUser(firstUserId);
           }, 0);
@@ -842,7 +767,7 @@ const LandlordDashboard = () => {
         }
         return prevSelected;
       });
-      
+
       if (chatUsersList.length === 0) {
         console.warn('No users found. This could mean:');
         console.warn('1. No other users in the same company');
@@ -858,18 +783,13 @@ const LandlordDashboard = () => {
     } finally {
       isLoadingUsersRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadChatForUser]); // addNotification is stable, no need to include
-
-  // Send message
+  }, [loadChatForUser]);
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
     if (String(selectedUserId).startsWith('group:')) return;
 
     const content = chatInput.trim();
     const tempMessageId = `temp-${Date.now()}`;
-    
-    // Optimistic update
     const storedUser = localStorage.getItem('user');
     let currentUserId = null;
     if (storedUser) {
@@ -880,7 +800,7 @@ const LandlordDashboard = () => {
         console.error('Error parsing user:', e);
       }
     }
-    
+
     const tempMessage = {
       id: tempMessageId,
       fromUserId: currentUserId,
@@ -889,53 +809,39 @@ const LandlordDashboard = () => {
       status: 'Sent',
       read: false,
       createdAt: new Date().toISOString(),
-      type: 'message',
+      type: 'message'
     };
-    
-    setChatMessages(prev => [...prev, tempMessage]);
+
+    setChatMessages((prev) => [...prev, tempMessage]);
     setChatInput('');
-    
-    // Scroll to bottom
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
-    
+
     try {
       const message = await messagingService.sendMessage({
         toUserId: selectedUserId,
-        content: content,
+        content: content
       });
-      
-      // Replace temp message with actual message
-      setChatMessages(prev => prev.map(msg => 
-        msg.id === tempMessageId ? message : msg
+      setChatMessages((prev) => prev.map((msg) =>
+      msg.id === tempMessageId ? message : msg
       ));
-      
-      // Reload chat to get updated conversation
       await loadChatForUser(selectedUserId);
     } catch (error) {
       console.error('Error sending message:', error);
       addNotification(error.message || 'Failed to send message', 'error');
-      // Remove optimistic message on error
-      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      setChatInput(content); // Restore input on error
+      setChatMessages((prev) => prev.filter((msg) => msg.id !== tempMessageId));
+      setChatInput(content);
     }
   };
-  
-  // Load users when chat tab is active (only once per tab switch)
   useEffect(() => {
     if (activeTab === 'chat' && !isLoadingUsersRef.current) {
       loadUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]); // Only depend on activeTab, not loadUsers
-  
-  // Auto-scroll to bottom when messages change
+  }, [activeTab]);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
-
-  // Action handlers
   const handleAddProperty = async (propertyData) => {
     try {
       await landlordService.addProperty(propertyData);
@@ -989,15 +895,12 @@ const LandlordDashboard = () => {
       const receipt = await landlordService.generateReceipt(receiptData);
       addNotification('Receipt generated successfully', 'success');
       setShowReceiptModal(false);
-      // You could also trigger a download here
       console.log('Generated receipt:', receipt);
     } catch (error) {
       console.error('Error generating receipt:', error);
       addNotification('Failed to generate receipt', 'error');
     }
   };
-
-  // Generate Receipt Function
   const generateReceipt = () => {
     const receiptData = {
       receiptNumber: `RCP-${Date.now()}`,
@@ -1009,8 +912,6 @@ const LandlordDashboard = () => {
       period: 'November 2024',
       description: 'Monthly Rent Payment'
     };
-
-    // Create receipt content
     const receiptContent = `
       REAL ESTATE RENTAL RECEIPT
       =========================
@@ -1033,8 +934,6 @@ const LandlordDashboard = () => {
       
       Generated on: ${new Date().toLocaleString()}
     `;
-
-    // Create and download the receipt
     const blob = new Blob([receiptContent], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1047,8 +946,6 @@ const LandlordDashboard = () => {
 
     addNotification('Receipt generated and downloaded!', 'success');
   };
-
-  // Generate Lease Function
   const generateLease = () => {
     const leaseData = {
       leaseId: `LEASE-${Date.now()}`,
@@ -1095,8 +992,6 @@ const LandlordDashboard = () => {
 
     addNotification('Lease agreement generated and downloaded!', 'success');
   };
-
-  // Other button functions
   const handleScheduleVisit = () => {
     addNotification('Visit scheduling feature opened!', 'info');
   };
@@ -1148,10 +1043,8 @@ const LandlordDashboard = () => {
 
     addNotification('Financial report generated and downloaded!', 'success');
   };
-
-  // State to force re-render when language changes
   const [language, setLanguage] = useState(getLanguage());
-  
+
   useEffect(() => {
     const handleLanguageChange = () => {
       setLanguage(getLanguage());
@@ -1162,18 +1055,18 @@ const LandlordDashboard = () => {
 
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: t('nav.overview'), icon: Home },
-      { id: 'properties', label: t('nav.propertyAsset'), icon: Home },
-      { id: 'tenants', label: t('nav.tenants'), icon: Users },
-      { id: 'payments', label: t('nav.paymentsCashFlow'), icon: DollarSign },
-      { id: 'rents', label: t('nav.rentsTracking'), icon: DollarSign },
-      { id: 'expenses', label: t('nav.expenses'), icon: FileText },
-      { id: 'works', label: t('nav.worksClaims'), icon: Wrench },
-      { id: 'tracking', label: t('nav.businessTracking'), icon: BarChart3 },
-      { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
-      { id: 'chat', label: t('nav.messaging'), icon: MessageCircle },
-      { id: 'settings', label: t('nav.profileSettings'), icon: Settings }
-    ],
+    { id: 'overview', label: t('nav.overview'), icon: Home },
+    { id: 'properties', label: t('nav.propertyAsset'), icon: Home },
+    { id: 'tenants', label: t('nav.tenants'), icon: Users },
+    { id: 'payments', label: t('nav.paymentsCashFlow'), icon: DollarSign },
+    { id: 'rents', label: t('nav.rentsTracking'), icon: DollarSign },
+    { id: 'expenses', label: t('nav.expenses'), icon: FileText },
+    { id: 'works', label: t('nav.worksClaims'), icon: Wrench },
+    { id: 'tracking', label: t('nav.businessTracking'), icon: BarChart3 },
+    { id: 'advertisements', label: t('nav.advertisements'), icon: Megaphone },
+    { id: 'chat', label: t('nav.messaging'), icon: MessageCircle },
+    { id: 'settings', label: t('nav.profileSettings'), icon: Settings }],
+
     [language]
   );
 
@@ -1197,7 +1090,7 @@ const LandlordDashboard = () => {
     const totalUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.totalUnits, 0) || normalizeAmount(overviewData?.totalUnits);
     const occupiedUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.occupiedUnits, 0) || normalizeAmount(overviewData?.occupiedUnits);
     const vacantUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.vacantUnits, 0) || normalizeAmount(overviewData?.vacantUnits);
-    const occupancyRate = totalUnits > 0 ? ((occupiedUnits / totalUnits) * 100).toFixed(1) : '0.0';
+    const occupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits * 100).toFixed(1) : '0.0';
     const activeTenantSignatures = new Set();
     const activeTenantsCount = tenants.filter((tenant) => {
       const status = normalizeText(readValue(tenant?.status, tenant?.Status, tenant?.paymentStatus, tenant?.PaymentStatus));
@@ -1205,12 +1098,12 @@ const LandlordDashboard = () => {
         return false;
       }
       const signature = [
-        normalizeText(readValue(tenant?.email, tenant?.Email)),
-        normalizeText(readValue(tenant?.name, tenant?.Name)),
-        normalizeText(readValue(tenant?.property, tenant?.Property)),
-        normalizeText(readValue(tenant?.phone, tenant?.Phone)),
-        normalizeText(readValue(tenant?.source, tenant?.Source)),
-      ].join('|');
+      normalizeText(readValue(tenant?.email, tenant?.Email)),
+      normalizeText(readValue(tenant?.name, tenant?.Name)),
+      normalizeText(readValue(tenant?.property, tenant?.Property)),
+      normalizeText(readValue(tenant?.phone, tenant?.Phone)),
+      normalizeText(readValue(tenant?.source, tenant?.Source))].
+      join('|');
       if (activeTenantSignatures.has(signature)) {
         return false;
       }
@@ -1222,9 +1115,9 @@ const LandlordDashboard = () => {
       const map = new Map();
       rows.forEach((row, index) => {
         const date = parseDateValue(readValue(row?.date, row?.Date, row?.createdAt, row?.CreatedAt, row?.paidAt, row?.PaidAt));
-        const month = date
-          ? date.toLocaleString(undefined, { month: 'short', year: 'numeric' })
-          : readValue(row?.month, row?.Month, row?.label, row?.Label, `Month ${index + 1}`);
+        const month = date ?
+        date.toLocaleString(undefined, { month: 'short', year: 'numeric' }) :
+        readValue(row?.month, row?.Month, row?.label, row?.Label, `Month ${index + 1}`);
         const key = normalizeText(month) || `month-${index}`;
         const entry = map.get(key) || { month, total: 0, _index: index };
         entry.total += normalizeAmount(readValue(...amountKeys.map((keyName) => row?.[keyName])));
@@ -1234,13 +1127,13 @@ const LandlordDashboard = () => {
     };
 
     const paymentRows = Array.isArray(payments) ? payments : [];
-    const netPaymentRows = Array.isArray(netPayments)
-      ? netPayments
-      : Array.isArray(netPayments?.payments)
-        ? netPayments.payments
-        : Array.isArray(netPayments?.data)
-          ? netPayments.data
-          : [];
+    const netPaymentRows = Array.isArray(netPayments) ?
+    netPayments :
+    Array.isArray(netPayments?.payments) ?
+    netPayments.payments :
+    Array.isArray(netPayments?.data) ?
+    netPayments.data :
+    [];
     const collectedPaymentRows = paymentRows.filter((row) => {
       const chargeType = normalizeText(readValue(row?.chargeType, row?.ChargeType, row?.type, row?.Type, row?.category, row?.Category));
       const status = getPaymentStatus(row);
@@ -1265,9 +1158,9 @@ const LandlordDashboard = () => {
     const chartData = [...chartSeriesMap.values()].sort((a, b) => (a._index ?? 0) - (b._index ?? 0));
     const totalRentCollected = chartData.reduce((sum, row) => sum + (row.rent || 0), 0) || normalizeAmount(overviewData?.totalRentCollected);
     const totalNetPayoutReceived = chartData.reduce((sum, row) => sum + (row.payout || 0), 0) || normalizeAmount(overviewData?.totalNetPayoutReceived);
-    const paymentRate = paymentRows.length > 0
-      ? (collectedPaymentRows.length / paymentRows.length) * 100
-      : normalizeAmount(overviewData?.paymentRate);
+    const paymentRate = paymentRows.length > 0 ?
+    collectedPaymentRows.length / paymentRows.length * 100 :
+    normalizeAmount(overviewData?.paymentRate);
 
     return (
       <div className="sa-overview-page">
@@ -1285,30 +1178,30 @@ const LandlordDashboard = () => {
               <ResponsiveContainer>
                 <AreaChart
                   data={chartData.length > 0 ? chartData : []}
-                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
-                >
+                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+                  
                   <defs>
                     <linearGradient id="colorRentLandlord" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorPayout" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                  <XAxis 
-                    dataKey="month" 
-                    stroke="#6b7280" 
+                  <XAxis
+                    dataKey="month"
+                    stroke="#6b7280"
                     tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#e5e7eb' }}
-                  />
-                  <YAxis 
-                    stroke="#6b7280" 
+                    axisLine={{ stroke: '#e5e7eb' }} />
+                  
+                  <YAxis
+                    stroke="#6b7280"
                     tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#e5e7eb' }}
-                  />
+                    axisLine={{ stroke: '#e5e7eb' }} />
+                  
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -1321,12 +1214,12 @@ const LandlordDashboard = () => {
                       if (name === 'rent') return [`${value.toLocaleString()} XOF`, 'Rent Collected'];
                       if (name === 'payout') return [`${value.toLocaleString()} XOF`, 'Net Payout'];
                       return value;
-                    }}
-                  />
-                  <Legend 
+                    }} />
+                  
+                  <Legend
                     wrapperStyle={{ paddingTop: '10px' }}
-                    iconType="line"
-                  />
+                    iconType="line" />
+                  
                   <Area
                     type="natural"
                     dataKey="rent"
@@ -1335,8 +1228,8 @@ const LandlordDashboard = () => {
                     fill="url(#colorRentLandlord)"
                     dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
                     activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    name="Rent Collected"
-                  />
+                    name="Rent Collected" />
+                  
                   <Area
                     type="natural"
                     dataKey="payout"
@@ -1345,14 +1238,14 @@ const LandlordDashboard = () => {
                     fill="url(#colorPayout)"
                     dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
                     activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    name="Net Payout"
-                  />
+                    name="Net Payout" />
+                  
                 </AreaChart>
               </ResponsiveContainer>
           </div>
-          {chartData.length === 0 && (
+          {chartData.length === 0 &&
             <p className="sa-cell-sub" style={{ marginTop: '12px' }}>No recent payment data available yet.</p>
-          )}
+            }
           </div>
 
           <div className="sa-overview-metrics">
@@ -1374,48 +1267,47 @@ const LandlordDashboard = () => {
               <p className="sa-metric-label">Active Tenants</p>
               <p className="sa-metric-number">{activeTenantsCount}</p>
           </div>
-            {/* Advertisements Display - Replacing Banner Card */}
-            {advertisements.length > 0 ? (
-              <div style={{
-                gridColumn: 'span 2',
-                minHeight: '400px',
-                padding: '32px',
-                backgroundColor: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '24px',
-                overflow: 'hidden',
-                position: 'relative'
-              }}>
+            {advertisements.length > 0 ?
+            <div style={{
+              gridColumn: 'span 2',
+              minHeight: '400px',
+              padding: '32px',
+              backgroundColor: '#fff',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '24px',
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
                 <h3 style={{
-                  margin: '0 0 20px 0',
-                  fontSize: '1.5rem',
-                  fontWeight: '600',
-                  color: '#1f2937'
-                }}>
+                margin: '0 0 20px 0',
+                fontSize: '1.5rem',
+                fontWeight: '600',
+                color: '#1f2937'
+              }}>
                   Advertisements
                 </h3>
                 <div style={{
-                  position: 'relative',
-                  overflow: 'hidden',
-                  flex: 1
-                }}>
+                position: 'relative',
+                overflow: 'hidden',
+                flex: 1
+              }}>
                   <div style={{
-                    display: 'flex',
-                    transform: `translateX(-${currentAdIndex * 100}%)`,
-                    transition: 'transform 0.5s ease-in-out',
-                    width: `${advertisements.length * 100}%`
-                  }}>
+                  display: 'flex',
+                  transform: `translateX(-${currentAdIndex * 100}%)`,
+                  transition: 'transform 0.5s ease-in-out',
+                  width: `${advertisements.length * 100}%`
+                }}>
                     {advertisements.map((ad, index) => {
                     const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-                    const fullImageUrl = imageUrl 
-                      ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                      : null;
+                    const fullImageUrl = imageUrl ?
+                    imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}` :
+                    null;
 
                     return (
-                      <div 
+                      <div
                         key={`ad-${ad.ID || ad.id || index}`}
                         style={{
                           width: `${100 / advertisements.length}%`,
@@ -1427,96 +1319,94 @@ const LandlordDashboard = () => {
                           alignItems: 'center',
                           textAlign: 'center',
                           flexShrink: 0
-                        }}
-                      >
-                        {fullImageUrl && (
-                          <img 
-                            src={fullImageUrl} 
-                            alt={ad.Title || ad.title || 'Advertisement'} 
-                            style={{
-                              width: '100%',
-                              height: 'auto',
-                              maxHeight: '250px',
-                              objectFit: 'contain',
-                              borderRadius: '8px',
-                              marginBottom: '16px'
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        )}
-                        <h3 style={{ 
-                          margin: '0 0 8px 0', 
-                          fontSize: '1.1rem', 
+                        }}>
+                        
+                        {fullImageUrl &&
+                        <img
+                          src={fullImageUrl}
+                          alt={ad.Title || ad.title || 'Advertisement'}
+                          style={{
+                            width: '100%',
+                            height: 'auto',
+                            maxHeight: '250px',
+                            objectFit: 'contain',
+                            borderRadius: '8px',
+                            marginBottom: '16px'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }} />
+
+                        }
+                        <h3 style={{
+                          margin: '0 0 8px 0',
+                          fontSize: '1.1rem',
                           color: '#1f2937',
                           fontWeight: '600'
                         }}>
                           {ad.Title || ad.title || 'Untitled Advertisement'}
                         </h3>
-                        <p style={{ 
-                          margin: '0 0 12px 0', 
-                          fontSize: '0.9rem', 
+                        <p style={{
+                          margin: '0 0 12px 0',
+                          fontSize: '0.9rem',
                           color: '#6b7280',
                           lineHeight: '1.5'
                         }}>
                           {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
                         </p>
-                        {ad.CreatedAt && (
-                          <span style={{ 
-                            fontSize: '0.8rem', 
-                            color: '#9ca3af'
-                          }}>
+                        {ad.CreatedAt &&
+                        <span style={{
+                          fontSize: '0.8rem',
+                          color: '#9ca3af'
+                        }}>
                             Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
                           </span>
-                        )}
-        </div>
-                    );
+                        }
+        </div>);
+
                   })}
               </div>
-                  
-                  {/* Carousel Indicators */}
-                  {advertisements.length > 1 && (
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '16px',
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)'
-                    }}>
-                      {advertisements.map((_, index) => (
-                        <button
-                          key={`indicator-${index}`}
-                          onClick={() => {
-                            setCurrentAdIndex(index);
-                            if (carouselIntervalRef.current) {
-                              clearInterval(carouselIntervalRef.current);
-                            }
-                            carouselIntervalRef.current = setInterval(() => {
-                              setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
-                            }, 5000);
-                          }}
-                          style={{
-                            width: index === currentAdIndex ? '24px' : '8px',
-                            height: '8px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: index === currentAdIndex ? '#3b82f6' : '#d1d5db',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease'
-                          }}
-                        />
-                      ))}
-            </div>
+                  {advertisements.length > 1 &&
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '16px',
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)'
+                }}>
+                      {advertisements.map((_, index) =>
+                  <button
+                    key={`indicator-${index}`}
+                    onClick={() => {
+                      setCurrentAdIndex(index);
+                      if (carouselIntervalRef.current) {
+                        clearInterval(carouselIntervalRef.current);
+                      }
+                      carouselIntervalRef.current = setInterval(() => {
+                        setCurrentAdIndex((prevIndex) => (prevIndex + 1) % advertisements.length);
+                      }, 5000);
+                    }}
+                    style={{
+                      width: index === currentAdIndex ? '24px' : '8px',
+                      height: '8px',
+                      borderRadius: '4px',
+                      border: 'none',
+                      backgroundColor: index === currentAdIndex ? '#3b82f6' : '#d1d5db',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease'
+                    }} />
+
                   )}
-          </div>
             </div>
-            ) : (
-              <div className="sa-banner-card">
+                }
+          </div>
+            </div> :
+
+            <div className="sa-banner-card">
                 <div className="sa-banner-text">
                   <h3>Property Management</h3>
                   <p>
@@ -1524,7 +1414,7 @@ const LandlordDashboard = () => {
                   </p>
             </div>
           </div>
-            )}
+            }
             </div>
             </div>
 
@@ -1555,10 +1445,10 @@ const LandlordDashboard = () => {
             </div>
           </div>
 
-          </div>
-        );
+          </div>);
+
   };
-      
+
   const handleViewBuilding = async (property) => {
     const propId = property.id ?? property.ID;
     if (!propId) return;
@@ -1596,17 +1486,16 @@ const LandlordDashboard = () => {
   };
 
   const renderProperties = () => {
-    // Building/Villa detail view – apartments table with images (read-only for landlord)
     if (pmView === 'building-detail' && buildingDetail) {
       const units = buildingDetail.units || [];
       const totalApartments = buildingDetail.totalApartments ?? units.length;
       const images = buildingDetail.images || [];
       const firstImage = images[0];
       return (
-    <div className="sa-clients-page">
+        <div className="sa-clients-page">
       <div className="sa-clients-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setBuildingDetail(null); setPmPropertyId(null); setPmBuildingName(''); }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => {setPmView('list');setBuildingDetail(null);setPmPropertyId(null);setPmBuildingName('');}}>
                 <ArrowLeft size={18} />
                 Back
               </button>
@@ -1616,16 +1505,16 @@ const LandlordDashboard = () => {
       </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
-            {firstImage && (
-              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
-            )}
-            {images.length > 1 && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {images.slice(1, 5).map((img, i) => (
-                  <img key={i} src={img} alt={`${pmBuildingName} ${i + 2}`} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />
-                ))}
+            {firstImage &&
+            <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            }
+            {images.length > 1 &&
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {images.slice(1, 5).map((img, i) =>
+              <img key={i} src={img} alt={`${pmBuildingName} ${i + 2}`} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />
+              )}
               </div>
-            )}
+            }
             <div style={{ flex: 1, minWidth: 200 }}>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
               <p style={{ margin: 0, color: '#6b7280' }}>Total of apartments: <strong>{totalApartments}</strong></p>
@@ -1655,7 +1544,7 @@ const LandlordDashboard = () => {
                     const isOverdue = statusText.includes('overdue') || statusText.includes('late') || statusText.includes('arrears') || unpaidRents > 0;
                     const rentValue = normalizeAmount(readValue(row?.rentPrice, row?.rent, row?.Rent));
                     return (
-                    <tr key={getRecordId(row) || i}>
+                      <tr key={getRecordId(row) || i}>
                       <td>{formatDateValue(entryDate)}</td>
                       <td>{row.unitNumber || row.name || `Apartment ${i + 1}`}</td>
                       <td>{row.tenant || '—'}</td>
@@ -1667,15 +1556,15 @@ const LandlordDashboard = () => {
                           {isOverdue ? 'Overdue' : statusLabel}
                         </span>
                       </td>
-              </tr>
-                    );
+              </tr>);
+
                   })}
                 </tbody>
               </table>
                     </div>
           </div>
-        </div>
-      );
+        </div>);
+
     }
 
     if (pmView === 'villa-detail' && buildingDetail) {
@@ -1687,7 +1576,7 @@ const LandlordDashboard = () => {
         <div className="sa-clients-page">
           <div className="sa-clients-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => { setPmView('list'); setBuildingDetail(null); setPmPropertyId(null); setPmBuildingName(''); }}>
+              <button type="button" className="sa-primary-cta" style={{ padding: '8px 12px' }} onClick={() => {setPmView('list');setBuildingDetail(null);setPmPropertyId(null);setPmBuildingName('');}}>
                 <ArrowLeft size={18} />
                 Back
               </button>
@@ -1697,16 +1586,16 @@ const LandlordDashboard = () => {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
-            {firstImage && (
-              <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
-            )}
-            {images.length > 1 && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {images.slice(1, 5).map((img, i) => (
-                  <img key={i} src={img} alt={`${pmBuildingName} ${i + 2}`} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />
-                ))}
+            {firstImage &&
+            <img src={firstImage} alt={pmBuildingName} style={{ width: 280, height: 160, objectFit: 'cover', borderRadius: 8 }} />
+            }
+            {images.length > 1 &&
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {images.slice(1, 5).map((img, i) =>
+              <img key={i} src={img} alt={`${pmBuildingName} ${i + 2}`} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />
+              )}
               </div>
-            )}
+            }
             <div style={{ flex: 1, minWidth: 200 }}>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem' }}>{pmBuildingName.toUpperCase()}</h3>
               <p style={{ margin: 0, color: '#6b7280' }}>Total of apartments: <strong>{totalApartments}</strong></p>
@@ -1736,7 +1625,7 @@ const LandlordDashboard = () => {
                     const isOverdue = statusText.includes('overdue') || statusText.includes('late') || statusText.includes('arrears') || unpaidRents > 0;
                     const rentValue = normalizeAmount(readValue(row?.rentPrice, row?.rent, row?.Rent));
                     return (
-                    <tr key={getRecordId(row) || i}>
+                      <tr key={getRecordId(row) || i}>
                       <td>{formatDateValue(entryDate)}</td>
                       <td>{row.unitNumber || row.name || 'VILLA'}</td>
                       <td>{row.tenant || '—'}</td>
@@ -1748,27 +1637,25 @@ const LandlordDashboard = () => {
                           {isOverdue ? 'Overdue' : statusLabel}
                         </span>
                       </td>
-                    </tr>
-                    );
+                    </tr>);
+
                   })}
             </tbody>
           </table>
             </div>
         </div>
-    </div>
-  );
-    }
+    </div>);
 
-    // Buildings list – click to see apartments
+    }
     const propType = (p) => getPropertyType(p);
     const isBuilding = (p) => ['building', 'apartment', 'condo', 'house', 'studio'].some((t) => propType(p).includes(t));
     const isVilla = (p) => propType(p).includes('villa');
     const buildings = properties.filter(isBuilding);
     const villas = properties.filter(isVilla);
-    const others = properties.filter(p => !isBuilding(p) && !isVilla(p));
+    const others = properties.filter((p) => !isBuilding(p) && !isVilla(p));
 
     return (
-    <div className="sa-clients-page">
+      <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
             <h2>Property & Asset Management</h2>
@@ -1806,8 +1693,8 @@ const LandlordDashboard = () => {
                       key={property.ID || property.id || `property-${index}`}
                       style={{ cursor: 'pointer' }}
                       onClick={handleClick}
-                      className="clickable-row"
-                    >
+                      className="clickable-row">
+                      
                   <td className="sa-cell-main">
                         <span className="sa-cell-title">{property.Address || property.address || property.name || property.building || 'Unknown'}</span>
                   </td>
@@ -1825,20 +1712,20 @@ const LandlordDashboard = () => {
                       <td onClick={(e) => e.stopPropagation()}>
                         <button type="button" className="sa-icon-button" title="View" onClick={handleClick}>👁️</button>
                   </td>
-                </tr>
-                  );
+                </tr>);
+
                 })}
-                {properties.length === 0 && !pmLoading && (
-                  <tr>
+                {properties.length === 0 && !pmLoading &&
+                <tr>
                     <td colSpan={9} className="sa-table-empty">No properties found</td>
                   </tr>
-            )}
+                }
           </tbody>
         </table>
           </div>
       </div>
-    </div>
-  );
+    </div>);
+
   };
 
   const renderTenantDetail = () => {
@@ -1848,22 +1735,22 @@ const LandlordDashboard = () => {
           <div className="sa-section-card" style={{ padding: '48px', textAlign: 'center' }}>
             <p className="sa-cell-sub" style={{ margin: 0 }}>Loading tenant details…</p>
           </div>
-        </div>
-      );
+        </div>);
+
     }
     const c = tenantDetail?.client;
     if (!c) {
       return (
         <div className="sa-clients-page">
-          <button type="button" className="sa-outline-button sa-tenant-detail-back-btn" onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }} style={{ marginBottom: '16px' }}>
+          <button type="button" className="sa-outline-button sa-tenant-detail-back-btn" onClick={() => {setSelectedTenantId(null);setTenantDetail(null);}} style={{ marginBottom: '16px' }}>
             <ArrowLeft size={16} />
             Back to list
           </button>
           <div className="sa-section-card">
             <p className="sa-cell-sub" style={{ margin: 0 }}>Tenant not found or failed to load.</p>
           </div>
-        </div>
-      );
+        </div>);
+
     }
     const prop = tenantDetail?.property;
     const alertList = Array.isArray(tenantDetail?.alerts) ? tenantDetail.alerts : [];
@@ -1889,7 +1776,7 @@ const LandlordDashboard = () => {
     return (
       <div className="sa-clients-page">
         <div className="sa-clients-header" style={{ marginBottom: '20px' }}>
-          <button type="button" className="sa-outline-button sa-tenant-detail-back-btn" onClick={() => { setSelectedTenantId(null); setTenantDetail(null); }}>
+          <button type="button" className="sa-outline-button sa-tenant-detail-back-btn" onClick={() => {setSelectedTenantId(null);setTenantDetail(null);}}>
             <ArrowLeft size={16} />
             Back to list
           </button>
@@ -1900,12 +1787,12 @@ const LandlordDashboard = () => {
             <div>
               <h2>{name}</h2>
               <span className={`sa-status-pill ${(status || '').toLowerCase().replace(/\s+/g, '-')}`} style={{ marginRight: '8px' }}>{status}</span>
-              {propertyAddr && propertyAddr !== '—' && (
-                <span className="sa-tenant-detail-meta">
+              {propertyAddr && propertyAddr !== '—' &&
+              <span className="sa-tenant-detail-meta">
                   <MapPin size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
                   {propertyAddr}{unitNumber && unitNumber !== '—' ? ` · ${unitNumber}` : ''}
                 </span>
-              )}
+              }
             </div>
           </div>
         </div>
@@ -1936,8 +1823,8 @@ const LandlordDashboard = () => {
               <div><dt>Last payment</dt><dd>{lastPayment ? new Date(lastPayment).toLocaleDateString() : '—'}</dd></div>
             </dl>
           </div>
-          {prop && (
-            <div className="sa-section-card sa-tenant-detail-card">
+          {prop &&
+          <div className="sa-section-card sa-tenant-detail-card">
               <h3><Building size={18} /> Property details</h3>
               <dl className="sa-tenant-detail-dl">
                 <div><dt>Type</dt><dd>{prop.type || prop.Type || '—'}</dd></div>
@@ -1946,67 +1833,67 @@ const LandlordDashboard = () => {
                 <div><dt>Property status</dt><dd><span className={`sa-status-pill ${(prop.status || prop.Status || '').toLowerCase()}`}>{prop.status || prop.Status || '—'}</span></dd></div>
               </dl>
             </div>
-          )}
+          }
           <div className="sa-section-card sa-tenant-detail-card" style={alertList.length ? undefined : { gridColumn: '1 / -1' }}>
             <h3><AlertTriangle size={18} /> Alerts & activity</h3>
-            {alertList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {alertList.map((alert, idx) => (
-                  <li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item">
+            {alertList.length > 0 ?
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {alertList.map((alert, idx) =>
+              <li key={alert.ID || alert.id || idx} className="sa-tenant-detail-alert-item">
                     <div className="sa-tenant-detail-alert-title">{alert.Title || alert.title || 'Alert'}</div>
                     {alert.Message && <div className="sa-cell-sub" style={{ marginBottom: '4px' }}>{alert.Message}</div>}
                     <div className="sa-tenant-detail-alert-meta">{(alert.Urgency || alert.urgency || '').toLowerCase()} · {alert.Status || alert.status || 'Open'}{alert.Amount != null && ` · ${Number(alert.Amount).toLocaleString()} XOF`}</div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="sa-cell-sub">No alerts for this tenant.</p>
-            )}
+              )}
+              </ul> :
+
+            <p className="sa-cell-sub">No alerts for this tenant.</p>
+            }
           </div>
           <div className="sa-section-card sa-tenant-detail-card">
             <h3><Wrench size={18} /> Maintenances requested</h3>
-            {maintenancesList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {maintenancesList.map((m, idx) => (
-                  <li key={m.ID ?? m.id ?? idx} className="sa-tenant-detail-alert-item">
+            {maintenancesList.length > 0 ?
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {maintenancesList.map((m, idx) =>
+              <li key={m.ID ?? m.id ?? idx} className="sa-tenant-detail-alert-item">
                     <div className="sa-tenant-detail-alert-title">{m.Issue || m.issue || 'Maintenance'}</div>
-                    <div className="sa-tenant-detail-alert-meta">{(m.Status || m.status || '—')} · {(m.Priority || m.priority || '—')}{m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}</div>
+                    <div className="sa-tenant-detail-alert-meta">{m.Status || m.status || '—'} · {m.Priority || m.priority || '—'}{m.CreatedAt && ` · ${new Date(m.CreatedAt).toLocaleDateString()}`}</div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="sa-cell-sub">No maintenance requests for this tenant.</p>
-            )}
+              )}
+              </ul> :
+
+            <p className="sa-cell-sub">No maintenance requests for this tenant.</p>
+            }
           </div>
           <div className="sa-section-card sa-tenant-detail-card">
             <h3><Receipt size={18} /> Recent payment history</h3>
-            {paymentsList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {paymentsList.slice(0, 10).map((p, idx) => (
-                  <li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
-                    <div className="sa-tenant-detail-alert-title">{Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {(p.Status || p.status || '—')}</div>
-                    <div className="sa-tenant-detail-alert-meta">{p.Date ? new Date(p.Date).toLocaleDateString() : (p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—')}{(p.Method || p.method) && ` · ${p.Method || p.method}`}</div>
+            {paymentsList.length > 0 ?
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {paymentsList.slice(0, 10).map((p, idx) =>
+              <li key={p.ID || p.id || idx} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: (p.Status || p.status) === 'Approved' ? '#16a34a' : '#f59e0b' }}>
+                    <div className="sa-tenant-detail-alert-title">{Number(p.Amount ?? p.amount ?? 0).toLocaleString()} XOF · {p.Status || p.status || '—'}</div>
+                    <div className="sa-tenant-detail-alert-meta">{p.Date ? new Date(p.Date).toLocaleDateString() : p.CreatedAt ? new Date(p.CreatedAt).toLocaleDateString() : '—'}{(p.Method || p.method) && ` · ${p.Method || p.method}`}</div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="sa-cell-sub">No payment history for this tenant.</p>
-            )}
+              )}
+              </ul> :
+
+            <p className="sa-cell-sub">No payment history for this tenant.</p>
+            }
           </div>
           <div className="sa-section-card sa-tenant-detail-card">
             <h3><StickyNote size={18} /> Private notes</h3>
-            {privateNotesList.length > 0 ? (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {privateNotesList.map((n) => (
-                  <li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}>
+            {privateNotesList.length > 0 ?
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {privateNotesList.map((n) =>
+              <li key={n.id ?? n.ID} className="sa-tenant-detail-alert-item" style={{ borderLeftColor: '#6366f1' }}>
                     <div className="sa-tenant-detail-alert-title">{n.note ?? n.Note}</div>
-                    <div className="sa-tenant-detail-alert-meta">{n.createdAt ? new Date(n.createdAt).toLocaleString() : (n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : '')}</div>
+                    <div className="sa-tenant-detail-alert-meta">{n.createdAt ? new Date(n.createdAt).toLocaleString() : n.CreatedAt ? new Date(n.CreatedAt).toLocaleString() : ''}</div>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="sa-cell-sub">No private notes yet.</p>
-            )}
+              )}
+              </ul> :
+
+            <p className="sa-cell-sub">No private notes yet.</p>
+            }
           </div>
           <div className="sa-section-card sa-tenant-detail-card">
             <h3><AlertCircle size={18} /> Quick actions</h3>
@@ -2021,24 +1908,24 @@ const LandlordDashboard = () => {
             <span className="sa-tenant-detail-updated">Last updated: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}</span>
           </div>
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
   const renderTenants = () => {
     if (selectedTenantId) return renderTenantDetail();
-    const filteredTenants = tenants.filter(t => {
+    const filteredTenants = tenants.filter((t) => {
       const name = (t.name ?? t.Name ?? '').toLowerCase();
-      const prop = (t.property ?? t.Property ?? '');
+      const prop = t.property ?? t.Property ?? '';
       const nameMatch = !tenantNameFilter || name.includes(tenantNameFilter.toLowerCase().trim());
       const propMatch = !tenantPropertyFilter || prop === tenantPropertyFilter;
       return nameMatch && propMatch;
     });
-    const tenantProps = tenants.map(t => t.property ?? t.Property).filter(Boolean);
-    const landlordProps = properties.map(p => p.Address ?? p.address ?? p.name).filter(Boolean);
+    const tenantProps = tenants.map((t) => t.property ?? t.Property).filter(Boolean);
+    const landlordProps = properties.map((p) => p.Address ?? p.address ?? p.name).filter(Boolean);
     const uniqueProperties = [...new Set([...tenantProps, ...landlordProps])].filter(Boolean).sort();
     return (
-    <div className="sa-clients-page">
+      <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
             <h2>Tenant Management</h2>
@@ -2047,21 +1934,21 @@ const LandlordDashboard = () => {
         <div className="sa-clients-header-right">
             <div className="sa-filters-section">
             <input
-              type="text"
-              className="sa-filter-select"
-              placeholder="Filter by name..."
-              value={tenantNameFilter}
-              onChange={(e) => setTenantNameFilter(e.target.value)}
-            />
+                type="text"
+                className="sa-filter-select"
+                placeholder="Filter by name..."
+                value={tenantNameFilter}
+                onChange={(e) => setTenantNameFilter(e.target.value)} />
+              
             <select
-              className="sa-filter-select"
-              value={tenantPropertyFilter}
-              onChange={(e) => setTenantPropertyFilter(e.target.value)}
-            >
+                className="sa-filter-select"
+                value={tenantPropertyFilter}
+                onChange={(e) => setTenantPropertyFilter(e.target.value)}>
+                
               <option value="">All Properties</option>
-              {uniqueProperties.map(addr => (
+              {uniqueProperties.map((addr) =>
                 <option key={addr} value={addr}>{addr}</option>
-              ))}
+                )}
             </select>
         </div>
                     </div>
@@ -2092,18 +1979,18 @@ const LandlordDashboard = () => {
                   const totalToPay = getTenantTotalToPay(tenant);
                   const monthsInArrears = getTenantMonthsInArrears(tenant);
                   const paymentStatus = getTenantPaymentStatus(tenant);
-                  const statusLabel = paymentStatus === 'up-to-date' || paymentStatus === 'uptodate' || paymentStatus === 'paid'
-                    ? 'Up to date'
-                    : monthsInArrears > 0
-                      ? 'Overdue'
-                      : (tenant.status ?? tenant.Status ?? 'Active');
+                  const statusLabel = paymentStatus === 'up-to-date' || paymentStatus === 'uptodate' || paymentStatus === 'paid' ?
+                  'Up to date' :
+                  monthsInArrears > 0 ?
+                  'Overdue' :
+                  tenant.status ?? tenant.Status ?? 'Active';
                   return (
                     <tr
                       key={tenantId ?? index}
                       style={{ cursor: 'pointer' }}
                       onClick={() => tenantId && setSelectedTenantId(String(tenantId))}
-                      className="clickable-row"
-                    >
+                      className="clickable-row">
+                      
                       <td>{index + 1}</td>
                       <td className="sa-cell-main"><span className="sa-cell-title">{tenantName}</span></td>
                       <td>{getTenantPropertyName(tenant)}</td>
@@ -2120,18 +2007,18 @@ const LandlordDashboard = () => {
                       <td onClick={(e) => e.stopPropagation()}>
                         <button type="button" className="sa-icon-button" title="View" onClick={() => tenantId && setSelectedTenantId(String(tenantId))}>👁️</button>
               </td>
-            </tr>
-                  );
+            </tr>);
+
                 })}
-                {filteredTenants.length === 0 && (
-                  <tr><td colSpan={9} className="sa-table-empty">No tenants found</td></tr>
-                )}
+                {filteredTenants.length === 0 &&
+                <tr><td colSpan={9} className="sa-table-empty">No tenants found</td></tr>
+                }
           </tbody>
         </table>
           </div>
                 </div>
-              </div>
-  );
+              </div>);
+
   };
 
   const renderPayments = () => {
@@ -2142,28 +2029,28 @@ const LandlordDashboard = () => {
         </div>
         
         <div className="sa-transactions-tabs">
-          <button 
+          <button
             className={`sa-subtab-button ${paymentSubTab === 'net' ? 'active' : ''}`}
             onClick={() => {
               setPaymentSubTab('net');
               loadNetPayments();
-            }}
-          >
+            }}>
+            
             Net Payments
           </button>
-          <button 
+          <button
             className={`sa-subtab-button ${paymentSubTab === 'history' ? 'active' : ''}`}
             onClick={() => {
               setPaymentSubTab('history');
               loadPaymentHistory();
-            }}
-          >
+            }}>
+            
             Payment History
           </button>
         </div>
 
-        {paymentSubTab === 'net' && (
-          <div className="sa-clients-page">
+        {paymentSubTab === 'net' &&
+        <div className="sa-clients-page">
             <div className="sa-clients-header">
         <div>
                 <h2>Net Payments After Commission</h2>
@@ -2171,35 +2058,35 @@ const LandlordDashboard = () => {
               </div>
               <div className="sa-clients-header-right">
                 <div className="sa-filters-section">
-                  <select 
-                    className="sa-filter-select"
-                    value={netPaymentStatusFilter}
-                    onChange={(e) => setNetPaymentStatusFilter(e.target.value)}
-                  >
+                  <select
+                  className="sa-filter-select"
+                  value={netPaymentStatusFilter}
+                  onChange={(e) => setNetPaymentStatusFilter(e.target.value)}>
+                  
                     <option value="">All Status</option>
                     <option value="Pending">Pending</option>
                     <option value="Paid">Paid</option>
                   </select>
                   <input
-                    type="date"
-                    className="sa-filter-select"
-                    value={netPaymentStartDate}
-                    onChange={(e) => setNetPaymentStartDate(e.target.value)}
-                    placeholder="Start Date"
-                  />
+                  type="date"
+                  className="sa-filter-select"
+                  value={netPaymentStartDate}
+                  onChange={(e) => setNetPaymentStartDate(e.target.value)}
+                  placeholder="Start Date" />
+                
                   <input
-                    type="date"
-                    className="sa-filter-select"
-                    value={netPaymentEndDate}
-                    onChange={(e) => setNetPaymentEndDate(e.target.value)}
-                    placeholder="End Date"
-                  />
+                  type="date"
+                  className="sa-filter-select"
+                  value={netPaymentEndDate}
+                  onChange={(e) => setNetPaymentEndDate(e.target.value)}
+                  placeholder="End Date" />
+                
                 </div>
         </div>
       </div>
       
-            {netPayments && (
-              <>
+            {netPayments &&
+          <>
                 <div className="sa-overview-metrics" style={{ marginBottom: '24px' }}>
                   <div className="sa-metric-card">
                     <p className="sa-metric-label">Total Net Amount</p>
@@ -2225,13 +2112,13 @@ const LandlordDashboard = () => {
               </tr>
             </thead>
             <tbody>
-                      {(!netPayments.payments || netPayments.payments.length === 0) ? (
-                        <tr>
+                      {!netPayments.payments || netPayments.payments.length === 0 ?
+                  <tr>
                           <td colSpan={7} className="sa-table-empty">No net payments found</td>
-              </tr>
-                      ) : (
-                        netPayments.payments.map((payment, index) => (
-                          <tr key={payment.id || payment.ID || `net-payment-${index}`}>
+              </tr> :
+
+                  netPayments.payments.map((payment, index) =>
+                  <tr key={payment.id || payment.ID || `net-payment-${index}`}>
                             <td>{index + 1}</td>
                             <td>{new Date(payment.date || payment.Date).toLocaleDateString()}</td>
                             <td className="sa-cell-main">
@@ -2246,18 +2133,18 @@ const LandlordDashboard = () => {
                     </span>
                 </td>
               </tr>
-                        ))
-                      )}
+                  )
+                  }
             </tbody>
           </table>
                   </div>
               </>
-      )}
+          }
           </div>
-        )}
+        }
 
-        {paymentSubTab === 'history' && (
-          <div className="sa-clients-page">
+        {paymentSubTab === 'history' &&
+        <div className="sa-clients-page">
             <div className="sa-clients-header">
         <div>
                 <h2>Payment & Payout History</h2>
@@ -2266,25 +2153,25 @@ const LandlordDashboard = () => {
               <div className="sa-clients-header-right">
                 <div className="sa-filters-section">
                   <input
-                    type="date"
-                    className="sa-filter-select"
-                    value={netPaymentStartDate}
-                    onChange={(e) => setNetPaymentStartDate(e.target.value)}
-                    placeholder="Start Date"
-                  />
+                  type="date"
+                  className="sa-filter-select"
+                  value={netPaymentStartDate}
+                  onChange={(e) => setNetPaymentStartDate(e.target.value)}
+                  placeholder="Start Date" />
+                
                   <input
-                    type="date"
-                    className="sa-filter-select"
-                    value={netPaymentEndDate}
-                    onChange={(e) => setNetPaymentEndDate(e.target.value)}
-                    placeholder="End Date"
-                  />
+                  type="date"
+                  className="sa-filter-select"
+                  value={netPaymentEndDate}
+                  onChange={(e) => setNetPaymentEndDate(e.target.value)}
+                  placeholder="End Date" />
+                
                 </div>
               </div>
             </div>
                 
-            {paymentHistory && paymentHistory.payouts && paymentHistory.payouts.length > 0 ? (
-              <>
+            {paymentHistory && paymentHistory.payouts && paymentHistory.payouts.length > 0 ?
+          <>
                 <div className="sa-section-card">
                   <div className="sa-section-header">
                     <div>
@@ -2306,8 +2193,8 @@ const LandlordDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {paymentHistory.payouts.map((payout, index) => (
-                          <tr key={payout.id || payout.ID || `payout-${index}`}>
+                        {paymentHistory.payouts.map((payout, index) =>
+                    <tr key={payout.id || payout.ID || `payout-${index}`}>
                             <td>{index + 1}</td>
                             <td>{new Date(payout.date || payout.Date).toLocaleDateString()}</td>
                             <td className="sa-cell-main">
@@ -2322,25 +2209,25 @@ const LandlordDashboard = () => {
                               </span>
                             </td>
                           </tr>
-                        ))}
+                    )}
                       </tbody>
                     </table>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="sa-section-card">
+              </> :
+
+          <div className="sa-section-card">
                 <div className="sa-table-empty">No payouts found</div>
               </div>
-            )}
+          }
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
-  const renderRentalManagement = () => (
-    <div className="sa-overview-page">
+  const renderRentalManagement = () =>
+  <div className="sa-overview-page">
       <div className="sa-overview-metrics" style={{ width: '100%' }}>
         <div className="sa-metric-card sa-metric-primary">
           <p className="sa-metric-label">Generation of Lease Agreements</p>
@@ -2359,8 +2246,8 @@ const LandlordDashboard = () => {
           <p className="sa-metric-number">Active</p>
                 </div>
       </div>
-                  </div>
-  );
+                  </div>;
+
 
   const renderMaintenanceDetail = () => {
     const m = selectedMaintenance;
@@ -2385,8 +2272,8 @@ const LandlordDashboard = () => {
           <button
             type="button"
             className="sa-outline-button sa-tenant-detail-back-btn"
-            onClick={() => setSelectedMaintenance(null)}
-          >
+            onClick={() => setSelectedMaintenance(null)}>
+            
             <ArrowLeft size={16} />
             Back to list
           </button>
@@ -2431,9 +2318,9 @@ const LandlordDashboard = () => {
               <div>
                 <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
                 <p style={{ margin: 0, color: '#1f2937' }}>
-                  {m.Date || m.date || m.CreatedAt || m.createdAt
-                    ? new Date(m.Date || m.date || m.CreatedAt || m.createdAt).toLocaleDateString()
-                    : 'N/A'}
+                  {m.Date || m.date || m.CreatedAt || m.createdAt ?
+                  new Date(m.Date || m.date || m.CreatedAt || m.createdAt).toLocaleDateString() :
+                  'N/A'}
                 </p>
               </div>
               <div>
@@ -2448,65 +2335,65 @@ const LandlordDashboard = () => {
                   {m.EstimatedHours ?? m.estimatedHours ?? 0} h
                 </p>
               </div>
-              {(m.Assigned || m.assigned) && (
-                <div>
+              {(m.Assigned || m.assigned) &&
+              <div>
                   <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Assigned To</label>
                   <p style={{ margin: 0, color: '#1f2937' }}>{m.Assigned || m.assigned}</p>
                 </div>
-              )}
+              }
             </div>
 
-            {photos.length > 0 && (
-              <div>
+            {photos.length > 0 &&
+            <div>
                 <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Photos ({photos.length})</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
                   {photos.map((photoUrl, index) => {
-                    const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
-                    if (!url) return null;
-                    return (
-                      <div
-                        key={index}
-                        style={{
-                          position: 'relative',
-                          borderRadius: '12px',
-                          overflow: 'hidden',
-                          aspectRatio: '1',
-                          backgroundColor: '#f3f4f6',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                        }}
-                      >
+                  const url = typeof photoUrl === 'string' ? photoUrl : photoUrl?.url || photoUrl?.src || '';
+                  if (!url) return null;
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        position: 'relative',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        aspectRatio: '1',
+                        backgroundColor: '#f3f4f6',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }}>
+                      
                         <img
-                          src={url}
-                          alt={`Maintenance photo ${index + 1}`}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => window.open(url, '_blank')}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            const parent = e.target.parentElement;
-                            if (parent && !parent.querySelector('.sa-photo-fallback')) {
-                              const fallback = document.createElement('div');
-                              fallback.className = 'sa-photo-fallback';
-                              fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
-                              fallback.textContent = 'Image not available';
-                              parent.appendChild(fallback);
-                            }
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
+                        src={url}
+                        alt={`Maintenance photo ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => window.open(url, '_blank')}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const parent = e.target.parentElement;
+                          if (parent && !parent.querySelector('.sa-photo-fallback')) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'sa-photo-fallback';
+                            fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
+                            fallback.textContent = 'Image not available';
+                            parent.appendChild(fallback);
+                          }
+                        }} />
+                      
+                      </div>);
+
+                })}
                 </div>
               </div>
-            )}
+            }
           </div>
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
   const renderQuoteDetail = () => {
@@ -2515,17 +2402,17 @@ const LandlordDashboard = () => {
 
     const maintenance = quote.maintenance || quote.Maintenance || {};
     const documents = parseQuoteDocuments(quote);
-    const maintenanceDocuments = Array.isArray(maintenance.Documents)
-      ? maintenance.Documents
-      : parseQuoteDocuments(maintenance);
+    const maintenanceDocuments = Array.isArray(maintenance.Documents) ?
+    maintenance.Documents :
+    parseQuoteDocuments(maintenance);
     const displayDocuments = documents.length > 0 ? documents : maintenanceDocuments;
 
     const photosRaw = maintenance.Photos ?? maintenance.photos ?? [];
-    const photos = Array.isArray(photosRaw)
-      ? photosRaw
-      : (typeof photosRaw === 'string' && photosRaw.trim()
-        ? (() => { try { const parsed = JSON.parse(photosRaw); return Array.isArray(parsed) ? parsed : []; } catch (_) { return []; } })()
-        : []);
+    const photos = Array.isArray(photosRaw) ?
+    photosRaw :
+    typeof photosRaw === 'string' && photosRaw.trim() ?
+    (() => {try {const parsed = JSON.parse(photosRaw);return Array.isArray(parsed) ? parsed : [];} catch (_) {return [];}})() :
+    [];
 
     const status = normalizeText(quote.Status || quote.status || '');
     const canApprove = status === 'pending_owner_approval';
@@ -2537,8 +2424,8 @@ const LandlordDashboard = () => {
           <button
             type="button"
             className="sa-outline-button sa-tenant-detail-back-btn"
-            onClick={() => setSelectedQuote(null)}
-          >
+            onClick={() => setSelectedQuote(null)}>
+            
             <ArrowLeft size={16} />
             Back to list
           </button>
@@ -2549,48 +2436,48 @@ const LandlordDashboard = () => {
               <h2>Maintenance Quote Details</h2>
               <p>Review the property, tenant, problem, documents and images before deciding.</p>
             </div>
-            {canApprove && (
-              <div style={{ display: 'flex', gap: '12px' }}>
+            {canApprove &&
+            <div style={{ display: 'flex', gap: '12px' }}>
                 <button
-                  className="sa-primary-cta"
-                  style={{ backgroundColor: '#16a34a' }}
-                  disabled={loading}
-                  onClick={async () => {
-                    try {
-                      await landlordService.approveMaintenanceQuote(quote.ID || quote.id);
-                      addNotification('Quote approved successfully', 'success');
-                      setSelectedQuote(null);
-                      loadData();
-                    } catch (err) {
-                      console.error('Error approving quote:', err);
-                      addNotification(err?.message || 'Failed to approve quote', 'error');
-                    }
-                  }}
-                >
+                className="sa-primary-cta"
+                style={{ backgroundColor: '#16a34a' }}
+                disabled={loading}
+                onClick={async () => {
+                  try {
+                    await landlordService.approveMaintenanceQuote(quote.ID || quote.id);
+                    addNotification('Quote approved successfully', 'success');
+                    setSelectedQuote(null);
+                    loadData();
+                  } catch (err) {
+                    console.error('Error approving quote:', err);
+                    addNotification(err?.message || 'Failed to approve quote', 'error');
+                  }
+                }}>
+                
                   <FileCheck size={18} />
                   Approve Quote
                 </button>
                 <button
-                  className="sa-primary-cta"
-                  style={{ backgroundColor: '#dc2626' }}
-                  disabled={loading}
-                  onClick={async () => {
-                    if (!window.confirm('Are you sure you want to reject this quote?')) return;
-                    try {
-                      await landlordService.rejectMaintenanceQuote(quote.ID || quote.id);
-                      addNotification('Quote rejected successfully', 'success');
-                      setSelectedQuote(null);
-                      loadData();
-                    } catch (err) {
-                      console.error('Error rejecting quote:', err);
-                      addNotification(err?.message || 'Failed to reject quote', 'error');
-                    }
-                  }}
-                >
+                className="sa-primary-cta"
+                style={{ backgroundColor: '#dc2626' }}
+                disabled={loading}
+                onClick={async () => {
+                  if (!window.confirm('Are you sure you want to reject this quote?')) return;
+                  try {
+                    await landlordService.rejectMaintenanceQuote(quote.ID || quote.id);
+                    addNotification('Quote rejected successfully', 'success');
+                    setSelectedQuote(null);
+                    loadData();
+                  } catch (err) {
+                    console.error('Error rejecting quote:', err);
+                    addNotification(err?.message || 'Failed to reject quote', 'error');
+                  }
+                }}>
+                
                   Reject Quote
                 </button>
               </div>
-            )}
+            }
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
@@ -2628,7 +2515,7 @@ const LandlordDashboard = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
             {displayDocuments.map((doc, index) => {
-              const url = typeof doc === 'string' ? doc : (doc?.url || doc?.URL || '');
+              const url = typeof doc === 'string' ? doc : doc?.url || doc?.URL || '';
               if (!url) return null;
               return (
                 <a
@@ -2637,67 +2524,67 @@ const LandlordDashboard = () => {
                   target="_blank"
                   rel="noreferrer"
                   className="sa-outline-button"
-                  style={{ justifyContent: 'center', textDecoration: 'none' }}
-                >
+                  style={{ justifyContent: 'center', textDecoration: 'none' }}>
+                  
                   {doc?.name || `Document ${index + 1}`}
-                </a>
-              );
+                </a>);
+
             })}
-            {displayDocuments.length === 0 && (
-              <p style={{ margin: 0, color: '#6b7280' }}>No downloadable documents attached.</p>
-            )}
+            {displayDocuments.length === 0 &&
+            <p style={{ margin: 0, color: '#6b7280' }}>No downloadable documents attached.</p>
+            }
           </div>
 
-          {photos.length > 0 && (
-            <div style={{ marginBottom: '24px' }}>
+          {photos.length > 0 &&
+          <div style={{ marginBottom: '24px' }}>
               <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>Images ({photos.length})</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
                 {photos.map((photoUrl, index) => {
-                  const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
-                  if (!url) return null;
-                  return (
-                    <div
-                      key={index}
-                      style={{
-                        position: 'relative',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        aspectRatio: '1',
-                        backgroundColor: '#f3f4f6',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                      }}
-                    >
+                const url = typeof photoUrl === 'string' ? photoUrl : photoUrl?.url || photoUrl?.src || '';
+                if (!url) return null;
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      position: 'relative',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      aspectRatio: '1',
+                      backgroundColor: '#f3f4f6',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}>
+                    
                       <img
-                        src={url}
-                        alt={`Quote maintenance ${index + 1}`}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => window.open(url, '_blank')}
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          const parent = e.target.parentElement;
-                          if (parent && !parent.querySelector('.sa-photo-fallback')) {
-                            const fallback = document.createElement('div');
-                            fallback.className = 'sa-photo-fallback';
-                            fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
-                            fallback.textContent = 'Image not available';
-                            parent.appendChild(fallback);
-                          }
-                        }}
-                      />
-                    </div>
-                  );
-                })}
+                      src={url}
+                      alt={`Quote maintenance ${index + 1}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => window.open(url, '_blank')}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const parent = e.target.parentElement;
+                        if (parent && !parent.querySelector('.sa-photo-fallback')) {
+                          const fallback = document.createElement('div');
+                          fallback.className = 'sa-photo-fallback';
+                          fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
+                          fallback.textContent = 'Image not available';
+                          parent.appendChild(fallback);
+                        }
+                      }} />
+                    
+                    </div>);
+
+              })}
               </div>
             </div>
-          )}
+          }
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
   const renderWorksAndClaims = () => {
@@ -2709,17 +2596,15 @@ const LandlordDashboard = () => {
     }
 
     return (
-    <div className="sa-clients-page">
+      <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
       <h2>Works & Interventions Management</h2>
       <p>Track maintenance works, interventions, and automatic claims management</p>
         </div>
                 </div>
-                
-          {/* Maintenance Requests (from Technician) - Landlord can approve */}
-          {maintenances && maintenances.length > 0 && (
-            <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+          {maintenances && maintenances.length > 0 &&
+        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
               <div className="sa-section-header">
                 <div>
                   <h3>Maintenance Requests</h3>
@@ -2742,14 +2627,14 @@ const LandlordDashboard = () => {
                   </thead>
                   <tbody>
                     {maintenances.map((m, index) => {
-                      const status = (m.Status || m.status || '').toLowerCase();
-                      return (
-                        <tr
-                          key={m.ID || m.id || `maint-${index}`}
-                          className="clickable-row"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => setSelectedMaintenance(m)}
-                        >
+                  const status = (m.Status || m.status || '').toLowerCase();
+                  return (
+                    <tr
+                      key={m.ID || m.id || `maint-${index}`}
+                      className="clickable-row"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedMaintenance(m)}>
+                      
                           <td>{index + 1}</td>
                           <td>{m.Date || m.date ? new Date(m.Date || m.date).toLocaleDateString() : 'N/A'}</td>
                           <td>{m.Property || m.property || 'N/A'}</td>
@@ -2768,18 +2653,16 @@ const LandlordDashboard = () => {
                               {m.Status || m.status || 'Pending'}
                             </span>
                           </td>
-                        </tr>
-                      );
-                    })}
+                        </tr>);
+
+                })}
                   </tbody>
                 </table>
         </div>
                 </div>
-          )}
-                
-          {/* Pending Maintenance Quotes for Approval */}
-          {maintenanceQuotes && maintenanceQuotes.length > 0 && (
-            <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+        }
+          {maintenanceQuotes && maintenanceQuotes.length > 0 &&
+        <div className="sa-section-card" style={{ marginBottom: '24px' }}>
               <div className="sa-section-header">
                 <div>
                   <h3>Pending Maintenance Quotes</h3>
@@ -2802,14 +2685,14 @@ const LandlordDashboard = () => {
                   </thead>
                   <tbody>
                     {maintenanceQuotes.map((quote, index) => {
-                      const status = (quote.Status || quote.status || '').toLowerCase();
-                      return (
-                        <tr
-                          key={quote.ID || quote.id || `quote-${index}`}
-                          className="clickable-row"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => setSelectedQuote(quote)}
-                        >
+                  const status = (quote.Status || quote.status || '').toLowerCase();
+                  return (
+                    <tr
+                      key={quote.ID || quote.id || `quote-${index}`}
+                      className="clickable-row"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedQuote(quote)}>
+                      
                           <td>{index + 1}</td>
                           <td>{quote.Date || quote.date ? new Date(quote.Date || quote.date).toLocaleDateString() : 'N/A'}</td>
                           <td>{quote.Property || quote.property || 'N/A'}</td>
@@ -2822,56 +2705,56 @@ const LandlordDashboard = () => {
                           </td>
                           <td>{quote.ValidatedBy || quote.validatedBy || '—'}</td>
                           <td className="sa-row-actions" onClick={(e) => e.stopPropagation()}>
-                    {status === 'pending_owner_approval' && (
-                      <>
+                    {status === 'pending_owner_approval' &&
+                        <>
                                 <button
-                                  className="table-action-button edit"
-                                  style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none', padding: '6px 12px' }}
-                                  disabled={loading}
-                                  onClick={async () => {
-                                    try {
-                                      await landlordService.approveMaintenanceQuote(quote.ID || quote.id);
-                                      addNotification('Quote approved successfully', 'success');
-                                      loadData();
-                                    } catch (error) {
-                                      console.error('Error approving quote:', error);
-                                      addNotification('Failed to approve quote', 'error');
-                                    }
-                                  }}
-                                >
+                            className="table-action-button edit"
+                            style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none', padding: '6px 12px' }}
+                            disabled={loading}
+                            onClick={async () => {
+                              try {
+                                await landlordService.approveMaintenanceQuote(quote.ID || quote.id);
+                                addNotification('Quote approved successfully', 'success');
+                                loadData();
+                              } catch (error) {
+                                console.error('Error approving quote:', error);
+                                addNotification('Failed to approve quote', 'error');
+                              }
+                            }}>
+                            
                                   Approve
                                 </button>
                                 <button
-                                  className="table-action-button delete"
-                                  style={{ backgroundColor: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', marginLeft: '8px' }}
-                                  disabled={loading}
-                                  onClick={async () => {
-                                    if (!window.confirm('Are you sure you want to reject this quote?')) return;
-                                    try {
-                                      await landlordService.rejectMaintenanceQuote(quote.ID || quote.id);
-                                      addNotification('Quote rejected successfully', 'success');
-                                      loadData();
-                                    } catch (error) {
-                                      console.error('Error rejecting quote:', error);
-                                      addNotification('Failed to reject quote', 'error');
-                                    }
-                                  }}
-                                >
+                            className="table-action-button delete"
+                            style={{ backgroundColor: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', marginLeft: '8px' }}
+                            disabled={loading}
+                            onClick={async () => {
+                              if (!window.confirm('Are you sure you want to reject this quote?')) return;
+                              try {
+                                await landlordService.rejectMaintenanceQuote(quote.ID || quote.id);
+                                addNotification('Quote rejected successfully', 'success');
+                                loadData();
+                              } catch (error) {
+                                console.error('Error rejecting quote:', error);
+                                addNotification('Failed to reject quote', 'error');
+                              }
+                            }}>
+                            
                                   Reject
                                 </button>
                               </>
-                            )}
+                        }
                           </td>
-                        </tr>
-                      );
-                    })}
+                        </tr>);
+
+                })}
                   </tbody>
                 </table>
               </div>
             </div>
-          )}
+        }
 
-          {workOrders.length > 0 && (
+          {workOrders.length > 0 &&
         <div className="sa-section-card" style={{ marginBottom: '24px' }}>
           <div className="sa-section-header">
                 <div>
@@ -2893,8 +2776,8 @@ const LandlordDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {workOrders.map((work, index) => (
-                      <tr key={work.ID || `work-${index}`}>
+                    {workOrders.map((work, index) =>
+                <tr key={work.ID || `work-${index}`}>
                     <td>{index + 1}</td>
                     <td className="sa-cell-main">
                       <span className="sa-cell-title">{work.Title || work.title || 'N/A'}</span>
@@ -2908,18 +2791,18 @@ const LandlordDashboard = () => {
                             {work.Status || work.status || 'Pending'}
                           </span>
                         </td>
-                        <td>{work.Date ? new Date(work.Date).toLocaleDateString() : (work.date ? new Date(work.date).toLocaleDateString() : 'N/A')}</td>
+                        <td>{work.Date ? new Date(work.Date).toLocaleDateString() : work.date ? new Date(work.date).toLocaleDateString() : 'N/A'}</td>
                     <td className="sa-row-actions">
                       <button className="sa-icon-button" title="View">👁️</button>
                       <button className="sa-icon-button" title="Edit">✏️</button>
                         </td>
                       </tr>
-                    ))}
+                )}
                   </tbody>
                 </table>
               </div>
             </div>
-          )}
+        }
 
       <div className="sa-section-card">
         <div className="sa-section-header">
@@ -2942,13 +2825,13 @@ const LandlordDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-              {claims.length === 0 ? (
+              {claims.length === 0 ?
                 <tr>
                   <td colSpan={7} className="sa-table-empty">No claims found</td>
-                </tr>
-              ) : (
-                claims.map((claim, index) => (
-                      <tr key={claim.ID || `claim-${index}`}>
+                </tr> :
+
+                claims.map((claim, index) =>
+                <tr key={claim.ID || `claim-${index}`}>
                     <td>{index + 1}</td>
                     <td className="sa-cell-main">
                       <span className="sa-cell-title">{claim.Title || claim.title || 'N/A'}</span>
@@ -2962,24 +2845,24 @@ const LandlordDashboard = () => {
                             {claim.Status || claim.status || 'Pending'}
                           </span>
                         </td>
-                        <td>{claim.Date ? new Date(claim.Date).toLocaleDateString() : (claim.date ? new Date(claim.date).toLocaleDateString() : 'N/A')}</td>
+                        <td>{claim.Date ? new Date(claim.Date).toLocaleDateString() : claim.date ? new Date(claim.date).toLocaleDateString() : 'N/A'}</td>
                     <td className="sa-row-actions">
                       <button className="sa-icon-button" title="View">👁️</button>
                       <button className="sa-icon-button" title="Edit">✏️</button>
                         </td>
                       </tr>
-                ))
-              )}
+                )
+                }
                   </tbody>
                 </table>
               </div>
             </div>
-          </div>
-        );
+          </div>);
+
   };
-      
-  const renderInventory = () => (
-    <div className="sa-clients-page">
+
+  const renderInventory = () =>
+  <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
       <h2>Inventory Management</h2>
@@ -3008,13 +2891,13 @@ const LandlordDashboard = () => {
               </tr>
             </thead>
             <tbody>
-            {inventory.length === 0 ? (
-              <tr>
+            {inventory.length === 0 ?
+          <tr>
                 <td colSpan={8} className="sa-table-empty">No inventory found</td>
-              </tr>
-            ) : (
-              inventory.map((item, index) => (
-                <tr key={item.ID || item.id || `inventory-${index}`}>
+              </tr> :
+
+          inventory.map((item, index) =>
+          <tr key={item.ID || item.id || `inventory-${index}`}>
                   <td>{index + 1}</td>
                   <td className="sa-cell-main">
                     <span className="sa-cell-title">{item.Property || item.property || 'N/A'}</span>
@@ -3027,20 +2910,20 @@ const LandlordDashboard = () => {
                       {item.Condition || item.condition || 'Good'}
                     </span>
                   </td>
-                  <td>{item.UpdatedAt ? new Date(item.UpdatedAt).toLocaleDateString() : (item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A')}</td>
+                  <td>{item.UpdatedAt ? new Date(item.UpdatedAt).toLocaleDateString() : item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}</td>
                   <td className="sa-row-actions">
                     <button className="sa-icon-button" title="View">👁️</button>
                     <button className="sa-icon-button" title="Edit">✏️</button>
                     <button className="sa-icon-button" title="Delete" style={{ color: '#dc2626', marginLeft: '8px' }}>🗑️</button>
                   </td>
                 </tr>
-              ))
-            )}
+          )
+          }
           </tbody>
         </table>
                 </div>
-    </div>
-  );
+    </div>;
+
 
   const renderRents = () => {
     const collectedRows = dedupeBySignature(
@@ -3049,7 +2932,7 @@ const LandlordDashboard = () => {
         signature: getTransactionSignature({
           ...rent,
           Tenant: formatTenantName(rent, ''),
-          Property: formatPropertyBuilding(rent, rent.property || rent.Property || ''),
+          Property: formatPropertyBuilding(rent, rent.property || rent.Property || '')
         })
       })) : []
     );
@@ -3059,7 +2942,7 @@ const LandlordDashboard = () => {
         signature: getTransactionSignature({
           ...rent,
           Tenant: formatTenantName(rent, ''),
-          Property: formatPropertyBuilding(rent, rent.property || rent.Property || ''),
+          Property: formatPropertyBuilding(rent, rent.property || rent.Property || '')
         })
       })) : []
     );
@@ -3074,8 +2957,8 @@ const LandlordDashboard = () => {
             <p>Track collected and pending rents</p>
           </div>
           <div className="sa-clients-header-right">
-            <button 
-              className="sa-primary-cta" 
+            <button
+              className="sa-primary-cta"
               onClick={async () => {
                 try {
                   await landlordService.downloadReport({ type: 'financial' });
@@ -3084,16 +2967,16 @@ const LandlordDashboard = () => {
                   addNotification('Failed to download report', 'error');
                 }
               }}
-              disabled={loading}
-            >
+              disabled={loading}>
+              
               <FileText size={16} />
               Download Report
             </button>
           </div>
         </div>
 
-        {rents && (
-          <>
+        {rents &&
+        <>
             <div className="sa-overview-metrics" style={{ marginBottom: '24px' }}>
               <div className="sa-metric-card sa-metric-primary">
                 <p className="sa-metric-label">Total Collected</p>
@@ -3105,8 +2988,8 @@ const LandlordDashboard = () => {
               </div>
             </div>
 
-            {collectedRows.length > 0 && (
-              <div className="sa-section-card" style={{ marginBottom: '24px' }}>
+            {collectedRows.length > 0 &&
+          <div className="sa-section-card" style={{ marginBottom: '24px' }}>
                 <div className="sa-section-header">
                   <div>
                     <h3>Collected Rents</h3>
@@ -3128,9 +3011,9 @@ const LandlordDashboard = () => {
                     </thead>
                     <tbody>
                       {collectedRows.map((rent, index) => {
-                        const statusLabel = readValue(rent.status, rent.Status, 'Approved');
-                        return (
-                          <tr key={getRecordId(rent) || rent.signature || `collected-${index}`}>
+                    const statusLabel = readValue(rent.status, rent.Status, 'Approved');
+                    return (
+                      <tr key={getRecordId(rent) || rent.signature || `collected-${index}`}>
                             <td>{index + 1}</td>
                             <td>{formatDateValue(readValue(rent.date, rent.Date, rent.createdAt, rent.CreatedAt))}</td>
                             <td className="sa-cell-main">
@@ -3144,17 +3027,17 @@ const LandlordDashboard = () => {
                                 {statusLabel}
                               </span>
                             </td>
-                          </tr>
-                        );
-                      })}
+                          </tr>);
+
+                  })}
                     </tbody>
                   </table>
                 </div>
               </div>
-            )}
+          }
 
-            {pendingRows.length > 0 && (
-              <div className="sa-section-card">
+            {pendingRows.length > 0 &&
+          <div className="sa-section-card">
                 <div className="sa-section-header">
                   <div>
                     <h3>Tenants Who Have Not Paid</h3>
@@ -3176,11 +3059,11 @@ const LandlordDashboard = () => {
                     </thead>
                     <tbody>
                       {pendingRows.map((rent, index) => {
-                        const daysOverdue = normalizeAmount(readValue(rent.daysOverdue, rent.DaysOverdue));
-                        const dueDate = readValue(rent.date, rent.Date, rent.dueDate, rent.DueDate);
-                        const statusLabel = readValue(rent.status, rent.Status, 'Pending');
-                        return (
-                          <tr key={getRecordId(rent) || rent.signature || `pending-${index}`}>
+                    const daysOverdue = normalizeAmount(readValue(rent.daysOverdue, rent.DaysOverdue));
+                    const dueDate = readValue(rent.date, rent.Date, rent.dueDate, rent.DueDate);
+                    const statusLabel = readValue(rent.status, rent.Status, 'Pending');
+                    return (
+                      <tr key={getRecordId(rent) || rent.signature || `pending-${index}`}>
                             <td>{index + 1}</td>
                             <td className="sa-cell-main">
                               <span className="sa-cell-title">{formatTenantName(rent, 'Unknown')}</span>
@@ -3189,33 +3072,33 @@ const LandlordDashboard = () => {
                             <td>{normalizeAmount(readValue(rent.amount, rent.Amount, rent.dueAmount, rent.DueAmount)).toLocaleString()} XOF</td>
                             <td>{dueDate ? formatDateValue(dueDate) : '—'}</td>
                             <td>
-                              {daysOverdue > 0 ? (
-                                <span style={{ color: '#dc2626', fontWeight: 500 }}>{daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue</span>
-                              ) : (
-                                <span style={{ color: '#6b7280' }}>Due today</span>
-                              )}
+                              {daysOverdue > 0 ?
+                          <span style={{ color: '#dc2626', fontWeight: 500 }}>{daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue</span> :
+
+                          <span style={{ color: '#6b7280' }}>Due today</span>
+                          }
                             </td>
                             <td>
                               <span className={`sa-status-pill ${getStatusClassName(statusLabel, 'pending')}`}>
                                 {statusLabel}
                               </span>
                             </td>
-                          </tr>
-                        );
-                      })}
+                          </tr>);
+
+                  })}
                     </tbody>
                   </table>
                 </div>
               </div>
-            )}
+          }
           </>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
-  const renderExpenses = () => (
-    <div className="sa-clients-page">
+  const renderExpenses = () =>
+  <div className="sa-clients-page">
       <div className="sa-clients-header">
         <div>
           <h2>Expenses Management</h2>
@@ -3223,39 +3106,37 @@ const LandlordDashboard = () => {
         </div>
         <div className="sa-clients-header-right">
           <div className="sa-filters-section">
-            <select 
-              className="sa-filter-select"
-              value={expensePropertyFilter}
-              onChange={(e) => setExpensePropertyFilter(e.target.value)}
-            >
+            <select
+            className="sa-filter-select"
+            value={expensePropertyFilter}
+            onChange={(e) => setExpensePropertyFilter(e.target.value)}>
+            
               <option value="">All Properties</option>
-              {properties.map(prop => (
-                <option key={prop.id || prop.ID} value={prop.Address || prop.address}>
+              {properties.map((prop) =>
+            <option key={prop.id || prop.ID} value={prop.Address || prop.address}>
                   {prop.Address || prop.address}
                 </option>
-              ))}
+            )}
             </select>
             <input
-              type="date"
-              className="sa-filter-select"
-              value={expenseStartDate}
-              onChange={(e) => setExpenseStartDate(e.target.value)}
-              placeholder="Start Date"
-            />
+            type="date"
+            className="sa-filter-select"
+            value={expenseStartDate}
+            onChange={(e) => setExpenseStartDate(e.target.value)}
+            placeholder="Start Date" />
+          
             <input
-              type="date"
-              className="sa-filter-select"
-              value={expenseEndDate}
-              onChange={(e) => setExpenseEndDate(e.target.value)}
-              placeholder="End Date"
-            />
+            type="date"
+            className="sa-filter-select"
+            value={expenseEndDate}
+            onChange={(e) => setExpenseEndDate(e.target.value)}
+            placeholder="End Date" />
+          
           </div>
                   </div>
                 </div>
-
-      {/* Building expenses pending owner approval */}
-      {pendingExpensesForApproval.length > 0 && (
-        <div className="sa-section-card" style={{ marginBottom: '24px', border: '2px solid #f59e0b', background: '#fffbeb' }}>
+      {pendingExpensesForApproval.length > 0 &&
+    <div className="sa-section-card" style={{ marginBottom: '24px', border: '2px solid #f59e0b', background: '#fffbeb' }}>
           <div className="sa-section-header">
             <div>
               <h3>Expenses to Approve</h3>
@@ -3276,8 +3157,8 @@ const LandlordDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {pendingExpensesForApproval.map((expense, index) => (
-                  <tr key={expense.id || expense.ID || `pending-expense-${index}`}>
+                {pendingExpensesForApproval.map((expense, index) =>
+            <tr key={expense.id || expense.ID || `pending-expense-${index}`}>
                     <td>{index + 1}</td>
                     <td>{expense.building || expense.Building || 'N/A'}</td>
                     <td>{expense.category || expense.Category || 'N/A'}</td>
@@ -3286,40 +3167,40 @@ const LandlordDashboard = () => {
                     </td>
                     <td>{(expense.amount || expense.Amount || 0).toLocaleString()} XOF</td>
                     <td>
-                      {expense.date || expense.Date
-                        ? new Date(expense.date || expense.Date).toLocaleDateString()
-                        : 'N/A'}
+                      {expense.date || expense.Date ?
+                new Date(expense.date || expense.Date).toLocaleDateString() :
+                'N/A'}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          className="table-action-button edit"
-                          onClick={() => handleApproveExpense(expense.id || expense.ID)}
-                          disabled={loading}
-                          style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
-                        >
+                    className="table-action-button edit"
+                    onClick={() => handleApproveExpense(expense.id || expense.ID)}
+                    disabled={loading}
+                    style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}>
+                    
                           Approve
                         </button>
                         <button
-                          className="table-action-button delete"
-                          onClick={() => handleRejectExpense(expense.id || expense.ID)}
-                          disabled={loading}
-                        >
+                    className="table-action-button delete"
+                    onClick={() => handleRejectExpense(expense.id || expense.ID)}
+                    disabled={loading}>
+                    
                           Reject
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
+            )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+    }
                 
-      {expenses.length > 0 && expenses[0].property ? (
-        expenses.map((propertyGroup, groupIndex) => (
-          <div key={propertyGroup.property || `property-${groupIndex}`} className="sa-section-card" style={{ marginBottom: '24px' }}>
+      {expenses.length > 0 && expenses[0].property ?
+    expenses.map((propertyGroup, groupIndex) =>
+    <div key={propertyGroup.property || `property-${groupIndex}`} className="sa-section-card" style={{ marginBottom: '24px' }}>
             <div className="sa-section-header">
               <div>
                 <h3>{propertyGroup.property || 'Unknown Property'}</h3>
@@ -3338,9 +3219,9 @@ const LandlordDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {propertyGroup.expenses && propertyGroup.expenses.length > 0 ? (
-                    propertyGroup.expenses.map((expense, index) => (
-                      <tr key={expense.id || expense.ID || `expense-${index}`}>
+                  {propertyGroup.expenses && propertyGroup.expenses.length > 0 ?
+            propertyGroup.expenses.map((expense, index) =>
+            <tr key={expense.id || expense.ID || `expense-${index}`}>
                         <td>{index + 1}</td>
                         <td>{new Date(expense.date || expense.Date).toLocaleDateString()}</td>
                         <td>{expense.category || expense.Category || 'N/A'}</td>
@@ -3349,19 +3230,19 @@ const LandlordDashboard = () => {
                           <span className="sa-cell-sub">{expense.notes || expense.Notes || 'N/A'}</span>
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
+            ) :
+
+            <tr>
                       <td colSpan={5} className="sa-table-empty">No expenses for this property</td>
                     </tr>
-                  )}
+            }
                 </tbody>
               </table>
               </div>
           </div>
-        ))
-      ) : (
-        <div className="sa-table-wrapper">
+    ) :
+
+    <div className="sa-table-wrapper">
           <table className="sa-table">
             <thead>
               <tr>
@@ -3374,13 +3255,13 @@ const LandlordDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {expenses.length === 0 ? (
-                <tr>
+              {expenses.length === 0 ?
+          <tr>
                   <td colSpan={6} className="sa-table-empty">No expenses found</td>
-                </tr>
-              ) : (
-                expenses.map((expense, index) => (
-                  <tr key={expense.id || expense.ID || `expense-${index}`}>
+                </tr> :
+
+          expenses.map((expense, index) =>
+          <tr key={expense.id || expense.ID || `expense-${index}`}>
                     <td>{index + 1}</td>
                     <td>{new Date(expense.date || expense.Date).toLocaleDateString()}</td>
                     <td className="sa-cell-main">
@@ -3392,39 +3273,37 @@ const LandlordDashboard = () => {
                       <span className="sa-cell-sub">{expense.notes || expense.Notes || 'N/A'}</span>
                     </td>
                   </tr>
-                ))
-              )}
+          )
+          }
             </tbody>
           </table>
           </div>
-      )}
-        </div>
-  );
+    }
+        </div>;
 
-  // Render messaging page (shared design with Accounting)
-  const renderChat = () => (
-    <ChatTab
-      chatUsers={chatUsers}
-      selectedUserId={selectedUserId}
-      chatMessages={chatMessages}
-      chatInput={chatInput}
-      setChatInput={setChatInput}
-      loadChatForUser={loadChatForUser}
-      handleSendMessage={handleSendMessage}
-      messagesEndRef={messagesEndRef}
-      hideGroups
-    />
-  );
-      
+  const renderChat = () =>
+  <ChatTab
+    chatUsers={chatUsers}
+    selectedUserId={selectedUserId}
+    chatMessages={chatMessages}
+    chatInput={chatInput}
+    setChatInput={setChatInput}
+    loadChatForUser={loadChatForUser}
+    handleSendMessage={handleSendMessage}
+    messagesEndRef={messagesEndRef}
+    hideGroups />;
+
+
+
   const renderBusinessTracking = () => {
     const propertyRows = properties.map((property) => ({
       property,
-      occupancy: getPropertyOccupancyStats(property),
+      occupancy: getPropertyOccupancyStats(property)
     }));
     const totalProperties = propertyRows.length;
     const totalUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.totalUnits, 0);
     const occupiedUnits = propertyRows.reduce((sum, row) => sum + row.occupancy.occupiedUnits, 0);
-    const currentOccupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : null;
+    const currentOccupancyRate = totalUnits > 0 ? occupiedUnits / totalUnits * 100 : null;
 
     const paymentRows = Array.isArray(payments) ? payments : [];
     const expenseRows = Array.isArray(expenses) ? expenses : [];
@@ -3439,9 +3318,9 @@ const LandlordDashboard = () => {
       const map = new Map();
       rows.forEach((row, index) => {
         const date = parseDateValue(readValue(row?.date, row?.Date, row?.createdAt, row?.CreatedAt, row?.paidAt, row?.PaidAt));
-        const month = date
-          ? date.toLocaleString(undefined, { month: 'short', year: 'numeric' })
-          : readValue(row?.month, row?.Month, row?.label, row?.Label, `Month ${index + 1}`);
+        const month = date ?
+        date.toLocaleString(undefined, { month: 'short', year: 'numeric' }) :
+        readValue(row?.month, row?.Month, row?.label, row?.Label, `Month ${index + 1}`);
         const key = normalizeText(month) || `month-${index}`;
         const entry = map.get(key) || { month, [kind]: 0, _index: index };
         entry.month = entry.month || month;
@@ -3454,38 +3333,38 @@ const LandlordDashboard = () => {
 
     const revenueByMonth = monthlySeries(approvedRentPayments, ['amount', 'Amount', 'paidAmount', 'PaidAmount', 'netAmount', 'NetAmount'], 'revenue');
     const expensesByMonth = monthlySeries(relevantExpenses, ['amount', 'Amount'], 'expenses');
-    const occupancyByMonth = Array.isArray(businessTracking?.occupancyByMonth) && businessTracking.occupancyByMonth.length > 0
-      ? businessTracking.occupancyByMonth
-      : Array.from({ length: Math.max(revenueByMonth.length, expensesByMonth.length, 6) }, (_, index) => ({
-          month: `Month ${index + 1}`,
-          rate: currentOccupancyRate,
-        }));
+    const occupancyByMonth = Array.isArray(businessTracking?.occupancyByMonth) && businessTracking.occupancyByMonth.length > 0 ?
+    businessTracking.occupancyByMonth :
+    Array.from({ length: Math.max(revenueByMonth.length, expensesByMonth.length, 6) }, (_, index) => ({
+      month: `Month ${index + 1}`,
+      rate: currentOccupancyRate
+    }));
     const chartData = buildTrackingSeries(revenueByMonth, expensesByMonth, occupancyByMonth);
     const revenueSum = revenueByMonth.reduce((sum, row) => sum + normalizeAmount(row.revenue), 0);
     const expenseSum = expensesByMonth.reduce((sum, row) => sum + normalizeAmount(row.expenses), 0);
     const totalRevenue = revenueByMonth.length > 0 ? revenueSum : normalizeAmount(businessTracking?.totalRevenue);
     const maintenanceCosts = expensesByMonth.length > 0 ? expenseSum : normalizeAmount(businessTracking?.maintenanceCosts);
-    const occupancyRate = currentOccupancyRate !== null
-      ? currentOccupancyRate
-      : (chartData.length > 0 ? chartData[chartData.length - 1].occupancy : normalizeAmount(businessTracking?.occupancyRate));
-    const netProfit = revenueByMonth.length > 0 || expensesByMonth.length > 0
-      ? (totalRevenue - maintenanceCosts)
-      : normalizeAmount(businessTracking?.netProfit);
-    const roi = maintenanceCosts > 0
-      ? ((netProfit / maintenanceCosts) * 100)
-      : normalizeAmount(businessTracking?.roi);
+    const occupancyRate = currentOccupancyRate !== null ?
+    currentOccupancyRate :
+    chartData.length > 0 ? chartData[chartData.length - 1].occupancy : normalizeAmount(businessTracking?.occupancyRate);
+    const netProfit = revenueByMonth.length > 0 || expensesByMonth.length > 0 ?
+    totalRevenue - maintenanceCosts :
+    normalizeAmount(businessTracking?.netProfit);
+    const roi = maintenanceCosts > 0 ?
+    netProfit / maintenanceCosts * 100 :
+    normalizeAmount(businessTracking?.roi);
     const latestRevenue = revenueByMonth.length > 0 ? revenueByMonth[revenueByMonth.length - 1].revenue : totalRevenue;
     const previousRevenue = revenueByMonth.length > 1 ? revenueByMonth[revenueByMonth.length - 2].revenue : 0;
-    const revenueTrends = previousRevenue > 0
-      ? `${(((latestRevenue - previousRevenue) / previousRevenue) * 100).toFixed(1)}%`
-      : (businessTracking?.revenueTrends ?? '+0%');
+    const revenueTrends = previousRevenue > 0 ?
+    `${((latestRevenue - previousRevenue) / previousRevenue * 100).toFixed(1)}%` :
+    businessTracking?.revenueTrends ?? '+0%';
     const pieData = [
-      { name: 'Revenue', value: totalRevenue, color: '#3b82f6' },
-      { name: 'Expenses', value: maintenanceCosts, color: '#f59e0b' }
-    ].filter(d => d.value > 0);
+    { name: 'Revenue', value: totalRevenue, color: '#3b82f6' },
+    { name: 'Expenses', value: maintenanceCosts, color: '#f59e0b' }].
+    filter((d) => d.value > 0);
 
     return (
-    <div className="sa-overview-page">
+      <div className="sa-overview-page">
         <div className="sa-clients-header" style={{ marginBottom: '24px' }}>
           <div>
             <h2>Business Analytics</h2>
@@ -3519,52 +3398,49 @@ const LandlordDashboard = () => {
             <p className="sa-metric-number">{netProfit.toLocaleString()} XOF</p>
           </div>
         </div>
-
-        {/* Revenue vs Expenses Chart */}
         <div className="sa-section-card" style={{ marginBottom: '24px' }}>
           <div className="sa-section-header">
             <h3>Revenue vs Expenses (Last 6 Months)</h3>
             <p>Monthly rent collected vs maintenance and other expenses</p>
           </div>
           <div style={{ width: '100%', height: '300px', padding: '20px' }}>
-            {chartData.length > 0 ? (
-              <ResponsiveContainer>
+            {chartData.length > 0 ?
+            <ResponsiveContainer>
                 <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
                   <defs>
                     <linearGradient id="colorRevenueTracking" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorExpensesTracking" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="month" stroke="#6b7280" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#6b7280" tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                  <YAxis stroke="#6b7280" tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip formatter={(value) => [`${Number(value).toLocaleString()} XOF`, '']} labelFormatter={(l) => `Month: ${l}`} />
                   <Legend />
                   <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="url(#colorRevenueTracking)" name="Revenue" strokeWidth={2} />
                   <Area type="monotone" dataKey="expenses" stroke="#f59e0b" fill="url(#colorExpensesTracking)" name="Expenses" strokeWidth={2} />
                 </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af' }}>No chart data available yet</div>
-            )}
+              </ResponsiveContainer> :
+
+            <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af' }}>No chart data available yet</div>
+            }
           </div>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
-          {/* Occupancy Rate Chart */}
           <div className="sa-section-card" style={{ flex: '1 1 400px', minWidth: '300px' }}>
             <div className="sa-section-header">
               <h3>Occupancy Rate by Month</h3>
               <p>Property occupancy over the last 6 months</p>
             </div>
             <div style={{ width: '100%', height: '280px', padding: '20px' }}>
-              {chartData.length > 0 ? (
-                <ResponsiveContainer>
+              {chartData.length > 0 ?
+              <ResponsiveContainer>
                   <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="month" stroke="#6b7280" tick={{ fontSize: 12 }} />
@@ -3572,52 +3448,48 @@ const LandlordDashboard = () => {
                     <Tooltip formatter={(value) => [`${Number(value).toFixed(1)}%`, 'Occupancy']} />
                     <Bar dataKey="occupancy" fill="#10b981" name="Occupancy %" radius={[4, 4, 0, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af' }}>No data</div>
-              )}
+                </ResponsiveContainer> :
+
+              <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af' }}>No data</div>
+              }
             </div>
           </div>
-
-          {/* Revenue vs Expenses Pie */}
           <div className="sa-section-card" style={{ flex: '1 1 400px', minWidth: '300px' }}>
             <div className="sa-section-header">
               <h3>Revenue vs Expenses (Total)</h3>
               <p>Overall income vs costs distribution</p>
             </div>
             <div style={{ width: '100%', height: '280px', padding: '20px' }}>
-              {pieData.length > 0 ? (
-                <ResponsiveContainer>
+              {pieData.length > 0 ?
+              <ResponsiveContainer>
                   <PieChart>
                     <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={2}
-                      dataKey="value"
-                      nameKey="name"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    
+                      {pieData.map((entry, index) =>
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    )}
                     </Pie>
                     <Tooltip formatter={(value) => [`${Number(value).toLocaleString()} XOF`, '']} />
                   </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af' }}>No data to display</div>
-              )}
+                </ResponsiveContainer> :
+
+              <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af' }}>No data to display</div>
+              }
             </div>
           </div>
               </div>
-          </div>
-        );
+          </div>);
+
   };
-      
-  // Load advertisements
   const loadAdvertisements = async () => {
     try {
       const ads = await landlordService.getAdvertisements();
@@ -3631,10 +3503,10 @@ const LandlordDashboard = () => {
 
   const renderAdvertisements = () => {
     return (
-      <AdvertisementsList advertisements={advertisements} />
-    );
+      <AdvertisementsList advertisements={advertisements} />);
+
   };
-      
+
   const renderContent = (tabId = activeTab) => {
     switch (tabId) {
       case 'overview':
@@ -3661,8 +3533,8 @@ const LandlordDashboard = () => {
         return (
           <div className="embedded-settings">
             <SettingsPage />
-          </div>
-        );
+          </div>);
+
       default:
         return renderOverview();
     }
@@ -3670,11 +3542,11 @@ const LandlordDashboard = () => {
 
   const layoutMenu = useMemo(
     () =>
-      tabs.map(tab => ({
-        ...tab,
-        onSelect: () => setActiveTab(tab.id),
-        active: activeTab === tab.id
-      })),
+    tabs.map((tab) => ({
+      ...tab,
+      onSelect: () => setActiveTab(tab.id),
+      active: activeTab === tab.id
+    })),
     [tabs, activeTab]
   );
 
@@ -3692,31 +3564,29 @@ const LandlordDashboard = () => {
         menu={layoutMenu}
         activeId={activeTab}
         onActiveChange={setActiveTab}
-        onLogout={handleLogout}
-      >
-        {({ activeId }) => (
-          <div className="content-body">
+        onLogout={handleLogout}>
+        
+        {({ activeId }) =>
+        <div className="content-body">
             {renderContent(activeId)}
           </div>
-        )}
+        }
       </RoleLayout>
 
       <div className="notifications-container">
-        {notifications.map(notification => (
-          <div key={notification.id} className={`notification notification-${notification.type}`}>
+        {notifications.map((notification) =>
+        <div key={notification.id} className={`notification notification-${notification.type}`}>
             <span>{notification.message}</span>
-            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
+            <button onClick={() => setNotifications((prev) => prev.filter((n) => n.id !== notification.id))}>×</button>
           </div>
-        ))}
+        )}
       </div>
-
-      {/* Create Work Order Modal */}
       <Modal
         isOpen={showWorkOrderModal}
         onClose={() => setShowWorkOrderModal(false)}
         title="Create Work Order"
-        size="lg"
-      >
+        size="lg">
+        
         <form onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.target);
@@ -3734,18 +3604,18 @@ const LandlordDashboard = () => {
             <label>Property</label>
             <select name="property" required>
               <option value="">Select property</option>
-              {properties.map(property => {
+              {properties.map((property) => {
                 const id = property.ID || property.id;
                 const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                 return (
                   <option key={id} value={label}>
                     {label}
-                  </option>
-                );
+                  </option>);
+
               })}
-              {properties.length === 0 && (
-                <option value="" disabled>No properties found</option>
-              )}
+              {properties.length === 0 &&
+              <option value="" disabled>No properties found</option>
+              }
             </select>
           </div>
           <div className="form-group">
@@ -3784,14 +3654,12 @@ const LandlordDashboard = () => {
           </div>
         </form>
       </Modal>
-
-      {/* Create Claim Modal */}
       <Modal
         isOpen={showClaimModal}
         onClose={() => setShowClaimModal(false)}
         title="Create Claim"
-        size="lg"
-      >
+        size="lg">
+        
         <form onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.target);
@@ -3807,18 +3675,18 @@ const LandlordDashboard = () => {
             <label>Property</label>
             <select name="property" required>
               <option value="">Select property</option>
-              {properties.map(property => {
+              {properties.map((property) => {
                 const id = property.ID || property.id;
                 const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                 return (
                   <option key={id} value={label}>
                     {label}
-                  </option>
-                );
+                  </option>);
+
               })}
-              {properties.length === 0 && (
-                <option value="" disabled>No properties found</option>
-              )}
+              {properties.length === 0 &&
+              <option value="" disabled>No properties found</option>
+              }
             </select>
           </div>
           <div className="form-group">
@@ -3844,14 +3712,12 @@ const LandlordDashboard = () => {
           </div>
         </form>
       </Modal>
-
-      {/* Add Inventory Modal */}
       <Modal
         isOpen={showInventoryModal}
         onClose={() => setShowInventoryModal(false)}
         title="Add Inventory"
-        size="lg"
-      >
+        size="lg">
+        
         <form onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.target);
@@ -3866,18 +3732,18 @@ const LandlordDashboard = () => {
             <label>Property</label>
             <select name="property" required>
               <option value="">Select property</option>
-              {properties.map(property => {
+              {properties.map((property) => {
                 const id = property.ID || property.id;
                 const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                 return (
                   <option key={id} value={label}>
                     {label}
-                  </option>
-                );
+                  </option>);
+
               })}
-              {properties.length === 0 && (
-                <option value="" disabled>No properties found</option>
-              )}
+              {properties.length === 0 &&
+              <option value="" disabled>No properties found</option>
+              }
             </select>
           </div>
           <div className="form-group">
@@ -3899,14 +3765,12 @@ const LandlordDashboard = () => {
           </div>
         </form>
       </Modal>
-
-      {/* Generate Receipt Modal */}
       <Modal
         isOpen={showReceiptModal}
         onClose={() => setShowReceiptModal(false)}
         title="Generate Receipt"
-        size="lg"
-      >
+        size="lg">
+        
         <form onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.target);
@@ -3938,18 +3802,18 @@ const LandlordDashboard = () => {
             <label>Property</label>
             <select name="property" required>
               <option value="">Select property</option>
-              {properties.map(property => {
+              {properties.map((property) => {
                 const id = property.ID || property.id;
                 const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
                 return (
                   <option key={id} value={label}>
                     {label}
-                  </option>
-                );
+                  </option>);
+
               })}
-              {properties.length === 0 && (
-                <option value="" disabled>No properties found</option>
-              )}
+              {properties.length === 0 &&
+              <option value="" disabled>No properties found</option>
+              }
             </select>
           </div>
           <div className="form-group">
@@ -3975,8 +3839,8 @@ const LandlordDashboard = () => {
         </form>
       </Modal>
 
-    </>
-  );
+    </>);
+
 };
 
 export default LandlordDashboard;

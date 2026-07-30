@@ -8,12 +8,11 @@ const parseJson = async (response) => {
   if (!text) return null;
   try {
     const json = JSON.parse(text);
-    // Auto-unwrap paginated responses: {data: [...], total, page, ...} → just the array
     if (json && Array.isArray(json.data) && typeof json.total === 'number' && typeof json.page === 'number') {
       return json.data;
     }
     return json;
-  } catch { return null; }
+  } catch {return null;}
 };
 
 const getAuthHeaders = (includeContentType = true) => {
@@ -21,7 +20,7 @@ const getAuthHeaders = (includeContentType = true) => {
   const headers = {};
   if (includeContentType) headers['Content-Type'] = 'application/json';
   if (token) {
-    const sanitized = String(token).trim().split('').filter(c => { const code = c.charCodeAt(0); return code >= 32 && code <= 126; }).join('');
+    const sanitized = String(token).trim().split('').filter((c) => {const code = c.charCodeAt(0);return code >= 32 && code <= 126;}).join('');
     if (sanitized) headers['Authorization'] = sanitized;
   }
   return headers;
@@ -40,7 +39,7 @@ const apiPost = async (path, body) => {
   const response = await fetch(`${SUPERADMIN_BASE_URL}${path}`, {
     method: 'POST',
     headers: getAuthHeaders(true),
-    body: JSON.stringify(body),
+    body: JSON.stringify(body)
   });
   if (!response.ok) {
     const text = await response.text().catch(() => '');
@@ -53,7 +52,7 @@ const apiPut = async (path, body) => {
   const response = await fetch(`${SUPERADMIN_BASE_URL}${path}`, {
     method: 'PUT',
     headers: getAuthHeaders(true),
-    body: JSON.stringify(body),
+    body: JSON.stringify(body)
   });
   if (!response.ok) {
     const text = await response.text().catch(() => '');
@@ -65,7 +64,7 @@ const apiPut = async (path, body) => {
 const apiDelete = async (path) => {
   const response = await fetch(`${SUPERADMIN_BASE_URL}${path}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(false),
+    headers: getAuthHeaders(false)
   });
   if (!response.ok) {
     const text = await response.text().catch(() => '');
@@ -75,10 +74,7 @@ const apiDelete = async (path) => {
 };
 
 export const superAdminService = {
-  // Overview
   getOverview: () => apiGet('/agency-stats'),
-
-  // Companies
   getCompanies: () => apiGet('/companies'),
   getCompanyDetails: (id) => apiGet(`/companies/${id}/details`),
   addCompany: (data) => apiPost('/companies', data),
@@ -86,24 +82,16 @@ export const superAdminService = {
   deleteCompany: (id) => apiDelete(`/companies/${id}`),
   deactivateCompany: (id, reason) => apiPost(`/companies/${id}/deactivate`, { reason }),
   reactivateCompany: (id) => apiPost(`/companies/${id}/reactivate`, {}),
-
-  // Agency Directors
   getAgencyAdmins: () => apiGet('/agency-directors'),
   getAgencyAdminsList: () => apiGet('/agency-admins'),
   addAgencyAdmin: (data) => apiPost('/users', data),
   updateAgencyAdmin: (id, data) => apiPut(`/users/${id}`, data),
   deleteAgencyAdmin: (id) => apiDelete(`/users/${id}`),
-
-  // Users
   getUsers: () => apiGet('/users'),
   addUser: (data) => apiPost('/users', data),
   updateUser: (id, data) => apiPut(`/users/${id}`, data),
   deleteUser: (id) => apiDelete(`/users/${id}`),
-
-  // Financial
   getFinancialOverview: () => apiGet('/financial'),
-
-  // Advertisements
   getAdvertisements: () => apiGet('/advertisements'),
   createAdvertisement: async (adData) => {
     const formData = new FormData();
@@ -117,11 +105,11 @@ export const superAdminService = {
     } else {
       throw new Error('Image file is required.');
     }
-    const headers = getAuthHeaders(false); // no Content-Type for FormData
+    const headers = getAuthHeaders(false);
     const response = await fetch(`${SUPERADMIN_BASE_URL}/advertisements`, {
       method: 'POST',
       headers,
-      body: formData,
+      body: formData
     });
     if (!response.ok) {
       const text = await response.text().catch(() => '');
@@ -129,15 +117,9 @@ export const superAdminService = {
     }
     return parseJson(response);
   },
-
-  // Chat
   getChatWithAdmin: (adminId) => apiGet(`/chat/${adminId}/messages`),
   sendChatMessage: (payload) => apiPost('/chat/messages', payload),
-
-  // Subscriptions
   getSubscriptions: () => apiGet('/subscriptions'),
-
-  // Agency Payments
   getAgencyPayments: () => apiGet('/agency-payments'),
-  addAgencyPayment: (data) => apiPost('/agency-payments', data),
+  addAgencyPayment: (data) => apiPost('/agency-payments', data)
 };

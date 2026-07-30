@@ -30,8 +30,6 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: block;
 }
-
-/* Circle avatar with initials when no profile picture */
 .profile-avatar-initials {
   width: 44px;
   height: 44px;
@@ -174,8 +172,6 @@
   background: #fef2f2;
   color: #dc2626;
 }
-
-/* Mobile responsiveness */
 @media (max-width: 768px) {
   .profile-dropdown-menu {
     width: 260px;

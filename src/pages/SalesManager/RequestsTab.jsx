@@ -1,7 +1,5 @@
 import React from 'react';
 import { Inbox } from 'lucide-react';
-
-/* ── shared inline styles ── */
 const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse' };
 const thStyle = { padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid #f1f5f9' };
@@ -31,19 +29,16 @@ const RequestsTab = ({
   requestStatusFilter,
   setRequestStatusFilter,
   handleApproveRequest,
-  openFollowUp,
+  openFollowUp
 }) => {
   return (
     <div style={card}>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
           <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#1e293b' }}>Visit Requests</h3>
           <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Manage incoming requests from prospective tenants</p>
         </div>
       </div>
-
-      {/* Filters */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <select style={selectStyle} value={requestStatusFilter} onChange={(e) => setRequestStatusFilter(e.target.value)}>
           <option value="">All Status</option>
@@ -53,17 +48,15 @@ const RequestsTab = ({
           <option value="Scheduled">Scheduled</option>
         </select>
       </div>
-
-      {/* Content */}
-      {loading ? (
-        <div style={emptyState}>Loading requests...</div>
-      ) : requests.length === 0 ? (
-        <div style={emptyState}>
+      {loading ?
+      <div style={emptyState}>Loading requests...</div> :
+      requests.length === 0 ?
+      <div style={emptyState}>
           <Inbox size={40} style={{ color: '#cbd5e1', marginBottom: '12px' }} />
           <div>No requests received</div>
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
+        </div> :
+
+      <div style={{ overflowX: 'auto' }}>
           <table style={tableStyle}>
             <thead>
               <tr>
@@ -76,17 +69,17 @@ const RequestsTab = ({
             </thead>
             <tbody>
               {requests.map((request, index) => {
-                const requestId = request.ID || request.id || `request-${index}`;
-                const clientName = request.ClientName || request.clientName || 'Client';
-                const clientEmail = request.ClientEmail || request.clientEmail || '';
-                const clientPhone = request.ClientPhone || request.clientPhone || '';
-                const property = request.Property || request.property || 'Property';
-                const status = request.Status || request.status || 'Pending';
-                const createdAt = request.CreatedAt || request.createdAt;
-                const preferredDate = request.PreferredDate || request.preferredDate;
-                const followUpCount = request.followUpCount || request.FollowUpCount || 0;
-                return (
-                  <tr key={requestId} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+              const requestId = request.ID || request.id || `request-${index}`;
+              const clientName = request.ClientName || request.clientName || 'Client';
+              const clientEmail = request.ClientEmail || request.clientEmail || '';
+              const clientPhone = request.ClientPhone || request.clientPhone || '';
+              const property = request.Property || request.property || 'Property';
+              const status = request.Status || request.status || 'Pending';
+              const createdAt = request.CreatedAt || request.createdAt;
+              const preferredDate = request.PreferredDate || request.preferredDate;
+              const followUpCount = request.followUpCount || request.FollowUpCount || 0;
+              return (
+                <tr key={requestId} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                     <td style={tdStyle}>
                       <div style={cellMain}>
                         <span style={cellTitle}>{clientName}</span>
@@ -107,32 +100,32 @@ const RequestsTab = ({
                     </td>
                     <td style={tdStyle}>
                       <span style={statusPill(status)}>{status}</span>
-                      {followUpCount > 0 && (
-                        <span style={{ ...cellSub, display: 'block', marginTop: '4px' }}>
+                      {followUpCount > 0 &&
+                    <span style={{ ...cellSub, display: 'block', marginTop: '4px' }}>
                           {followUpCount} follow-up{followUpCount > 1 ? 's' : ''}
                           <span style={badge}>{followUpCount}</span>
                         </span>
-                      )}
+                    }
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        {status === 'Pending' && (
-                          <>
+                        {status === 'Pending' &&
+                      <>
                             <button style={actionBtn('approve')} onClick={() => handleApproveRequest(requestId)}>Approve</button>
                             <button style={actionBtn('followup')} onClick={() => openFollowUp(request)}>Follow-up</button>
                           </>
-                        )}
+                      }
                       </div>
                     </td>
-                  </tr>
-                );
-              })}
+                  </tr>);
+
+            })}
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };
 
 export default RequestsTab;

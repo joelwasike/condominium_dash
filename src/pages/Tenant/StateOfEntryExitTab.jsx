@@ -12,18 +12,18 @@ const statusPill = (s) => {
 };
 const emptyState = { padding: '48px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' };
 
-const StateOfEntryExitTab = ({ myInventory }) => (
-  <div style={card}>
+const StateOfEntryExitTab = ({ myInventory }) =>
+<div style={card}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
       <div>
         <h2 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>State of Entry / Exit</h2>
         <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>View inventory (state of entry or exit) reports filled by the technician for your property</p>
       </div>
     </div>
-    {myInventory.length === 0 ? (
-      <div style={emptyState}>No state of entry or exit records yet. When a technician fills an inventory for you, it will appear here.</div>
-    ) : (
-      <div style={{ overflowX: 'auto' }}>
+    {myInventory.length === 0 ?
+  <div style={emptyState}>No state of entry or exit records yet. When a technician fills an inventory for you, it will appear here.</div> :
+
+  <div style={{ overflowX: 'auto' }}>
         <table style={tableStyle}>
           <thead>
             <tr>
@@ -37,25 +37,25 @@ const StateOfEntryExitTab = ({ myInventory }) => (
           </thead>
           <tbody>
             {myInventory.map((inv) => {
-              const type = inv.type || inv.Type || '';
-              const property = inv.property || inv.Property || '\u2014';
-              const date = inv.date || inv.Date || inv.createdAt || inv.CreatedAt;
-              const dateStr = date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '\u2014';
-              const inspector = inv.inspector || inv.Inspector || '\u2014';
-              const status = inv.status || inv.Status || '\u2014';
-              const reportURL = inv.reportURL || inv.ReportURL;
-              const isEntry = type === 'Move-in';
-              return (
-                <tr key={inv.id || inv.ID}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = ''; }}
-                >
+          const type = inv.type || inv.Type || '';
+          const property = inv.property || inv.Property || '\u2014';
+          const date = inv.date || inv.Date || inv.createdAt || inv.CreatedAt;
+          const dateStr = date ? new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '\u2014';
+          const inspector = inv.inspector || inv.Inspector || '\u2014';
+          const status = inv.status || inv.Status || '\u2014';
+          const reportURL = inv.reportURL || inv.ReportURL;
+          const isEntry = type === 'Move-in';
+          return (
+            <tr key={inv.id || inv.ID}
+            onMouseEnter={(e) => {e.currentTarget.style.background = '#f8fafc';}}
+            onMouseLeave={(e) => {e.currentTarget.style.background = '';}}>
+              
                   <td style={tdStyle}>
                     <span style={{
-                      display: 'inline-block', padding: '4px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600,
-                      backgroundColor: isEntry ? '#dbeafe' : '#fef3c7',
-                      color: isEntry ? '#1e40af' : '#92400e'
-                    }}>
+                  display: 'inline-block', padding: '4px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600,
+                  backgroundColor: isEntry ? '#dbeafe' : '#fef3c7',
+                  color: isEntry ? '#1e40af' : '#92400e'
+                }}>
                       {isEntry ? 'Entry' : type === 'Move-out' ? 'Exit' : type || '\u2014'}
                     </span>
                   </td>
@@ -64,23 +64,23 @@ const StateOfEntryExitTab = ({ myInventory }) => (
                   <td style={tdStyle}>{inspector}</td>
                   <td style={tdStyle}><span style={statusPill(status)}>{status}</span></td>
                   <td style={tdStyle}>
-                    {reportURL ? (
-                      <a href={reportURL} target="_blank" rel="noopener noreferrer"
-                        style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem' }}>
+                    {reportURL ?
+                <a href={reportURL} target="_blank" rel="noopener noreferrer"
+                style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem' }}>
                         View report
-                      </a>
-                    ) : (
-                      <span style={{ color: '#94a3b8' }}>{'\u2014'}</span>
-                    )}
+                      </a> :
+
+                <span style={{ color: '#94a3b8' }}>{'\u2014'}</span>
+                }
                   </td>
-                </tr>
-              );
-            })}
+                </tr>);
+
+        })}
           </tbody>
         </table>
       </div>
-    )}
-  </div>
-);
+  }
+  </div>;
+
 
 export default StateOfEntryExitTab;

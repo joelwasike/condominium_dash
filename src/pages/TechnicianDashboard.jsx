@@ -27,8 +27,8 @@ import {
   History,
   TrendingUp,
   FileCheck,
-  ArrowLeft
-} from 'lucide-react';
+  ArrowLeft } from
+'lucide-react';
 import { technicianService } from '../services/technicianService';
 import { messagingService } from '../services/messagingService';
 import { API_CONFIG } from '../config/api';
@@ -43,13 +43,13 @@ import '../components/RoleLayout.css';
 const TechnicianDashboard = () => {
   const INSPECTION_ITEMS = useMemo(
     () => [
-      { key: 'doorHandles', label: 'Door handles' },
-      { key: 'doors', label: 'Doors (bedrooms, bathrooms, closets)' },
-      { key: 'closets', label: 'Closets and storage' },
-      { key: 'walls', label: 'Walls and paintwork' },
-      { key: 'floors', label: 'Floors' },
-      { key: 'fixtures', label: 'Visible fixtures and fittings' },
-    ],
+    { key: 'doorHandles', label: 'Door handles' },
+    { key: 'doors', label: 'Doors (bedrooms, bathrooms, closets)' },
+    { key: 'closets', label: 'Closets and storage' },
+    { key: 'walls', label: 'Walls and paintwork' },
+    { key: 'floors', label: 'Floors' },
+    { key: 'fixtures', label: 'Visible fixtures and fittings' }],
+
     []
   );
 
@@ -60,7 +60,6 @@ const TechnicianDashboard = () => {
       rooms.push('Main Room', 'Kitchenette', 'Bathroom');
       return rooms;
     }
-    // Common rooms for apartments/villas/duplex
     rooms.push('Living Room', 'Kitchen', 'Bathroom', 'Toilet', 'Corridor');
     const bedrooms = Math.max(1, Number(numberOfRooms) || 1);
     for (let i = 1; i <= bedrooms; i++) rooms.push(`Bedroom ${i}`);
@@ -100,11 +99,8 @@ const TechnicianDashboard = () => {
   const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState('');
   const [maintenancePropertyFilter, setMaintenancePropertyFilter] = useState('');
   const [technicianContacts, setTechnicianContacts] = useState([]);
-  // Multi-worker quote rows: [{id, workerName, quoteFile}]
   const [workerQuoteRows, setWorkerQuoteRows] = useState([]);
-  // Worker quotes fetched for a selected maintenance in detail view
   const [maintenanceWorkerQuotes, setMaintenanceWorkerQuotes] = useState([]);
-  // Quote document upload modal (opened by the 💰 button on a maintenance row)
   const [showQuoteDocModal, setShowQuoteDocModal] = useState(false);
   const [quoteDocMaintenance, setQuoteDocMaintenance] = useState(null);
   const [quoteDocForm, setQuoteDocForm] = useState({ amount: '', problem: '', invoice: null, quotation: null, supportingDocument: null });
@@ -122,8 +118,6 @@ const TechnicianDashboard = () => {
     photo: null,
     idCard: null
   });
-  
-  // New state for restructured sections
   const [quotes, setQuotes] = useState([]);
   const [works, setWorks] = useState([]);
   const [selectedWorkIds, setSelectedWorkIds] = useState([]);
@@ -141,8 +135,8 @@ const TechnicianDashboard = () => {
   const [reportsData, setReportsData] = useState(null);
   const [showInventoryFormModal, setShowInventoryFormModal] = useState(false);
   const [inventoryFormData, setInventoryFormData] = useState({
-    type: 'Entry', // Entry or Exit
-    propertyType: '', // Studio, Apartment, Duplex, Villa
+    type: 'Entry',
+    propertyType: '',
     numberOfRooms: 1,
     numberOfBathrooms: 1,
     numberOfKitchens: 1,
@@ -152,32 +146,29 @@ const TechnicianDashboard = () => {
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().slice(0, 5),
     technicianName: '',
-    // Dynamic form data will be stored here
     formData: {
       rooms: {},
       meters: { electricity: '', water: '', gas: '', keys: '' },
       observations: { technician: '', tenant: '' },
-      exit: { degradations: '', workToBeCarriedOut: '', estimatedCost: 0, bailImpact: 'None' },
+      exit: { degradations: '', workToBeCarriedOut: '', estimatedCost: 0, bailImpact: 'None' }
     }
   });
-
-  // Ensure room/item structure exists in formData when property settings change
   useEffect(() => {
     if (!inventoryFormData.propertyType) return;
     const roomList = getRoomList(inventoryFormData.propertyType, inventoryFormData.numberOfRooms);
     if (roomList.length === 0) return;
 
-    setInventoryFormData(prev => {
+    setInventoryFormData((prev) => {
       const prevRooms = prev.formData?.rooms || {};
       let changed = false;
       const nextRooms = { ...prevRooms };
 
-      roomList.forEach(roomName => {
+      roomList.forEach((roomName) => {
         if (!nextRooms[roomName]) {
           nextRooms[roomName] = {};
           changed = true;
         }
-        INSPECTION_ITEMS.forEach(item => {
+        INSPECTION_ITEMS.forEach((item) => {
           if (!nextRooms[roomName][item.key]) {
             nextRooms[roomName][item.key] = { condition: '', comment: '', photos: [] };
             changed = true;
@@ -190,54 +181,50 @@ const TechnicianDashboard = () => {
         ...prev,
         formData: {
           ...prev.formData,
-          rooms: nextRooms,
-        },
+          rooms: nextRooms
+        }
       };
     });
   }, [inventoryFormData.propertyType, inventoryFormData.numberOfRooms, INSPECTION_ITEMS, getRoomList]);
-
-  // Auto-select property type when property (address) is selected on inventory form (Entry/Exit) – e.g. when opening from list row or when user changes property
   useEffect(() => {
     if (!showInventoryFormModal || !inventoryFormData.propertyAddress || !companyProperties?.length) return;
     const selectedProperty = companyProperties.find(
-      p => (p.Address || p.address) === inventoryFormData.propertyAddress
+      (p) => (p.Address || p.address) === inventoryFormData.propertyAddress
     );
     if (!selectedProperty) return;
     const bedrooms = selectedProperty.Bedrooms ?? selectedProperty.bedrooms;
     const bathrooms = selectedProperty.Bathrooms ?? selectedProperty.bathrooms;
     const propTypeRaw =
-      selectedProperty.Type ||
-      selectedProperty.type ||
-      selectedProperty.BuildingType ||
-      selectedProperty.buildingType ||
-      selectedProperty.PropertyType ||
-      selectedProperty.propertyType ||
-      '';
+    selectedProperty.Type ||
+    selectedProperty.type ||
+    selectedProperty.BuildingType ||
+    selectedProperty.buildingType ||
+    selectedProperty.PropertyType ||
+    selectedProperty.propertyType ||
+    '';
     const typeLower = String(propTypeRaw).toLowerCase();
-    const inferredType = typeLower.includes('studio')
-      ? 'Studio'
-      : typeLower.includes('duplex')
-        ? 'Duplex'
-        : typeLower.includes('villa')
-          ? 'Villa'
-          : typeLower.includes('apartment')
-            ? 'Apartment'
-            : bedrooms
-              ? 'Apartment'
-              : '';
+    const inferredType = typeLower.includes('studio') ?
+    'Studio' :
+    typeLower.includes('duplex') ?
+    'Duplex' :
+    typeLower.includes('villa') ?
+    'Villa' :
+    typeLower.includes('apartment') ?
+    'Apartment' :
+    bedrooms ?
+    'Apartment' :
+    '';
     if (!inferredType) return;
-    setInventoryFormData(prev => {
+    setInventoryFormData((prev) => {
       if (prev.propertyType === inferredType && (bedrooms == null || prev.numberOfRooms === Number(bedrooms)) && (bathrooms == null || prev.numberOfBathrooms === Number(bathrooms))) return prev;
       return {
         ...prev,
         propertyType: inferredType,
-        numberOfRooms: bedrooms !== undefined && bedrooms !== null ? Number(bedrooms) : (inferredType === 'Studio' ? 1 : prev.numberOfRooms),
-        numberOfBathrooms: bathrooms !== undefined && bathrooms !== null ? Number(bathrooms) : prev.numberOfBathrooms,
+        numberOfRooms: bedrooms !== undefined && bedrooms !== null ? Number(bedrooms) : inferredType === 'Studio' ? 1 : prev.numberOfRooms,
+        numberOfBathrooms: bathrooms !== undefined && bathrooms !== null ? Number(bathrooms) : prev.numberOfBathrooms
       };
     });
   }, [showInventoryFormModal, inventoryFormData.propertyAddress, companyProperties]);
-
-  // Filter states
   const [quoteStatusFilter, setQuoteStatusFilter] = useState('');
   const [quoteDateFilter, setQuoteDateFilter] = useState('');
   const [quotePropertyFilter, setQuotePropertyFilter] = useState('');
@@ -250,53 +237,43 @@ const TechnicianDashboard = () => {
   const [historyDateFilter, setHistoryDateFilter] = useState('');
   const [historyTypeFilter, setHistoryTypeFilter] = useState('');
   const [historyPropertyFilter, setHistoryPropertyFilter] = useState('');
-  const [stateEntryView, setStateEntryView] = useState('entry'); // 'entry' | 'exit'
+  const [stateEntryView, setStateEntryView] = useState('entry');
   const [stateEntryNameFilter, setStateEntryNameFilter] = useState('');
   const [stateEntryPropertyFilter, setStateEntryPropertyFilter] = useState('');
   const [stateEntryStatusFilter, setStateEntryStatusFilter] = useState('');
   const [stateEntryDateFilter, setStateEntryDateFilter] = useState('');
-
-  // Cost of Work: owners -> properties -> works
-  const [costOfWorkView, setCostOfWorkView] = useState('owners'); // 'owners' | 'properties' | 'works'
+  const [costOfWorkView, setCostOfWorkView] = useState('owners');
   const [selectedCostOwner, setSelectedCostOwner] = useState(null);
   const [selectedCostProperty, setSelectedCostProperty] = useState(null);
   const [costOfWorkOwners, setCostOfWorkOwners] = useState([]);
   const [costOfWorkProperties, setCostOfWorkProperties] = useState([]);
   const [costOfWorkWorks, setCostOfWorkWorks] = useState([]);
-  
-  // Helper data for Inventory Form (Entry / Exit)
   const currentInventoryTenants =
-    inventoryFormData.type === 'Entry' ? entryTenants : exitTenants;
-  // Use companyTenants (all tenants from sales manager) for the dropdown so technician can select any tenant
+  inventoryFormData.type === 'Entry' ? entryTenants : exitTenants;
   const tenantOptions =
-    companyTenants && companyTenants.length > 0
-      ? companyTenants
-      : currentInventoryTenants;
+  companyTenants && companyTenants.length > 0 ?
+  companyTenants :
+  currentInventoryTenants;
 
   const inventoryPropertyOptions = Array.from(
     new Set(
-      (companyProperties && companyProperties.length > 0
-        ? companyProperties.map(p => p.Address || p.address)
-        : (currentInventoryTenants || []).map(t => t.Property || t.property)
-      ).filter(Boolean)
+      (companyProperties && companyProperties.length > 0 ?
+      companyProperties.map((p) => p.Address || p.address) :
+      (currentInventoryTenants || []).map((t) => t.Property || t.property)).
+      filter(Boolean)
     )
   );
 
   const inventoryTenantSuggestions =
-    inventoryFormData.tenantName && currentInventoryTenants
-      ? currentInventoryTenants.filter(t => {
-          const name = (t.Name || t.name || '').toLowerCase();
-          return name.includes(inventoryFormData.tenantName.toLowerCase());
-        })
-      : [];
-
-  
-  // Advertisements state
+  inventoryFormData.tenantName && currentInventoryTenants ?
+  currentInventoryTenants.filter((t) => {
+    const name = (t.Name || t.name || '').toLowerCase();
+    return name.includes(inventoryFormData.tenantName.toLowerCase());
+  }) :
+  [];
   const [advertisements, setAdvertisements] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const carouselIntervalRef = useRef(null);
-  
-  // Messaging states
   const [chatUsers, setChatUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
@@ -305,8 +282,6 @@ const TechnicianDashboard = () => {
   const messagesEndRef = useRef(null);
   const markReadTimeoutRef = useRef(null);
   const lastMarkedReadRef = useRef(null);
-  
-  // Notifications
   const [notifications, setNotifications] = useState([]);
   const [showWorkStartModal, setShowWorkStartModal] = useState(false);
   const [selectedQuoteForWork, setSelectedQuoteForWork] = useState(null);
@@ -316,18 +291,18 @@ const TechnicianDashboard = () => {
   const readQuoteValue = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim() !== '') ?? '';
   const getQuoteRecordId = (record) => record?.id ?? record?.ID ?? record?.Id ?? null;
   const parseQuoteDocuments = (quote) => {
-    const raw = quote?.Documents
-      ?? quote?.documents
-      ?? quote?.documentURLs
-      ?? quote?.DocumentURLs
-      ?? quote?.documentUrls
-      ?? quote?.DocumentUrls
-      ?? quote?.attachments
-      ?? quote?.Attachments
-      ?? quote?.invoice
-      ?? quote?.quotation
-      ?? quote?.supportingDocument
-      ?? [];
+    const raw = quote?.Documents ??
+    quote?.documents ??
+    quote?.documentURLs ??
+    quote?.DocumentURLs ??
+    quote?.documentUrls ??
+    quote?.DocumentUrls ??
+    quote?.attachments ??
+    quote?.Attachments ??
+    quote?.invoice ??
+    quote?.quotation ??
+    quote?.supportingDocument ??
+    [];
     const list = Array.isArray(raw) ? raw : [raw];
     return list.flatMap((doc) => {
       if (!doc) return [];
@@ -403,25 +378,23 @@ const TechnicianDashboard = () => {
       quote?.createdAt,
       quote?.CreatedAt
     );
-    const decision = String(rawDecision).trim().toLowerCase() || (status === 'rejected' ? 'rejected' : (status === 'approved' || status === 'validated' ? 'approved' : ''));
+    const decision = String(rawDecision).trim().toLowerCase() || (status === 'rejected' ? 'rejected' : status === 'approved' || status === 'validated' ? 'approved' : '');
     return {
       decision,
       reason: reason ? String(reason).trim() : '',
       decidedBy: decidedBy ? String(decidedBy).trim() : '—',
       decidedAt: decidedAt || null,
-      status,
+      status
     };
   };
-  
+
   const addNotification = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setNotifications(prev => [...prev, { id, message, type }]);
+    setNotifications((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 3000);
   }, []);
-
-  // Load data from backend
   useEffect(() => {
     loadData();
   }, []);
@@ -430,7 +403,6 @@ const TechnicianDashboard = () => {
     setLoading(true);
     try {
       if (isDemoMode()) {
-        // Use demo data
         const demoData = getTechnicianDemoData();
         setOverviewData(demoData.overview);
         setInspections(demoData.inspections);
@@ -438,27 +410,25 @@ const TechnicianDashboard = () => {
         setLoading(false);
         return;
       }
-      
+
       const [overview, inspection, task, maintenanceRequests, contacts, quotesData, worksData, entryData, exitData, historyDataRes, propertiesData, tenantsData] = await Promise.all([
-        technicianService.getOverview().catch(() => null),
-        technicianService.listInspections().catch(() => []),
-        technicianService.listTasks().catch(() => []),
-        technicianService.listMaintenanceRequests().catch(() => []),
-        technicianService.getTechnicianContacts().catch(() => []),
-        technicianService.listQuotes().catch(() => []),
-        technicianService.getWorkProgress({}).catch(() => []),
-        technicianService.getStateOfEntry().catch(() => []),
-        technicianService.getStateOfExit().catch(() => []),
-        technicianService.getHistory({}).catch(() => ({ queries: [], quotes: [], works: [], inventories: [] })),
-        technicianService.getProperties().catch(() => []),
-        technicianService.getTenants().catch(() => [])
-      ]);
-      
+      technicianService.getOverview().catch(() => null),
+      technicianService.listInspections().catch(() => []),
+      technicianService.listTasks().catch(() => []),
+      technicianService.listMaintenanceRequests().catch(() => []),
+      technicianService.getTechnicianContacts().catch(() => []),
+      technicianService.listQuotes().catch(() => []),
+      technicianService.getWorkProgress({}).catch(() => []),
+      technicianService.getStateOfEntry().catch(() => []),
+      technicianService.getStateOfExit().catch(() => []),
+      technicianService.getHistory({}).catch(() => ({ queries: [], quotes: [], works: [], inventories: [] })),
+      technicianService.getProperties().catch(() => []),
+      technicianService.getTenants().catch(() => [])]
+      );
+
       setOverviewData(overview);
       setInspections(Array.isArray(inspection) ? inspection : []);
       setTasks(Array.isArray(task) ? task : []);
-      
-      // Handle maintenance requests - could be array or object with maintenanceRequests property
       if (maintenanceRequests) {
         if (Array.isArray(maintenanceRequests)) {
           setRequests(maintenanceRequests);
@@ -470,24 +440,14 @@ const TechnicianDashboard = () => {
       } else {
         setRequests([]);
       }
-      
-      // Set technician contacts
       setTechnicianContacts(Array.isArray(contacts) ? contacts : []);
-      
-      // Set quotes
       setQuotes(Array.isArray(quotesData) ? quotesData : []);
-      
-      // Set works (maintenance requests that are work orders)
       setWorks(Array.isArray(worksData) ? worksData : []);
-      
-      // Set entry and exit states
       setEntryTenants(Array.isArray(entryData) ? entryData : []);
       setExitTenants(Array.isArray(exitData) ? exitData : []);
 
       setCompanyProperties(Array.isArray(propertiesData) ? propertiesData : []);
       setCompanyTenants(Array.isArray(tenantsData) ? tenantsData : []);
-      
-      // Set history data
       if (historyDataRes && typeof historyDataRes === 'object') {
         setHistoryData({
           queries: Array.isArray(historyDataRes.queries) ? historyDataRes.queries : [],
@@ -527,18 +487,17 @@ const TechnicianDashboard = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Ensure type is 'Move-in' or 'Move-out' for API
       const inspectionData = {
         ...inspectionForm,
-        type: inspectionForm.type === 'move-in' ? 'Move-in' : 
-              inspectionForm.type === 'move-out' ? 'Move-out' : 
-              inspectionForm.type,
+        type: inspectionForm.type === 'move-in' ? 'Move-in' :
+        inspectionForm.type === 'move-out' ? 'Move-out' :
+        inspectionForm.type
       };
       await technicianService.createInspection(inspectionData);
       addNotification('Inspection created successfully', 'success');
       setShowInspectionModal(false);
       setInspectionForm({ property: '', type: 'Move-in', inspector: '', notes: '' });
-      loadData(); // Reload data to show new inspection
+      loadData();
     } catch (error) {
       console.error('Error creating inspection:', error);
       addNotification(error.message || 'Failed to create inspection', 'error');
@@ -550,7 +509,7 @@ const TechnicianDashboard = () => {
   const handlePhotoUpload = async (e) => {
     e.preventDefault();
     if (!photoFile || !selectedInspectionForPhoto) return;
-    
+
     setLoading(true);
     try {
       const inspectionId = selectedInspectionForPhoto.id || selectedInspectionForPhoto.ID;
@@ -559,7 +518,7 @@ const TechnicianDashboard = () => {
       setShowPhotoUploadModal(false);
       setSelectedInspectionForPhoto(null);
       setPhotoFile(null);
-      loadData(); // Reload data to show updated inspection with photo
+      loadData();
     } catch (error) {
       console.error('Error uploading photo:', error);
       addNotification(error.message || 'Failed to upload photo', 'error');
@@ -584,15 +543,15 @@ const TechnicianDashboard = () => {
       property: task.Property || task.property || '',
       issue: task.Issue || task.issue || '',
       priority: task.Priority || task.priority || 'normal',
-        assigned: task.Assigned || task.assigned || '',
-        photos: []
+      assigned: task.Assigned || task.assigned || '',
+      photos: []
     });
     setShowTaskModal(true);
   };
 
   const handleTaskUpdate = async (e) => {
     e.preventDefault();
-    
+
     setLoading(true);
     try {
       const taskId = selectedTask?.id || selectedTask?.ID;
@@ -604,13 +563,13 @@ const TechnicianDashboard = () => {
             assigned: taskForm.assigned || '',
             priority: taskForm.priority || 'normal',
             issue: taskForm.issue || '',
-            property: taskForm.property || '',
+            property: taskForm.property || ''
           });
           addNotification('Maintenance updated successfully', 'success');
         } else {
           const costRaw = taskForm.estimatedCost;
-          const estimatedCost = (typeof costRaw === 'number' && Number.isFinite(costRaw)) ? costRaw : (Number(costRaw) || 0);
-          const statusForCreate = taskForm.requireDirectorApproval ? 'Pending Director Approval' : (taskForm.status || 'Pending');
+          const estimatedCost = typeof costRaw === 'number' && Number.isFinite(costRaw) ? costRaw : Number(costRaw) || 0;
+          const statusForCreate = taskForm.requireDirectorApproval ? 'Pending Director Approval' : taskForm.status || 'Pending';
           const maintenanceData = {
             property: taskForm.property || '',
             issue: taskForm.issue || 'Maintenance Task',
@@ -621,18 +580,16 @@ const TechnicianDashboard = () => {
             photos: taskForm.photos || [],
             quotation: taskForm.quotation || null,
             invoice: taskForm.invoice || null,
-            requireDirectorApproval: taskForm.requireDirectorApproval || false,
+            requireDirectorApproval: taskForm.requireDirectorApproval || false
           };
           const createdMaintenance = await technicianService.createMaintenanceRequest(maintenanceData);
           const hadPhotos = (maintenanceData.photos && maintenanceData.photos.length) > 0;
           const needsApproval = maintenanceData.requireDirectorApproval;
           let msg = hadPhotos ? 'Maintenance created. To add photos, edit this request and attach images.' : 'Maintenance created successfully';
           if (needsApproval) msg += ' Task sent to director for approval.';
-
-          // Upload per-worker quotes if any were provided
           const newMaintenanceId = createdMaintenance?.ID || createdMaintenance?.id;
           if (newMaintenanceId) {
-            const rowsToUpload = workerQuoteRows.filter(r => r.workerName.trim());
+            const rowsToUpload = workerQuoteRows.filter((r) => r.workerName.trim());
             for (const row of rowsToUpload) {
               try {
                 await technicianService.addWorkerQuote(newMaintenanceId, row.workerName.trim(), row.quoteFile);
@@ -647,11 +604,9 @@ const TechnicianDashboard = () => {
           addNotification(msg, 'success');
         }
       } else if (taskId) {
-        // Update existing task
         await technicianService.updateTask(taskId, taskForm);
         addNotification('Task updated successfully', 'success');
       } else {
-        // Create new task
         const taskData = {
           property: taskForm.property || '',
           issue: taskForm.issue || 'Maintenance Task',
@@ -668,7 +623,7 @@ const TechnicianDashboard = () => {
       setSelectedTask(null);
       setTaskContext('task');
       setTaskForm({ status: '', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
-      loadData(); // Reload data to show updated/created task
+      loadData();
     } catch (error) {
       console.error('Error updating/creating task:', error);
       addNotification(error.message || 'Failed to save task', 'error');
@@ -682,11 +637,6 @@ const TechnicianDashboard = () => {
     try {
       const taskId = task.id || task.ID;
       await technicianService.updateTask(taskId, { status: 'Completed' });
-
-      // When a maintenance task is marked as completed, automatically
-      // create a pending quote (if one has not already been generated)
-      // so that it appears in the Quotes page for validation by the
-      // owner or agency admin.
       const alreadyGenerated = task.quoteGenerated || task.QuoteGenerated;
       if (!alreadyGenerated) {
         const quoteData = {
@@ -694,7 +644,7 @@ const TechnicianDashboard = () => {
           property: task.Property || task.property || '',
           issue: task.Issue || task.issue || 'Maintenance Task',
           amount: task.EstimatedCost || task.estimatedCost || 0,
-          recipient: 'management@example.com',
+          recipient: 'management@example.com'
         };
         try {
           await technicianService.submitQuote(quoteData);
@@ -706,7 +656,7 @@ const TechnicianDashboard = () => {
       } else {
         addNotification('Task marked as completed', 'success');
       }
-      loadData(); // Reload data to show updated task
+      loadData();
     } catch (error) {
       console.error('Error completing task:', error);
       addNotification('Failed to complete task', 'error');
@@ -752,7 +702,7 @@ const TechnicianDashboard = () => {
       await technicianService.updateMaintenanceRequest(maintenanceId, {
         status: 'In Progress',
         workStartDate: workSchedule.startDate,
-        workEndDate: workSchedule.endDate,
+        workEndDate: workSchedule.endDate
       });
       addNotification('Work started and scheduled successfully', 'success');
       setShowWorkStartModal(false);
@@ -773,7 +723,7 @@ const TechnicianDashboard = () => {
       setLoading(true);
       await technicianService.updateMaintenanceRequest(workId, {
         status,
-        completedAt: status === 'Completed' ? new Date().toISOString() : undefined,
+        completedAt: status === 'Completed' ? new Date().toISOString() : undefined
       });
       addNotification('Work status updated', 'success');
       loadData();
@@ -786,11 +736,11 @@ const TechnicianDashboard = () => {
   };
 
   const toggleWorkSelection = (workId) => {
-    setSelectedWorkIds(prev => (
-      prev.includes(workId)
-        ? prev.filter(id => id !== workId)
-        : [...prev, workId]
-    ));
+    setSelectedWorkIds((prev) =>
+    prev.includes(workId) ?
+    prev.filter((id) => id !== workId) :
+    [...prev, workId]
+    );
   };
 
   const handleArchiveWorks = async (workIds) => {
@@ -799,7 +749,7 @@ const TechnicianDashboard = () => {
     try {
       setLoading(true);
       await Promise.all(
-        ids.map(id => technicianService.updateMaintenanceRequest(id, { archived: true }))
+        ids.map((id) => technicianService.updateMaintenanceRequest(id, { archived: true }))
       );
       addNotification('Work archived', 'success');
       setSelectedWorkIds([]);
@@ -811,62 +761,44 @@ const TechnicianDashboard = () => {
       setLoading(false);
     }
   };
-
-  // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
-
-  // Auto-scroll when messages change
   useEffect(() => {
     if (chatMessages.length > 0) {
       scrollToBottom();
     }
   }, [chatMessages, scrollToBottom]);
-
-  // Load chat for a specific user
   const loadChatForUser = useCallback(async (userId) => {
     if (!userId) return;
-    
+
     try {
       setSelectedUserId(userId);
       console.log('Loading chat for user:', userId);
       const messages = await messagingService.getConversation(userId);
       console.log('Loaded messages:', messages);
-      
-      // Normalize messages array
       const normalizedMessages = Array.isArray(messages) ? messages : [];
       console.log('Normalized messages:', normalizedMessages);
       setChatMessages(normalizedMessages);
-      
-      // Mark messages as read with debouncing to avoid rate limiting
-      // Only mark as read if we haven't marked this user recently
       const userIdStr = String(userId);
       if (lastMarkedReadRef.current !== userIdStr) {
-        // Clear any pending timeout
         if (markReadTimeoutRef.current) {
           clearTimeout(markReadTimeoutRef.current);
         }
-        
-        // Mark this user as being processed to prevent duplicate calls
         lastMarkedReadRef.current = userIdStr;
-        
-        // Debounce the mark as read call with a longer delay to avoid rate limiting
         markReadTimeoutRef.current = setTimeout(async () => {
           try {
             await messagingService.markMessagesAsRead(userId);
             console.log('Marked messages as read for user:', userId);
           } catch (readError) {
-            // Silently ignore rate limit errors - they're expected if called too frequently
             if (!readError.message || !readError.message.includes('Rate limit')) {
               console.error('Error marking messages as read:', readError);
             }
-            // Reset the last marked ref on error so we can retry later
             if (readError.message && readError.message.includes('Rate limit')) {
               lastMarkedReadRef.current = null;
             }
           }
-        }, 2000); // Wait 2 seconds before marking as read to avoid rate limiting
+        }, 2000);
       }
     } catch (error) {
       console.error('Error loading chat:', error);
@@ -874,12 +806,8 @@ const TechnicianDashboard = () => {
       addNotification(`Failed to load conversation: ${error.message || 'Unknown error'}`, 'error');
       setChatMessages([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // addNotification is stable, no need to include
-
-  // Load users for messaging (from same company)
+  }, []);
   const loadUsers = useCallback(async () => {
-    // Prevent multiple simultaneous calls
     if (isLoadingUsersRef.current) {
       console.log('Users already loading, skipping...');
       return;
@@ -888,24 +816,18 @@ const TechnicianDashboard = () => {
     try {
       isLoadingUsersRef.current = true;
       console.log('Loading users for messaging...');
-      // Use the new getUsers endpoint
       const users = await messagingService.getUsers();
       console.log('Users API response:', users);
-      
-      // Handle different response formats
       let usersArray = [];
       if (Array.isArray(users)) {
         usersArray = users;
       } else if (users && Array.isArray(users.users)) {
         usersArray = users.users;
       } else if (users && typeof users === 'object') {
-        // Try to find array in response
-        usersArray = Object.values(users).find(val => Array.isArray(val)) || [];
+        usersArray = Object.values(users).find((val) => Array.isArray(val)) || [];
       }
-      
+
       console.log('Processed users array:', usersArray);
-      
-      // Get current user ID to exclude from list
       const storedUser = localStorage.getItem('user');
       let currentUserId = null;
       if (storedUser) {
@@ -917,67 +839,54 @@ const TechnicianDashboard = () => {
           console.error('Error parsing stored user:', error);
         }
       }
-      
-      // Map users to chat format and exclude current user
-      const chatUsersList = usersArray
-        .filter(user => {
-          const userId = user.id || user.ID;
-          // Convert both to strings for comparison to handle type mismatches
-          const userIdStr = userId ? String(userId) : null;
-          const currentUserIdStr = currentUserId ? String(currentUserId) : null;
-          const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
-          if (!shouldInclude && userIdStr) {
-            console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
-          }
-          return shouldInclude;
-        })
-        .map(user => {
-          const userId = user.id || user.ID;
-          return {
-            userId: userId,
-            name: user.name || user.Name || 'User',
-            email: user.email || user.Email || '',
-            role: user.role || user.Role || '',
-            company: user.company || user.Company || '',
-            status: user.status || user.Status || 'Active',
-            unreadCount: 0 // Will be updated from conversations if needed
-          };
-        })
-        .sort((a, b) => {
-          const nameA = (a.name || '').toLowerCase();
-          const nameB = (b.name || '').toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
-      
+      const chatUsersList = usersArray.
+      filter((user) => {
+        const userId = user.id || user.ID;
+        const userIdStr = userId ? String(userId) : null;
+        const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+        const shouldInclude = userIdStr && userIdStr !== currentUserIdStr;
+        if (!shouldInclude && userIdStr) {
+          console.log(`Excluding user ${userIdStr} (current user: ${currentUserIdStr})`);
+        }
+        return shouldInclude;
+      }).
+      map((user) => {
+        const userId = user.id || user.ID;
+        return {
+          userId: userId,
+          name: user.name || user.Name || 'User',
+          email: user.email || user.Email || '',
+          role: user.role || user.Role || '',
+          company: user.company || user.Company || '',
+          status: user.status || user.Status || 'Active',
+          unreadCount: 0
+        };
+      }).
+      sort((a, b) => {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
       console.log('Final chat users list:', chatUsersList);
-      
-      // Get conversations to update unread counts and include users who have messaged but aren't in users list
       try {
         const conversations = await messagingService.getConversations();
         if (Array.isArray(conversations)) {
-          // Create a map of existing users by ID for quick lookup
           const existingUsersMap = new Map();
-          chatUsersList.forEach(u => {
+          chatUsersList.forEach((u) => {
             existingUsersMap.set(String(u.userId), u);
           });
-          
-          // Process conversations to update unread counts and add missing users
-          conversations.forEach(conv => {
+          conversations.forEach((conv) => {
             const convUserId = String(conv.userId || conv.userID);
             const existingUser = existingUsersMap.get(convUserId);
-            
+
             if (existingUser) {
-              // Update unread count for existing user
               if (conv.unreadCount) {
                 existingUser.unreadCount = conv.unreadCount;
               }
             } else {
-              // User has a conversation but isn't in the users list - add them
-              // This handles cases where users from other companies or roles have messaged
               const convUser = conv.user || {};
               const userId = conv.userId || conv.userID || convUser.id || convUser.ID;
-              
-              // Only add if it's not the current user
               const currentUserIdStr = currentUserId ? String(currentUserId) : null;
               if (userId && String(userId) !== currentUserIdStr) {
                 const newUser = {
@@ -995,8 +904,6 @@ const TechnicianDashboard = () => {
               }
             }
           });
-          
-          // Re-sort after adding new users
           chatUsersList.sort((a, b) => {
             const nameA = (a.name || '').toLowerCase();
             const nameB = (b.name || '').toLowerCase();
@@ -1006,15 +913,11 @@ const TechnicianDashboard = () => {
       } catch (convError) {
         console.error('Error loading conversations for unread counts:', convError);
       }
-      
+
       setChatUsers(chatUsersList);
-      
-      // Auto-select first user if available and no user is selected
-      // Use functional update to avoid dependency on selectedUserId
-      setSelectedUserId(prevSelected => {
+      setSelectedUserId((prevSelected) => {
         if (chatUsersList.length > 0 && !prevSelected) {
           const firstUserId = chatUsersList[0].userId;
-          // Load chat for first user asynchronously
           setTimeout(() => {
             loadChatForUser(firstUserId);
           }, 0);
@@ -1022,7 +925,7 @@ const TechnicianDashboard = () => {
         }
         return prevSelected;
       });
-      
+
       if (chatUsersList.length === 0) {
         console.warn('No users found. This could mean:');
         console.warn('1. No other users in the same company');
@@ -1038,24 +941,18 @@ const TechnicianDashboard = () => {
     } finally {
       isLoadingUsersRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadChatForUser]); // addNotification is stable, no need to include
-
-  // Load users when chat tab is active (only once per tab switch)
+  }, [loadChatForUser]);
   useEffect(() => {
     if (activeTab === 'chat' && !isLoadingUsersRef.current) {
       loadUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]); // Only depend on activeTab, not loadUsers
+  }, [activeTab]);
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !selectedUserId) return;
-    
+
     const content = chatInput.trim();
     const tempMessageId = `temp-${Date.now()}`;
-    
-    // Get current user ID from localStorage
     const storedUser = localStorage.getItem('user');
     let currentUserId = null;
     if (storedUser) {
@@ -1066,13 +963,11 @@ const TechnicianDashboard = () => {
         console.error('Error parsing stored user:', error);
       }
     }
-    
+
     if (!currentUserId) {
       addNotification('Unable to identify current user. Please log in again.', 'error');
       return;
     }
-    
-    // Optimistic update: add message immediately to UI
     const optimisticMessage = {
       id: tempMessageId,
       fromUserId: currentUserId,
@@ -1081,10 +976,10 @@ const TechnicianDashboard = () => {
       createdAt: new Date().toISOString(),
       read: false
     };
-    
-    setChatMessages(prev => [...prev, optimisticMessage]);
+
+    setChatMessages((prev) => [...prev, optimisticMessage]);
     setChatInput('');
-    
+
     try {
       console.log('Sending message:', { fromUserId: currentUserId, toUserId: selectedUserId, content });
       const newMessage = await messagingService.sendMessage({
@@ -1092,24 +987,19 @@ const TechnicianDashboard = () => {
         toUserId: selectedUserId,
         content: content
       });
-      
+
       console.log('Message sent successfully, server response:', newMessage);
-      
-      // Replace optimistic message with actual message from server
-      // Check if newMessage has the expected structure
       if (newMessage && (newMessage.id || newMessage.ID)) {
         console.log('Replacing optimistic message with server response');
-        setChatMessages(prev => {
-          const updated = prev.map(msg => 
-            msg.id === tempMessageId ? newMessage : msg
+        setChatMessages((prev) => {
+          const updated = prev.map((msg) =>
+          msg.id === tempMessageId ? newMessage : msg
           );
           console.log('Updated messages:', updated);
           return updated;
         });
       } else {
         console.log('Server response format unexpected, reloading chat after delay');
-        // If server response format is unexpected, reload chat after a short delay
-        // to give server time to process
         setTimeout(async () => {
           if (selectedUserId) {
             console.log('Reloading chat for user:', selectedUserId);
@@ -1121,21 +1011,15 @@ const TechnicianDashboard = () => {
       console.error('Error sending message:', error);
       console.error('Error details:', error.message, error.stack);
       addNotification(error.message || 'Failed to send message', 'error');
-      // Remove optimistic message on error
-      setChatMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      // Restore input
+      setChatMessages((prev) => prev.filter((msg) => msg.id !== tempMessageId));
       setChatInput(content);
     }
   };
-
-  // Load advertisements when advertisements or overview tab is active
   useEffect(() => {
     if (activeTab === 'advertisements' || activeTab === 'overview') {
       loadAdvertisements();
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load Cost of Work owners when Cost of Work tab is active; reset drill-down when entering tab
+  }, [activeTab]);
   useEffect(() => {
     if (activeTab === 'cost-of-work') {
       setCostOfWorkView('owners');
@@ -1143,28 +1027,28 @@ const TechnicianDashboard = () => {
       setSelectedCostProperty(null);
       setCostOfWorkProperties([]);
       setCostOfWorkWorks([]);
-      technicianService.getCostOfWorkOwners()
-        .then(data => setCostOfWorkOwners(Array.isArray(data) ? data : []))
-        .catch(() => setCostOfWorkOwners([]));
+      technicianService.getCostOfWorkOwners().
+      then((data) => setCostOfWorkOwners(Array.isArray(data) ? data : [])).
+      catch(() => setCostOfWorkOwners([]));
     }
   }, [activeTab]);
 
 
   const tabs = useMemo(
     () => [
-      { id: 'overview', label: 'Overview', icon: Building },
-      { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-      { id: 'quotes', label: 'The Quotes', icon: DollarSign },
-      { id: 'works', label: 'Works', icon: HardHat },
-      { id: 'cost-of-work', label: 'Cost of Work', icon: BarChart2 },
-      { id: 'state-entry', label: 'State of Entry / Exit', icon: LogIn },
-      { id: 'worker-contacts', label: 'Contact of Workers', icon: Phone },
-      { id: 'history', label: 'History', icon: History },
-      { id: 'reports', label: 'Reports', icon: FileCheck },
-      { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
-      { id: 'chat', label: 'Messages', icon: MessageCircle },
-      { id: 'settings', label: 'Settings', icon: Settings }
-    ],
+    { id: 'overview', label: 'Overview', icon: Building },
+    { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+    { id: 'quotes', label: 'The Quotes', icon: DollarSign },
+    { id: 'works', label: 'Works', icon: HardHat },
+    { id: 'cost-of-work', label: 'Cost of Work', icon: BarChart2 },
+    { id: 'state-entry', label: 'State of Entry / Exit', icon: LogIn },
+    { id: 'worker-contacts', label: 'Contact of Workers', icon: Phone },
+    { id: 'history', label: 'History', icon: History },
+    { id: 'reports', label: 'Reports', icon: FileCheck },
+    { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
+    { id: 'chat', label: 'Messages', icon: MessageCircle },
+    { id: 'settings', label: 'Settings', icon: Settings }],
+
     []
   );
 
@@ -1185,21 +1069,21 @@ const TechnicianDashboard = () => {
       const label = date.toLocaleString('default', { month: 'short' });
       monthLabels.push(label);
 
-      const totalCount = requests.filter(r => {
+      const totalCount = requests.filter((r) => {
         const dateValue = r.CreatedAt || r.createdAt || r.Date || r.date;
         if (!dateValue) return false;
         const reqDate = new Date(dateValue);
         return reqDate.getMonth() === date.getMonth() && reqDate.getFullYear() === date.getFullYear();
       }).length;
 
-      const completedCount = requests.filter(r => {
+      const completedCount = requests.filter((r) => {
         const dateValue = r.CreatedAt || r.createdAt || r.Date || r.date;
         if (!dateValue) return false;
         const reqDate = new Date(dateValue);
         const status = (r.Status || r.status || '').toLowerCase();
         return reqDate.getMonth() === date.getMonth() &&
-          reqDate.getFullYear() === date.getFullYear() &&
-          status === 'completed';
+        reqDate.getFullYear() === date.getFullYear() &&
+        status === 'completed';
       }).length;
 
       monthlyRequests.push(totalCount);
@@ -1211,8 +1095,8 @@ const TechnicianDashboard = () => {
     const chartHeight = 140;
     const chartPadding = 10;
     const toPoint = (value, index, count) => {
-      const x = chartPadding + (index * (chartWidth - chartPadding * 2)) / (count - 1 || 1);
-      const y = chartHeight - chartPadding - (value / maxValue) * (chartHeight - chartPadding * 2);
+      const x = chartPadding + index * (chartWidth - chartPadding * 2) / (count - 1 || 1);
+      const y = chartHeight - chartPadding - value / maxValue * (chartHeight - chartPadding * 2);
       return `${x},${y}`;
     };
     const requestsPath = monthlyRequests.map((v, i) => toPoint(v, i, monthlyRequests.length)).join(' ');
@@ -1236,164 +1120,154 @@ const TechnicianDashboard = () => {
                   fill="none"
                   stroke="#7c3aed"
                   strokeWidth="3"
-                  points={requestsPath}
-                />
+                  points={requestsPath} />
+                
                 <polyline
                   fill="none"
                   stroke="#22c55e"
                   strokeWidth="3"
-                  points={completedPath}
-                />
+                  points={completedPath} />
+                
               </svg>
             </div>
             <div className="sa-chart-footer">
-              {monthLabels.map(label => (
-                <span key={label}>{label}</span>
-              ))}
+              {monthLabels.map((label) =>
+              <span key={label}>{label}</span>
+              )}
             </div>
           </div>
 
           <div className="sa-overview-metrics">
-            {/* Pending Requests */}
             <div className="sa-metric-card sa-metric-primary" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('maintenance')}>
               <p className="sa-metric-label">Pending Requests</p>
               <p className="sa-metric-period">Awaiting processing</p>
-              <p className="sa-metric-value">{requests.filter(r => (r.Status || r.status) === 'Pending').length}</p>
+              <p className="sa-metric-value">{requests.filter((r) => (r.Status || r.status) === 'Pending').length}</p>
             </div>
-            
-            {/* Quotes to be Validated */}
             <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('quotes')}>
               <p className="sa-metric-label">Quotes to be Validated</p>
               <p className="sa-metric-period">Awaiting validation</p>
-              <p className="sa-metric-value">{quotes.filter(q => (q.Status || q.status) === 'Sent' || (q.Status || q.status) === 'Pending').length}</p>
+              <p className="sa-metric-value">{quotes.filter((q) => (q.Status || q.status) === 'Sent' || (q.Status || q.status) === 'Pending').length}</p>
             </div>
-            
-            {/* Urgent Work */}
             <div className="sa-metric-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('works')}>
               <p className="sa-metric-label">Urgent Work</p>
               <p className="sa-metric-period">High priority</p>
               <p className="sa-metric-value">{overviewData?.urgentTicketsPending || 0}</p>
             </div>
-            
-            {/* Important Alerts */}
             <div className="sa-metric-card">
               <p className="sa-metric-label">Important Alerts</p>
               <p className="sa-metric-period">Requires attention</p>
-              <p className="sa-metric-value">{requests.filter(r => {
-                const priority = (r.Priority || r.priority || '').toLowerCase();
-                return priority === 'urgent' && (r.Status || r.status) !== 'Completed';
-              }).length}</p>
+              <p className="sa-metric-value">{requests.filter((r) => {
+                  const priority = (r.Priority || r.priority || '').toLowerCase();
+                  return priority === 'urgent' && (r.Status || r.status) !== 'Completed';
+                }).length}</p>
             </div>
-            
-            {/* Monthly Indicators */}
             <div className="sa-metric-card">
               <p className="sa-metric-label">Monthly Requests</p>
               <p className="sa-metric-period">This month</p>
-              <p className="sa-metric-value">{requests.filter(r => {
-                const date = r.CreatedAt || r.createdAt || r.Date || r.date;
-                if (!date) return false;
-                const reqDate = new Date(date);
-                const now = new Date();
-                return reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
-              }).length}</p>
+              <p className="sa-metric-value">{requests.filter((r) => {
+                  const date = r.CreatedAt || r.createdAt || r.Date || r.date;
+                  if (!date) return false;
+                  const reqDate = new Date(date);
+                  const now = new Date();
+                  return reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
+                }).length}</p>
             </div>
             
             <div className="sa-metric-card">
               <p className="sa-metric-label">Average Resolution Time</p>
               <p className="sa-metric-number">{overviewData?.averageResolutionTime ? `${overviewData.averageResolutionTime.toFixed(1)} days` : 'N/A'}</p>
             </div>
-            {/* Advertisements Display - Replacing Banner Card */}
-            {advertisements.length > 0 ? (
-              <div style={{
-                gridColumn: 'span 2',
-                minHeight: '400px',
-                padding: '32px',
-                backgroundColor: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '24px',
-                overflowX: 'auto'
-              }}>
+            {advertisements.length > 0 ?
+            <div style={{
+              gridColumn: 'span 2',
+              minHeight: '400px',
+              padding: '32px',
+              backgroundColor: '#fff',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '24px',
+              overflowX: 'auto'
+            }}>
                 <div style={{
-                  display: 'flex',
-                  gap: '24px',
-                  flexWrap: 'nowrap',
-                  overflowX: 'auto',
-                  paddingBottom: '16px',
-                  width: '100%'
-                }}>
+                display: 'flex',
+                gap: '24px',
+                flexWrap: 'nowrap',
+                overflowX: 'auto',
+                paddingBottom: '16px',
+                width: '100%'
+              }}>
                   {advertisements.map((ad, index) => {
-                    const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-                    const fullImageUrl = imageUrl 
-                      ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                      : null;
+                  const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+                  const fullImageUrl = imageUrl ?
+                  imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}` :
+                  null;
 
-                    return (
-                      <div 
-                        key={`ad-${ad.ID || ad.id || index}`}
+                  return (
+                    <div
+                      key={`ad-${ad.ID || ad.id || index}`}
+                      style={{
+                        minWidth: '350px',
+                        maxWidth: '450px',
+                        padding: '20px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        flexShrink: 0
+                      }}>
+                      
+                        {fullImageUrl &&
+                      <img
+                        src={fullImageUrl}
+                        alt={ad.Title || ad.title || 'Advertisement'}
                         style={{
-                          minWidth: '350px',
-                          maxWidth: '450px',
-                          padding: '20px',
-                          backgroundColor: '#f9fafb',
+                          width: '100%',
+                          height: 'auto',
+                          maxHeight: '250px',
+                          objectFit: 'contain',
                           borderRadius: '8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          flexShrink: 0
+                          marginBottom: '16px'
                         }}
-                      >
-                        {fullImageUrl && (
-                          <img 
-                            src={fullImageUrl} 
-                            alt={ad.Title || ad.title || 'Advertisement'} 
-                            style={{
-                              width: '100%',
-                              height: 'auto',
-                              maxHeight: '250px',
-                              objectFit: 'contain',
-                              borderRadius: '8px',
-                              marginBottom: '16px'
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        )}
-                        <h3 style={{ 
-                          margin: '0 0 8px 0', 
-                          fontSize: '1.1rem', 
-                          color: '#1f2937',
-                          fontWeight: '600'
-                        }}>
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }} />
+
+                      }
+                        <h3 style={{
+                        margin: '0 0 8px 0',
+                        fontSize: '1.1rem',
+                        color: '#1f2937',
+                        fontWeight: '600'
+                      }}>
                           {ad.Title || ad.title || 'Untitled Advertisement'}
                         </h3>
-                        <p style={{ 
-                          margin: '0 0 12px 0', 
-                          fontSize: '0.9rem', 
-                          color: '#6b7280',
-                          lineHeight: '1.5'
-                        }}>
+                        <p style={{
+                        margin: '0 0 12px 0',
+                        fontSize: '0.9rem',
+                        color: '#6b7280',
+                        lineHeight: '1.5'
+                      }}>
                           {ad.Text || ad.text || ad.description || ad.Description || 'No description available'}
                         </p>
-                        {ad.CreatedAt && (
-                          <span style={{ 
-                            fontSize: '0.8rem', 
-                            color: '#9ca3af'
-                          }}>
+                        {ad.CreatedAt &&
+                      <span style={{
+                        fontSize: '0.8rem',
+                        color: '#9ca3af'
+                      }}>
                             Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
                           </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                      }
+                      </div>);
+
+                })}
                 </div>
-              </div>
-            ) : (
-              <div className="sa-banner-card">
+              </div> :
+
+            <div className="sa-banner-card">
                 <div className="sa-banner-text">
                   <h3>Maintenance Management</h3>
                   <p>
@@ -1401,7 +1275,7 @@ const TechnicianDashboard = () => {
                   </p>
                 </div>
               </div>
-            )}
+            }
           </div>
         </div>
 
@@ -1420,21 +1294,21 @@ const TechnicianDashboard = () => {
           </div>
         </div>
 
-      </div>
-    );
+      </div>);
+
   };
 
-  const renderInspections = () => (
-    <div className="sa-section-card">
+  const renderInspections = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
         <h3>Property Inspections</h3>
         <p>Manage move-in, move-out, and routine inspections</p>
         </div>
-        <button 
-          className="sa-primary-cta"
-          onClick={() => setShowInspectionModal(true)}
-        >
+        <button
+        className="sa-primary-cta"
+        onClick={() => setShowInspectionModal(true)}>
+        
           <Plus size={16} />
           Add Inspection
         </button>
@@ -1471,24 +1345,24 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {inspections.length === 0 ? (
-              <tr>
+            {inspections.length === 0 ?
+          <tr>
                 <td colSpan="7" className="sa-table-empty">
                   No inspections found
                 </td>
-              </tr>
-            ) : (
-              inspections.map((inspection, index) => {
-                const inspectionId = inspection.id || inspection.ID;
-                const property = inspection.property || inspection.Property;
-                const type = inspection.type || inspection.Type;
-                const date = inspection.date || inspection.Date;
-                const inspector = inspection.inspector || inspection.Inspector;
-                const notes = inspection.notes || inspection.Notes;
-                const photos = inspection.photos || inspection.Photos;
-                
-                return (
-                  <tr key={inspectionId}>
+              </tr> :
+
+          inspections.map((inspection, index) => {
+            const inspectionId = inspection.id || inspection.ID;
+            const property = inspection.property || inspection.Property;
+            const type = inspection.type || inspection.Type;
+            const date = inspection.date || inspection.Date;
+            const inspector = inspection.inspector || inspection.Inspector;
+            const notes = inspection.notes || inspection.Notes;
+            const photos = inspection.photos || inspection.Photos;
+
+            return (
+              <tr key={inspectionId}>
                     <td>{index + 1}</td>
                     <td className="sa-cell-main">
                       <span className="sa-cell-title">{property}</span>
@@ -1505,27 +1379,27 @@ const TechnicianDashboard = () => {
                     </td>
                     <td className="sa-row-actions">
                       <button className="sa-icon-button" onClick={() => handleUploadPhotoClick(inspection)} title="Upload Photo">📷</button>
-                      {photos && Array.isArray(photos) && photos.length > 0 && (
-                        <span className="sa-cell-sub" style={{ marginLeft: '8px', fontSize: '0.75rem' }}>
+                      {photos && Array.isArray(photos) && photos.length > 0 &&
+                  <span className="sa-cell-sub" style={{ marginLeft: '8px', fontSize: '0.75rem' }}>
                           ({photos.length})
                         </span>
-                    )}
+                  }
                   </td>
-                </tr>
-                );
-              })
-            )}
+                </tr>);
+
+          })
+          }
           </tbody>
         </table>
       </div>
-    </div>
-  );
+    </div>;
+
 
   const handleQuoteDocSubmit = async (e) => {
     e.preventDefault();
     if (!quoteDocMaintenance) return;
     const amount = Number(quoteDocForm.amount);
-    if (!amount || amount <= 0) { addNotification('Enter a valid amount', 'error'); return; }
+    if (!amount || amount <= 0) {addNotification('Enter a valid amount', 'error');return;}
     setQuoteDocSubmitting(true);
     try {
       await technicianService.submitQuoteWithFiles({
@@ -1536,7 +1410,7 @@ const TechnicianDashboard = () => {
         problem: quoteDocForm.problem,
         invoice: quoteDocForm.invoice,
         quotation: quoteDocForm.quotation,
-        supportingDocument: quoteDocForm.supportingDocument,
+        supportingDocument: quoteDocForm.supportingDocument
       });
       addNotification('Quote submitted successfully', 'success');
       setShowQuoteDocModal(false);
@@ -1572,9 +1446,8 @@ const TechnicianDashboard = () => {
     };
 
     const handleUpdateMaintenance = async (maintenance) => {
-      // Reuse the task modal to update estimated hours/cost and status
       const existingPhotoURLs = maintenance.photos || maintenance.Photos || maintenance.photoURLs || maintenance.PhotoURLs || [];
-      const photoArray = Array.isArray(existingPhotoURLs) ? existingPhotoURLs : (typeof existingPhotoURLs === 'string' ? JSON.parse(existingPhotoURLs || '[]') : []);
+      const photoArray = Array.isArray(existingPhotoURLs) ? existingPhotoURLs : typeof existingPhotoURLs === 'string' ? JSON.parse(existingPhotoURLs || '[]') : [];
       setShowTaskModal(true);
       setTaskContext('maintenance');
       setSelectedTask(maintenance);
@@ -1586,7 +1459,7 @@ const TechnicianDashboard = () => {
         estimatedHours: maintenance.estimatedHours || maintenance.EstimatedHours || 0,
         estimatedCost: maintenance.estimatedCost || maintenance.EstimatedCost || 0,
         assigned: maintenance.assigned || maintenance.Assigned || maintenance.assignedTo || maintenance.AssignedTo || '',
-        existingPhotoURLs: photoArray,
+        existingPhotoURLs: photoArray
       });
     };
 
@@ -1598,13 +1471,11 @@ const TechnicianDashboard = () => {
       setQuoteDocForm({ amount: estimatedCost > 0 ? String(estimatedCost) : '', problem: '', invoice: null, quotation: null, supportingDocument: null });
       setShowQuoteDocModal(true);
     };
-
-    // Only show non-completed maintenance in this table, then apply filters.
-    const visibleRequests = requests.filter(m => {
+    const visibleRequests = requests.filter((m) => {
       const rawStatus = m.status || m.Status || '';
       const status = String(rawStatus).trim().toLowerCase();
       const completedStatuses = ['completed', 'complete', 'done', 'finished', 'closed', 'resolved'];
-      if (completedStatuses.some(s => status === s || status.startsWith(s))) return false;
+      if (completedStatuses.some((s) => status === s || status.startsWith(s))) return false;
 
       const priority = (m.priority || m.Priority || 'normal').toString().trim().toLowerCase();
       const mStatus = (m.status || m.Status || '').toString().trim();
@@ -1616,7 +1487,7 @@ const TechnicianDashboard = () => {
       return true;
     });
 
-    const uniqueProperties = [...new Set(requests.map(m => (m.property || m.Property || '').trim()).filter(Boolean))].sort();
+    const uniqueProperties = [...new Set(requests.map((m) => (m.property || m.Property || '').trim()).filter(Boolean))].sort();
 
     return (
       <div className="sa-section-card">
@@ -1628,8 +1499,6 @@ const TechnicianDashboard = () => {
           <button
             className="sa-primary-cta"
             onClick={() => {
-              // Open the generic task modal in "create" mode so the technician
-              // can add a new maintenance task.
               setSelectedTask(null);
               setTaskContext('maintenance');
               setTaskForm({
@@ -1644,13 +1513,13 @@ const TechnicianDashboard = () => {
                 existingPhotoURLs: [],
                 quotation: null,
                 invoice: null,
-                requireDirectorApproval: false,
+                requireDirectorApproval: false
               });
               setWorkerQuoteRows([{ id: Date.now(), workerName: '', quoteFile: null }]);
               setShowTaskModal(true);
             }}
-            disabled={loading}
-          >
+            disabled={loading}>
+            
             <Plus size={18} />
             Add Maintenance
           </button>
@@ -1660,8 +1529,8 @@ const TechnicianDashboard = () => {
           <select
             className="sa-filter-select"
             value={maintenancePriorityFilter}
-            onChange={(e) => setMaintenancePriorityFilter(e.target.value)}
-          >
+            onChange={(e) => setMaintenancePriorityFilter(e.target.value)}>
+            
             <option value="">All Priority Levels</option>
             <option value="urgent">Urgent</option>
             <option value="high">High</option>
@@ -1671,8 +1540,8 @@ const TechnicianDashboard = () => {
           <select
             className="sa-filter-select"
             value={maintenanceStatusFilter}
-            onChange={(e) => setMaintenanceStatusFilter(e.target.value)}
-          >
+            onChange={(e) => setMaintenanceStatusFilter(e.target.value)}>
+            
             <option value="">All Status</option>
             <option value="Pending">Pending</option>
             <option value="In Progress">In Progress</option>
@@ -1682,12 +1551,12 @@ const TechnicianDashboard = () => {
           <select
             className="sa-filter-select"
             value={maintenancePropertyFilter}
-            onChange={(e) => setMaintenancePropertyFilter(e.target.value)}
-          >
+            onChange={(e) => setMaintenancePropertyFilter(e.target.value)}>
+            
             <option value="">All Properties</option>
-            {uniqueProperties.map((prop) => (
-              <option key={prop} value={prop}>{prop}</option>
-            ))}
+            {uniqueProperties.map((prop) =>
+            <option key={prop} value={prop}>{prop}</option>
+            )}
           </select>
         </div>
 
@@ -1710,36 +1579,36 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {visibleRequests.length === 0 ? (
+            {visibleRequests.length === 0 ?
               <tr>
                   <td colSpan={12} className="sa-table-empty">
                   No maintenance requests found
                 </td>
-              </tr>
-            ) : (
-                visibleRequests.map((maintenance, index) => {
-                  const maintenanceId = maintenance.id || maintenance.ID;
-                  const property = maintenance.property || maintenance.Property;
-                  const tenant = maintenance.tenant || maintenance.Tenant || maintenance.tenantName || maintenance.TenantName || '—';
-                  const issue = maintenance.title || maintenance.Title || maintenance.issue || maintenance.Issue || 'Maintenance Request';
-                  const description = maintenance.description || maintenance.Description || '';
-                  const priority = (maintenance.priority || maintenance.Priority || 'normal').toLowerCase();
-                  const status = maintenance.status || maintenance.Status || 'Pending';
-                  const assigned = maintenance.assigned || maintenance.Assigned || maintenance.assignedTo || maintenance.AssignedTo || 'Unassigned';
-                  const date = maintenance.date || maintenance.Date || maintenance.createdAt || maintenance.CreatedAt;
-                  const estimatedHours = maintenance.estimatedHours || maintenance.EstimatedHours || 0;
-                  const estimatedCostRaw =
-                    maintenance.estimatedCost ??
-                    maintenance.EstimatedCost ??
-                    maintenance.estimated_cost ??
-                    maintenance.Estimated_Cost ??
-                    0;
-                  const estimatedCost = Number(estimatedCostRaw) || 0;
-                  const quoteGenerated = maintenance.quoteGenerated || maintenance.QuoteGenerated || false;
-                  const photos = maintenance.photos || maintenance.Photos || maintenance.photoURLs || maintenance.PhotoURLs || [];
-                  
-                  return (
-                    <tr key={maintenanceId}>
+              </tr> :
+
+              visibleRequests.map((maintenance, index) => {
+                const maintenanceId = maintenance.id || maintenance.ID;
+                const property = maintenance.property || maintenance.Property;
+                const tenant = maintenance.tenant || maintenance.Tenant || maintenance.tenantName || maintenance.TenantName || '—';
+                const issue = maintenance.title || maintenance.Title || maintenance.issue || maintenance.Issue || 'Maintenance Request';
+                const description = maintenance.description || maintenance.Description || '';
+                const priority = (maintenance.priority || maintenance.Priority || 'normal').toLowerCase();
+                const status = maintenance.status || maintenance.Status || 'Pending';
+                const assigned = maintenance.assigned || maintenance.Assigned || maintenance.assignedTo || maintenance.AssignedTo || 'Unassigned';
+                const date = maintenance.date || maintenance.Date || maintenance.createdAt || maintenance.CreatedAt;
+                const estimatedHours = maintenance.estimatedHours || maintenance.EstimatedHours || 0;
+                const estimatedCostRaw =
+                maintenance.estimatedCost ??
+                maintenance.EstimatedCost ??
+                maintenance.estimated_cost ??
+                maintenance.Estimated_Cost ??
+                0;
+                const estimatedCost = Number(estimatedCostRaw) || 0;
+                const quoteGenerated = maintenance.quoteGenerated || maintenance.QuoteGenerated || false;
+                const photos = maintenance.photos || maintenance.Photos || maintenance.photoURLs || maintenance.PhotoURLs || [];
+
+                return (
+                  <tr key={maintenanceId}>
                       <td>{index + 1}</td>
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{property}</span>
@@ -1748,16 +1617,16 @@ const TechnicianDashboard = () => {
                       <td>
                         <div className="sa-cell-main">
                           <span className="sa-cell-title">{issue}</span>
-                          {description && (
-                            <span className="sa-cell-sub" style={{ fontSize: '0.75rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {description &&
+                        <span className="sa-cell-sub" style={{ fontSize: '0.75rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {description}
                             </span>
-                          )}
-                          {photos && Array.isArray(photos) && photos.length > 0 && (
-                            <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#2563eb', marginTop: '4px' }}>
+                        }
+                          {photos && Array.isArray(photos) && photos.length > 0 &&
+                        <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#2563eb', marginTop: '4px' }}>
                               📷 {photos.length} photo{photos.length !== 1 ? 's' : ''}
                             </span>
-                          )}
+                        }
                         </div>
                   </td>
                   <td>
@@ -1780,44 +1649,44 @@ const TechnicianDashboard = () => {
                         </span>
                       </td>
                       <td className="sa-row-actions">
-                        <button 
-                          className="sa-icon-button" 
-                          onClick={() => {
-                            setSelectedMaintenanceRequest(maintenance);
-                            setShowMaintenanceViewModal(true);
-                          }} 
-                          title="View Details"
-                        >
+                        <button
+                        className="sa-icon-button"
+                        onClick={() => {
+                          setSelectedMaintenanceRequest(maintenance);
+                          setShowMaintenanceViewModal(true);
+                        }}
+                        title="View Details">
+                        
                           👁️
                         </button>
-                        {(status === 'Pending' || status === 'In Progress') && (
-                          <button 
-                            className="sa-icon-button" 
-                            onClick={() => handleRefuseRequest(maintenance)} 
-                            title="Refuse Request"
-                            style={{ color: '#ef4444', marginLeft: '8px' }}
-                          >
+                        {(status === 'Pending' || status === 'In Progress') &&
+                      <button
+                        className="sa-icon-button"
+                        onClick={() => handleRefuseRequest(maintenance)}
+                        title="Refuse Request"
+                        style={{ color: '#ef4444', marginLeft: '8px' }}>
+                        
                             ✗
                           </button>
-                        )}
+                      }
                         <button className="sa-icon-button" onClick={() => handleUpdateMaintenance(maintenance)} title="Edit" style={{ marginLeft: '8px' }}>✏️</button>
-                        {!quoteGenerated && status !== 'Refused' && (
-                          <button className="sa-icon-button" onClick={() => handleSubmitQuote(maintenance)} title="Generate Quote" style={{ color: '#2563eb', marginLeft: '8px' }}>💰</button>
-                        )}
+                        {!quoteGenerated && status !== 'Refused' &&
+                      <button className="sa-icon-button" onClick={() => handleSubmitQuote(maintenance)} title="Generate Quote" style={{ color: '#2563eb', marginLeft: '8px' }}>💰</button>
+                      }
                       </td>
-                </tr>
-                  );
-                })
-            )}
+                </tr>);
+
+              })
+              }
           </tbody>
         </table>
       </div>
-    </div>
-  );
+    </div>);
+
   };
 
   const renderInventories = () => {
-    const inventoryInspections = inspections.filter(i => {
+    const inventoryInspections = inspections.filter((i) => {
       const type = i.type || i.Type;
       return type === 'Move-in' || type === 'Move-out';
     });
@@ -1845,23 +1714,23 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-              {inventoryInspections.length === 0 ? (
+              {inventoryInspections.length === 0 ?
               <tr>
                   <td colSpan={7} className="sa-table-empty">
                   No inventory inspections found
                 </td>
-              </tr>
-            ) : (
-                inventoryInspections.map((inv, index) => {
-                  const invId = inv.id || inv.ID;
-                  const property = inv.property || inv.Property;
-                  const type = inv.type || inv.Type;
-                  const date = inv.date || inv.Date;
-                  const inspector = inv.inspector || inv.Inspector;
-                  const notes = inv.notes || inv.Notes;
-                  
-                  return (
-                    <tr key={`inv-${invId}`}>
+              </tr> :
+
+              inventoryInspections.map((inv, index) => {
+                const invId = inv.id || inv.ID;
+                const property = inv.property || inv.Property;
+                const type = inv.type || inv.Type;
+                const date = inv.date || inv.Date;
+                const inspector = inv.inspector || inv.Inspector;
+                const notes = inv.notes || inv.Notes;
+
+                return (
+                  <tr key={`inv-${invId}`}>
                       <td>{index + 1}</td>
                       <td className="sa-cell-main">
                         <span className="sa-cell-title">{property}</span>
@@ -1880,129 +1749,126 @@ const TechnicianDashboard = () => {
                         <button className="sa-icon-button" title="View">👁️</button>
                         <button className="sa-icon-button" title="Edit">✏️</button>
                   </td>
-                </tr>
-                  );
-                })
-            )}
+                </tr>);
+
+              })
+              }
           </tbody>
         </table>
       </div>
-    </div>
-  );
+    </div>);
+
   };
 
-  const renderMessages = () => (
-    <div className="sa-chat-page">
+  const renderMessages = () =>
+  <div className="sa-chat-page">
       <div className="sa-chat-layout">
         <div className="sa-chat-list">
           <h3>Users</h3>
           <ul>
             {chatUsers.map((user) => {
-              const active = user.userId === selectedUserId;
-              return (
-                <li
-                  key={user.userId}
-                  className={active ? 'active' : ''}
-                  onClick={() => loadChatForUser(user.userId)}
-                >
+            const active = user.userId === selectedUserId;
+            return (
+              <li
+                key={user.userId}
+                className={active ? 'active' : ''}
+                onClick={() => loadChatForUser(user.userId)}>
+                
                   <div className="sa-cell-main">
                     <span className="sa-cell-title">{user.name || 'User'}</span>
                     <span className="sa-cell-sub">{user.email || ''}</span>
-                    {user.role && (
-                      <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    {user.role &&
+                  <span className="sa-cell-sub" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                         {user.role}
                       </span>
-                    )}
-                    {user.unreadCount > 0 && (
-                      <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
+                  }
+                    {user.unreadCount > 0 &&
+                  <span className="sa-cell-sub" style={{ color: '#2563eb', fontWeight: 600, marginTop: '4px' }}>
                         {user.unreadCount} unread
                       </span>
-                    )}
+                  }
                   </div>
-                </li>
-              );
-            })}
-            {chatUsers.length === 0 && (
-              <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                </li>);
+
+          })}
+            {chatUsers.length === 0 &&
+          <li style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
                 No users available
               </li>
-            )}
+          }
           </ul>
       </div>
 
         <div className="sa-chat-conversation">
           <div className="sa-chat-header">
             <h3>Messages</h3>
-            {selectedUserId && (
-              <span className="sa-chat-subtitle">
+            {selectedUserId &&
+          <span className="sa-chat-subtitle">
                 Chat with{' '}
                 {
-                  (chatUsers.find((u) => u.userId === selectedUserId) || {})
-                    .name || 'User'
-                }
+            (chatUsers.find((u) => u.userId === selectedUserId) || {}).
+            name || 'User'
+            }
               </span>
-            )}
+          }
       </div>
           <div className="sa-chat-messages">
             {chatMessages.map((msg, index) => {
-              const messageContent = msg.content || msg.Content || '';
-              const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
-              const messageFromUserId = msg.fromUserId || msg.FromUserId;
-              const messageId = msg.id || msg.ID || index;
-              
-              // Determine if message is outgoing or incoming
-              const storedUser = localStorage.getItem('user');
-              let isOutgoing = false;
-              if (storedUser) {
-                try {
-                  const user = JSON.parse(storedUser);
-                  const currentUserId = user.id || user.ID;
-                  isOutgoing = String(messageFromUserId) === String(currentUserId);
-                } catch (e) {
-                  // Default to incoming if we can't parse user
-                }
+            const messageContent = msg.content || msg.Content || '';
+            const messageCreatedAt = msg.createdAt || msg.CreatedAt || '';
+            const messageFromUserId = msg.fromUserId || msg.FromUserId;
+            const messageId = msg.id || msg.ID || index;
+            const storedUser = localStorage.getItem('user');
+            let isOutgoing = false;
+            if (storedUser) {
+              try {
+                const user = JSON.parse(storedUser);
+                const currentUserId = user.id || user.ID;
+                isOutgoing = String(messageFromUserId) === String(currentUserId);
+              } catch (e) {
               }
-              
-              return (
-                <div
-                  key={`msg-${messageId}`}
-                  className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}
-                >
+            }
+
+            return (
+              <div
+                key={`msg-${messageId}`}
+                className={`sa-chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`}>
+                
                   <p>{messageContent}</p>
                   <span className="sa-chat-meta">
-                    {messageCreatedAt
-                      ? new Date(messageCreatedAt).toLocaleString()
-                      : ''}
+                    {messageCreatedAt ?
+                  new Date(messageCreatedAt).toLocaleString() :
+                  ''}
                   </span>
-                </div>
-              );
-            })}
-            {chatMessages.length === 0 && (
-              <div className="sa-table-empty">
+                </div>);
+
+          })}
+            {chatMessages.length === 0 &&
+          <div className="sa-table-empty">
                 Select a conversation on the left to start chatting.
               </div>
-            )}
+          }
             <div ref={messagesEndRef} />
           </div>
           <div className="sa-chat-input-row">
             <input
-              type="text"
-              placeholder="Type a message..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              disabled={!selectedUserId}
-            />
-            <button 
-              className="sa-primary-cta" 
-              onClick={handleSendMessage}
-              disabled={!selectedUserId || !chatInput.trim()}
-            >
+            type="text"
+            placeholder="Type a message..."
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            disabled={!selectedUserId} />
+          
+            <button
+            className="sa-primary-cta"
+            onClick={handleSendMessage}
+            disabled={!selectedUserId || !chatInput.trim()}>
+            
               <MessageCircle size={16} />
               Send
             </button>
@@ -2011,11 +1877,11 @@ const TechnicianDashboard = () => {
         
         <div className="sa-chat-details">
           <h4>Contact Details</h4>
-          {selectedUserId ? (
-            (() => {
-              const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
-              return (
-                <>
+          {selectedUserId ?
+        (() => {
+          const user = chatUsers.find((u) => u.userId === selectedUserId) || {};
+          return (
+            <>
                   <p>
                     <strong>Name:</strong> {user.name || 'User'}
                   </p>
@@ -2025,24 +1891,24 @@ const TechnicianDashboard = () => {
                   <p>
                     <strong>Role:</strong> {user.role || 'N/A'}
                   </p>
-                  {user.company && (
-                    <p>
+                  {user.company &&
+              <p>
                       <strong>Company:</strong> {user.company}
                     </p>
-                  )}
-                </>
-              );
-            })()
-          ) : (
-            <p>Select a user to view details.</p>
-          )}
+              }
+                </>);
+
+        })() :
+
+        <p>Select a user to view details.</p>
+        }
         </div>
       </div>
-    </div>
-  );
+    </div>;
 
-  const renderProgress = () => (
-    <div className="sa-section-card">
+
+  const renderProgress = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
         <h3>Work Progress Report</h3>
@@ -2051,21 +1917,21 @@ const TechnicianDashboard = () => {
       </div>
 
       <div className="sa-filters-section">
-        <select 
-          className="sa-filter-select"
-          value=""
-          onChange={() => {}}
-        >
+        <select
+        className="sa-filter-select"
+        value=""
+        onChange={() => {}}>
+        
           <option value="">All Status</option>
           <option value="Pending">Pending</option>
           <option value="In Progress">In Progress</option>
           <option value="Completed">Completed</option>
         </select>
-        <select 
-          className="sa-filter-select"
-          value=""
-          onChange={() => {}}
-        >
+        <select
+        className="sa-filter-select"
+        value=""
+        onChange={() => {}}>
+        
           <option value="">All Priority</option>
           <option value="urgent">Urgent</option>
           <option value="high">High</option>
@@ -2074,8 +1940,8 @@ const TechnicianDashboard = () => {
         </select>
       </div>
 
-      {null && (
-        <div style={{ marginBottom: '20px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
+      {null &&
+    <div style={{ marginBottom: '20px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Total Ongoing</p>
@@ -2092,12 +1958,12 @@ const TechnicianDashboard = () => {
             <div>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Total Ongoing Cost</p>
               <p style={{ margin: '4px 0 0', fontSize: '1.2rem', fontWeight: 600, color: '#111827' }}>
-                ${(0).toLocaleString()}
+                ${0 .toLocaleString()}
               </p>
             </div>
           </div>
         </div>
-      )}
+    }
 
       <div className="sa-table-wrapper">
         <table className="sa-table">
@@ -2113,24 +1979,24 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {[].length === 0 ? (
-              <tr>
+            {[].length === 0 ?
+          <tr>
                 <td colSpan={7} className="sa-table-empty">
                   No maintenance requests found
                 </td>
-              </tr>
-            ) : (
-              [].map((m, index) => {
-                const maintenanceId = m.id || m.ID;
-                const property = m.property || m.Property;
-                const issue = m.issue || m.Issue;
-                const priority = (m.priority || m.Priority || 'normal').toLowerCase();
-                const status = m.status || m.Status || 'Pending';
-                const assigned = m.assigned || m.Assigned || 'Unassigned';
-                const estimatedCost = m.estimatedCost || m.EstimatedCost || 0;
-                
-                return (
-                  <tr key={`prog-${maintenanceId}`}>
+              </tr> :
+
+          [].map((m, index) => {
+            const maintenanceId = m.id || m.ID;
+            const property = m.property || m.Property;
+            const issue = m.issue || m.Issue;
+            const priority = (m.priority || m.Priority || 'normal').toLowerCase();
+            const status = m.status || m.Status || 'Pending';
+            const assigned = m.assigned || m.Assigned || 'Unassigned';
+            const estimatedCost = m.estimatedCost || m.EstimatedCost || 0;
+
+            return (
+              <tr key={`prog-${maintenanceId}`}>
                     <td>{index + 1}</td>
                     <td className="sa-cell-main">
                       <span className="sa-cell-title">{property}</span>
@@ -2148,31 +2014,31 @@ const TechnicianDashboard = () => {
                     </td>
                     <td>{assigned}</td>
                     <td>${estimatedCost.toLocaleString()}</td>
-                </tr>
-                );
-              })
-            )}
+                </tr>);
+
+          })
+          }
           </tbody>
         </table>
       </div>
-    </div>
-  );
+    </div>;
 
-  const renderTasks = () => (
-    <div className="sa-section-card">
+
+  const renderTasks = () =>
+  <div className="sa-section-card">
       <div className="sa-section-header">
         <div>
         <h3>Task Management</h3>
         <p>Manage scheduled tasks and maintenance calendar</p>
         </div>
-        <button 
-          className="sa-primary-cta"
-          onClick={() => {
-            setSelectedTask(null);
-            setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
-            setShowTaskModal(true);
-          }}
-        >
+        <button
+        className="sa-primary-cta"
+        onClick={() => {
+          setSelectedTask(null);
+          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
+          setShowTaskModal(true);
+        }}>
+        
           <Plus size={16} />
           Create Task
         </button>
@@ -2210,25 +2076,25 @@ const TechnicianDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {tasks.length === 0 ? (
-              <tr>
+            {tasks.length === 0 ?
+          <tr>
                 <td colSpan={9} className="sa-table-empty">
                   No tasks found
                 </td>
-              </tr>
-            ) : (
-              tasks.map((task, index) => {
-                const taskId = task.id || task.ID;
-                const issue = task.issue || task.Issue || 'Maintenance Task';
-                const property = task.property || task.Property;
-                const priority = (task.priority || task.Priority || 'normal').toLowerCase();
-                const date = task.date || task.Date || task.createdAt || task.CreatedAt;
-                const status = task.status || task.Status || 'Pending';
-                const estimatedHours = task.estimatedHours || task.EstimatedHours || 0;
-                const estimatedCost = task.estimatedCost || task.EstimatedCost || 0;
-                
-                return (
-                  <tr key={taskId}>
+              </tr> :
+
+          tasks.map((task, index) => {
+            const taskId = task.id || task.ID;
+            const issue = task.issue || task.Issue || 'Maintenance Task';
+            const property = task.property || task.Property;
+            const priority = (task.priority || task.Priority || 'normal').toLowerCase();
+            const date = task.date || task.Date || task.createdAt || task.CreatedAt;
+            const status = task.status || task.Status || 'Pending';
+            const estimatedHours = task.estimatedHours || task.EstimatedHours || 0;
+            const estimatedCost = task.estimatedCost || task.EstimatedCost || 0;
+
+            return (
+              <tr key={taskId}>
                     <td>{index + 1}</td>
                     <td className="sa-cell-main">
                       <span className="sa-cell-title">{issue}</span>
@@ -2249,29 +2115,27 @@ const TechnicianDashboard = () => {
                     <td>${estimatedCost.toLocaleString()}</td>
                     <td className="sa-row-actions">
                       <button className="sa-icon-button" onClick={() => handleTaskView(task)} title="View/Edit">✏️</button>
-                      {status !== 'Completed' && (
-                    <button 
-                          className="sa-icon-button" 
-                        onClick={() => handleTaskComplete(task)}
-                        disabled={loading}
-                          title="Complete"
-                          style={{ color: '#16a34a', marginLeft: '8px' }}
-                      >
+                      {status !== 'Completed' &&
+                  <button
+                    className="sa-icon-button"
+                    onClick={() => handleTaskComplete(task)}
+                    disabled={loading}
+                    title="Complete"
+                    style={{ color: '#16a34a', marginLeft: '8px' }}>
+                    
                           ✓
                       </button>
-                    )}
+                  }
                   </td>
-                </tr>
-                );
-              })
-            )}
+                </tr>);
+
+          })
+          }
           </tbody>
         </table>
       </div>
-    </div>
-  );
+    </div>;
 
-  // Load advertisements
   const loadAdvertisements = async () => {
     try {
       const ads = await technicianService.getAdvertisements();
@@ -2294,48 +2158,48 @@ const TechnicianDashboard = () => {
             </div>
 
         <div className="sa-ads-list">
-          {advertisements.length > 0 ? (
-            advertisements.map((ad, index) => {
-              const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
-              const fullImageUrl = imageUrl 
-                ? (imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}`)
-                : null;
+          {advertisements.length > 0 ?
+          advertisements.map((ad, index) => {
+            const imageUrl = ad.ImageURL || ad.imageUrl || ad.imageURL;
+            const fullImageUrl = imageUrl ?
+            imageUrl.startsWith('http') ? imageUrl : `${API_CONFIG.BASE_URL}${imageUrl}` :
+            null;
 
-              return (
-                <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
+            return (
+              <div key={`ad-${ad.ID || ad.id || index}`} className="sa-ad-card">
                   <div className="sa-ad-status-column">
                     <span className="sa-ad-status published">Active</span>
           </div>
                   <div className="sa-ad-main">
-                    {fullImageUrl && (
-                      <img 
-                        src={fullImageUrl} 
-                        alt={ad.Title || ad.title || 'Advertisement'} 
-                        className="sa-ad-image"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    )}
+                    {fullImageUrl &&
+                  <img
+                    src={fullImageUrl}
+                    alt={ad.Title || ad.title || 'Advertisement'}
+                    className="sa-ad-image"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }} />
+
+                  }
                     <h3>{ad.Title || ad.title || 'Untitled Advertisement'}</h3>
                     <p>{ad.Text || ad.text || ad.description || ad.Description || 'No description available'}</p>
-                    {ad.CreatedAt && (
-                      <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
+                    {ad.CreatedAt &&
+                  <span className="sa-ad-date" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '8px', display: 'block' }}>
                         Posted: {new Date(ad.CreatedAt).toLocaleDateString()}
                       </span>
-                    )}
+                  }
             </div>
-            </div>
-              );
-            })
-          ) : (
-            <div className="sa-table-empty">
+            </div>);
+
+          }) :
+
+          <div className="sa-table-empty">
               No active advertisements available at this time.
           </div>
-          )}
+          }
       </div>
-    </div>
-  );
+    </div>);
+
   };
 
   const handleContactSubmit = async (e) => {
@@ -2346,9 +2210,9 @@ const TechnicianDashboard = () => {
       const payload = {
         ...contactForm,
         category:
-          contactForm.category === 'other' && contactForm.customCategory.trim()
-            ? contactForm.customCategory.trim()
-            : contactForm.category,
+        contactForm.category === 'other' && contactForm.customCategory.trim() ?
+        contactForm.customCategory.trim() :
+        contactForm.category
       };
       if (contactId) {
         await technicianService.updateTechnicianContact(contactId, payload);
@@ -2410,26 +2274,26 @@ const TechnicianDashboard = () => {
             <h2>Technician Contacts Management</h2>
             <p>Add and manage technician contacts (plumbers, electricians, etc.) for tenants</p>
           </div>
-          <button 
-            className="sa-primary-cta" 
+          <button
+            className="sa-primary-cta"
             onClick={() => {
               setSelectedContact(null);
               setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '', photo: null, idCard: null });
               setShowContactModal(true);
-            }} 
-            disabled={loading}
-          >
+            }}
+            disabled={loading}>
+            
             <Plus size={18} />
             Add Contact
           </button>
         </div>
 
-        {loading ? (
-          <div className="sa-table-empty">Loading contacts...</div>
-        ) : technicianContacts.length === 0 ? (
-          <div className="sa-table-empty">No technician contacts added yet</div>
-        ) : (
-          <div className="sa-table-wrapper">
+        {loading ?
+        <div className="sa-table-empty">Loading contacts...</div> :
+        technicianContacts.length === 0 ?
+        <div className="sa-table-empty">No technician contacts added yet</div> :
+
+        <div className="sa-table-wrapper">
             <table className="sa-table">
               <thead>
                 <tr>
@@ -2444,27 +2308,27 @@ const TechnicianDashboard = () => {
               </thead>
               <tbody>
                 {technicianContacts.map((contact, index) => {
-                  const contactId = contact.ID || contact.id;
-                  return (
-                    <tr key={contactId}>
+                const contactId = contact.ID || contact.id;
+                return (
+                  <tr key={contactId}>
                       <td>{index + 1}</td>
                       <td>
                         <div className="sa-cell-main">
                           <span className="sa-cell-title">{contact.Name || contact.name || 'N/A'}</span>
-                          {contact.Description && (
-                            <span className="sa-cell-sub">{contact.Description || contact.description}</span>
-                          )}
+                          {contact.Description &&
+                        <span className="sa-cell-sub">{contact.Description || contact.description}</span>
+                        }
                         </div>
                       </td>
                       <td>
                         <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          backgroundColor: '#f3f4f6',
-                          color: '#6b7280',
-                          fontSize: '0.75rem',
-                          textTransform: 'capitalize'
-                        }}>
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: '#f3f4f6',
+                        color: '#6b7280',
+                        fontSize: '0.75rem',
+                        textTransform: 'capitalize'
+                      }}>
                           {contact.Category || contact.category || 'N/A'}
                         </span>
                       </td>
@@ -2474,32 +2338,32 @@ const TechnicianDashboard = () => {
                       <td>
                         <div className="sa-row-actions">
                           <button
-                            className="table-action-button edit"
-                            onClick={() => handleEditContact(contact)}
-                            title="Edit Contact"
-                          >
+                          className="table-action-button edit"
+                          onClick={() => handleEditContact(contact)}
+                          title="Edit Contact">
+                          
                             <Edit size={14} />
                             Edit
                           </button>
                           <button
-                            className="table-action-button delete"
-                            onClick={() => handleDeleteContact(contactId)}
-                            title="Delete Contact"
-                          >
+                          className="table-action-button delete"
+                          onClick={() => handleDeleteContact(contactId)}
+                          title="Delete Contact">
+                          
                             <Trash2 size={14} />
                             Delete
                           </button>
                         </div>
                       </td>
-                    </tr>
-                  );
-                })}
+                    </tr>);
+
+              })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   };
 
   const renderQuoteDetail = () => {
@@ -2507,27 +2371,27 @@ const TechnicianDashboard = () => {
     if (!quote) return null;
 
     const maintenanceId = quote.MaintenanceID ?? quote.maintenanceId ?? quote.MaintenanceId;
-    const maintenance = quote.maintenance
-      ?? quote.Maintenance
-      ?? (maintenanceId && Array.isArray(requests)
-        ? requests.find((request) => String(request.ID ?? request.id) === String(maintenanceId))
-        : null)
-      ?? {};
+    const maintenance = quote.maintenance ??
+    quote.Maintenance ?? (
+    maintenanceId && Array.isArray(requests) ?
+    requests.find((request) => String(request.ID ?? request.id) === String(maintenanceId)) :
+    null) ??
+    {};
     const documents = parseQuoteDocuments(quote);
     const maintenanceDocuments = parseQuoteDocuments(maintenance);
     const displayDocuments = [...documents, ...maintenanceDocuments].filter((doc, index, arr) => arr.findIndex((item) => item.url === doc.url) === index);
     const photosRaw = maintenance.Photos ?? maintenance.photos ?? maintenance.PhotoURLs ?? maintenance.photoURLs ?? [];
-    const photos = Array.isArray(photosRaw)
-      ? photosRaw
-      : (typeof photosRaw === 'string' && photosRaw.trim()
-        ? (() => { try { const parsed = JSON.parse(photosRaw); return Array.isArray(parsed) ? parsed : []; } catch (_) { return []; } })()
-        : []);
+    const photos = Array.isArray(photosRaw) ?
+    photosRaw :
+    typeof photosRaw === 'string' && photosRaw.trim() ?
+    (() => {try {const parsed = JSON.parse(photosRaw);return Array.isArray(parsed) ? parsed : [];} catch (_) {return [];}})() :
+    [];
     const decisionMeta = getQuoteDecisionMeta(quote);
-    const statusLabel = decisionMeta.decision === 'approved'
-      ? 'Validated'
-      : decisionMeta.decision === 'rejected'
-        ? 'Rejected'
-        : (quote.Status || quote.status || 'Pending');
+    const statusLabel = decisionMeta.decision === 'approved' ?
+    'Validated' :
+    decisionMeta.decision === 'rejected' ?
+    'Rejected' :
+    quote.Status || quote.status || 'Pending';
     const statusClass = (decisionMeta.decision || String(quote.Status || quote.status || 'pending')).toLowerCase().replace(/_/g, '-');
     const issue = quote.Issue || quote.issue || quote.problem || quote.Problem || maintenance.Issue || maintenance.issue || 'N/A';
 
@@ -2556,9 +2420,9 @@ const TechnicianDashboard = () => {
           <div>
             <label style={{ fontWeight: 600, color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
             <p style={{ margin: 0, color: '#1f2937' }}>
-              {quote.Date || quote.date || quote.CreatedAt || quote.createdAt
-                ? new Date(quote.Date || quote.date || quote.CreatedAt || quote.createdAt).toLocaleString()
-                : 'N/A'}
+              {quote.Date || quote.date || quote.CreatedAt || quote.createdAt ?
+              new Date(quote.Date || quote.date || quote.CreatedAt || quote.createdAt).toLocaleString() :
+              'N/A'}
             </p>
           </div>
           <div>
@@ -2594,49 +2458,47 @@ const TechnicianDashboard = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-          {displayDocuments.map((doc, index) => (
-            <a
-              key={`${doc.url}-${index}`}
-              href={doc.url}
-              target="_blank"
-              rel="noreferrer"
-              className="sa-outline-button"
-              style={{ justifyContent: 'center', textDecoration: 'none' }}
-            >
+          {displayDocuments.map((doc, index) =>
+          <a
+            key={`${doc.url}-${index}`}
+            href={doc.url}
+            target="_blank"
+            rel="noreferrer"
+            className="sa-outline-button"
+            style={{ justifyContent: 'center', textDecoration: 'none' }}>
+            
               {doc.label || `Document ${index + 1}`}
             </a>
-          ))}
-          {displayDocuments.length === 0 && (
-            <p style={{ margin: 0, color: '#6b7280' }}>No downloadable documents attached.</p>
           )}
+          {displayDocuments.length === 0 &&
+          <p style={{ margin: 0, color: '#6b7280' }}>No downloadable documents attached.</p>
+          }
         </div>
 
-        {photos.length > 0 && (
-          <div>
+        {photos.length > 0 &&
+        <div>
             <label style={{ fontWeight: 600, color: '#374151', marginBottom: '12px', display: 'block' }}>Photos ({photos.length})</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px' }}>
               {photos.map((photoUrl, index) => {
-                const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
-                if (!url) return null;
-                return (
-                  <div key={`${url}-${index}`} style={{ borderRadius: '12px', overflow: 'hidden', background: '#f3f4f6', minHeight: '150px' }}>
+              const url = typeof photoUrl === 'string' ? photoUrl : photoUrl?.url || photoUrl?.src || '';
+              if (!url) return null;
+              return (
+                <div key={`${url}-${index}`} style={{ borderRadius: '12px', overflow: 'hidden', background: '#f3f4f6', minHeight: '150px' }}>
                     <img
-                      src={url}
-                      alt={`Quote maintenance ${index + 1}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                      onClick={() => window.open(url, '_blank')}
-                    />
-                  </div>
-                );
-              })}
+                    src={url}
+                    alt={`Quote maintenance ${index + 1}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                    onClick={() => window.open(url, '_blank')} />
+                  
+                  </div>);
+
+            })}
             </div>
           </div>
-        )}
-      </div>
-    );
-  };
+        }
+      </div>);
 
-  // Render Quotes Section - List quotes being validated and validated quotes
+  };
   const renderQuotes = () => {
     if (selectedQuoteDetail) {
       return renderQuoteDetail();
@@ -2645,11 +2507,11 @@ const TechnicianDashboard = () => {
     const workStartedForQuote = (q) => {
       const quoteMaintenanceId = q.MaintenanceID || q.maintenanceId;
       return quoteMaintenanceId && works.some(
-        w => String(w.ID || w.id) === String(quoteMaintenanceId) && (w.Status || w.status) === 'In Progress'
+        (w) => String(w.ID || w.id) === String(quoteMaintenanceId) && (w.Status || w.status) === 'In Progress'
       );
     };
 
-    const filteredQuotes = quotes.filter(q => {
+    const filteredQuotes = quotes.filter((q) => {
       const status = (q.Status || q.status || '').toLowerCase();
       const property = (q.Property || q.property || '').toLowerCase();
       const issue = (q.Issue || q.issue || '').toLowerCase();
@@ -2660,7 +2522,6 @@ const TechnicianDashboard = () => {
       if (quoteStatusFilter) {
         const expected = quoteStatusFilter.toLowerCase();
         if (isWorkStatusFilter) {
-          // Work Started / Work Not Started: only include validated quotes; work filter applied below
           if (status !== 'approved' && status !== 'validated') return false;
         } else if (expected !== status) return false;
       }
@@ -2673,19 +2534,19 @@ const TechnicianDashboard = () => {
       return true;
     });
 
-    const quotesToValidate = filteredQuotes.filter(q => {
-      if (isWorkStatusFilter) return false; // Work status filter shows only validated quotes
+    const quotesToValidate = filteredQuotes.filter((q) => {
+      if (isWorkStatusFilter) return false;
       const status = (q.Status || q.status || '').toLowerCase();
       return status === 'sent' || status === 'pending';
     });
-    let validatedQuotes = filteredQuotes.filter(q => {
+    let validatedQuotes = filteredQuotes.filter((q) => {
       const status = (q.Status || q.status || '').toLowerCase();
       return status === 'approved' || status === 'validated';
     });
     if (quoteStatusFilter === 'work_started') {
-      validatedQuotes = validatedQuotes.filter(q => workStartedForQuote(q));
+      validatedQuotes = validatedQuotes.filter((q) => workStartedForQuote(q));
     } else if (quoteStatusFilter === 'work_not_started') {
-      validatedQuotes = validatedQuotes.filter(q => !workStartedForQuote(q));
+      validatedQuotes = validatedQuotes.filter((q) => !workStartedForQuote(q));
     }
 
     return (
@@ -2698,11 +2559,11 @@ const TechnicianDashboard = () => {
         </div>
 
         <div className="sa-filters-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-          <select 
+          <select
             className="sa-filter-select"
             value={quoteStatusFilter}
-            onChange={(e) => setQuoteStatusFilter(e.target.value)}
-          >
+            onChange={(e) => setQuoteStatusFilter(e.target.value)}>
+            
             <option value="">All Status</option>
             <option value="sent">Being Validated</option>
             <option value="approved">Validated</option>
@@ -2714,18 +2575,16 @@ const TechnicianDashboard = () => {
             type="date"
             className="sa-filter-select"
             value={quoteDateFilter}
-            onChange={(e) => setQuoteDateFilter(e.target.value)}
-          />
+            onChange={(e) => setQuoteDateFilter(e.target.value)} />
+          
           <input
             type="text"
             className="sa-filter-select"
             placeholder="Filter by property"
             value={quotePropertyFilter}
-            onChange={(e) => setQuotePropertyFilter(e.target.value)}
-          />
+            onChange={(e) => setQuotePropertyFilter(e.target.value)} />
+          
         </div>
-
-        {/* Quotes Being Validated Tab */}
         <div style={{ marginBottom: '24px' }}>
           <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Quotes Being Validated</h4>
           <div className="sa-table-wrapper">
@@ -2743,18 +2602,18 @@ const TechnicianDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {quotesToValidate.length === 0 ? (
-                  <tr>
+                {quotesToValidate.length === 0 ?
+                <tr>
                     <td colSpan={8} className="sa-table-empty">No quotes awaiting validation</td>
-                  </tr>
-                ) : (
-                  quotesToValidate.map((q, index) => (
-                    <tr
-                      key={q.ID || q.id}
-                      className="clickable-row"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => setSelectedQuoteDetail(q)}
-                    >
+                  </tr> :
+
+                quotesToValidate.map((q, index) =>
+                <tr
+                  key={q.ID || q.id}
+                  className="clickable-row"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setSelectedQuoteDetail(q)}>
+                  
                       <td>{index + 1}</td>
                       <td>{q.Date || q.date ? new Date(q.Date || q.date).toLocaleDateString() : 'N/A'}</td>
                       <td>{q.Property || q.property || 'N/A'}</td>
@@ -2767,18 +2626,15 @@ const TechnicianDashboard = () => {
                         </span>
                       </td>
                       <td>
-                        {/* Check if super urgent - requires single validation */}
                         <span className="sa-status-pill urgent">Super Urgent</span>
                       </td>
                     </tr>
-                  ))
-                )}
+                )
+                }
               </tbody>
             </table>
           </div>
         </div>
-
-        {/* Validated Quotes Tab */}
         <div>
           <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Validated Quotes</h4>
           <div className="sa-table-wrapper">
@@ -2797,23 +2653,23 @@ const TechnicianDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {validatedQuotes.length === 0 ? (
-                  <tr>
+                {validatedQuotes.length === 0 ?
+                <tr>
                     <td colSpan={9} className="sa-table-empty">No validated quotes</td>
-                  </tr>
-                ) : (
-                  validatedQuotes.map((q, index) => {
-                    const quoteMaintenanceId = q.MaintenanceID || q.maintenanceId;
-                    const workStarted = quoteMaintenanceId && works.some(
-                      w => String(w.ID || w.id) === String(quoteMaintenanceId) && (w.Status || w.status) === 'In Progress'
-                    );
-                    return (
+                  </tr> :
+
+                validatedQuotes.map((q, index) => {
+                  const quoteMaintenanceId = q.MaintenanceID || q.maintenanceId;
+                  const workStarted = quoteMaintenanceId && works.some(
+                    (w) => String(w.ID || w.id) === String(quoteMaintenanceId) && (w.Status || w.status) === 'In Progress'
+                  );
+                  return (
                     <tr
                       key={q.ID || q.id}
                       className="clickable-row"
                       style={{ cursor: 'pointer' }}
-                      onClick={() => setSelectedQuoteDetail(q)}
-                    >
+                      onClick={() => setSelectedQuoteDetail(q)}>
+                      
                       <td>{index + 1}</td>
                       <td>{q.Date || q.date ? new Date(q.Date || q.date).toLocaleDateString() : 'N/A'}</td>
                       <td>{q.Property || q.property || 'N/A'}</td>
@@ -2827,34 +2683,32 @@ const TechnicianDashboard = () => {
                       </td>
                       <td>{q.ValidatedBy || q.validatedBy || 'N/A'}</td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        {workStarted ? (
-                          <span className="sa-status-pill completed" style={{ cursor: 'default' }}>
+                        {workStarted ?
+                        <span className="sa-status-pill completed" style={{ cursor: 'default' }}>
                             Work Started
-                          </span>
-                        ) : (
-                          <button
-                            className="table-action-button edit"
-                            onClick={() => openWorkStartModal(q)}
-                          >
+                          </span> :
+
+                        <button
+                          className="table-action-button edit"
+                          onClick={() => openWorkStartModal(q)}>
+                          
                             Start Work
                           </button>
-                        )}
+                        }
                       </td>
-                    </tr>
-                    );
-                  })
-                )}
+                    </tr>);
+
+                })
+                }
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Render Works Section - List work in progress, in pause, and completed
+  };
   const renderWorks = () => {
-    const filteredWorks = works.filter(w => {
+    const filteredWorks = works.filter((w) => {
       if (w.Archived || w.archived) return false;
       const status = (w.Status || w.status || '').toLowerCase();
       const property = (w.Property || w.property || '').toLowerCase();
@@ -2877,11 +2731,11 @@ const TechnicianDashboard = () => {
       return true;
     });
 
-    const worksInProgress = filteredWorks.filter(w => (w.Status || w.status) === 'In Progress');
-    const worksInPause = filteredWorks.filter(w => (w.Status || w.status) === 'Paused' || (w.Status || w.status) === 'On Hold');
-    const completedWorks = filteredWorks.filter(w => (w.Status || w.status) === 'Completed');
-    const completedWorkIds = completedWorks.map(w => w.ID || w.id).filter(Boolean);
-    const allCompletedSelected = completedWorkIds.length > 0 && completedWorkIds.every(id => selectedWorkIds.includes(id));
+    const worksInProgress = filteredWorks.filter((w) => (w.Status || w.status) === 'In Progress');
+    const worksInPause = filteredWorks.filter((w) => (w.Status || w.status) === 'Paused' || (w.Status || w.status) === 'On Hold');
+    const completedWorks = filteredWorks.filter((w) => (w.Status || w.status) === 'Completed');
+    const completedWorkIds = completedWorks.map((w) => w.ID || w.id).filter(Boolean);
+    const allCompletedSelected = completedWorkIds.length > 0 && completedWorkIds.every((id) => selectedWorkIds.includes(id));
 
     return (
       <div className="sa-section-card">
@@ -2893,11 +2747,11 @@ const TechnicianDashboard = () => {
         </div>
 
         <div className="sa-filters-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-          <select 
+          <select
             className="sa-filter-select"
             value={workStatusFilter}
-            onChange={(e) => setWorkStatusFilter(e.target.value)}
-          >
+            onChange={(e) => setWorkStatusFilter(e.target.value)}>
+            
             <option value="">All Status</option>
             <option value="in progress">In Progress</option>
             <option value="paused">In Pause</option>
@@ -2907,20 +2761,20 @@ const TechnicianDashboard = () => {
             type="date"
             className="sa-filter-select"
             value={workDateFilter}
-            onChange={(e) => setWorkDateFilter(e.target.value)}
-          />
+            onChange={(e) => setWorkDateFilter(e.target.value)} />
+          
           <input
             type="text"
             className="sa-filter-select"
             placeholder="Filter by property"
             value={workPropertyFilter}
-            onChange={(e) => setWorkPropertyFilter(e.target.value)}
-          />
+            onChange={(e) => setWorkPropertyFilter(e.target.value)} />
+          
           <select
             className="sa-filter-select"
             value={workPriorityFilter}
-            onChange={(e) => setWorkPriorityFilter(e.target.value)}
-          >
+            onChange={(e) => setWorkPriorityFilter(e.target.value)}>
+            
             <option value="">All Priority</option>
             <option value="low">Low</option>
             <option value="normal">Normal</option>
@@ -2928,8 +2782,6 @@ const TechnicianDashboard = () => {
             <option value="urgent">Urgent</option>
           </select>
         </div>
-
-        {/* Work In Progress */}
         <div style={{ marginBottom: '24px' }}>
           <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Work In Progress</h4>
           <div className="sa-table-wrapper">
@@ -2948,13 +2800,13 @@ const TechnicianDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {worksInProgress.length === 0 ? (
-                  <tr>
+                {worksInProgress.length === 0 ?
+                <tr>
                     <td colSpan={9} className="sa-table-empty">No work in progress</td>
-                  </tr>
-                ) : (
-                  worksInProgress.map((w, index) => (
-                    <tr key={w.ID || w.id}>
+                  </tr> :
+
+                worksInProgress.map((w, index) =>
+                <tr key={w.ID || w.id}>
                       <td>{index + 1}</td>
                       <td>{w.Property || w.property || 'N/A'}</td>
                       <td>{w.Issue || w.issue || 'N/A'}</td>
@@ -2976,14 +2828,12 @@ const TechnicianDashboard = () => {
                         </button>
                       </td>
                     </tr>
-                  ))
-                )}
+                )
+                }
               </tbody>
             </table>
           </div>
         </div>
-
-        {/* Work In Pause */}
         <div style={{ marginBottom: '24px' }}>
           <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>Work In Pause</h4>
           <div className="sa-table-wrapper">
@@ -3002,13 +2852,13 @@ const TechnicianDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {worksInPause.length === 0 ? (
-                  <tr>
+                {worksInPause.length === 0 ?
+                <tr>
                     <td colSpan={9} className="sa-table-empty">No work in pause</td>
-                  </tr>
-                ) : (
-                  worksInPause.map((w, index) => (
-                    <tr key={w.ID || w.id}>
+                  </tr> :
+
+                worksInPause.map((w, index) =>
+                <tr key={w.ID || w.id}>
                       <td>{index + 1}</td>
                       <td>{w.Property || w.property || 'N/A'}</td>
                       <td>{w.Issue || w.issue || 'N/A'}</td>
@@ -3030,14 +2880,12 @@ const TechnicianDashboard = () => {
                         </button>
                       </td>
                     </tr>
-                  ))
-                )}
+                )
+                }
               </tbody>
             </table>
           </div>
         </div>
-
-        {/* Completed Works */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>Completed Works</h4>
@@ -3045,8 +2893,8 @@ const TechnicianDashboard = () => {
               className="action-button secondary"
               type="button"
               onClick={() => handleArchiveWorks(selectedWorkIds)}
-              disabled={selectedWorkIds.length === 0 || loading}
-            >
+              disabled={selectedWorkIds.length === 0 || loading}>
+              
               Archive Selected
             </button>
           </div>
@@ -3060,12 +2908,12 @@ const TechnicianDashboard = () => {
                       checked={allCompletedSelected}
                       onChange={() => {
                         if (allCompletedSelected) {
-                          setSelectedWorkIds(prev => prev.filter(id => !completedWorkIds.includes(id)));
+                          setSelectedWorkIds((prev) => prev.filter((id) => !completedWorkIds.includes(id)));
                         } else {
-                          setSelectedWorkIds(prev => Array.from(new Set([...prev, ...completedWorkIds])));
+                          setSelectedWorkIds((prev) => Array.from(new Set([...prev, ...completedWorkIds])));
                         }
-                      }}
-                    />
+                      }} />
+                    
                   </th>
                   <th>No</th>
                   <th>Property</th>
@@ -3079,19 +2927,19 @@ const TechnicianDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {completedWorks.length === 0 ? (
-                  <tr>
+                {completedWorks.length === 0 ?
+                <tr>
                     <td colSpan={10} className="sa-table-empty">No completed work</td>
-                  </tr>
-                ) : (
-                  completedWorks.map((w, index) => (
-                    <tr key={w.ID || w.id}>
+                  </tr> :
+
+                completedWorks.map((w, index) =>
+                <tr key={w.ID || w.id}>
                       <td>
                         <input
-                          type="checkbox"
-                          checked={selectedWorkIds.includes(w.ID || w.id)}
-                          onChange={() => toggleWorkSelection(w.ID || w.id)}
-                        />
+                      type="checkbox"
+                      checked={selectedWorkIds.includes(w.ID || w.id)}
+                      onChange={() => toggleWorkSelection(w.ID || w.id)} />
+                    
                       </td>
                       <td>{index + 1}</td>
                       <td>{w.Property || w.property || 'N/A'}</td>
@@ -3104,29 +2952,27 @@ const TechnicianDashboard = () => {
                       <td>{w.Assigned || w.assigned || 'Unassigned'}</td>
                       <td>${(w.EstimatedCost || w.estimatedCost || 0).toLocaleString()}</td>
                       <td>{w.WorkStartDate || w.workStartDate ? new Date(w.WorkStartDate || w.workStartDate).toLocaleDateString() : 'N/A'}</td>
-                      <td>{w.WorkEndDate || w.workEndDate ? new Date(w.WorkEndDate || w.workEndDate).toLocaleDateString() : (w.CompletedAt || w.completedAt ? new Date(w.CompletedAt || w.completedAt).toLocaleDateString() : 'N/A')}</td>
+                      <td>{w.WorkEndDate || w.workEndDate ? new Date(w.WorkEndDate || w.workEndDate).toLocaleDateString() : w.CompletedAt || w.completedAt ? new Date(w.CompletedAt || w.completedAt).toLocaleDateString() : 'N/A'}</td>
                       <td>
                         <button
-                          className="table-action-button edit"
-                          type="button"
-                          onClick={() => handleArchiveWorks([w.ID || w.id])}
-                          disabled={loading}
-                        >
+                      className="table-action-button edit"
+                      type="button"
+                      onClick={() => handleArchiveWorks([w.ID || w.id])}
+                      disabled={loading}>
+                      
                           Archive
                         </button>
                       </td>
                     </tr>
-                  ))
-                )}
+                )
+                }
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Render State of Entry / Exit - Entry | Exit tenant tables (View)
+  };
   const renderStateEntry = () => {
     const list = stateEntryView === 'entry' ? entryTenants : exitTenants;
     const toDateOnly = (d) => {
@@ -3160,13 +3006,13 @@ const TechnicianDashboard = () => {
               View inventory reports you have submitted, and add new Entry or Exit inventories for tenants below.
             </p>
           </div>
-          <button 
+          <button
             className="sa-primary-cta"
             onClick={() => {
               setInventoryFormData({ ...inventoryFormData, type: stateEntryView === 'entry' ? 'Entry' : 'Exit' });
               setShowInventoryFormModal(true);
-            }}
-          >
+            }}>
+            
             <Plus size={16} />
             Add Inventory ({stateEntryView === 'entry' ? 'Entry' : 'Exit'})
           </button>
@@ -3177,30 +3023,30 @@ const TechnicianDashboard = () => {
           <button
             type="button"
             className={stateEntryView === 'entry' ? 'action-button primary' : 'action-button secondary'}
-            onClick={() => setStateEntryView('entry')}
-          >
+            onClick={() => setStateEntryView('entry')}>
+            
             Entry
           </button>
           <button
             type="button"
             className={stateEntryView === 'exit' ? 'action-button primary' : 'action-button secondary'}
-            onClick={() => setStateEntryView('exit')}
-          >
+            onClick={() => setStateEntryView('exit')}>
+            
             Exit
           </button>
         </div>
 
         <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600', color: '#374151' }}>
-          {stateEntryView === 'entry'
-            ? 'Tenants who need Entry inventory – select a row to add a new report'
-            : 'Tenants who need Exit inventory – select a row to add a new report'}
+          {stateEntryView === 'entry' ?
+          'Tenants who need Entry inventory – select a row to add a new report' :
+          'Tenants who need Exit inventory – select a row to add a new report'}
         </h4>
         <div className="sa-filters-section" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '16px' }}>
           <select
             className="sa-filter-select"
             value={stateEntryStatusFilter}
-            onChange={(e) => setStateEntryStatusFilter(e.target.value)}
-          >
+            onChange={(e) => setStateEntryStatusFilter(e.target.value)}>
+            
             <option value="">All statuses</option>
             <option value="pending">Pending</option>
             <option value="scheduled">Scheduled</option>
@@ -3212,8 +3058,8 @@ const TechnicianDashboard = () => {
             className="sa-filter-select"
             placeholder="Filter by date"
             value={stateEntryDateFilter}
-            onChange={(e) => setStateEntryDateFilter(e.target.value)}
-          />
+            onChange={(e) => setStateEntryDateFilter(e.target.value)} />
+          
         </div>
 
         <div className="sa-table-wrapper">
@@ -3224,35 +3070,35 @@ const TechnicianDashboard = () => {
                 <th>Tenant Name</th>
                 <th>Property</th>
                 {stateEntryView === 'entry' && <th>Unit Number</th>}
-                {stateEntryView === 'entry' ? (
-                  <>
+                {stateEntryView === 'entry' ?
+                <>
                     <th>Deposit Paid Date</th>
                     <th>Inventory Request Date</th>
                     <th>Status</th>
-                  </>
-                ) : (
-                  <>
+                  </> :
+
+                <>
                     <th>Termination Request Date</th>
                     <th>Inventory Check Date</th>
                     <th>Exit Inventory Status</th>
                     <th>Deposit Refund Status</th>
                   </>
-                )}
+                }
                 <th />
               </tr>
             </thead>
             <tbody>
-              {filteredList.length === 0 ? (
-                <tr>
+              {filteredList.length === 0 ?
+              <tr>
                   <td colSpan={stateEntryView === 'exit' ? 8 : 8} className="sa-table-empty">
-                    {stateEntryView === 'entry'
-                      ? 'No entry inventory requests found. Use filters or add an Entry inventory from the popup.'
-                      : 'No exit requests found. Use filters or add an Exit inventory from the popup.'}
+                    {stateEntryView === 'entry' ?
+                  'No entry inventory requests found. Use filters or add an Entry inventory from the popup.' :
+                  'No exit requests found. Use filters or add an Exit inventory from the popup.'}
                   </td>
-                </tr>
-              ) : stateEntryView === 'entry' ? (
-                filteredList.map((tenant, index) => (
-                  <tr key={tenant.ID || tenant.id}>
+                </tr> :
+              stateEntryView === 'entry' ?
+              filteredList.map((tenant, index) =>
+              <tr key={tenant.ID || tenant.id}>
                     <td>{index + 1}</td>
                     <td>{tenant.Name || tenant.name || 'N/A'}</td>
                     <td>{tenant.Property || tenant.property || 'N/A'}</td>
@@ -3265,33 +3111,33 @@ const TechnicianDashboard = () => {
                       </span>
                     </td>
                     <td className="sa-row-actions">
-                      <button 
-                        className="sa-icon-button" 
-                        onClick={() => {
-                          setInventoryFormData({ ...inventoryFormData, type: 'Entry', tenantName: tenant.Name || tenant.name, propertyAddress: tenant.Property || tenant.property });
-                          setShowInventoryFormModal(true);
-                        }}
-                        title="Create Inventory"
-                      >
+                      <button
+                    className="sa-icon-button"
+                    onClick={() => {
+                      setInventoryFormData({ ...inventoryFormData, type: 'Entry', tenantName: tenant.Name || tenant.name, propertyAddress: tenant.Property || tenant.property });
+                      setShowInventoryFormModal(true);
+                    }}
+                    title="Create Inventory">
+                    
                         📋
                       </button>
                     </td>
                   </tr>
-                ))
-              ) : (
-                filteredList.map((tenant, index) => {
-                  const termRequestDate = tenant.TerminationRequestDate || tenant.terminationRequestDate || tenant.requestDate || tenant.RequestDate || tenant.createdAt || tenant.CreatedAt;
-                  const termRequestDateStr = termRequestDate ? (() => { const d = new Date(termRequestDate); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(); })() : '—';
-                  return (
+              ) :
+
+              filteredList.map((tenant, index) => {
+                const termRequestDate = tenant.TerminationRequestDate || tenant.terminationRequestDate || tenant.requestDate || tenant.RequestDate || tenant.createdAt || tenant.CreatedAt;
+                const termRequestDateStr = termRequestDate ? (() => {const d = new Date(termRequestDate);return isNaN(d.getTime()) ? '—' : d.toLocaleDateString();})() : '—';
+                return (
                   <tr key={tenant.ID || tenant.id}>
                     <td>{index + 1}</td>
                     <td>{tenant.Name || tenant.name || 'N/A'}</td>
                     <td>{tenant.Property || tenant.property || 'N/A'}</td>
                     <td>{termRequestDateStr}</td>
                     <td>
-                      {tenant.InventoryCheckDate || tenant.inventoryCheckDate
-                        ? new Date(tenant.InventoryCheckDate || tenant.inventoryCheckDate).toLocaleDateString()
-                        : '—'}
+                      {tenant.InventoryCheckDate || tenant.inventoryCheckDate ?
+                      new Date(tenant.InventoryCheckDate || tenant.inventoryCheckDate).toLocaleDateString() :
+                      '—'}
                     </td>
                     <td>
                       <span className={`sa-status-pill ${(tenant.ExitInventoryStatus || tenant.exitInventoryStatus || 'pending').toLowerCase()}`}>
@@ -3304,26 +3150,24 @@ const TechnicianDashboard = () => {
                       </span>
                     </td>
                     <td className="sa-row-actions">
-                      <button 
-                        className="sa-icon-button" 
+                      <button
+                        className="sa-icon-button"
                         onClick={() => {
                           setInventoryFormData({ ...inventoryFormData, type: 'Exit', tenantName: tenant.Name || tenant.name, propertyAddress: tenant.Property || tenant.property });
                           setShowInventoryFormModal(true);
                         }}
-                        title="Create Exit Inventory"
-                      >
+                        title="Create Exit Inventory">
+                        
                         📋
                       </button>
                     </td>
-                  </tr>
-                  );
-                })
-              )}
+                  </tr>);
+
+              })
+              }
             </tbody>
           </table>
         </div>
-
-        {/* Submitted inventory reports - history below the tenant table */}
         <div style={{ marginTop: '32px' }}>
           <h4 style={{ marginBottom: '12px', fontSize: '1rem', fontWeight: '600', color: '#374151' }}>
             Submitted inventory reports
@@ -3347,17 +3191,17 @@ const TechnicianDashboard = () => {
               <tbody>
                 {(() => {
                   const invType = stateEntryView === 'entry' ? 'Move-in' : 'Move-out';
-                  const submitted = (submittedInventories || [])
-                    .filter(inv => (inv.Type || inv.type) === invType)
-                    .sort((a, b) => new Date(b.CreatedAt || b.createdAt || b.Date || b.date) - new Date(a.CreatedAt || a.createdAt || a.Date || a.date));
+                  const submitted = (submittedInventories || []).
+                  filter((inv) => (inv.Type || inv.type) === invType).
+                  sort((a, b) => new Date(b.CreatedAt || b.createdAt || b.Date || b.date) - new Date(a.CreatedAt || a.createdAt || a.Date || a.date));
                   if (submitted.length === 0) {
                     return (
                       <tr>
                         <td colSpan={7} className="sa-table-empty">
                           No submitted {stateEntryView === 'entry' ? 'Entry' : 'Exit'} inventory reports yet.
                         </td>
-                      </tr>
-                    );
+                      </tr>);
+
                   }
                   return submitted.map((inv, idx) => {
                     const reportURL = inv.ReportURL || inv.reportURL || inv.ReportUrl;
@@ -3371,34 +3215,32 @@ const TechnicianDashboard = () => {
                         </td>
                         <td>{inv.Tenant || inv.tenant || '—'}</td>
                         <td>{inv.Property || inv.property || '—'}</td>
-                        <td>{(inv.Date || inv.date || inv.CreatedAt || inv.createdAt) ? new Date(inv.Date || inv.date || inv.CreatedAt || inv.createdAt).toLocaleDateString() : '—'}</td>
+                        <td>{inv.Date || inv.date || inv.CreatedAt || inv.createdAt ? new Date(inv.Date || inv.date || inv.CreatedAt || inv.createdAt).toLocaleDateString() : '—'}</td>
                         <td>
                           <span className={`sa-status-pill ${(inv.Status || inv.status || 'completed').toLowerCase()}`}>
                             {inv.Status || inv.status || 'Completed'}
                           </span>
                         </td>
                         <td>
-                          {reportURL ? (
-                            <a href={`${API_CONFIG?.BASE_URL || ''}${reportURL}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
+                          {reportURL ?
+                          <a href={`${API_CONFIG?.BASE_URL || ''}${reportURL}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
                               View report
-                            </a>
-                          ) : (
-                            <span style={{ color: '#9ca3af' }}>—</span>
-                          )}
+                            </a> :
+
+                          <span style={{ color: '#9ca3af' }}>—</span>
+                          }
                         </td>
-                      </tr>
-                    );
+                      </tr>);
+
                   });
                 })()}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Render History Section - Query history, Quote history, Work history, Inventory reports history
+  };
   const renderHistory = () => {
     return (
       <div className="sa-section-card">
@@ -3415,13 +3257,13 @@ const TechnicianDashboard = () => {
             className="sa-filter-select"
             value={historyDateFilter}
             onChange={(e) => setHistoryDateFilter(e.target.value)}
-            placeholder="Filter by date"
-          />
-          <select 
+            placeholder="Filter by date" />
+          
+          <select
             className="sa-filter-select"
             value={historyTypeFilter}
-            onChange={(e) => setHistoryTypeFilter(e.target.value)}
-          >
+            onChange={(e) => setHistoryTypeFilter(e.target.value)}>
+            
             <option value="">All Types</option>
             <option value="query">Query History</option>
             <option value="quote">Quote History</option>
@@ -3444,13 +3286,12 @@ const TechnicianDashboard = () => {
             </thead>
             <tbody>
               {(() => {
-                // Combine all history data
                 const allHistory = [
-                  ...historyData.queries.map(q => ({ ...q, type: 'Query' })),
-                  ...historyData.quotes.map(q => ({ ...q, type: 'Quote' })),
-                  ...historyData.works.map(w => ({ ...w, type: 'Work' })),
-                  ...historyData.inventories.map(i => ({ ...i, type: 'Inventory' }))
-                ].filter(item => {
+                ...historyData.queries.map((q) => ({ ...q, type: 'Query' })),
+                ...historyData.quotes.map((q) => ({ ...q, type: 'Quote' })),
+                ...historyData.works.map((w) => ({ ...w, type: 'Work' })),
+                ...historyData.inventories.map((i) => ({ ...i, type: 'Inventory' }))].
+                filter((item) => {
                   if (historyDateFilter) {
                     const itemDate = new Date(item.Date || item.date || item.CreatedAt || item.createdAt);
                     const filterDate = new Date(historyDateFilter);
@@ -3474,12 +3315,12 @@ const TechnicianDashboard = () => {
                   return (
                     <tr>
                       <td colSpan={6} className="sa-table-empty">No history records found</td>
-                    </tr>
-                  );
+                    </tr>);
+
                 }
 
-                return allHistory.map((item, index) => (
-                  <tr key={`${item.type}-${item.ID || item.id || index}`}>
+                return allHistory.map((item, index) =>
+                <tr key={`${item.type}-${item.ID || item.id || index}`}>
                     <td>{index + 1}</td>
                     <td>
                       <span className="sa-status-pill" style={{ backgroundColor: '#e0e7ff', color: '#3730a3' }}>
@@ -3495,16 +3336,14 @@ const TechnicianDashboard = () => {
                       </span>
                     </td>
                   </tr>
-                ));
+                );
               })()}
             </tbody>
           </table>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Render Reports Section
+  };
   const renderReports = () => {
     return (
       <div className="sa-section-card">
@@ -3517,7 +3356,6 @@ const TechnicianDashboard = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
-            // Generate monthly report of requests
             addNotification('Monthly report of requests feature coming soon', 'info');
           }}>
             <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Monthly Report of Requests</h4>
@@ -3525,7 +3363,6 @@ const TechnicianDashboard = () => {
           </div>
 
           <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
-            // Generate quotes report
             addNotification('Quotes report feature coming soon', 'info');
           }}>
             <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Report of the Quotes</h4>
@@ -3533,7 +3370,6 @@ const TechnicianDashboard = () => {
           </div>
 
           <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
-            // Generate work report
             addNotification('Work report feature coming soon', 'info');
           }}>
             <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Report of the Work Carried Out</h4>
@@ -3541,7 +3377,6 @@ const TechnicianDashboard = () => {
           </div>
 
           <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
-            // Generate emergency report
             addNotification('Emergency report feature coming soon', 'info');
           }}>
             <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Emergency Report</h4>
@@ -3549,18 +3384,15 @@ const TechnicianDashboard = () => {
           </div>
 
           <div className="sa-metric-card" style={{ cursor: 'pointer', padding: '20px' }} onClick={() => {
-            // Generate property/building report
             addNotification('Property report feature coming soon', 'info');
           }}>
             <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Report by Property or Building</h4>
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Detailed report for specific property</p>
           </div>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Render Inventory Form - Comprehensive dynamic form
+  };
   const renderInventoryForm = () => {
     return (
       <div className="sa-section-card">
@@ -3569,7 +3401,7 @@ const TechnicianDashboard = () => {
             <h3>Inventory Form (Entry / Exit)</h3>
             <p>Create detailed inventory reports for property entry or exit</p>
           </div>
-          <button 
+          <button
             className="sa-primary-cta"
             onClick={() => {
               setInventoryFormData({
@@ -3586,8 +3418,8 @@ const TechnicianDashboard = () => {
                 formData: {}
               });
               setShowInventoryFormModal(true);
-            }}
-          >
+            }}>
+            
             <Plus size={16} />
             New Inventory Form
           </button>
@@ -3608,21 +3440,21 @@ const TechnicianDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {inspections.filter(i => {
+              {inspections.filter((i) => {
                 const type = i.Type || i.type;
                 return type === 'Move-in' || type === 'Move-out';
-              }).length === 0 ? (
-                <tr>
+              }).length === 0 ?
+              <tr>
                   <td colSpan={8} className="sa-table-empty">
                     No inventory forms created yet. Click "New Inventory Form" to create one.
                   </td>
-                </tr>
-              ) : (
-                inspections.filter(i => {
-                  const type = i.Type || i.type;
-                  return type === 'Move-in' || type === 'Move-out';
-                }).map((inv, index) => (
-                  <tr key={inv.ID || inv.id}>
+                </tr> :
+
+              inspections.filter((i) => {
+                const type = i.Type || i.type;
+                return type === 'Move-in' || type === 'Move-out';
+              }).map((inv, index) =>
+              <tr key={inv.ID || inv.id}>
                     <td>{index + 1}</td>
                     <td>
                       <span className={`sa-status-pill ${(inv.Type || inv.type || 'move-in').toLowerCase().replace(' ', '-')}`}>
@@ -3640,16 +3472,14 @@ const TechnicianDashboard = () => {
                       <button className="sa-icon-button" title="View">👁️</button>
                     </td>
                   </tr>
-                ))
-              )}
+              )
+              }
             </tbody>
           </table>
         </div>
-      </div>
-    );
-  };
+      </div>);
 
-  // Cost of Work: Level 1 = owners table, Level 2 = property containers (no images), Level 3 = works table
+  };
   const renderCostOfWork = () => {
     const handleSelectOwner = async (owner) => {
       setSelectedCostOwner(owner);
@@ -3706,17 +3536,17 @@ const TechnicianDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {costOfWorkOwners.length === 0 ? (
-                  <tr>
+                {costOfWorkOwners.length === 0 ?
+                <tr>
                     <td colSpan={6} className="sa-table-empty">No owners found</td>
-                  </tr>
-                ) : (
-                  costOfWorkOwners.map((owner) => (
-                    <tr
-                      key={owner.id || owner.ID}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => handleSelectOwner(owner)}
-                    >
+                  </tr> :
+
+                costOfWorkOwners.map((owner) =>
+                <tr
+                  key={owner.id || owner.ID}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSelectOwner(owner)}>
+                  
                       <td>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
@@ -3729,13 +3559,13 @@ const TechnicianDashboard = () => {
                       <td>{owner.numberOfWork ?? owner.NumberOfWork ?? 0}</td>
                       <td>{(owner.totalCost ?? owner.TotalCost ?? 0).toLocaleString()}</td>
                     </tr>
-                  ))
-                )}
+                )
+                }
               </tbody>
             </table>
           </div>
-        </div>
-      );
+        </div>);
+
     }
 
     if (costOfWorkView === 'properties') {
@@ -3755,30 +3585,30 @@ const TechnicianDashboard = () => {
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-            {costOfWorkProperties.length === 0 ? (
-              <div className="sa-table-empty" style={{ gridColumn: '1 / -1', padding: '24px' }}>No properties found for this owner</div>
-            ) : (
-              costOfWorkProperties.map((prop) => (
-                <div
-                  key={prop.id || prop.ID}
-                  onClick={() => handleSelectProperty(prop)}
-                  style={{
-                    padding: '20px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    background: '#fff',
-                    cursor: 'pointer',
-                    transition: 'box-shadow 0.2s, border-color 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-                    e.currentTarget.style.borderColor = '#9ca3af';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = 'none';
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                  }}
-                >
+            {costOfWorkProperties.length === 0 ?
+            <div className="sa-table-empty" style={{ gridColumn: '1 / -1', padding: '24px' }}>No properties found for this owner</div> :
+
+            costOfWorkProperties.map((prop) =>
+            <div
+              key={prop.id || prop.ID}
+              onClick={() => handleSelectProperty(prop)}
+              style={{
+                padding: '20px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                background: '#fff',
+                cursor: 'pointer',
+                transition: 'box-shadow 0.2s, border-color 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                e.currentTarget.style.borderColor = '#9ca3af';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.borderColor = '#e5e7eb';
+              }}>
+              
                   <div style={{ fontWeight: '600', fontSize: '1.1rem', marginBottom: '8px', color: '#111827' }}>
                     {prop.name || prop.Name || 'Property'}
                   </div>
@@ -3789,14 +3619,12 @@ const TechnicianDashboard = () => {
                     Number of work: <strong>{prop.numberOfWork ?? prop.NumberOfWork ?? 0}</strong>
                   </div>
                 </div>
-              ))
-            )}
+            )
+            }
           </div>
-        </div>
-      );
-    }
+        </div>);
 
-    // costOfWorkView === 'works'
+    }
     const propertyName = selectedCostProperty?.name || selectedCostProperty?.Name || 'Property';
     const totalWork = costOfWorkWorks.length;
     const priorityPillClass = (p) => {
@@ -3837,13 +3665,13 @@ const TechnicianDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {costOfWorkWorks.length === 0 ? (
-                <tr>
+              {costOfWorkWorks.length === 0 ?
+              <tr>
                   <td colSpan={8} className="sa-table-empty">No works found for this property</td>
-                </tr>
-              ) : (
-                costOfWorkWorks.map((work) => (
-                  <tr key={work.id || work.ID}>
+                </tr> :
+
+              costOfWorkWorks.map((work) =>
+              <tr key={work.id || work.ID}>
                     <td><input type="checkbox" readOnly /></td>
                     <td>{work.date ? new Date(work.date).toLocaleDateString() : '—'}</td>
                     <td>{work.apartment || work.Apartment || '—'}</td>
@@ -3861,13 +3689,13 @@ const TechnicianDashboard = () => {
                       </span>
                     </td>
                   </tr>
-                ))
-              )}
+              )
+              }
             </tbody>
           </table>
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
   const renderContent = (tabId = activeTab) => {
@@ -3885,7 +3713,7 @@ const TechnicianDashboard = () => {
       case 'state-entry':
         return renderStateEntry();
       case 'worker-contacts':
-        return renderTechnicianContacts(); // Reuse existing function
+        return renderTechnicianContacts();
       case 'history':
         return renderHistory();
       case 'reports':
@@ -3898,8 +3726,8 @@ const TechnicianDashboard = () => {
         return (
           <div className="embedded-settings">
             <SettingsPage />
-          </div>
-        );
+          </div>);
+
       default:
         return renderOverview();
     }
@@ -3907,11 +3735,11 @@ const TechnicianDashboard = () => {
 
   const layoutMenu = useMemo(
     () =>
-      tabs.map(tab => ({
-        ...tab,
-        onSelect: () => setActiveTab(tab.id),
-        active: activeTab === tab.id
-      })),
+    tabs.map((tab) => ({
+      ...tab,
+      onSelect: () => setActiveTab(tab.id),
+      active: activeTab === tab.id
+    })),
     [tabs, activeTab]
   );
 
@@ -3922,33 +3750,31 @@ const TechnicianDashboard = () => {
         menu={layoutMenu}
         activeId={activeTab}
         onActiveChange={setActiveTab}
-        onLogout={handleLogout}
-      >
-        {({ activeId }) => (
-          <div className="content-body">
+        onLogout={handleLogout}>
+        
+        {({ activeId }) =>
+        <div className="content-body">
             {renderContent(activeId)}
                     </div>
-        )}
+        }
       </RoleLayout>
       <div className="notifications-container">
-        {notifications.map(notification => (
-          <div key={`notification-${notification.id}`} className={`notification notification-${notification.type}`}>
+        {notifications.map((notification) =>
+        <div key={`notification-${notification.id}`} className={`notification notification-${notification.type}`}>
             <span>{notification.message}</span>
-            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}>×</button>
+            <button onClick={() => setNotifications((prev) => prev.filter((n) => n.id !== notification.id))}>×</button>
                     </div>
-        ))}
+        )}
                   </div>
-
-      {/* Add Inspection Modal */}
-      {showInspectionModal && (
-        <div className="modal-overlay" onClick={() => setShowInspectionModal(false)}>
+      {showInspectionModal &&
+      <div className="modal-overlay" onClick={() => setShowInspectionModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add New Inspection</h3>
-              <button 
-                className="modal-close"
-                onClick={() => setShowInspectionModal(false)}
-              >
+              <button
+              className="modal-close"
+              onClick={() => setShowInspectionModal(false)}>
+              
                 ×
               </button>
             </div>
@@ -3958,34 +3784,34 @@ const TechnicianDashboard = () => {
               <div className="form-group">
                     <label htmlFor="inspection-property">Property *</label>
                 <select
-                      id="inspection-property"
-                  value={inspectionForm.property}
-                  onChange={(e) => setInspectionForm({...inspectionForm, property: e.target.value})}
-                  required
-                >
+                    id="inspection-property"
+                    value={inspectionForm.property}
+                    onChange={(e) => setInspectionForm({ ...inspectionForm, property: e.target.value })}
+                    required>
+                    
                   <option value="">Select property</option>
-                  {companyProperties.map(property => {
-                    const id = property.ID || property.id;
-                    const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
-                    return (
-                      <option key={id} value={label}>
+                  {companyProperties.map((property) => {
+                      const id = property.ID || property.id;
+                      const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                      return (
+                        <option key={id} value={label}>
                         {label}
-                      </option>
-                    );
-                  })}
-                  {companyProperties.length === 0 && (
+                      </option>);
+
+                    })}
+                  {companyProperties.length === 0 &&
                     <option value="" disabled>No properties found</option>
-                  )}
+                    }
                 </select>
               </div>
               <div className="form-group">
                     <label htmlFor="inspection-type">Inspection Type *</label>
                 <select
-                      id="inspection-type"
-                  value={inspectionForm.type}
-                  onChange={(e) => setInspectionForm({...inspectionForm, type: e.target.value})}
-                  required
-                >
+                    id="inspection-type"
+                    value={inspectionForm.type}
+                    onChange={(e) => setInspectionForm({ ...inspectionForm, type: e.target.value })}
+                    required>
+                    
                   <option value="routine">Routine</option>
                   <option value="move-in">Move-in</option>
                   <option value="move-out">Move-out</option>
@@ -3997,38 +3823,38 @@ const TechnicianDashboard = () => {
               <div className="form-group">
                     <label htmlFor="inspection-inspector">Inspector *</label>
                 <input
-                  type="text"
-                      id="inspection-inspector"
-                  value={inspectionForm.inspector}
-                  onChange={(e) => setInspectionForm({...inspectionForm, inspector: e.target.value})}
-                  placeholder="Enter inspector name"
-                  required
-                />
+                    type="text"
+                    id="inspection-inspector"
+                    value={inspectionForm.inspector}
+                    onChange={(e) => setInspectionForm({ ...inspectionForm, inspector: e.target.value })}
+                    placeholder="Enter inspector name"
+                    required />
+                  
                   </div>
               </div>
               <div className="form-group">
                   <label htmlFor="inspection-notes">Notes</label>
                 <textarea
-                    id="inspection-notes"
+                  id="inspection-notes"
                   value={inspectionForm.notes}
-                  onChange={(e) => setInspectionForm({...inspectionForm, notes: e.target.value})}
+                  onChange={(e) => setInspectionForm({ ...inspectionForm, notes: e.target.value })}
                   placeholder="Enter inspection notes"
-                  rows="3"
-                />
+                  rows="3" />
+                
               </div>
                 <div className="modal-footer">
-                <button 
-                  type="button" 
-                    className="action-button secondary"
-                  onClick={() => setShowInspectionModal(false)}
-                >
+                <button
+                  type="button"
+                  className="action-button secondary"
+                  onClick={() => setShowInspectionModal(false)}>
+                  
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
-                    className="action-button primary"
-                  disabled={loading}
-                >
+                <button
+                  type="submit"
+                  className="action-button primary"
+                  disabled={loading}>
+                  
                   {loading ? 'Adding...' : 'Add Inspection'}
                 </button>
               </div>
@@ -4036,28 +3862,26 @@ const TechnicianDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Task Management Modal */}
-      {showTaskModal && (
-        <div className="modal-overlay" onClick={() => {
-          setShowTaskModal(false);
-          setSelectedTask(null);
-          setTaskContext('task');
-          setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
-        }}>
+      }
+      {showTaskModal &&
+      <div className="modal-overlay" onClick={() => {
+        setShowTaskModal(false);
+        setSelectedTask(null);
+        setTaskContext('task');
+        setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
+      }}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{selectedTask ? `Task Details - ${selectedTask.Issue || selectedTask.issue || 'Maintenance Task'}` : 'Create New Task'}</h3>
-              <button 
-                className="modal-close"
-                onClick={() => {
-                  setShowTaskModal(false);
-                  setSelectedTask(null);
-                  setTaskContext('task');
-                  setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
-                }}
-              >
+              <button
+              className="modal-close"
+              onClick={() => {
+                setShowTaskModal(false);
+                setSelectedTask(null);
+                setTaskContext('task');
+                setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
+              }}>
+              
                 ×
               </button>
             </div>
@@ -4067,108 +3891,108 @@ const TechnicianDashboard = () => {
               <div className="form-group">
                     <label htmlFor="task-property">Property {!selectedTask && '*'}</label>
                 <select
-                      id="task-property"
-                      value={selectedTask ? (selectedTask.Property || selectedTask.property || '') : (taskForm.property || '')}
-                      onChange={(e) => {
-                        if (selectedTask) return;
-                        setTaskForm({...taskForm, property: e.target.value});
-                      }}
-                      disabled={!!selectedTask}
-                      className={selectedTask ? "disabled-input" : ""}
-                      required={!selectedTask}
-                >
+                    id="task-property"
+                    value={selectedTask ? selectedTask.Property || selectedTask.property || '' : taskForm.property || ''}
+                    onChange={(e) => {
+                      if (selectedTask) return;
+                      setTaskForm({ ...taskForm, property: e.target.value });
+                    }}
+                    disabled={!!selectedTask}
+                    className={selectedTask ? "disabled-input" : ""}
+                    required={!selectedTask}>
+                    
                   <option value="">Select property</option>
-                  {companyProperties.map(property => {
-                    const id = property.ID || property.id;
-                    const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
-                    return (
-                      <option key={id} value={label}>
+                  {companyProperties.map((property) => {
+                      const id = property.ID || property.id;
+                      const label = property.Address || property.address || property.name || property.Name || `Property ${id}`;
+                      return (
+                        <option key={id} value={label}>
                         {label}
-                      </option>
-                    );
-                  })}
-                  {selectedTask && (selectedTask.Property || selectedTask.property) && !companyProperties.find(p => (p.Address || p.address) === (selectedTask.Property || selectedTask.property)) && (
+                      </option>);
+
+                    })}
+                  {selectedTask && (selectedTask.Property || selectedTask.property) && !companyProperties.find((p) => (p.Address || p.address) === (selectedTask.Property || selectedTask.property)) &&
                     <option value={selectedTask.Property || selectedTask.property}>
                       {selectedTask.Property || selectedTask.property}
                     </option>
-                  )}
-                  {companyProperties.length === 0 && (
+                    }
+                  {companyProperties.length === 0 &&
                     <option value="" disabled>No properties found</option>
-                  )}
+                    }
                 </select>
               </div>
               <div className="form-group">
                     <label htmlFor="task-priority">Priority {!selectedTask && '*'}</label>
-                    {selectedTask ? (
-                      <input
-                        type="text"
-                        id="task-priority"
-                        value={selectedTask.Priority || selectedTask.priority || 'Medium'}
-                  disabled
-                  className="disabled-input"
-                      />
-                    ) : (
-                      <select
-                        id="task-priority"
-                        value={taskForm.priority || 'normal'}
-                        onChange={(e) => setTaskForm({...taskForm, priority: e.target.value})}
-                        required
-                      >
+                    {selectedTask ?
+                  <input
+                    type="text"
+                    id="task-priority"
+                    value={selectedTask.Priority || selectedTask.priority || 'Medium'}
+                    disabled
+                    className="disabled-input" /> :
+
+
+                  <select
+                    id="task-priority"
+                    value={taskForm.priority || 'normal'}
+                    onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
+                    required>
+                    
                         <option value="urgent">Urgent</option>
                         <option value="high">High</option>
                         <option value="normal">Normal</option>
                         <option value="low">Low</option>
                       </select>
-                    )}
+                  }
                   </div>
               </div>
               <div className="form-group">
                   <label htmlFor="task-issue">Issue {!selectedTask && '*'}</label>
                   <textarea
-                    id="task-issue"
-                    value={selectedTask ? (selectedTask.Issue || selectedTask.issue || 'Maintenance Task') : (taskForm.issue || '')}
-                    onChange={(e) => {
-                      if (selectedTask) return; // Disabled for existing tasks
-                      setTaskForm({...taskForm, issue: e.target.value});
-                    }}
-                    disabled={!!selectedTask}
-                    className={selectedTask ? "disabled-input" : ""}
-                    rows="2"
-                    required={!selectedTask}
-                    placeholder="Describe the maintenance issue"
-                />
+                  id="task-issue"
+                  value={selectedTask ? selectedTask.Issue || selectedTask.issue || 'Maintenance Task' : taskForm.issue || ''}
+                  onChange={(e) => {
+                    if (selectedTask) return;
+                    setTaskForm({ ...taskForm, issue: e.target.value });
+                  }}
+                  disabled={!!selectedTask}
+                  className={selectedTask ? "disabled-input" : ""}
+                  rows="2"
+                  required={!selectedTask}
+                  placeholder="Describe the maintenance issue" />
+                
               </div>
                 <div className="form-row">
               <div className="form-group">
                     <label htmlFor="task-status">Status *</label>
                 <select
-                      id="task-status"
-                      value={taskForm.status || 'Pending'}
-                  onChange={(e) => setTaskForm({...taskForm, status: e.target.value})}
-                  required
-                >
+                    id="task-status"
+                    value={taskForm.status || 'Pending'}
+                    onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}
+                    required>
+                    
                   <option value="Pending">Pending</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Completed">Completed</option>
                   <option value="Scheduled">Scheduled</option>
                 </select>
               </div>
-                  {taskContext === 'maintenance' && !selectedTask ? (
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  {taskContext === 'maintenance' && !selectedTask ?
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                 <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>
                   Workers &amp; Quotes
                 </label>
-                {workerQuoteRows.map((row, idx) => (
+                {workerQuoteRows.map((row, idx) =>
                   <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'start', marginBottom: '10px', padding: '10px', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
                     <div>
                       <label style={{ fontSize: '0.8rem', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Worker *</label>
                       <select
                         value={row.workerName}
                         onChange={(e) => {
-                          const updated = workerQuoteRows.map(r => r.id === row.id ? { ...r, workerName: e.target.value } : r);
+                          const updated = workerQuoteRows.map((r) => r.id === row.id ? { ...r, workerName: e.target.value } : r);
                           setWorkerQuoteRows(updated);
-                        }}
-                      >
+                        }}>
+                        
                         <option value="">Select worker...</option>
                         {technicianContacts.map((contact) => {
                           const name = contact.Name || contact.name || 'N/A';
@@ -4176,12 +4000,12 @@ const TechnicianDashboard = () => {
                           return (
                             <option key={contact.ID || contact.id} value={name}>
                               {name}{category ? ` (${category})` : ''}
-                            </option>
-                          );
+                            </option>);
+
                         })}
-                        {technicianContacts.length === 0 && (
-                          <option value="" disabled>No workers — add via Contact of Workers</option>
-                        )}
+                        {technicianContacts.length === 0 &&
+                        <option value="" disabled>No workers — add via Contact of Workers</option>
+                        }
                       </select>
                     </div>
                     <div>
@@ -4191,65 +4015,65 @@ const TechnicianDashboard = () => {
                         accept=".pdf,.doc,.docx,image/*"
                         onChange={(e) => {
                           const f = e.target.files?.[0] || null;
-                          const updated = workerQuoteRows.map(r => r.id === row.id ? { ...r, quoteFile: f } : r);
+                          const updated = workerQuoteRows.map((r) => r.id === row.id ? { ...r, quoteFile: f } : r);
                           setWorkerQuoteRows(updated);
                           e.target.value = '';
-                        }}
-                      />
-                      {row.quoteFile && (
-                        <span style={{ fontSize: '0.75rem', color: '#374151' }}>{row.quoteFile.name}</span>
-                      )}
+                        }} />
+                      
+                      {row.quoteFile &&
+                      <span style={{ fontSize: '0.75rem', color: '#374151' }}>{row.quoteFile.name}</span>
+                      }
                     </div>
                     <button
                       type="button"
                       style={{ marginTop: '20px', padding: '6px 10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                      onClick={() => setWorkerQuoteRows(workerQuoteRows.filter(r => r.id !== row.id))}
-                    >
+                      onClick={() => setWorkerQuoteRows(workerQuoteRows.filter((r) => r.id !== row.id))}>
+                      
                       Remove
                     </button>
                   </div>
-                ))}
+                  )}
                 <button
-                  type="button"
-                  style={{ padding: '6px 14px', background: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}
-                  onClick={() => setWorkerQuoteRows([...workerQuoteRows, { id: Date.now(), workerName: '', quoteFile: null }])}
-                >
+                    type="button"
+                    style={{ padding: '6px 14px', background: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}
+                    onClick={() => setWorkerQuoteRows([...workerQuoteRows, { id: Date.now(), workerName: '', quoteFile: null }])}>
+                    
                   + Add Worker
                 </button>
-              </div>
-                  ) : !selectedTask ? (
-              <div className="form-group">
+              </div> :
+                !selectedTask ?
+                <div className="form-group">
                       <label htmlFor="task-assigned">Assigned To</label>
                       <input
-                        type="text"
-                        id="task-assigned"
-                        value={taskForm.assigned || ''}
-                        onChange={(e) => setTaskForm({...taskForm, assigned: e.target.value})}
-                        placeholder="Enter technician name"
-                      />
-                    </div>
-                  ) : null}
+                    type="text"
+                    id="task-assigned"
+                    value={taskForm.assigned || ''}
+                    onChange={(e) => setTaskForm({ ...taskForm, assigned: e.target.value })}
+                    placeholder="Enter technician name" />
+                  
+                    </div> :
+                null}
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="task-cost">Estimated Cost ($)</label>
                 <input
-                  type="number"
-                      id="task-cost"
-                      value={taskForm.estimatedCost === '' || taskForm.estimatedCost === 0 ? '' : taskForm.estimatedCost}
-                  onChange={(e) => setTaskForm({...taskForm, estimatedCost: e.target.value === '' ? '' : (parseFloat(e.target.value) || 0)})}
-                  min="0"
-                  step="0.01"
-                      placeholder="0.00"
-                />
+                    type="number"
+                    id="task-cost"
+                    value={taskForm.estimatedCost === '' || taskForm.estimatedCost === 0 ? '' : taskForm.estimatedCost}
+                    onChange={(e) => setTaskForm({ ...taskForm, estimatedCost: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00" />
+                  
               </div>
             </div>
-            {selectedTask && taskContext === 'maintenance' && (taskForm.existingPhotoURLs?.length > 0) && (
+            {selectedTask && taskContext === 'maintenance' && taskForm.existingPhotoURLs?.length > 0 &&
               <div className="form-group">
                 <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Maintenance photos</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
                   {(taskForm.existingPhotoURLs || []).map((url, index) => {
-                    const src = typeof url === 'string' ? url : (url?.url || url?.src || '');
+                    const src = typeof url === 'string' ? url : url?.url || url?.src || '';
                     if (!src) return null;
                     return (
                       <div key={index} style={{ borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
@@ -4258,27 +4082,27 @@ const TechnicianDashboard = () => {
                           alt={`Photo ${index + 1}`}
                           style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
                           onClick={() => window.open(src, '_blank')}
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                      </div>
-                    );
+                          onError={(e) => {e.target.style.display = 'none';}} />
+                        
+                      </div>);
+
                   })}
                 </div>
               </div>
-            )}
-            {selectedTask && taskContext === 'maintenance' && (selectedTask.QuotationURL || selectedTask.quotationURL) && (
+              }
+            {selectedTask && taskContext === 'maintenance' && (selectedTask.QuotationURL || selectedTask.quotationURL) &&
               <div className="form-group">
                 <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Quotation</label>
                 <a href={selectedTask.QuotationURL || selectedTask.quotationURL} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>View / Download Quotation</a>
               </div>
-            )}
-            {selectedTask && taskContext === 'maintenance' && (selectedTask.InvoiceURL || selectedTask.invoiceURL) && (
+              }
+            {selectedTask && taskContext === 'maintenance' && (selectedTask.InvoiceURL || selectedTask.invoiceURL) &&
               <div className="form-group">
                 <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Invoice</label>
                 <a href={selectedTask.InvoiceURL || selectedTask.invoiceURL} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>View / Download Invoice</a>
               </div>
-            )}
-            {!selectedTask && (
+              }
+            {!selectedTask &&
               <div className="form-group">
                 <label htmlFor="task-photos">Upload one or more photos (optional)</label>
                 <input
@@ -4288,138 +4112,135 @@ const TechnicianDashboard = () => {
                   multiple
                   onChange={(e) => {
                     const newFiles = Array.from(e.target.files || []);
-                    setTaskForm(prev => ({
+                    setTaskForm((prev) => ({
                       ...prev,
                       photos: [...(prev.photos || []), ...newFiles]
                     }));
                     e.target.value = '';
-                  }}
-                />
-                {taskForm.photos && taskForm.photos.length > 0 && (
-                  <div style={{ marginTop: '8px' }}>
+                  }} />
+                
+                {taskForm.photos && taskForm.photos.length > 0 &&
+                <div style={{ marginTop: '8px' }}>
                     <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '6px' }}>
                       {taskForm.photos.length} photo{taskForm.photos.length !== 1 ? 's' : ''} selected
                     </div>
                     <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.85rem', color: '#374151' }}>
-                      {taskForm.photos.map((file, idx) => (
-                        <li key={`${file.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      {taskForm.photos.map((file, idx) =>
+                    <li key={`${file.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                           <span style={{ flex: 1 }}>{file.name}</span>
                           <button
-                            type="button"
-                            className="action-button secondary"
-                            style={{ padding: '2px 8px', fontSize: '0.75rem' }}
-                            onClick={() => {
-                              setTaskForm(prev => ({
-                                ...prev,
-                                photos: prev.photos.filter((_, i) => i !== idx)
-                              }));
-                            }}
-                          >
+                        type="button"
+                        className="action-button secondary"
+                        style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                        onClick={() => {
+                          setTaskForm((prev) => ({
+                            ...prev,
+                            photos: prev.photos.filter((_, i) => i !== idx)
+                          }));
+                        }}>
+                        
                             Remove
                           </button>
                         </li>
-                      ))}
+                    )}
                     </ul>
                   </div>
-                )}
+                }
               </div>
-            )}
-            {!selectedTask && taskContext === 'maintenance' && (
+              }
+            {!selectedTask && taskContext === 'maintenance' &&
               <>
               <div className="form-group">
                 <label htmlFor="task-quotation">Upload Quotation (optional)</label>
                 <input
-                  type="file"
-                  id="task-quotation"
-                  accept=".pdf,.doc,.docx,image/*"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    setTaskForm(prev => ({ ...prev, quotation: f || null }));
-                    e.target.value = '';
-                  }}
-                />
-                {taskForm.quotation && (
+                    type="file"
+                    id="task-quotation"
+                    accept=".pdf,.doc,.docx,image/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      setTaskForm((prev) => ({ ...prev, quotation: f || null }));
+                      e.target.value = '';
+                    }} />
+                  
+                {taskForm.quotation &&
                   <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>{taskForm.quotation.name}</span>
-                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, quotation: null }))}>Remove</button>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm((prev) => ({ ...prev, quotation: null }))}>Remove</button>
                   </div>
-                )}
+                  }
               </div>
               <div className="form-group">
                 <label htmlFor="task-invoice">Upload Invoice (optional)</label>
                 <input
-                  type="file"
-                  id="task-invoice"
-                  accept=".pdf,.doc,.docx,image/*"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    setTaskForm(prev => ({ ...prev, invoice: f || null }));
-                    e.target.value = '';
-                  }}
-                />
-                {taskForm.invoice && (
+                    type="file"
+                    id="task-invoice"
+                    accept=".pdf,.doc,.docx,image/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      setTaskForm((prev) => ({ ...prev, invoice: f || null }));
+                      e.target.value = '';
+                    }} />
+                  
+                {taskForm.invoice &&
                   <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>{taskForm.invoice.name}</span>
-                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm(prev => ({ ...prev, invoice: null }))}>Remove</button>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTaskForm((prev) => ({ ...prev, invoice: null }))}>Remove</button>
                   </div>
-                )}
+                  }
               </div>
               <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                   <input
-                    type="checkbox"
-                    checked={!!taskForm.requireDirectorApproval}
-                    onChange={(e) => setTaskForm(prev => ({ ...prev, requireDirectorApproval: e.target.checked }))}
-                  />
+                      type="checkbox"
+                      checked={!!taskForm.requireDirectorApproval}
+                      onChange={(e) => setTaskForm((prev) => ({ ...prev, requireDirectorApproval: e.target.checked }))} />
+                    
                   <span>Require director approval (for security – task will be sent to director for approval before processing)</span>
                 </label>
               </div>
               </>
-            )}
+              }
                 <div className="modal-footer">
-                <button 
-                  type="button" 
-                    className="action-button secondary"
+                <button
+                  type="button"
+                  className="action-button secondary"
                   onClick={() => {
                     setShowTaskModal(false);
                     setSelectedTask(null);
                     setTaskContext('task');
                     setTaskForm({ status: 'Pending', estimatedHours: 0, estimatedCost: 0, photos: [], existingPhotoURLs: [] });
-                  }}
-                >
+                  }}>
+                  
                     Cancel
                 </button>
-                <button 
-                  type="submit" 
-                    className="action-button primary"
-                  disabled={loading}
-                >
-                    {loading ? (selectedTask ? 'Updating...' : 'Creating...') : (selectedTask ? 'Update Task' : 'Create Task')}
+                <button
+                  type="submit"
+                  className="action-button primary"
+                  disabled={loading}>
+                  
+                    {loading ? selectedTask ? 'Updating...' : 'Creating...' : selectedTask ? 'Update Task' : 'Create Task'}
                 </button>
               </div>
             </form>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Quote Document Upload Modal */}
-      {showQuoteDocModal && quoteDocMaintenance && (
-        <div
-          className="modal-overlay"
-          onClick={() => { if (!quoteDocSubmitting) { setShowQuoteDocModal(false); setQuoteDocMaintenance(null); } }}
-        >
+      }
+      {showQuoteDocModal && quoteDocMaintenance &&
+      <div
+        className="modal-overlay"
+        onClick={() => {if (!quoteDocSubmitting) {setShowQuoteDocModal(false);setQuoteDocMaintenance(null);}}}>
+        
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px' }}>
             <div className="modal-header">
               <h3>Generate Quote</h3>
               <button
-                className="modal-close"
-                onClick={() => { if (!quoteDocSubmitting) { setShowQuoteDocModal(false); setQuoteDocMaintenance(null); } }}
-              >×</button>
+              className="modal-close"
+              onClick={() => {if (!quoteDocSubmitting) {setShowQuoteDocModal(false);setQuoteDocMaintenance(null);}}}>
+              ×</button>
             </div>
 
             <form onSubmit={handleQuoteDocSubmit} className="modal-form">
-              {/* Context info */}
               <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.875rem', color: '#374151' }}>
                 <strong>{quoteDocMaintenance.property || quoteDocMaintenance.Property}</strong>
                 <br />
@@ -4429,96 +4250,96 @@ const TechnicianDashboard = () => {
               <div className="form-group">
                 <label htmlFor="qdoc-amount">Quote Amount (XOF) *</label>
                 <input
-                  type="number"
-                  id="qdoc-amount"
-                  required
-                  min="1"
-                  step="any"
-                  placeholder="e.g. 150000"
-                  value={quoteDocForm.amount}
-                  onChange={(e) => setQuoteDocForm(prev => ({ ...prev, amount: e.target.value }))}
-                />
+                type="number"
+                id="qdoc-amount"
+                required
+                min="1"
+                step="any"
+                placeholder="e.g. 150000"
+                value={quoteDocForm.amount}
+                onChange={(e) => setQuoteDocForm((prev) => ({ ...prev, amount: e.target.value }))} />
+              
               </div>
 
               <div className="form-group">
                 <label htmlFor="qdoc-problem">Description / Notes (optional)</label>
                 <textarea
-                  id="qdoc-problem"
-                  rows={3}
-                  placeholder="Describe the work, scope, or any additional notes…"
-                  value={quoteDocForm.problem}
-                  onChange={(e) => setQuoteDocForm(prev => ({ ...prev, problem: e.target.value }))}
-                  style={{ resize: 'vertical' }}
-                />
+                id="qdoc-problem"
+                rows={3}
+                placeholder="Describe the work, scope, or any additional notes…"
+                value={quoteDocForm.problem}
+                onChange={(e) => setQuoteDocForm((prev) => ({ ...prev, problem: e.target.value }))}
+                style={{ resize: 'vertical' }} />
+              
               </div>
 
               <div className="form-group">
                 <label htmlFor="qdoc-quotation">Upload Quotation (optional)</label>
                 <input
-                  type="file"
-                  id="qdoc-quotation"
-                  accept=".pdf,.doc,.docx,image/*"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] || null;
-                    setQuoteDocForm(prev => ({ ...prev, quotation: f }));
-                    e.target.value = '';
-                  }}
-                />
-                {quoteDocForm.quotation && (
-                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                type="file"
+                id="qdoc-quotation"
+                accept=".pdf,.doc,.docx,image/*"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setQuoteDocForm((prev) => ({ ...prev, quotation: f }));
+                  e.target.value = '';
+                }} />
+              
+                {quoteDocForm.quotation &&
+              <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>{quoteDocForm.quotation.name}</span>
-                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, quotation: null }))}>Remove</button>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm((prev) => ({ ...prev, quotation: null }))}>Remove</button>
                   </div>
-                )}
+              }
               </div>
 
               <div className="form-group">
                 <label htmlFor="qdoc-invoice">Upload Invoice (optional)</label>
                 <input
-                  type="file"
-                  id="qdoc-invoice"
-                  accept=".pdf,.doc,.docx,image/*"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] || null;
-                    setQuoteDocForm(prev => ({ ...prev, invoice: f }));
-                    e.target.value = '';
-                  }}
-                />
-                {quoteDocForm.invoice && (
-                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                type="file"
+                id="qdoc-invoice"
+                accept=".pdf,.doc,.docx,image/*"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setQuoteDocForm((prev) => ({ ...prev, invoice: f }));
+                  e.target.value = '';
+                }} />
+              
+                {quoteDocForm.invoice &&
+              <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>{quoteDocForm.invoice.name}</span>
-                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, invoice: null }))}>Remove</button>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm((prev) => ({ ...prev, invoice: null }))}>Remove</button>
                   </div>
-                )}
+              }
               </div>
 
               <div className="form-group">
                 <label htmlFor="qdoc-supporting">Upload Supporting Documents (optional)</label>
                 <input
-                  type="file"
-                  id="qdoc-supporting"
-                  accept=".pdf,.doc,.docx,image/*"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] || null;
-                    setQuoteDocForm(prev => ({ ...prev, supportingDocument: f }));
-                    e.target.value = '';
-                  }}
-                />
-                {quoteDocForm.supportingDocument && (
-                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                type="file"
+                id="qdoc-supporting"
+                accept=".pdf,.doc,.docx,image/*"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setQuoteDocForm((prev) => ({ ...prev, supportingDocument: f }));
+                  e.target.value = '';
+                }} />
+              
+                {quoteDocForm.supportingDocument &&
+              <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>{quoteDocForm.supportingDocument.name}</span>
-                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm(prev => ({ ...prev, supportingDocument: null }))}>Remove</button>
+                    <button type="button" className="action-button secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setQuoteDocForm((prev) => ({ ...prev, supportingDocument: null }))}>Remove</button>
                   </div>
-                )}
+              }
               </div>
 
               <div className="modal-footer">
                 <button
-                  type="button"
-                  className="action-button secondary"
-                  disabled={quoteDocSubmitting}
-                  onClick={() => { setShowQuoteDocModal(false); setQuoteDocMaintenance(null); }}
-                >
+                type="button"
+                className="action-button secondary"
+                disabled={quoteDocSubmitting}
+                onClick={() => {setShowQuoteDocModal(false);setQuoteDocMaintenance(null);}}>
+                
                   Cancel
                 </button>
                 <button type="submit" className="action-button primary" disabled={quoteDocSubmitting}>
@@ -4528,26 +4349,24 @@ const TechnicianDashboard = () => {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Photo Upload Modal */}
-      {showPhotoUploadModal && selectedInspectionForPhoto && (
-        <div className="modal-overlay" onClick={() => {
-          setShowPhotoUploadModal(false);
-          setSelectedInspectionForPhoto(null);
-          setPhotoFile(null);
-        }}>
+      }
+      {showPhotoUploadModal && selectedInspectionForPhoto &&
+      <div className="modal-overlay" onClick={() => {
+        setShowPhotoUploadModal(false);
+        setSelectedInspectionForPhoto(null);
+        setPhotoFile(null);
+      }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Upload Inspection Photo</h3>
-              <button 
-                className="modal-close"
-                onClick={() => {
-                  setShowPhotoUploadModal(false);
-                  setSelectedInspectionForPhoto(null);
-                  setPhotoFile(null);
-                }}
-              >
+              <button
+              className="modal-close"
+              onClick={() => {
+                setShowPhotoUploadModal(false);
+                setSelectedInspectionForPhoto(null);
+                setPhotoFile(null);
+              }}>
+              
                 ×
               </button>
             </div>
@@ -4556,45 +4375,45 @@ const TechnicianDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="photo-inspection">Inspection</label>
                   <input
-                    type="text"
-                    id="photo-inspection"
-                    value={`${selectedInspectionForPhoto.property || selectedInspectionForPhoto.Property || ''} - ${selectedInspectionForPhoto.type || selectedInspectionForPhoto.Type || ''}`}
-                    disabled
-                    className="disabled-input"
-                  />
+                  type="text"
+                  id="photo-inspection"
+                  value={`${selectedInspectionForPhoto.property || selectedInspectionForPhoto.Property || ''} - ${selectedInspectionForPhoto.type || selectedInspectionForPhoto.Type || ''}`}
+                  disabled
+                  className="disabled-input" />
+                
                 </div>
                 <div className="form-group">
                   <label htmlFor="photo-file">Photo *</label>
                   <input
-                    type="file"
-                    id="photo-file"
-                    accept="image/*"
-                    onChange={(e) => setPhotoFile(e.target.files[0])}
-                    required
-                  />
-                  {photoFile && (
-                    <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#6b7280' }}>
+                  type="file"
+                  id="photo-file"
+                  accept="image/*"
+                  onChange={(e) => setPhotoFile(e.target.files[0])}
+                  required />
+                
+                  {photoFile &&
+                <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#6b7280' }}>
                       Selected: {photoFile.name}
                     </div>
-                  )}
+                }
                 </div>
                 <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="action-button secondary"
-                    onClick={() => {
-                      setShowPhotoUploadModal(false);
-                      setSelectedInspectionForPhoto(null);
-                      setPhotoFile(null);
-                    }}
-                  >
+                  <button
+                  type="button"
+                  className="action-button secondary"
+                  onClick={() => {
+                    setShowPhotoUploadModal(false);
+                    setSelectedInspectionForPhoto(null);
+                    setPhotoFile(null);
+                  }}>
+                  
                     Cancel
                   </button>
-                  <button 
-                    type="submit" 
-                    className="action-button primary"
-                    disabled={loading || !photoFile}
-                  >
+                  <button
+                  type="submit"
+                  className="action-button primary"
+                  disabled={loading || !photoFile}>
+                  
                     {loading ? 'Uploading...' : 'Upload Photo'}
                   </button>
                 </div>
@@ -4602,11 +4421,9 @@ const TechnicianDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Maintenance Request View Modal */}
-      {showMaintenanceViewModal && selectedMaintenanceRequest && (
-        <div className="modal-overlay" onClick={() => setShowMaintenanceViewModal(false)}>
+      }
+      {showMaintenanceViewModal && selectedMaintenanceRequest &&
+      <div className="modal-overlay" onClick={() => setShowMaintenanceViewModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h3>Maintenance Request Details</h3>
@@ -4646,107 +4463,105 @@ const TechnicianDashboard = () => {
                   <div>
                     <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Date</label>
                     <p style={{ margin: 0, color: '#1f2937' }}>
-                      {selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt
-                        ? new Date(selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt).toLocaleDateString()
-                        : 'N/A'}
+                      {selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt ?
+                    new Date(selectedMaintenanceRequest.Date || selectedMaintenanceRequest.date || selectedMaintenanceRequest.CreatedAt || selectedMaintenanceRequest.createdAt).toLocaleDateString() :
+                    'N/A'}
                     </p>
                   </div>
                 </div>
 
-                {(selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property) && (
-                  <div>
+                {(selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property) &&
+              <div>
                     <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Property</label>
                     <p style={{ margin: 0, color: '#1f2937' }}>
                       {selectedMaintenanceRequest.Property || selectedMaintenanceRequest.property}
                     </p>
                   </div>
-                )}
+              }
 
-                {(selectedMaintenanceRequest.Tenant || selectedMaintenanceRequest.tenant) && (
-                  <div>
+                {(selectedMaintenanceRequest.Tenant || selectedMaintenanceRequest.tenant) &&
+              <div>
                     <label style={{ fontWeight: '600', color: '#374151', marginBottom: '8px', display: 'block' }}>Tenant</label>
                     <p style={{ margin: 0, color: '#1f2937' }}>
                       {selectedMaintenanceRequest.Tenant || selectedMaintenanceRequest.tenant}
                     </p>
                   </div>
-                )}
-
-                {/* Photos Section */}
+              }
                 {(() => {
-                  let photos = [];
-                  const raw = selectedMaintenanceRequest.Photos ?? selectedMaintenanceRequest.photos ?? selectedMaintenanceRequest.PhotoURLs ?? selectedMaintenanceRequest.photoURLs;
-                  if (Array.isArray(raw)) {
-                    photos = raw;
-                  } else if (typeof raw === 'string' && raw.trim()) {
-                    try {
-                      photos = JSON.parse(raw) || [];
-                    } catch (_) {
-                      photos = [];
-                    }
+                let photos = [];
+                const raw = selectedMaintenanceRequest.Photos ?? selectedMaintenanceRequest.photos ?? selectedMaintenanceRequest.PhotoURLs ?? selectedMaintenanceRequest.photoURLs;
+                if (Array.isArray(raw)) {
+                  photos = raw;
+                } else if (typeof raw === 'string' && raw.trim()) {
+                  try {
+                    photos = JSON.parse(raw) || [];
+                  } catch (_) {
+                    photos = [];
                   }
-                  photos = Array.isArray(photos) ? photos : [];
+                }
+                photos = Array.isArray(photos) ? photos : [];
 
-                  return (
-                    <div>
+                return (
+                  <div>
                       <label style={{ fontWeight: '600', color: '#374151', marginBottom: '12px', display: 'block' }}>
                         Photos {photos.length > 0 ? `(${photos.length})` : ''}
                       </label>
-                      {photos.length > 0 ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+                      {photos.length > 0 ?
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
                           {photos.map((photoUrl, index) => {
-                            const url = typeof photoUrl === 'string' ? photoUrl : (photoUrl?.url || photoUrl?.src || '');
-                            if (!url) return null;
-                            return (
-                              <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
+                        const url = typeof photoUrl === 'string' ? photoUrl : photoUrl?.url || photoUrl?.src || '';
+                        if (!url) return null;
+                        return (
+                          <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', backgroundColor: '#f3f4f6' }}>
                                 <img
-                                  src={url}
-                                  alt={`Maintenance ${index + 1}`}
-                                  style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                    cursor: 'pointer'
-                                  }}
-                                  onClick={() => window.open(url, '_blank')}
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    const parent = e.target.parentElement;
-                                    if (parent && !parent.querySelector('.sa-photo-fallback')) {
-                                      const fallback = document.createElement('div');
-                                      fallback.className = 'sa-photo-fallback';
-                                      fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
-                                      fallback.textContent = 'Image not available';
-                                      parent.appendChild(fallback);
-                                    }
-                                  }}
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>No photos attached to this maintenance request</p>
-                      )}
-                    </div>
-                  );
-                })()}
+                              src={url}
+                              alt={`Maintenance ${index + 1}`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => window.open(url, '_blank')}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                const parent = e.target.parentElement;
+                                if (parent && !parent.querySelector('.sa-photo-fallback')) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'sa-photo-fallback';
+                                  fallback.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 0.85rem;';
+                                  fallback.textContent = 'Image not available';
+                                  parent.appendChild(fallback);
+                                }
+                              }} />
+                            
+                              </div>);
+
+                      })}
+                        </div> :
+
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>No photos attached to this maintenance request</p>
+                    }
+                    </div>);
+
+              })()}
               </div>
             </div>
             <div className="modal-footer">
-              <button 
-                type="button" 
-                className="action-button secondary" 
-                onClick={() => setShowMaintenanceViewModal(false)}
-              >
+              <button
+              type="button"
+              className="action-button secondary"
+              onClick={() => setShowMaintenanceViewModal(false)}>
+              
                 Close
               </button>
             </div>
           </div>
         </div>
-      )}
+      }
 
-      {showWorkStartModal && (
-        <div className="modal-overlay" onClick={() => setShowWorkStartModal(false)}>
+      {showWorkStartModal &&
+      <div className="modal-overlay" onClick={() => setShowWorkStartModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Work Started</h3>
@@ -4757,20 +4572,20 @@ const TechnicianDashboard = () => {
                 <div className="form-group">
                   <label>Start Date *</label>
                   <input
-                    type="date"
-                    value={workSchedule.startDate}
-                    onChange={(e) => setWorkSchedule(prev => ({ ...prev, startDate: e.target.value }))}
-                    required
-                  />
+                  type="date"
+                  value={workSchedule.startDate}
+                  onChange={(e) => setWorkSchedule((prev) => ({ ...prev, startDate: e.target.value }))}
+                  required />
+                
                 </div>
                 <div className="form-group">
                   <label>End Date *</label>
                   <input
-                    type="date"
-                    value={workSchedule.endDate}
-                    onChange={(e) => setWorkSchedule(prev => ({ ...prev, endDate: e.target.value }))}
-                    required
-                  />
+                  type="date"
+                  value={workSchedule.endDate}
+                  onChange={(e) => setWorkSchedule((prev) => ({ ...prev, endDate: e.target.value }))}
+                  required />
+                
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="action-button secondary" onClick={() => setShowWorkStartModal(false)}>
@@ -4784,11 +4599,9 @@ const TechnicianDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Technician Contact Modal */}
-      {showContactModal && (
-        <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
+      }
+      {showContactModal &&
+      <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{selectedContact ? 'Edit Technician Contact' : 'Add Technician Contact'}</h3>
@@ -4800,23 +4613,23 @@ const TechnicianDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="contactName">Name *</label>
                     <input
-                      type="text"
-                      id="contactName"
-                      value={contactForm.name}
-                      onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., John's Plumbing"
-                      required
-                    />
+                    type="text"
+                    id="contactName"
+                    value={contactForm.name}
+                    onChange={(e) => setContactForm((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., John's Plumbing"
+                    required />
+                  
                   </div>
 
                   <div className="form-group">
                     <label htmlFor="contactCategory">Category *</label>
                     <select
-                      id="contactCategory"
-                      value={contactForm.category}
-                      onChange={(e) => setContactForm(prev => ({ ...prev, category: e.target.value }))}
-                      required
-                    >
+                    id="contactCategory"
+                    value={contactForm.category}
+                    onChange={(e) => setContactForm((prev) => ({ ...prev, category: e.target.value }))}
+                    required>
+                    
                       <option value="">Select category</option>
                       <option value="plumber">Plumber</option>
                       <option value="electrician">Electrician</option>
@@ -4833,70 +4646,70 @@ const TechnicianDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="contactPhone">Phone Number *</label>
                     <input
-                      type="tel"
-                      id="contactPhone"
-                      value={contactForm.phone}
-                      onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="+225 07 12 34 56 78"
-                      required
-                    />
+                    type="tel"
+                    id="contactPhone"
+                    value={contactForm.phone}
+                    onChange={(e) => setContactForm((prev) => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+225 07 12 34 56 78"
+                    required />
+                  
                   </div>
 
                   <div className="form-group">
                     <label htmlFor="contactEmail">Email</label>
                     <input
-                      type="email"
-                      id="contactEmail"
-                      value={contactForm.email}
-                      onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="contact@example.com"
-                    />
+                    type="email"
+                    id="contactEmail"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm((prev) => ({ ...prev, email: e.target.value }))}
+                    placeholder="contact@example.com" />
+                  
                   </div>
                 </div>
 
-                {contactForm.category === 'other' && (
-                  <div className="form-group">
+                {contactForm.category === 'other' &&
+              <div className="form-group">
                     <label htmlFor="contactCustomCategory">Custom Worker Type *</label>
                     <input
-                      type="text"
-                      id="contactCustomCategory"
-                      value={contactForm.customCategory}
-                      onChange={(e) => setContactForm(prev => ({ ...prev, customCategory: e.target.value }))}
-                      placeholder="e.g., Roofer, Tiler, Welder"
-                      required
-                    />
+                  type="text"
+                  id="contactCustomCategory"
+                  value={contactForm.customCategory}
+                  onChange={(e) => setContactForm((prev) => ({ ...prev, customCategory: e.target.value }))}
+                  placeholder="e.g., Roofer, Tiler, Welder"
+                  required />
+                
                   </div>
-                )}
+              }
 
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="contactPhoto">Worker Photo</label>
                     <input
-                      type="file"
-                      id="contactPhoto"
-                      accept="image/*"
-                      onChange={(e) => setContactForm(prev => ({ ...prev, photo: e.target.files?.[0] || null }))}
-                    />
-                    {selectedContact && (selectedContact.PhotoURL || selectedContact.photoUrl) && (
-                      <div style={{ marginTop: '8px' }}>
+                    type="file"
+                    id="contactPhoto"
+                    accept="image/*"
+                    onChange={(e) => setContactForm((prev) => ({ ...prev, photo: e.target.files?.[0] || null }))} />
+                  
+                    {selectedContact && (selectedContact.PhotoURL || selectedContact.photoUrl) &&
+                  <div style={{ marginTop: '8px' }}>
                         <img
-                          src={selectedContact.PhotoURL || selectedContact.photoUrl}
-                          alt="Worker"
-                          style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                        />
+                      src={selectedContact.PhotoURL || selectedContact.photoUrl}
+                      alt="Worker"
+                      style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                    
                         <div>
                           <a
-                            href={selectedContact.PhotoURL || selectedContact.photoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            download
-                            className="sa-link"
-                          >
+                        href={selectedContact.PhotoURL || selectedContact.photoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        className="sa-link">
+                        
                             Download photo
                           </a>
                         </div>
                       </div>
-                    )}
+                  }
                     <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
                       This photo will be visible to tenants.
                     </small>
@@ -4904,31 +4717,31 @@ const TechnicianDashboard = () => {
                   <div className="form-group">
                     <label htmlFor="contactIdCard">Identity Card (Private)</label>
                     <input
-                      type="file"
-                      id="contactIdCard"
-                      accept="image/*"
-                      onChange={(e) => setContactForm(prev => ({ ...prev, idCard: e.target.files?.[0] || null }))}
-                    />
-                    {selectedContact && (selectedContact.IDCardURL || selectedContact.idCardUrl) && (
-                      <div style={{ marginTop: '8px' }}>
+                    type="file"
+                    id="contactIdCard"
+                    accept="image/*"
+                    onChange={(e) => setContactForm((prev) => ({ ...prev, idCard: e.target.files?.[0] || null }))} />
+                  
+                    {selectedContact && (selectedContact.IDCardURL || selectedContact.idCardUrl) &&
+                  <div style={{ marginTop: '8px' }}>
                         <img
-                          src={selectedContact.IDCardURL || selectedContact.idCardUrl}
-                          alt="ID Card"
-                          style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                        />
+                      src={selectedContact.IDCardURL || selectedContact.idCardUrl}
+                      alt="ID Card"
+                      style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                    
                         <div>
                           <a
-                            href={selectedContact.IDCardURL || selectedContact.idCardUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            download
-                            className="sa-link"
-                          >
+                        href={selectedContact.IDCardURL || selectedContact.idCardUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        className="sa-link">
+                        
                             Download ID card
                           </a>
                         </div>
                       </div>
-                    )}
+                  }
                     <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
                       This file is not shown to tenants.
                     </small>
@@ -4938,54 +4751,52 @@ const TechnicianDashboard = () => {
                 <div className="form-group">
                   <label htmlFor="contactAddress">Address</label>
                   <input
-                    type="text"
-                    id="contactAddress"
-                    value={contactForm.address}
-                    onChange={(e) => setContactForm(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="123 Main Street, City"
-                  />
+                  type="text"
+                  id="contactAddress"
+                  value={contactForm.address}
+                  onChange={(e) => setContactForm((prev) => ({ ...prev, address: e.target.value }))}
+                  placeholder="123 Main Street, City" />
+                
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="contactDescription">Description/Notes</label>
                   <textarea
-                    id="contactDescription"
-                    value={contactForm.description}
-                    onChange={(e) => setContactForm(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Additional information about this technician..."
-                    rows="3"
-                  />
+                  id="contactDescription"
+                  value={contactForm.description}
+                  onChange={(e) => setContactForm((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Additional information about this technician..."
+                  rows="3" />
+                
                 </div>
 
                 <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="action-button secondary" 
-                    onClick={() => {
-                      setShowContactModal(false);
-                      setSelectedContact(null);
-                      setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '' });
-                    }}
-                  >
+                  <button
+                  type="button"
+                  className="action-button secondary"
+                  onClick={() => {
+                    setShowContactModal(false);
+                    setSelectedContact(null);
+                    setContactForm({ name: '', category: '', customCategory: '', phone: '', email: '', address: '', description: '' });
+                  }}>
+                  
                     Cancel
                   </button>
-                  <button 
-                    type="submit" 
-                    className="action-button primary" 
-                    disabled={loading}
-                  >
-                    {loading ? 'Saving...' : (selectedContact ? 'Update Contact' : 'Add Contact')}
+                  <button
+                  type="submit"
+                  className="action-button primary"
+                  disabled={loading}>
+                  
+                    {loading ? 'Saving...' : selectedContact ? 'Update Contact' : 'Add Contact'}
                   </button>
                 </div>
               </form>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Comprehensive Inventory Form Modal */}
-      {showInventoryFormModal && (
-        <div className="modal-overlay" onClick={() => setShowInventoryFormModal(false)}>
+      }
+      {showInventoryFormModal &&
+      <div className="modal-overlay" onClick={() => setShowInventoryFormModal(false)}>
           <div className="modal-content" style={{ maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Inventory Form - {inventoryFormData.type === 'Entry' ? 'Entry' : 'Exit'}</h3>
@@ -4993,136 +4804,119 @@ const TechnicianDashboard = () => {
             </div>
             <div className="modal-body">
               <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  setLoading(true);
-
-                  // Validate mandatory checklist fields (photos are optional)
-                  const rooms = inventoryFormData.formData?.rooms || {};
-                  const roomNames = Object.keys(rooms);
-                  if (roomNames.length === 0) {
-                    addNotification('Please select property type and rooms, then fill the checklist.', 'error');
-                    return;
-                  }
-
-                  for (const roomName of roomNames) {
-                    const items = rooms[roomName] || {};
-                    for (const item of INSPECTION_ITEMS) {
-                      const it = items[item.key] || {};
-                      if (!it.condition) {
-                        addNotification(`Missing condition: ${roomName} → ${item.label}`, 'error');
-                        return;
-                      }
-                    }
-                  }
-
-                  const scheduledAt =
-                    inventoryFormData.date && inventoryFormData.time
-                      ? `${inventoryFormData.date}T${inventoryFormData.time}`
-                      : inventoryFormData.date;
-
-                  const inspectionType = inventoryFormData.type === 'Entry' ? 'Move-in' : 'Move-out';
-
-                  // Build report data without File objects
-                  const reportData = {
-                    appointment: {
-                      property: inventoryFormData.propertyAddress,
-                      tenant: inventoryFormData.tenantName,
-                      scheduledAt,
-                      inspectionType,
-                    },
-                    property: {
-                      type: inventoryFormData.propertyType,
-                      numberOfRooms: inventoryFormData.numberOfRooms,
-                      numberOfBathrooms: inventoryFormData.numberOfBathrooms,
-                      numberOfKitchens: inventoryFormData.numberOfKitchens,
-                      hasSwimmingPool: inventoryFormData.hasSwimmingPool,
-                      address: inventoryFormData.propertyAddress,
-                    },
-                    rooms: {},
-                    meters: inventoryFormData.formData?.meters || {},
-                    observations: inventoryFormData.formData?.observations || {},
-                    exit: inventoryFormData.type === 'Exit' ? (inventoryFormData.formData?.exit || {}) : undefined,
-                  };
-
-                  // Initialize empty photoUrls arrays for each item
-                  for (const roomName of roomNames) {
-                    reportData.rooms[roomName] = {};
-                    for (const item of INSPECTION_ITEMS) {
-                      const it = rooms[roomName]?.[item.key] || {};
-                      reportData.rooms[roomName][item.key] = {
-                        label: item.label,
-                        condition: it.condition,
-                        comment: it.comment || '',
-                        photoUrls: [],
-                      };
-                    }
-                  }
-
-                  // Create inspection first
-                  const created = await technicianService.createInspection({
-                    property: inventoryFormData.propertyAddress,
-                    type: inspectionType,
-                    inspector: inventoryFormData.technicianName,
-                    tenant: inventoryFormData.tenantName,
-                    scheduledAt,
-                    status: 'Completed',
-                    notes: inventoryFormData.formData?.observations?.technician || '',
-                    reportData,
-                    photos: [],
-                  });
-
-                  const inspectionId = created?.id || created?.ID;
-                  if (!inspectionId) {
-                    addNotification('Failed to create inspection record (missing ID).', 'error');
-                    return;
-                  }
-
-                  // Upload photos item-by-item, keep mapping into reportData
-                  for (const roomName of roomNames) {
-                    for (const item of INSPECTION_ITEMS) {
-                      const it = rooms[roomName]?.[item.key] || {};
-                      const files = it.photos || [];
-                      for (const file of files) {
-                        const uploadRes = await technicianService.uploadInspectionPhoto(inspectionId, file);
-                        const photoUrl = uploadRes?.photoUrl || uploadRes?.photoURL || uploadRes?.PhotoUrl;
-                        if (photoUrl) {
-                          reportData.rooms[roomName][item.key].photoUrls.push(photoUrl);
-                        }
-                      }
-                    }
-                  }
-
-                  // Update inspection with final reportData (with photo URLs)
-                  await technicianService.updateInspection(inspectionId, {
-                    tenant: inventoryFormData.tenantName,
-                    scheduledAt,
-                    status: 'Completed',
-                    reportData,
-                  });
-
-                  // Finalize to generate printable report file
-                  const finalized = await technicianService.finalizeInspection(inspectionId);
-                  const reportUrl = finalized?.reportUrl || finalized?.reportURL || finalized?.ReportUrl;
-
-                  addNotification('Inventory report saved successfully.', 'success');
-                  // Don't auto-open report - user stays on dashboard; report is saved and visible in History
-                  if (reportUrl) {
-                    addNotification('Report saved. View it in History or via the report link.', 'info');
-                  }
-
-                  setShowInventoryFormModal(false);
-                  loadData(); // Refresh State of Entry/Exit list and tenant dashboard will show it for the tenant
-                  loadSubmittedInventories(); // Refresh submitted inventories list below
-                } catch (error) {
-                  console.error('Error submitting inventory form:', error);
-                  addNotification(error.message || 'Failed to submit inventory form', 'error');
-                } finally {
-                  setLoading(false);
+              e.preventDefault();
+              try {
+                setLoading(true);
+                const rooms = inventoryFormData.formData?.rooms || {};
+                const roomNames = Object.keys(rooms);
+                if (roomNames.length === 0) {
+                  addNotification('Please select property type and rooms, then fill the checklist.', 'error');
+                  return;
                 }
-              }} className="modal-form">
-                
-                {/* A. General Information */}
+
+                for (const roomName of roomNames) {
+                  const items = rooms[roomName] || {};
+                  for (const item of INSPECTION_ITEMS) {
+                    const it = items[item.key] || {};
+                    if (!it.condition) {
+                      addNotification(`Missing condition: ${roomName} → ${item.label}`, 'error');
+                      return;
+                    }
+                  }
+                }
+
+                const scheduledAt =
+                inventoryFormData.date && inventoryFormData.time ?
+                `${inventoryFormData.date}T${inventoryFormData.time}` :
+                inventoryFormData.date;
+
+                const inspectionType = inventoryFormData.type === 'Entry' ? 'Move-in' : 'Move-out';
+                const reportData = {
+                  appointment: {
+                    property: inventoryFormData.propertyAddress,
+                    tenant: inventoryFormData.tenantName,
+                    scheduledAt,
+                    inspectionType
+                  },
+                  property: {
+                    type: inventoryFormData.propertyType,
+                    numberOfRooms: inventoryFormData.numberOfRooms,
+                    numberOfBathrooms: inventoryFormData.numberOfBathrooms,
+                    numberOfKitchens: inventoryFormData.numberOfKitchens,
+                    hasSwimmingPool: inventoryFormData.hasSwimmingPool,
+                    address: inventoryFormData.propertyAddress
+                  },
+                  rooms: {},
+                  meters: inventoryFormData.formData?.meters || {},
+                  observations: inventoryFormData.formData?.observations || {},
+                  exit: inventoryFormData.type === 'Exit' ? inventoryFormData.formData?.exit || {} : undefined
+                };
+                for (const roomName of roomNames) {
+                  reportData.rooms[roomName] = {};
+                  for (const item of INSPECTION_ITEMS) {
+                    const it = rooms[roomName]?.[item.key] || {};
+                    reportData.rooms[roomName][item.key] = {
+                      label: item.label,
+                      condition: it.condition,
+                      comment: it.comment || '',
+                      photoUrls: []
+                    };
+                  }
+                }
+                const created = await technicianService.createInspection({
+                  property: inventoryFormData.propertyAddress,
+                  type: inspectionType,
+                  inspector: inventoryFormData.technicianName,
+                  tenant: inventoryFormData.tenantName,
+                  scheduledAt,
+                  status: 'Completed',
+                  notes: inventoryFormData.formData?.observations?.technician || '',
+                  reportData,
+                  photos: []
+                });
+
+                const inspectionId = created?.id || created?.ID;
+                if (!inspectionId) {
+                  addNotification('Failed to create inspection record (missing ID).', 'error');
+                  return;
+                }
+                for (const roomName of roomNames) {
+                  for (const item of INSPECTION_ITEMS) {
+                    const it = rooms[roomName]?.[item.key] || {};
+                    const files = it.photos || [];
+                    for (const file of files) {
+                      const uploadRes = await technicianService.uploadInspectionPhoto(inspectionId, file);
+                      const photoUrl = uploadRes?.photoUrl || uploadRes?.photoURL || uploadRes?.PhotoUrl;
+                      if (photoUrl) {
+                        reportData.rooms[roomName][item.key].photoUrls.push(photoUrl);
+                      }
+                    }
+                  }
+                }
+                await technicianService.updateInspection(inspectionId, {
+                  tenant: inventoryFormData.tenantName,
+                  scheduledAt,
+                  status: 'Completed',
+                  reportData
+                });
+                const finalized = await technicianService.finalizeInspection(inspectionId);
+                const reportUrl = finalized?.reportUrl || finalized?.reportURL || finalized?.ReportUrl;
+
+                addNotification('Inventory report saved successfully.', 'success');
+                if (reportUrl) {
+                  addNotification('Report saved. View it in History or via the report link.', 'info');
+                }
+
+                setShowInventoryFormModal(false);
+                loadData();
+                loadSubmittedInventories();
+              } catch (error) {
+                console.error('Error submitting inventory form:', error);
+                addNotification(error.message || 'Failed to submit inventory form', 'error');
+              } finally {
+                setLoading(false);
+              }
+            }} className="modal-form">
                 <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
                   <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>A. General Information</h4>
                   <div className="form-row">
@@ -5131,24 +4925,24 @@ const TechnicianDashboard = () => {
                       <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <input
-                            type="radio"
-                            name="inventoryType"
-                            value="Entry"
-                            checked={inventoryFormData.type === 'Entry'}
-                            onChange={(e) => setInventoryFormData({ ...inventoryFormData, type: e.target.value })}
-                            required
-                          />
+                          type="radio"
+                          name="inventoryType"
+                          value="Entry"
+                          checked={inventoryFormData.type === 'Entry'}
+                          onChange={(e) => setInventoryFormData({ ...inventoryFormData, type: e.target.value })}
+                          required />
+                        
                           Entry
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <input
-                            type="radio"
-                            name="inventoryType"
-                            value="Exit"
-                            checked={inventoryFormData.type === 'Exit'}
-                            onChange={(e) => setInventoryFormData({ ...inventoryFormData, type: e.target.value })}
-                            required
-                          />
+                          type="radio"
+                          name="inventoryType"
+                          value="Exit"
+                          checked={inventoryFormData.type === 'Exit'}
+                          onChange={(e) => setInventoryFormData({ ...inventoryFormData, type: e.target.value })}
+                          required />
+                        
                           Exit
                         </label>
                       </div>
@@ -5159,10 +4953,10 @@ const TechnicianDashboard = () => {
                     <div className="form-group">
                       <label>Type of Property *</label>
                       <select
-                        value={inventoryFormData.propertyType}
-                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, propertyType: e.target.value, numberOfRooms: e.target.value === 'Studio' ? 1 : inventoryFormData.numberOfRooms })}
-                        required
-                      >
+                      value={inventoryFormData.propertyType}
+                      onChange={(e) => setInventoryFormData({ ...inventoryFormData, propertyType: e.target.value, numberOfRooms: e.target.value === 'Studio' ? 1 : inventoryFormData.numberOfRooms })}
+                      required>
+                      
                         <option value="">Select Property Type</option>
                         <option value="Studio">Studio</option>
                         <option value="Apartment">Apartment</option>
@@ -5170,47 +4964,47 @@ const TechnicianDashboard = () => {
                         <option value="Villa">Villa</option>
                       </select>
                     </div>
-                    {inventoryFormData.propertyType && inventoryFormData.propertyType !== 'Studio' && (
-                      <div className="form-group">
+                    {inventoryFormData.propertyType && inventoryFormData.propertyType !== 'Studio' &&
+                  <div className="form-group">
                         <label>Number of Bedrooms *</label>
                         <input
-                          type="number"
-                          min="1"
-                          value={inventoryFormData.numberOfRooms}
-                          onChange={(e) => setInventoryFormData({ ...inventoryFormData, numberOfRooms: parseInt(e.target.value) || 1 })}
-                          required
-                        />
+                      type="number"
+                      min="1"
+                      value={inventoryFormData.numberOfRooms}
+                      onChange={(e) => setInventoryFormData({ ...inventoryFormData, numberOfRooms: parseInt(e.target.value) || 1 })}
+                      required />
+                    
                       </div>
-                    )}
+                  }
                   </div>
 
                   <div className="form-row">
                     <div className="form-group">
                       <label>Number of Bathrooms *</label>
                       <input
-                        type="number"
-                        min="0"
-                        value={inventoryFormData.numberOfBathrooms}
-                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, numberOfBathrooms: parseInt(e.target.value) || 0 })}
-                        required
-                      />
+                      type="number"
+                      min="0"
+                      value={inventoryFormData.numberOfBathrooms}
+                      onChange={(e) => setInventoryFormData({ ...inventoryFormData, numberOfBathrooms: parseInt(e.target.value) || 0 })}
+                      required />
+                    
                     </div>
                     <div className="form-group">
                       <label>Number of Kitchens *</label>
                       <input
-                        type="number"
-                        min="0"
-                        value={inventoryFormData.numberOfKitchens}
-                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, numberOfKitchens: parseInt(e.target.value) || 0 })}
-                        required
-                      />
+                      type="number"
+                      min="0"
+                      value={inventoryFormData.numberOfKitchens}
+                      onChange={(e) => setInventoryFormData({ ...inventoryFormData, numberOfKitchens: parseInt(e.target.value) || 0 })}
+                      required />
+                    
                     </div>
                     <div className="form-group">
                       <label>Swimming Pool</label>
                       <select
-                        value={inventoryFormData.hasSwimmingPool ? 'yes' : 'no'}
-                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, hasSwimmingPool: e.target.value === 'yes' })}
-                      >
+                      value={inventoryFormData.hasSwimmingPool ? 'yes' : 'no'}
+                      onChange={(e) => setInventoryFormData({ ...inventoryFormData, hasSwimmingPool: e.target.value === 'yes' })}>
+                      
                         <option value="no">No</option>
                         <option value="yes">Yes</option>
                       </select>
@@ -5221,60 +5015,60 @@ const TechnicianDashboard = () => {
                     <div className="form-group">
                       <label>Address of the Property *</label>
                       <select
-                        value={inventoryFormData.propertyAddress}
-                        disabled={!inventoryFormData.tenantName}
-                        onChange={(e) =>
-                          setInventoryFormData(prev => {
-                            const selectedAddress = e.target.value;
-                            const selectedProperty = (companyProperties || []).find(
-                              p => (p.Address || p.address) === selectedAddress
-                            );
-                            const bedrooms = selectedProperty?.Bedrooms || selectedProperty?.bedrooms;
-                            const bathrooms = selectedProperty?.Bathrooms || selectedProperty?.bathrooms;
-                            const propTypeRaw =
-                              selectedProperty?.Type ||
-                              selectedProperty?.type ||
-                              selectedProperty?.BuildingType ||
-                              selectedProperty?.buildingType ||
-                              selectedProperty?.PropertyType ||
-                              selectedProperty?.propertyType ||
-                              '';
-                            const typeLower = String(propTypeRaw).toLowerCase();
-                            const inferredType = typeLower.includes('studio')
-                              ? 'Studio'
-                              : typeLower.includes('duplex')
-                                ? 'Duplex'
-                                : typeLower.includes('villa')
-                                  ? 'Villa'
-                                  : typeLower.includes('apartment')
-                                    ? 'Apartment'
-                                    : '';
-                            const matchingTenant = (currentInventoryTenants || []).find(t => {
-                              const property = t.Property || t.property || '';
-                              return property === selectedAddress;
-                            });
-                            const tenantName = matchingTenant ? (matchingTenant.Name || matchingTenant.name || '') : '';
-                            return {
-                              ...prev,
-                              propertyAddress: selectedAddress,
-                              numberOfRooms: bedrooms ? Number(bedrooms) : prev.numberOfRooms,
-                              numberOfBathrooms: bathrooms !== undefined ? Number(bathrooms) : prev.numberOfBathrooms,
-                              propertyType: inferredType || prev.propertyType || (bedrooms ? 'Apartment' : prev.propertyType),
-                              tenantName: tenantName || prev.tenantName,
-                            };
-                          })
-                        }
-                        required
-                      >
+                      value={inventoryFormData.propertyAddress}
+                      disabled={!inventoryFormData.tenantName}
+                      onChange={(e) =>
+                      setInventoryFormData((prev) => {
+                        const selectedAddress = e.target.value;
+                        const selectedProperty = (companyProperties || []).find(
+                          (p) => (p.Address || p.address) === selectedAddress
+                        );
+                        const bedrooms = selectedProperty?.Bedrooms || selectedProperty?.bedrooms;
+                        const bathrooms = selectedProperty?.Bathrooms || selectedProperty?.bathrooms;
+                        const propTypeRaw =
+                        selectedProperty?.Type ||
+                        selectedProperty?.type ||
+                        selectedProperty?.BuildingType ||
+                        selectedProperty?.buildingType ||
+                        selectedProperty?.PropertyType ||
+                        selectedProperty?.propertyType ||
+                        '';
+                        const typeLower = String(propTypeRaw).toLowerCase();
+                        const inferredType = typeLower.includes('studio') ?
+                        'Studio' :
+                        typeLower.includes('duplex') ?
+                        'Duplex' :
+                        typeLower.includes('villa') ?
+                        'Villa' :
+                        typeLower.includes('apartment') ?
+                        'Apartment' :
+                        '';
+                        const matchingTenant = (currentInventoryTenants || []).find((t) => {
+                          const property = t.Property || t.property || '';
+                          return property === selectedAddress;
+                        });
+                        const tenantName = matchingTenant ? matchingTenant.Name || matchingTenant.name || '' : '';
+                        return {
+                          ...prev,
+                          propertyAddress: selectedAddress,
+                          numberOfRooms: bedrooms ? Number(bedrooms) : prev.numberOfRooms,
+                          numberOfBathrooms: bathrooms !== undefined ? Number(bathrooms) : prev.numberOfBathrooms,
+                          propertyType: inferredType || prev.propertyType || (bedrooms ? 'Apartment' : prev.propertyType),
+                          tenantName: tenantName || prev.tenantName
+                        };
+                      })
+                      }
+                      required>
+                      
                         <option value="">Select Property</option>
-                        {inventoryPropertyOptions.map(address => (
-                          <option key={address} value={address}>
+                        {inventoryPropertyOptions.map((address) =>
+                      <option key={address} value={address}>
                             {address}
                           </option>
-                        ))}
-                        {inventoryPropertyOptions.length === 0 && (
-                          <option value="" disabled>No properties available</option>
-                        )}
+                      )}
+                        {inventoryPropertyOptions.length === 0 &&
+                      <option value="" disabled>No properties available</option>
+                      }
                       </select>
                     </div>
                     <div className="form-group" style={{ position: 'relative' }}>
@@ -5283,66 +5077,66 @@ const TechnicianDashboard = () => {
                         Use the tenant&apos;s name as in their account so they can see this report in their dashboard (State of Entry/Exit).
                       </p>
                       <select
-                        value={inventoryFormData.tenantName}
-                        onChange={(e) => {
-                          const selectedName = e.target.value;
-                          const selectedTenant = (tenantOptions || []).find(t => {
-                            const name = t.Name || t.name || t.Email || t.email || '';
-                            return name === selectedName;
-                          });
-                          const selectedPropertyAddress =
-                            selectedTenant?.Property ||
-                            selectedTenant?.property ||
-                            selectedTenant?.Address ||
-                            selectedTenant?.address ||
-                            '';
-                          const selectedProperty = (companyProperties || []).find(
-                            p => (p.Address || p.address) === selectedPropertyAddress
-                          );
-                          const bedrooms = selectedProperty?.Bedrooms || selectedProperty?.bedrooms;
-                          const bathrooms = selectedProperty?.Bathrooms || selectedProperty?.bathrooms;
-                          const propTypeRaw =
-                            selectedProperty?.Type ||
-                            selectedProperty?.type ||
-                            selectedProperty?.BuildingType ||
-                            selectedProperty?.buildingType ||
-                            selectedProperty?.PropertyType ||
-                            selectedProperty?.propertyType ||
-                            '';
-                          const typeLower = String(propTypeRaw).toLowerCase();
-                          const inferredType = typeLower.includes('studio')
-                            ? 'Studio'
-                            : typeLower.includes('duplex')
-                              ? 'Duplex'
-                              : typeLower.includes('villa')
-                                ? 'Villa'
-                                : typeLower.includes('apartment')
-                                  ? 'Apartment'
-                                  : '';
-                          setInventoryFormData(prev => ({
-                            ...prev,
-                            tenantName: selectedName,
-                            propertyAddress: selectedPropertyAddress || prev.propertyAddress,
-                            numberOfRooms: bedrooms ? Number(bedrooms) : prev.numberOfRooms,
-                            numberOfBathrooms: bathrooms !== undefined ? Number(bathrooms) : prev.numberOfBathrooms,
-                            propertyType: inferredType || prev.propertyType || (bedrooms ? 'Apartment' : prev.propertyType),
-                          }));
-                        }}
-                        required
-                      >
+                      value={inventoryFormData.tenantName}
+                      onChange={(e) => {
+                        const selectedName = e.target.value;
+                        const selectedTenant = (tenantOptions || []).find((t) => {
+                          const name = t.Name || t.name || t.Email || t.email || '';
+                          return name === selectedName;
+                        });
+                        const selectedPropertyAddress =
+                        selectedTenant?.Property ||
+                        selectedTenant?.property ||
+                        selectedTenant?.Address ||
+                        selectedTenant?.address ||
+                        '';
+                        const selectedProperty = (companyProperties || []).find(
+                          (p) => (p.Address || p.address) === selectedPropertyAddress
+                        );
+                        const bedrooms = selectedProperty?.Bedrooms || selectedProperty?.bedrooms;
+                        const bathrooms = selectedProperty?.Bathrooms || selectedProperty?.bathrooms;
+                        const propTypeRaw =
+                        selectedProperty?.Type ||
+                        selectedProperty?.type ||
+                        selectedProperty?.BuildingType ||
+                        selectedProperty?.buildingType ||
+                        selectedProperty?.PropertyType ||
+                        selectedProperty?.propertyType ||
+                        '';
+                        const typeLower = String(propTypeRaw).toLowerCase();
+                        const inferredType = typeLower.includes('studio') ?
+                        'Studio' :
+                        typeLower.includes('duplex') ?
+                        'Duplex' :
+                        typeLower.includes('villa') ?
+                        'Villa' :
+                        typeLower.includes('apartment') ?
+                        'Apartment' :
+                        '';
+                        setInventoryFormData((prev) => ({
+                          ...prev,
+                          tenantName: selectedName,
+                          propertyAddress: selectedPropertyAddress || prev.propertyAddress,
+                          numberOfRooms: bedrooms ? Number(bedrooms) : prev.numberOfRooms,
+                          numberOfBathrooms: bathrooms !== undefined ? Number(bathrooms) : prev.numberOfBathrooms,
+                          propertyType: inferredType || prev.propertyType || (bedrooms ? 'Apartment' : prev.propertyType)
+                        }));
+                      }}
+                      required>
+                      
                         <option value="">Select tenant</option>
                         {(tenantOptions || []).map((t, idx) => {
-                          const name = t.Name || t.name || t.Email || t.email || '';
-                          const property = t.Property || t.property || t.Address || t.address || '';
-                          return (
-                            <option key={`${name}-${idx}`} value={name}>
+                        const name = t.Name || t.name || t.Email || t.email || '';
+                        const property = t.Property || t.property || t.Address || t.address || '';
+                        return (
+                          <option key={`${name}-${idx}`} value={name}>
                               {name} {property ? `- ${property}` : ''}
-                            </option>
-                          );
-                        })}
-                        {(!tenantOptions || tenantOptions.length === 0) && (
-                          <option value="" disabled>No tenants available</option>
-                        )}
+                            </option>);
+
+                      })}
+                        {(!tenantOptions || tenantOptions.length === 0) &&
+                      <option value="" disabled>No tenants available</option>
+                      }
                       </select>
                     </div>
                   </div>
@@ -5351,36 +5145,34 @@ const TechnicianDashboard = () => {
                     <div className="form-group">
                       <label>Date *</label>
                       <input
-                        type="date"
-                        value={inventoryFormData.date}
-                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, date: e.target.value })}
-                        required
-                      />
+                      type="date"
+                      value={inventoryFormData.date}
+                      onChange={(e) => setInventoryFormData({ ...inventoryFormData, date: e.target.value })}
+                      required />
+                    
                     </div>
                     <div className="form-group">
                       <label>Time *</label>
                       <input
-                        type="time"
-                        value={inventoryFormData.time || ''}
-                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, time: e.target.value })}
-                        required
-                      />
+                      type="time"
+                      value={inventoryFormData.time || ''}
+                      onChange={(e) => setInventoryFormData({ ...inventoryFormData, time: e.target.value })}
+                      required />
+                    
                     </div>
                     <div className="form-group">
                       <label>Name of the Technical Manager *</label>
                       <input
-                        type="text"
-                        value={inventoryFormData.technicianName}
-                        onChange={(e) => setInventoryFormData({ ...inventoryFormData, technicianName: e.target.value })}
-                        required
-                      />
+                      type="text"
+                      value={inventoryFormData.technicianName}
+                      onChange={(e) => setInventoryFormData({ ...inventoryFormData, technicianName: e.target.value })}
+                      required />
+                    
                     </div>
                   </div>
                 </div>
-
-                {/* Dynamic Sections Based on Property Type */}
-                {inventoryFormData.propertyType && (
-                  <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
+                {inventoryFormData.propertyType &&
+              <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
                     <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>
                       B. STATE OF THE PREMISES – {inventoryFormData.propertyType.toUpperCase()}
                     </h4>
@@ -5389,10 +5181,8 @@ const TechnicianDashboard = () => {
                       {inventoryFormData.propertyType === 'Apartment' && 'Each room is automatically generated according to the number of bedrooms.'}
                       {(inventoryFormData.propertyType === 'Duplex' || inventoryFormData.propertyType === 'Villa') && 'Multi-level management and outdoor spaces.'}
                     </p>
-                    
-                    {/* Room-by-room inspection checklist */}
-                    {getRoomList(inventoryFormData.propertyType, inventoryFormData.numberOfRooms).map((roomName) => (
-                      <div key={roomName} style={{ marginBottom: '16px', padding: '12px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                    {getRoomList(inventoryFormData.propertyType, inventoryFormData.numberOfRooms).map((roomName) =>
+                <div key={roomName} style={{ marginBottom: '16px', padding: '12px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
                         <h5 style={{ margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 600 }}>{roomName}</h5>
                         <div className="sa-table-wrapper" style={{ marginBottom: 0 }}>
                           <table className="sa-table">
@@ -5406,35 +5196,35 @@ const TechnicianDashboard = () => {
                             </thead>
                             <tbody>
                               {INSPECTION_ITEMS.map((item) => {
-                                const itemState =
-                                  inventoryFormData.formData?.rooms?.[roomName]?.[item.key] || { condition: '', comment: '', photos: [] };
-                                return (
-                                  <tr key={`${roomName}-${item.key}`}>
+                          const itemState =
+                          inventoryFormData.formData?.rooms?.[roomName]?.[item.key] || { condition: '', comment: '', photos: [] };
+                          return (
+                            <tr key={`${roomName}-${item.key}`}>
                                     <td>{item.label}</td>
                                     <td>
                                       <select
-                                        value={itemState.condition}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          setInventoryFormData(prev => ({
-                                            ...prev,
-                                            formData: {
-                                              ...prev.formData,
-                                              rooms: {
-                                                ...prev.formData.rooms,
-                                                [roomName]: {
-                                                  ...(prev.formData.rooms?.[roomName] || {}),
-                                                  [item.key]: {
-                                                    ...(prev.formData.rooms?.[roomName]?.[item.key] || {}),
-                                                    condition: value,
-                                                  },
-                                                },
-                                              },
-                                            },
-                                          }));
-                                        }}
-                                        required
-                                      >
+                                  value={itemState.condition}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setInventoryFormData((prev) => ({
+                                      ...prev,
+                                      formData: {
+                                        ...prev.formData,
+                                        rooms: {
+                                          ...prev.formData.rooms,
+                                          [roomName]: {
+                                            ...(prev.formData.rooms?.[roomName] || {}),
+                                            [item.key]: {
+                                              ...(prev.formData.rooms?.[roomName]?.[item.key] || {}),
+                                              condition: value
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }));
+                                  }}
+                                  required>
+                                  
                                         <option value="">Select</option>
                                         <option value="good">Good condition</option>
                                         <option value="poor">Poor condition</option>
@@ -5443,219 +5233,213 @@ const TechnicianDashboard = () => {
                                     </td>
                                     <td>
                                       <input
-                                        type="text"
-                                        value={itemState.comment}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          setInventoryFormData(prev => ({
-                                            ...prev,
-                                            formData: {
-                                              ...prev.formData,
-                                              rooms: {
-                                                ...prev.formData.rooms,
-                                                [roomName]: {
-                                                  ...(prev.formData.rooms?.[roomName] || {}),
-                                                  [item.key]: {
-                                                    ...(prev.formData.rooms?.[roomName]?.[item.key] || {}),
-                                                    comment: value,
-                                                  },
-                                                },
-                                              },
-                                            },
-                                          }));
-                                        }}
-                                        placeholder="e.g., damaged handle, peeling paint..."
-                                      />
+                                  type="text"
+                                  value={itemState.comment}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setInventoryFormData((prev) => ({
+                                      ...prev,
+                                      formData: {
+                                        ...prev.formData,
+                                        rooms: {
+                                          ...prev.formData.rooms,
+                                          [roomName]: {
+                                            ...(prev.formData.rooms?.[roomName] || {}),
+                                            [item.key]: {
+                                              ...(prev.formData.rooms?.[roomName]?.[item.key] || {}),
+                                              comment: value
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }));
+                                  }}
+                                  placeholder="e.g., damaged handle, peeling paint..." />
+                                
                                     </td>
                                     <td>
                                       <input
-                                        type="file"
-                                        multiple
-                                        accept="image/*"
-                                        onChange={(e) => {
-                                          const files = Array.from(e.target.files || []);
-                                          setInventoryFormData(prev => ({
-                                            ...prev,
-                                            formData: {
-                                              ...prev.formData,
-                                              rooms: {
-                                                ...prev.formData.rooms,
-                                                [roomName]: {
-                                                  ...(prev.formData.rooms?.[roomName] || {}),
-                                                  [item.key]: {
-                                                    ...(prev.formData.rooms?.[roomName]?.[item.key] || {}),
-                                                    photos: files,
-                                                  },
-                                                },
-                                              },
-                                            },
-                                          }));
-                                        }}
-                                      />
+                                  type="file"
+                                  multiple
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const files = Array.from(e.target.files || []);
+                                    setInventoryFormData((prev) => ({
+                                      ...prev,
+                                      formData: {
+                                        ...prev.formData,
+                                        rooms: {
+                                          ...prev.formData.rooms,
+                                          [roomName]: {
+                                            ...(prev.formData.rooms?.[roomName] || {}),
+                                            [item.key]: {
+                                              ...(prev.formData.rooms?.[roomName]?.[item.key] || {}),
+                                              photos: files
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }));
+                                  }} />
+                                
                                       <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
-                                        {Array.isArray(itemState.photos) && itemState.photos.length > 0
-                                          ? `${itemState.photos.length} selected`
-                                          : 'No photos selected'}
+                                        {Array.isArray(itemState.photos) && itemState.photos.length > 0 ?
+                                  `${itemState.photos.length} selected` :
+                                  'No photos selected'}
                                       </div>
                                     </td>
-                                  </tr>
-                                );
-                              })}
+                                  </tr>);
+
+                        })}
                             </tbody>
                           </table>
                         </div>
                       </div>
-                    ))}
-                  </div>
                 )}
-
-                {/* E. Meters & Equipment */}
+                  </div>
+              }
                 <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
                   <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>E. Meters & Equipment</h4>
                   <div className="form-row">
                     <div className="form-group">
                       <label>Index Electricity Meter</label>
                       <input
-                        type="text"
-                        placeholder="Enter meter reading"
-                        value={inventoryFormData.formData?.meters?.electricity || ''}
-                        onChange={(e) =>
-                          setInventoryFormData(prev => ({
-                            ...prev,
-                            formData: { ...prev.formData, meters: { ...prev.formData.meters, electricity: e.target.value } },
-                          }))
-                        }
-                      />
+                      type="text"
+                      placeholder="Enter meter reading"
+                      value={inventoryFormData.formData?.meters?.electricity || ''}
+                      onChange={(e) =>
+                      setInventoryFormData((prev) => ({
+                        ...prev,
+                        formData: { ...prev.formData, meters: { ...prev.formData.meters, electricity: e.target.value } }
+                      }))
+                      } />
+                    
                     </div>
                     <div className="form-group">
                       <label>Index Water Meter</label>
                       <input
-                        type="text"
-                        placeholder="Enter meter reading"
-                        value={inventoryFormData.formData?.meters?.water || ''}
-                        onChange={(e) =>
-                          setInventoryFormData(prev => ({
-                            ...prev,
-                            formData: { ...prev.formData, meters: { ...prev.formData.meters, water: e.target.value } },
-                          }))
-                        }
-                      />
+                      type="text"
+                      placeholder="Enter meter reading"
+                      value={inventoryFormData.formData?.meters?.water || ''}
+                      onChange={(e) =>
+                      setInventoryFormData((prev) => ({
+                        ...prev,
+                        formData: { ...prev.formData, meters: { ...prev.formData.meters, water: e.target.value } }
+                      }))
+                      } />
+                    
                     </div>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
                       <label>Gas (if applicable)</label>
                       <input
-                        type="text"
-                        placeholder="Enter gas meter reading"
-                        value={inventoryFormData.formData?.meters?.gas || ''}
-                        onChange={(e) =>
-                          setInventoryFormData(prev => ({
-                            ...prev,
-                            formData: { ...prev.formData, meters: { ...prev.formData.meters, gas: e.target.value } },
-                          }))
-                        }
-                      />
+                      type="text"
+                      placeholder="Enter gas meter reading"
+                      value={inventoryFormData.formData?.meters?.gas || ''}
+                      onChange={(e) =>
+                      setInventoryFormData((prev) => ({
+                        ...prev,
+                        formData: { ...prev.formData, meters: { ...prev.formData.meters, gas: e.target.value } }
+                      }))
+                      } />
+                    
                     </div>
                     <div className="form-group">
                       <label>Number of Keys Handed In</label>
                       <input
-                        type="number"
-                        min="0"
-                        placeholder="Enter number of keys"
-                        value={inventoryFormData.formData?.meters?.keys || ''}
-                        onChange={(e) =>
-                          setInventoryFormData(prev => ({
-                            ...prev,
-                            formData: { ...prev.formData, meters: { ...prev.formData.meters, keys: e.target.value } },
-                          }))
-                        }
-                      />
+                      type="number"
+                      min="0"
+                      placeholder="Enter number of keys"
+                      value={inventoryFormData.formData?.meters?.keys || ''}
+                      onChange={(e) =>
+                      setInventoryFormData((prev) => ({
+                        ...prev,
+                        formData: { ...prev.formData, meters: { ...prev.formData.meters, keys: e.target.value } }
+                      }))
+                      } />
+                    
                     </div>
                   </div>
                 </div>
-
-                {/* F. Observations */}
                 <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
                   <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>F. Observations</h4>
                   <div className="form-group">
                     <label>Comments from the Technical Manager</label>
                     <textarea
-                      rows="3"
-                      placeholder="Enter comments..."
-                      value={inventoryFormData.formData?.observations?.technician || ''}
-                      onChange={(e) =>
-                        setInventoryFormData(prev => ({
-                          ...prev,
-                          formData: { ...prev.formData, observations: { ...prev.formData.observations, technician: e.target.value } },
-                        }))
-                      }
-                    />
+                    rows="3"
+                    placeholder="Enter comments..."
+                    value={inventoryFormData.formData?.observations?.technician || ''}
+                    onChange={(e) =>
+                    setInventoryFormData((prev) => ({
+                      ...prev,
+                      formData: { ...prev.formData, observations: { ...prev.formData.observations, technician: e.target.value } }
+                    }))
+                    } />
+                  
                   </div>
                   <div className="form-group">
                     <label>Observations of the Tenant</label>
                     <textarea
-                      rows="3"
-                      placeholder="Enter tenant observations..."
-                      value={inventoryFormData.formData?.observations?.tenant || ''}
-                      onChange={(e) =>
-                        setInventoryFormData(prev => ({
-                          ...prev,
-                          formData: { ...prev.formData, observations: { ...prev.formData.observations, tenant: e.target.value } },
-                        }))
-                      }
-                    />
+                    rows="3"
+                    placeholder="Enter tenant observations..."
+                    value={inventoryFormData.formData?.observations?.tenant || ''}
+                    onChange={(e) =>
+                    setInventoryFormData((prev) => ({
+                      ...prev,
+                      formData: { ...prev.formData, observations: { ...prev.formData.observations, tenant: e.target.value } }
+                    }))
+                    } />
+                  
                   </div>
                 </div>
-
-                {/* G. Exit - Estimation of Degradations (only for Exit) */}
-                {inventoryFormData.type === 'Exit' && (
-                  <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
+                {inventoryFormData.type === 'Exit' &&
+              <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
                     <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>G. OUTPUT – ESTIMATION OF DEGRADATIONS</h4>
                     <div className="form-group">
                       <label>Observed Degradations</label>
                       <textarea
-                        rows="3"
-                        placeholder="Describe observed degradations..."
-                        value={inventoryFormData.formData?.exit?.degradations || ''}
-                        onChange={(e) =>
-                          setInventoryFormData(prev => ({
-                            ...prev,
-                            formData: { ...prev.formData, exit: { ...prev.formData.exit, degradations: e.target.value } },
-                          }))
-                        }
-                      />
+                    rows="3"
+                    placeholder="Describe observed degradations..."
+                    value={inventoryFormData.formData?.exit?.degradations || ''}
+                    onChange={(e) =>
+                    setInventoryFormData((prev) => ({
+                      ...prev,
+                      formData: { ...prev.formData, exit: { ...prev.formData.exit, degradations: e.target.value } }
+                    }))
+                    } />
+                  
                     </div>
                     <div className="form-row">
                       <div className="form-group">
                         <label>Work to be Carried Out</label>
                         <textarea
-                          rows="2"
-                          placeholder="Describe work needed..."
-                          value={inventoryFormData.formData?.exit?.workToBeCarriedOut || ''}
-                          onChange={(e) =>
-                            setInventoryFormData(prev => ({
-                              ...prev,
-                              formData: { ...prev.formData, exit: { ...prev.formData.exit, workToBeCarriedOut: e.target.value } },
-                            }))
-                          }
-                        />
+                      rows="2"
+                      placeholder="Describe work needed..."
+                      value={inventoryFormData.formData?.exit?.workToBeCarriedOut || ''}
+                      onChange={(e) =>
+                      setInventoryFormData((prev) => ({
+                        ...prev,
+                        formData: { ...prev.formData, exit: { ...prev.formData.exit, workToBeCarriedOut: e.target.value } }
+                      }))
+                      } />
+                    
                       </div>
                       <div className="form-group">
                         <label>Estimated Cost</label>
                         <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          value={inventoryFormData.formData?.exit?.estimatedCost || 0}
-                          onChange={(e) =>
-                            setInventoryFormData(prev => ({
-                              ...prev,
-                              formData: { ...prev.formData, exit: { ...prev.formData.exit, estimatedCost: parseFloat(e.target.value) || 0 } },
-                            }))
-                          }
-                        />
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={inventoryFormData.formData?.exit?.estimatedCost || 0}
+                      onChange={(e) =>
+                      setInventoryFormData((prev) => ({
+                        ...prev,
+                        formData: { ...prev.formData, exit: { ...prev.formData.exit, estimatedCost: parseFloat(e.target.value) || 0 } }
+                      }))
+                      } />
+                    
                       </div>
                     </div>
                     <div className="form-group">
@@ -5663,55 +5447,53 @@ const TechnicianDashboard = () => {
                       <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <input
-                            type="radio"
-                            name="bailImpact"
-                            value="None"
-                            checked={(inventoryFormData.formData?.exit?.bailImpact || 'None') === 'None'}
-                            onChange={(e) =>
-                              setInventoryFormData(prev => ({
-                                ...prev,
-                                formData: { ...prev.formData, exit: { ...prev.formData.exit, bailImpact: e.target.value } },
-                              }))
-                            }
-                          />
+                        type="radio"
+                        name="bailImpact"
+                        value="None"
+                        checked={(inventoryFormData.formData?.exit?.bailImpact || 'None') === 'None'}
+                        onChange={(e) =>
+                        setInventoryFormData((prev) => ({
+                          ...prev,
+                          formData: { ...prev.formData, exit: { ...prev.formData.exit, bailImpact: e.target.value } }
+                        }))
+                        } />
+                      
                           None
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <input
-                            type="radio"
-                            name="bailImpact"
-                            value="Partial"
-                            checked={(inventoryFormData.formData?.exit?.bailImpact || 'None') === 'Partial'}
-                            onChange={(e) =>
-                              setInventoryFormData(prev => ({
-                                ...prev,
-                                formData: { ...prev.formData, exit: { ...prev.formData.exit, bailImpact: e.target.value } },
-                              }))
-                            }
-                          />
+                        type="radio"
+                        name="bailImpact"
+                        value="Partial"
+                        checked={(inventoryFormData.formData?.exit?.bailImpact || 'None') === 'Partial'}
+                        onChange={(e) =>
+                        setInventoryFormData((prev) => ({
+                          ...prev,
+                          formData: { ...prev.formData, exit: { ...prev.formData.exit, bailImpact: e.target.value } }
+                        }))
+                        } />
+                      
                           Partial
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <input
-                            type="radio"
-                            name="bailImpact"
-                            value="Total"
-                            checked={(inventoryFormData.formData?.exit?.bailImpact || 'None') === 'Total'}
-                            onChange={(e) =>
-                              setInventoryFormData(prev => ({
-                                ...prev,
-                                formData: { ...prev.formData, exit: { ...prev.formData.exit, bailImpact: e.target.value } },
-                              }))
-                            }
-                          />
+                        type="radio"
+                        name="bailImpact"
+                        value="Total"
+                        checked={(inventoryFormData.formData?.exit?.bailImpact || 'None') === 'Total'}
+                        onChange={(e) =>
+                        setInventoryFormData((prev) => ({
+                          ...prev,
+                          formData: { ...prev.formData, exit: { ...prev.formData.exit, bailImpact: e.target.value } }
+                        }))
+                        } />
+                      
                           Total
                         </label>
                       </div>
                     </div>
                   </div>
-                )}
-
-                {/* H. Digital Signature */}
+              }
                 <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
                   <h4 style={{ marginBottom: '16px', fontSize: '1.1rem', fontWeight: '600' }}>H. DIGITAL SIGNATURE (MANDATORY)</h4>
                   <div className="form-group">
@@ -5732,18 +5514,18 @@ const TechnicianDashboard = () => {
                 </div>
 
                 <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="action-button secondary" 
-                    onClick={() => setShowInventoryFormModal(false)}
-                  >
+                  <button
+                  type="button"
+                  className="action-button secondary"
+                  onClick={() => setShowInventoryFormModal(false)}>
+                  
                     Cancel
                   </button>
-                  <button 
-                    type="submit" 
-                    className="action-button primary" 
-                    disabled={loading}
-                  >
+                  <button
+                  type="submit"
+                  className="action-button primary"
+                  disabled={loading}>
+                  
                     {loading ? 'Saving...' : 'Finalize and Generate PDF'}
                   </button>
                 </div>
@@ -5751,9 +5533,9 @@ const TechnicianDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-    </>
-  );
+      }
+    </>);
+
 };
 
 export default TechnicianDashboard;

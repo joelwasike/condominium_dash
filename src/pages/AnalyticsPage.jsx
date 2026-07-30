@@ -9,8 +9,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
-} from 'recharts';
+  ResponsiveContainer } from
+'recharts';
 import {
   TrendingUp,
   TrendingDown,
@@ -21,8 +21,8 @@ import {
   BarChart3,
   Percent,
   ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react';
+  ArrowDownRight } from
+'lucide-react';
 
 const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], loading }) => {
   const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
@@ -32,11 +32,9 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
 
   const fmt = (v) => (v != null ? Number(v).toLocaleString() : '0') + ' XOF';
   const pct = (v) => (v != null ? Number(v).toFixed(1) : '0.0') + '%';
-
-  // Yearly chart data
   const yearlyChartData = useMemo(() => {
     if (!yearlyComparison?.yearlyData || !yearlyComparison?.sortedYears) return [];
-    return yearlyComparison.sortedYears.map(year => {
+    return yearlyComparison.sortedYears.map((year) => {
       const d = yearlyComparison.yearlyData[year] || {};
       return {
         year: String(year),
@@ -52,16 +50,16 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
       <div style={{ padding: '60px 40px', textAlign: 'center' }}>
         <div style={{ display: 'inline-block', width: 40, height: 40, border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
         <p style={{ marginTop: 16, color: '#64748b', fontSize: '0.95rem' }}>Loading analytics data...</p>
-      </div>
-    );
+      </div>);
+
   }
 
   if (!indicators) {
     return (
       <div style={{ padding: '60px 40px', textAlign: 'center' }}>
         <p style={{ color: '#64748b', fontSize: '0.95rem' }}>No analytics data available. Please ensure you have data in the system.</p>
-      </div>
-    );
+      </div>);
+
   }
 
   const summary = yearlyComparison?.summary || {};
@@ -74,77 +72,68 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
   const financial = indicators.financialHealth || {};
   const risks = indicators.risksAlerts || {};
   const decisions = indicators.decisionMaking || {};
-
-  // Latest year data for net margin
   const latestYear = yearlyComparison?.sortedYears?.[yearlyComparison.sortedYears.length - 1];
   const latestYearData = latestYear ? yearlyComparison?.yearlyData?.[latestYear] : null;
 
   const kpiCards = [
-    {
-      label: 'Most Profitable Year',
-      value: summary.mostProfitableYear || 'N/A',
-      icon: Award,
-      accent: '#f59e0b',
-      bg: '#fffbeb'
-    },
-    {
-      label: 'Global Trend',
-      value: summary.globalTrend ? summary.globalTrend.charAt(0).toUpperCase() + summary.globalTrend.slice(1) : 'Stable',
-      icon: summary.globalTrend === 'growth' ? TrendingUp : summary.globalTrend === 'regression' ? TrendingDown : Activity,
-      accent: summary.globalTrend === 'growth' ? '#10b981' : summary.globalTrend === 'regression' ? '#ef4444' : '#f59e0b',
-      bg: summary.globalTrend === 'growth' ? '#ecfdf5' : summary.globalTrend === 'regression' ? '#fef2f2' : '#fffbeb'
-    },
-    {
-      label: 'Net Margin',
-      value: latestYearData ? pct(latestYearData.netMargin) : 'N/A',
-      icon: Percent,
-      accent: '#8b5cf6',
-      bg: '#f5f3ff'
-    },
-    {
-      label: 'Collection Rate',
-      value: paymentPerf.collectionRate != null ? pct(paymentPerf.collectionRate) : 'N/A',
-      icon: DollarSign,
-      accent: '#3b82f6',
-      bg: '#eff6ff'
-    },
-    {
-      label: 'Occupancy Rate',
-      value: vacancy.currentOccupancyRate != null ? pct(vacancy.currentOccupancyRate) : 'N/A',
-      icon: Home,
-      accent: '#06b6d4',
-      bg: '#ecfeff'
-    }
-  ];
+  {
+    label: 'Most Profitable Year',
+    value: summary.mostProfitableYear || 'N/A',
+    icon: Award,
+    accent: '#f59e0b',
+    bg: '#fffbeb'
+  },
+  {
+    label: 'Global Trend',
+    value: summary.globalTrend ? summary.globalTrend.charAt(0).toUpperCase() + summary.globalTrend.slice(1) : 'Stable',
+    icon: summary.globalTrend === 'growth' ? TrendingUp : summary.globalTrend === 'regression' ? TrendingDown : Activity,
+    accent: summary.globalTrend === 'growth' ? '#10b981' : summary.globalTrend === 'regression' ? '#ef4444' : '#f59e0b',
+    bg: summary.globalTrend === 'growth' ? '#ecfdf5' : summary.globalTrend === 'regression' ? '#fef2f2' : '#fffbeb'
+  },
+  {
+    label: 'Net Margin',
+    value: latestYearData ? pct(latestYearData.netMargin) : 'N/A',
+    icon: Percent,
+    accent: '#8b5cf6',
+    bg: '#f5f3ff'
+  },
+  {
+    label: 'Collection Rate',
+    value: paymentPerf.collectionRate != null ? pct(paymentPerf.collectionRate) : 'N/A',
+    icon: DollarSign,
+    accent: '#3b82f6',
+    bg: '#eff6ff'
+  },
+  {
+    label: 'Occupancy Rate',
+    value: vacancy.currentOccupancyRate != null ? pct(vacancy.currentOccupancyRate) : 'N/A',
+    icon: Home,
+    accent: '#06b6d4',
+    bg: '#ecfeff'
+  }];
 
-  // Financial indicators
   const financialIndicators = [
-    { label: 'Payment Collection Rate', value: paymentPerf.collectionRate != null ? pct(paymentPerf.collectionRate) : 'N/A', good: paymentPerf.collectionRate > 80 },
-    { label: 'Average Revenue per Property', value: financial.monthlyRevenue && activity.totalAssetsManaged > 0 ? fmt(financial.monthlyRevenue / activity.totalAssetsManaged) : 'N/A', good: true },
-    { label: 'Commission Rate', value: profitability.commissionRate != null ? pct(profitability.commissionRate) : 'N/A', good: true },
-    { label: 'Expense Ratio', value: expensesCtrl.expenseRatio != null ? pct(expensesCtrl.expenseRatio) : (expensesCtrl.totalExpenses && financial.monthlyRevenue > 0 ? pct((expensesCtrl.totalExpenses / financial.monthlyRevenue) * 100) : 'N/A'), good: false }
-  ];
+  { label: 'Payment Collection Rate', value: paymentPerf.collectionRate != null ? pct(paymentPerf.collectionRate) : 'N/A', good: paymentPerf.collectionRate > 80 },
+  { label: 'Average Revenue per Property', value: financial.monthlyRevenue && activity.totalAssetsManaged > 0 ? fmt(financial.monthlyRevenue / activity.totalAssetsManaged) : 'N/A', good: true },
+  { label: 'Commission Rate', value: profitability.commissionRate != null ? pct(profitability.commissionRate) : 'N/A', good: true },
+  { label: 'Expense Ratio', value: expensesCtrl.expenseRatio != null ? pct(expensesCtrl.expenseRatio) : expensesCtrl.totalExpenses && financial.monthlyRevenue > 0 ? pct(expensesCtrl.totalExpenses / financial.monthlyRevenue * 100) : 'N/A', good: false }];
 
-  // Operational indicators
   const operationalIndicators = [
-    { label: 'Occupancy Rate', value: vacancy.currentOccupancyRate != null ? pct(vacancy.currentOccupancyRate) : 'N/A', good: vacancy.currentOccupancyRate > 80 },
-    { label: 'Avg Vacancy Duration', value: vacancy.averageVacancyDuration != null ? `${vacancy.averageVacancyDuration} days` : 'N/A', good: false },
-    { label: 'Maintenance Cost / Property', value: costsMaint.maintenanceCostPerProperty != null ? fmt(costsMaint.maintenanceCostPerProperty) : 'N/A', good: true },
-    { label: 'Active Properties', value: activity.totalAssetsManaged != null ? String(activity.totalAssetsManaged) : 'N/A', good: true }
-  ];
+  { label: 'Occupancy Rate', value: vacancy.currentOccupancyRate != null ? pct(vacancy.currentOccupancyRate) : 'N/A', good: vacancy.currentOccupancyRate > 80 },
+  { label: 'Avg Vacancy Duration', value: vacancy.averageVacancyDuration != null ? `${vacancy.averageVacancyDuration} days` : 'N/A', good: false },
+  { label: 'Maintenance Cost / Property', value: costsMaint.maintenanceCostPerProperty != null ? fmt(costsMaint.maintenanceCostPerProperty) : 'N/A', good: true },
+  { label: 'Active Properties', value: activity.totalAssetsManaged != null ? String(activity.totalAssetsManaged) : 'N/A', good: true }];
+
 
   const thStyle = { padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' };
   const tdStyle = { padding: '12px 16px', fontSize: '0.875rem', color: '#334155' };
 
   return (
     <div style={{ padding: '0', maxWidth: '100%' }}>
-      {/* Page Header */}
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ margin: '0 0 6px', fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>Analytics Dashboard</h2>
         <p style={{ margin: 0, fontSize: '0.9rem', color: '#94a3b8' }}>Comprehensive financial and operational analytics</p>
       </div>
-
-      {/* KPI Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 28 }}>
         {kpiCards.map((kpi, i) => {
           const Icon = kpi.icon;
@@ -157,14 +146,12 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
                 <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 500 }}>{kpi.label}</span>
               </div>
               <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#1e293b' }}>{kpi.value}</span>
-            </div>
-          );
+            </div>);
+
         })}
       </div>
-
-      {/* Revenue Chart */}
-      {yearlyChartData.length > 0 && (
-        <div style={{ ...card, marginBottom: 28 }}>
+      {yearlyChartData.length > 0 &&
+      <div style={{ ...card, marginBottom: 28 }}>
           <h3 style={sectionTitle}>Revenue Overview</h3>
           <p style={sectionSub}>Yearly revenue, expenses, and net income trends</p>
           <ResponsiveContainer width="100%" height={250}>
@@ -194,11 +181,9 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      )}
-
-      {/* Monthly Performance */}
-      {monthlyComparison && monthlyComparison.length > 0 && (
-        <div style={{ ...card, marginBottom: 28 }}>
+      }
+      {monthlyComparison && monthlyComparison.length > 0 &&
+      <div style={{ ...card, marginBottom: 28 }}>
           <h3 style={sectionTitle}>Monthly Performance</h3>
           <p style={sectionSub}>Month-over-month revenue, expenses, commissions, and net profit</p>
           <ResponsiveContainer width="100%" height={250}>
@@ -214,8 +199,6 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
               <Bar dataKey="netProfit" name="Net Profit" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-
-          {/* Monthly table */}
           <div style={{ marginTop: 20, overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -228,24 +211,21 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
                 </tr>
               </thead>
               <tbody>
-                {monthlyComparison.map((row, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                {monthlyComparison.map((row, idx) =>
+              <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
                     <td style={tdStyle}>{row.month || row.monthKey || '--'}</td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(row.revenue || 0)}</td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(row.expenses || 0)}</td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(row.commissions || 0)}</td>
                     <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600, color: (row.netProfit || 0) >= 0 ? '#10b981' : '#ef4444' }}>{fmt(row.netProfit || 0)}</td>
                   </tr>
-                ))}
+              )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
-
-      {/* Key Indicators Grid */}
+      }
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28 }}>
-        {/* Financial Indicators */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <DollarSign size={18} color="#3b82f6" />
@@ -253,23 +233,21 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
           </div>
           <p style={sectionSub}>Key financial performance metrics</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {financialIndicators.map((ind, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: i < financialIndicators.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+            {financialIndicators.map((ind, i) =>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: i < financialIndicators.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                 <span style={{ fontSize: '0.875rem', color: '#475569' }}>{ind.label}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1e293b' }}>{ind.value}</span>
                   {ind.value !== 'N/A' && (
-                    ind.good
-                      ? <ArrowUpRight size={14} color="#10b981" />
-                      : <ArrowDownRight size={14} color="#f59e0b" />
-                  )}
+                ind.good ?
+                <ArrowUpRight size={14} color="#10b981" /> :
+                <ArrowDownRight size={14} color="#f59e0b" />)
+                }
                 </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
-
-        {/* Operational Indicators */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <BarChart3 size={18} color="#8b5cf6" />
@@ -277,26 +255,24 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
           </div>
           <p style={sectionSub}>Key operational performance metrics</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {operationalIndicators.map((ind, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: i < operationalIndicators.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+            {operationalIndicators.map((ind, i) =>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: i < operationalIndicators.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                 <span style={{ fontSize: '0.875rem', color: '#475569' }}>{ind.label}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1e293b' }}>{ind.value}</span>
                   {ind.value !== 'N/A' && (
-                    ind.good
-                      ? <ArrowUpRight size={14} color="#10b981" />
-                      : <ArrowDownRight size={14} color="#f59e0b" />
-                  )}
+                ind.good ?
+                <ArrowUpRight size={14} color="#10b981" /> :
+                <ArrowDownRight size={14} color="#f59e0b" />)
+                }
                 </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
-
-      {/* Yearly Comparison Table */}
-      {yearlyComparison?.sortedYears && yearlyComparison.sortedYears.length > 0 && (
-        <div style={card}>
+      {yearlyComparison?.sortedYears && yearlyComparison.sortedYears.length > 0 &&
+      <div style={card}>
           <h3 style={sectionTitle}>Yearly Comparison</h3>
           <p style={sectionSub}>Side-by-side financial performance across all years</p>
           <div style={{ overflowX: 'auto' }}>
@@ -313,9 +289,9 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
               </thead>
               <tbody>
                 {yearlyComparison.sortedYears.map((year, idx) => {
-                  const data = yearlyComparison.yearlyData[year] || {};
-                  return (
-                    <tr key={year} style={{ borderBottom: '1px solid #f8fafc', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                const data = yearlyComparison.yearlyData[year] || {};
+                return (
+                  <tr key={year} style={{ borderBottom: '1px solid #f8fafc', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{year}</td>
                       <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(data.annualRevenue || 0)}</td>
                       <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(data.annualCommissions || 0)}</td>
@@ -328,16 +304,16 @@ const AnalyticsPage = ({ indicators, yearlyComparison, monthlyComparison = [], l
                           {pct(data.netMargin || 0)}
                         </span>
                       </td>
-                    </tr>
-                  );
-                })}
+                    </tr>);
+
+              })}
               </tbody>
             </table>
           </div>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };
 
 export default AnalyticsPage;

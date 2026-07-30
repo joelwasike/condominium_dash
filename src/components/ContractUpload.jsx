@@ -32,7 +32,7 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFiles(e.dataTransfer.files);
     }
@@ -40,12 +40,12 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
 
   const handleFiles = (newFiles) => {
     const fileArray = Array.from(newFiles);
-    const validFiles = fileArray.filter(file => {
+    const validFiles = fileArray.filter((file) => {
       const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       return validTypes.includes(file.type);
     });
-    
-    setFiles(prev => [...prev, ...validFiles]);
+
+    setFiles((prev) => [...prev, ...validFiles]);
   };
 
   const handleFileInput = (e) => {
@@ -55,12 +55,12 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
   };
 
   const removeFile = (index) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setContractDetails(prev => ({
+    setContractDetails((prev) => ({
       ...prev,
       [name]: value
     }));
@@ -68,17 +68,13 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
 
   const handleUpload = async () => {
     if (files.length === 0) return;
-    
+
     setUploading(true);
-    
-    // Simulate upload process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Call the upload handler
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     if (onUpload) {
       onUpload(files, contractDetails, userRole);
     }
-    
+
     setUploading(false);
     setFiles([]);
     setContractDetails({
@@ -119,8 +115,8 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
                 name="contractType"
                 value={contractDetails.contractType}
                 onChange={handleInputChange}
-                required
-              >
+                required>
+                
                 <option value="">Select contract type</option>
                 <option value="lease">Lease Agreement</option>
                 <option value="rental">Rental Agreement</option>
@@ -135,8 +131,8 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
                 value={contractDetails.propertyAddress}
                 onChange={handleInputChange}
                 placeholder="Enter property address"
-                required
-              />
+                required />
+              
             </div>
           </div>
 
@@ -148,8 +144,8 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
                 name="startDate"
                 value={contractDetails.startDate}
                 onChange={handleInputChange}
-                required
-              />
+                required />
+              
             </div>
             <div className="form-group">
               <label>End Date</label>
@@ -158,8 +154,8 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
                 name="endDate"
                 value={contractDetails.endDate}
                 onChange={handleInputChange}
-                required
-              />
+                required />
+              
             </div>
           </div>
 
@@ -172,8 +168,8 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
                 value={contractDetails.monthlyRent}
                 onChange={handleInputChange}
                 placeholder="Enter monthly rent amount"
-                required
-              />
+                required />
+              
             </div>
             <div className="form-group">
               <label>Security Deposit</label>
@@ -183,8 +179,8 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
                 value={contractDetails.deposit}
                 onChange={handleInputChange}
                 placeholder="Enter deposit amount"
-                required
-              />
+                required />
+              
             </div>
           </div>
 
@@ -197,8 +193,8 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
                 value={contractDetails.landlordName}
                 onChange={handleInputChange}
                 placeholder="Enter landlord name"
-                required
-              />
+                required />
+              
             </div>
             <div className="form-group">
               <label>Tenant Name</label>
@@ -208,8 +204,8 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
                 value={contractDetails.tenantName}
                 onChange={handleInputChange}
                 placeholder="Enter tenant name"
-                required
-              />
+                required />
+              
             </div>
           </div>
         </div>
@@ -222,27 +218,27 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
+            onClick={() => fileInputRef.current?.click()}>
+            
             <input
               ref={fileInputRef}
               type="file"
               multiple
               accept=".pdf,.doc,.docx"
               onChange={handleFileInput}
-              style={{ display: 'none' }}
-            />
+              style={{ display: 'none' }} />
+            
             <Upload className="upload-icon" size={48} />
             <h5>Drag & drop contract files here</h5>
             <p>or click to browse</p>
             <p className="upload-hint">Supported formats: PDF, DOC, DOCX (Max 10MB each)</p>
           </div>
 
-          {files.length > 0 && (
-            <div className="file-list">
+          {files.length > 0 &&
+          <div className="file-list">
               <h5>Selected Files ({files.length})</h5>
-              {files.map((file, index) => (
-                <div key={index} className="file-item">
+              {files.map((file, index) =>
+            <div key={index} className="file-item">
                   <div className="file-info">
                     <FileText className="file-icon" size={20} />
                     <div className="file-details">
@@ -251,45 +247,45 @@ const ContractUpload = ({ userRole, onUpload, onClose }) => {
                     </div>
                   </div>
                   <button
-                    className="remove-file"
-                    onClick={() => removeFile(index)}
-                  >
+                className="remove-file"
+                onClick={() => removeFile(index)}>
+                
                     <X size={16} />
                   </button>
                 </div>
-              ))}
+            )}
             </div>
-          )}
+          }
         </div>
       </div>
 
       <div className="upload-actions">
         <button
           className="btn-secondary"
-          onClick={onClose}
-        >
+          onClick={onClose}>
+          
           Cancel
         </button>
         <button
           className="btn-primary"
           onClick={handleUpload}
-          disabled={files.length === 0 || uploading || !contractDetails.contractType}
-        >
-          {uploading ? (
-            <>
+          disabled={files.length === 0 || uploading || !contractDetails.contractType}>
+          
+          {uploading ?
+          <>
               <div className="spinner"></div>
               Uploading...
-            </>
-          ) : (
-            <>
+            </> :
+
+          <>
               <Upload size={16} />
               Upload Contract
             </>
-          )}
+          }
         </button>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default ContractUpload;

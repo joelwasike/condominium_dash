@@ -1,4 +1,3 @@
-// User types
 export interface User {
   id: number;
   name: string;
@@ -11,17 +10,15 @@ export interface User {
 }
 
 export type UserRole =
-  | 'tenant'
-  | 'landlord'
-  | 'salesmanager'
-  | 'accounting'
-  | 'admin'
-  | 'technician'
-  | 'superadmin'
-  | 'agency_director'
-  | 'commercial';
-
-// Property types
+'tenant' |
+'landlord' |
+'salesmanager' |
+'accounting' |
+'admin' |
+'technician' |
+'superadmin' |
+'agency_director' |
+'commercial';
 export interface Property {
   id: number;
   address: string;
@@ -66,8 +63,6 @@ export interface PropertyUnit {
   createdAt: string;
   updatedAt: string;
 }
-
-// Payment types
 export interface TenantPayment {
   id: number;
   tenant: string;
@@ -98,8 +93,6 @@ export interface LandlordPayment {
   createdAt: string;
   updatedAt: string;
 }
-
-// Client/Tenant types
 export interface Client {
   id: number;
   name: string;
@@ -114,8 +107,6 @@ export interface Client {
   createdAt: string;
   updatedAt: string;
 }
-
-// Maintenance types
 export interface Maintenance {
   id: number;
   property: string;
@@ -140,8 +131,6 @@ export interface Maintenance {
   createdAt: string;
   updatedAt: string;
 }
-
-// Quote types
 export interface Quote {
   id: number;
   maintenanceID: number;
@@ -156,8 +145,6 @@ export interface Quote {
   createdAt: string;
   updatedAt: string;
 }
-
-// Document types
 export interface Document {
   id: number;
   tenant: string;
@@ -178,8 +165,6 @@ export interface Document {
   createdAt: string;
   updatedAt: string;
 }
-
-// Lease types
 export interface Lease {
   id: number;
   contractTitle: string;
@@ -198,8 +183,6 @@ export interface Lease {
   createdAt: string;
   updatedAt: string;
 }
-
-// Expense types
 export interface Expense {
   id: number;
   scope: 'Building' | 'Agency';
@@ -218,8 +201,6 @@ export interface Expense {
   createdAt: string;
   updatedAt: string;
 }
-
-// Inventory types
 export interface Inventory {
   id: number;
   property: string;
@@ -237,8 +218,6 @@ export interface Inventory {
   createdAt: string;
   updatedAt: string;
 }
-
-// Company types
 export interface Company {
   id: number;
   name: string;
@@ -253,8 +232,6 @@ export interface Company {
   createdAt: string;
   updatedAt: string;
 }
-
-// Listing types
 export interface Listing {
   id: number;
   address: string;
@@ -270,8 +247,6 @@ export interface Listing {
   createdAt: string;
   updatedAt: string;
 }
-
-// Visit types
 export interface Visit {
   id: number;
   property: string;
@@ -285,8 +260,6 @@ export interface Visit {
   createdAt: string;
   updatedAt: string;
 }
-
-// Alert types
 export interface Alert {
   id: number;
   type: string;
@@ -301,8 +274,6 @@ export interface Alert {
   createdAt: string;
   updatedAt: string;
 }
-
-// Reminder types
 export interface Reminder {
   id: number;
   subject: string;
@@ -316,8 +287,6 @@ export interface Reminder {
   createdAt: string;
   updatedAt: string;
 }
-
-// WorkOrder types
 export interface WorkOrder {
   id: number;
   property: string;
@@ -330,8 +299,6 @@ export interface WorkOrder {
   createdAt: string;
   updatedAt: string;
 }
-
-// Notification types
 export interface Notification {
   id: number;
   userID: number;
@@ -343,8 +310,6 @@ export interface Notification {
   createdAt: string;
   updatedAt: string;
 }
-
-// Pagination response
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -352,8 +317,6 @@ export interface PaginatedResponse<T> {
   pageSize: number;
   totalPages: number;
 }
-
-// API Error
 export interface APIError {
   code: string;
   message: string;
@@ -364,8 +327,6 @@ export interface ValidationError {
   field: string;
   message: string;
 }
-
-// Cashier types
 export interface CashierAccount {
   id: number;
   name: string;
@@ -393,8 +354,6 @@ export interface CashierTransaction {
   createdAt: string;
   updatedAt: string;
 }
-
-// Security Deposit types
 export interface SecurityDeposit {
   id: number;
   tenant: string;
@@ -417,8 +376,6 @@ export interface SecurityDeposit {
   createdAt: string;
   updatedAt: string;
 }
-
-// Employee types
 export interface Employee {
   id: number;
   name: string;
@@ -430,8 +387,6 @@ export interface Employee {
   createdAt: string;
   updatedAt: string;
 }
-
-// Message types
 export interface Message {
   id: number;
   fromUserID: number;
@@ -441,8 +396,6 @@ export interface Message {
   createdAt: string;
   updatedAt: string;
 }
-
-// Transfer types
 export interface TransferPaymentRequest {
   id: number;
   tenant: string;

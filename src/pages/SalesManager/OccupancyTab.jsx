@@ -6,8 +6,8 @@ import {
   Cell,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-} from 'recharts';
+  ResponsiveContainer } from
+'recharts';
 
 const card = { background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(15,23,42,0.06)', border: '1px solid #f1f5f9' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse' };
@@ -44,9 +44,8 @@ const OccupancyTab = ({
   setOccupancyDetailData,
   occupancyDetailLoading,
   handleOpenOccupancyDetail,
-  openEditPropertyModal,
+  openEditPropertyModal
 }) => {
-  // Occupancy is only for rental/managed properties. Exclude "For Sale" listings.
   const isForSale = (p) => {
     const propertyType = (p.PropertyType || p.propertyType || '').toString().trim().toLowerCase();
     const status = (p.Status || p.status || '').toString().trim().toLowerCase();
@@ -54,8 +53,6 @@ const OccupancyTab = ({
   };
   const rentableProperties = (Array.isArray(properties) ? properties : []).filter((p) => !isForSale(p));
   const totalProperties = rentableProperties.length;
-
-  // Helper: filled units per property (from API or derived from status)
   const getFilledUnits = (property) => {
     const n = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
     const filled = property.filledUnits ?? property.occupiedUnits ?? property.FilledUnits ?? property.OccupiedUnits;
@@ -64,36 +61,30 @@ const OccupancyTab = ({
     if (n <= 1) return status === 'occupied' ? 1 : 0;
     return 0;
   };
-
-  // Villas: filter by Type, then use units to determine occupied vs vacant
   const isVilla = (p) => (p.Type || p.type || '').toString().trim().toLowerCase() === 'villa';
   const villas = rentableProperties.filter(isVilla);
   const totalVillas = villas.length;
-  const occupiedVillas = villas.filter(v => {
+  const occupiedVillas = villas.filter((v) => {
     const total = v.NumberOfUnits ?? v.numberOfUnits ?? 1;
     const filled = getFilledUnits(v);
     return total > 0 && filled >= total;
   }).length;
-  const vacantVillas = villas.filter(v => {
+  const vacantVillas = villas.filter((v) => {
     const total = v.NumberOfUnits ?? v.numberOfUnits ?? 1;
     const filled = getFilledUnits(v);
     return total === 0 || filled < total;
   }).length;
-
-  // All properties (for overall metrics)
-  const occupiedProperties = rentableProperties.filter(p => {
+  const occupiedProperties = rentableProperties.filter((p) => {
     const total = p.NumberOfUnits ?? p.numberOfUnits ?? 1;
     const filled = getFilledUnits(p);
     return total > 0 && filled >= total;
   }).length;
-  const vacantProperties = rentableProperties.filter(p => {
+  const vacantProperties = rentableProperties.filter((p) => {
     const total = p.NumberOfUnits ?? p.numberOfUnits ?? 1;
     const filled = getFilledUnits(p);
     return total === 0 || filled < total;
   }).length;
-  const occupancyRate = totalProperties > 0 ? Math.round((occupiedProperties / totalProperties) * 100) : 0;
-
-  // Occupancy detail view: single property overview (units, tenants, graph)
+  const occupancyRate = totalProperties > 0 ? Math.round(occupiedProperties / totalProperties * 100) : 0;
   if (occupancyDetailView === 'detail') {
     const detail = occupancyDetailData || {};
     const units = detail.units || [];
@@ -104,17 +95,17 @@ const OccupancyTab = ({
     const vacantUnits = units.filter((u) => !isUnitOccupied(u));
     const occupiedCountDetail = occupiedUnits.length;
     const vacantCountDetail = vacantUnits.length;
-    const occupancyRateDetail = totalUnits > 0 ? Math.round((occupiedCountDetail / totalUnits) * 100) : 0;
+    const occupancyRateDetail = totalUnits > 0 ? Math.round(occupiedCountDetail / totalUnits * 100) : 0;
     const totalRent = occupiedUnits.reduce((sum, u) => sum + (Number(u.rentPrice) || Number(u.rent) || 0), 0);
     const pieData = [
-      { name: 'Occupied', value: occupiedCountDetail, color: '#22c55e' },
-      { name: 'Vacant', value: vacantCountDetail, color: '#94a3b8' },
-    ].filter((d) => d.value > 0);
+    { name: 'Occupied', value: occupiedCountDetail, color: '#22c55e' },
+    { name: 'Vacant', value: vacantCountDetail, color: '#94a3b8' }].
+    filter((d) => d.value > 0);
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <button type="button" style={backBtn} onClick={() => { setOccupancyDetailView('list'); setOccupancySelectedProperty(null); setOccupancyDetailData(null); }}>
+          <button type="button" style={backBtn} onClick={() => {setOccupancyDetailView('list');setOccupancySelectedProperty(null);setOccupancyDetailData(null);}}>
             <ArrowLeft size={18} />
             Back
           </button>
@@ -123,12 +114,12 @@ const OccupancyTab = ({
             <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>Units, tenants and occupancy overview</p>
           </div>
         </div>
-        {occupancyDetailLoading ? (
-          <div style={{ ...card, padding: '48px', textAlign: 'center', marginTop: '20px' }}>
+        {occupancyDetailLoading ?
+        <div style={{ ...card, padding: '48px', textAlign: 'center', marginTop: '20px' }}>
             <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>Loading...</p>
-          </div>
-        ) : (
-          <>
+          </div> :
+
+        <>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '20px' }}>
               <div style={metricCard}>
                 <p style={metricLabel}>Total Units</p>
@@ -151,16 +142,16 @@ const OccupancyTab = ({
                 <p style={metricValue}>{totalRent.toLocaleString()} XOF</p>
               </div>
             </div>
-            {pieData.length > 0 && (
-              <div style={{ ...card, marginTop: '20px' }}>
+            {pieData.length > 0 &&
+          <div style={{ ...card, marginTop: '20px' }}>
                 <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#1e293b' }}>Occupancy</h3>
                 <div style={{ width: '100%', maxWidth: 340, height: 260, margin: '0 auto' }}>
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
                       <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={72}>
-                        {pieData.map((entry) => (
-                          <Cell key={entry.name} fill={entry.color} />
-                        ))}
+                        {pieData.map((entry) =>
+                    <Cell key={entry.name} fill={entry.color} />
+                    )}
                       </Pie>
                       <Tooltip formatter={(value) => [value, 'Units']} />
                       <Legend layout="horizontal" align="center" verticalAlign="bottom" />
@@ -168,7 +159,7 @@ const OccupancyTab = ({
                   </ResponsiveContainer>
                 </div>
               </div>
-            )}
+          }
             <div style={{ ...card, marginTop: '20px' }}>
               <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#1e293b' }}>Occupied units</h3>
               <p style={{ margin: '0 0 12px 0', color: '#6b7280', fontSize: '0.875rem' }}>Units with current tenants</p>
@@ -184,11 +175,11 @@ const OccupancyTab = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {occupiedUnits.length > 0 ? (
-                      occupiedUnits.map((u, i) => {
-                        const tenantName = u.tenant || u.Tenant || '';
-                        return (
-                        <tr key={u.id || i}>
+                    {occupiedUnits.length > 0 ?
+                  occupiedUnits.map((u, i) => {
+                    const tenantName = u.tenant || u.Tenant || '';
+                    return (
+                      <tr key={u.id || i}>
                           <td style={tdStyle}>
                             {u.unitNumber || u.name || `Unit ${i + 1}`}
                             {tenantName ? <span style={{ color: '#6b7280', fontSize: '0.875rem' }}> – {tenantName}</span> : null}
@@ -197,12 +188,12 @@ const OccupancyTab = ({
                           <td style={tdStyle}>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
                           <td style={tdStyle}>{u.enterDate || '—'}</td>
                           <td style={tdStyle}><span style={statusPill(u.status || u.statut || 'Occupied')}>{u.status || u.statut || 'Occupied'}</span></td>
-                        </tr>
-                        );
-                      })
-                    ) : (
-                      <tr><td colSpan={5} style={emptyRow}>No occupied units</td></tr>
-                    )}
+                        </tr>);
+
+                  }) :
+
+                  <tr><td colSpan={5} style={emptyRow}>No occupied units</td></tr>
+                  }
                   </tbody>
                 </table>
               </div>
@@ -221,31 +212,31 @@ const OccupancyTab = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {vacantUnits.length > 0 ? (
-                      vacantUnits.map((u, i) => (
-                        <tr key={u.id || i}>
+                    {vacantUnits.length > 0 ?
+                  vacantUnits.map((u, i) =>
+                  <tr key={u.id || i}>
                           <td style={tdStyle}>{u.unitNumber || u.name || `Unit ${i + 1}`}</td>
                           <td style={tdStyle}>{typeof u.rentPrice === 'number' ? u.rentPrice.toLocaleString() : u.rentPrice || u.rent || '—'} F CFA</td>
                           <td style={tdStyle}>{u.type || '—'}</td>
                           <td style={tdStyle}><span style={statusPill(u.status || u.statut || 'Vacant')}>{u.status || u.statut || 'Vacant'}</span></td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr><td colSpan={4} style={emptyRow}>No vacant units</td></tr>
-                    )}
+                  ) :
+
+                  <tr><td colSpan={4} style={emptyRow}>No vacant units</td></tr>
+                  }
                   </tbody>
                 </table>
               </div>
             </div>
-            {totalUnits === 0 && (
-              <div style={{ ...card, marginTop: '20px', padding: '24px', textAlign: 'center', color: '#6b7280' }}>
+            {totalUnits === 0 &&
+          <div style={{ ...card, marginTop: '20px', padding: '24px', textAlign: 'center', color: '#6b7280' }}>
                 <p style={{ margin: 0 }}>This property has no units in the system yet.</p>
               </div>
-            )}
+          }
           </>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   }
 
   return (
@@ -301,8 +292,8 @@ const OccupancyTab = ({
         <select
           style={selectStyle}
           value={propertyStatusFilter}
-          onChange={(e) => setPropertyStatusFilter(e.target.value)}
-        >
+          onChange={(e) => setPropertyStatusFilter(e.target.value)}>
+          
           <option value="">All Status</option>
           <option value="Vacant">Vacant</option>
           <option value="Occupied">Occupied</option>
@@ -327,22 +318,22 @@ const OccupancyTab = ({
             </tr>
           </thead>
           <tbody>
-            {rentableProperties.length > 0 ? (
-                rentableProperties.map(property => {
-                  const propertyId = property.ID || property.id;
-                  const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
-                  const filledUnits = getFilledUnits(property);
-                  const remaining = Math.max(0, totalUnits - filledUnits);
-                  const isFull = totalUnits > 0 && filledUnits >= totalUnits;
-                  return (
-                    <tr
-                      key={propertyId}
-                      onClick={() => handleOpenOccupancyDetail(property)}
-                      style={{ cursor: 'pointer' }}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpenOccupancyDetail(property); } }}
-                    >
+            {rentableProperties.length > 0 ?
+              rentableProperties.map((property) => {
+                const propertyId = property.ID || property.id;
+                const totalUnits = property.NumberOfUnits ?? property.numberOfUnits ?? 1;
+                const filledUnits = getFilledUnits(property);
+                const remaining = Math.max(0, totalUnits - filledUnits);
+                const isFull = totalUnits > 0 && filledUnits >= totalUnits;
+                return (
+                  <tr
+                    key={propertyId}
+                    onClick={() => handleOpenOccupancyDetail(property)}
+                    style={{ cursor: 'pointer' }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();handleOpenOccupancyDetail(property);}}}>
+                    
                       <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" />
                       </td>
@@ -354,49 +345,49 @@ const OccupancyTab = ({
                       <td style={tdStyle}>
                         <div>
                           <span style={{ fontWeight: 600, color: '#1e293b' }}>{property.Type || property.type || 'N/A'}</span>
-                          {property.BuildingType || property.buildingType ? (
-                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8' }}>({property.BuildingType || property.buildingType})</span>
-                          ) : null}
+                          {property.BuildingType || property.buildingType ?
+                        <span style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8' }}>({property.BuildingType || property.buildingType})</span> :
+                        null}
                         </div>
                       </td>
                       <td style={tdStyle}>
                         <span style={statusPill(isFull ? 'occupied' : 'vacant')}>
-                          {isFull ? 'Occupied' : (remaining > 0 ? 'Partially filled' : (property.Status || property.status || 'Unknown'))}
+                          {isFull ? 'Occupied' : remaining > 0 ? 'Partially filled' : property.Status || property.status || 'Unknown'}
                         </span>
                       </td>
                       <td style={tdStyle}>
                         <div>
                           <span style={{ fontWeight: 600, color: '#1e293b' }}>{filledUnits} / {totalUnits}</span>
-                          {remaining > 0 && (
-                            <span style={{ display: 'block', fontSize: '0.8rem', color: '#6b7280' }}>
+                          {remaining > 0 &&
+                        <span style={{ display: 'block', fontSize: '0.8rem', color: '#6b7280' }}>
                               {remaining} remaining
                             </span>
-                          )}
+                        }
                         </div>
                       </td>
                       <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                         <button
-                          style={{ ...btnOutline, padding: '6px 12px' }}
-                          onClick={() => openEditPropertyModal(property)}
-                          title="Edit Property"
-                        >
+                        style={{ ...btnOutline, padding: '6px 12px' }}
+                        onClick={() => openEditPropertyModal(property)}
+                        title="Edit Property">
+                        
                           Edit
                         </button>
                       </td>
-                    </tr>
-                  );
-                })
-            ) : (
+                    </tr>);
+
+              }) :
+
               <tr>
                 <td colSpan={6} style={emptyRow}>No properties found. Create your first property to get started.</td>
               </tr>
-            )}
+              }
           </tbody>
         </table>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default OccupancyTab;

@@ -1,12 +1,9 @@
-/* Accounting Dashboard Styles – matching Sales Manager Dashboard exactly */
 .accounting-content {
   padding: 24px;
   background: transparent;
   min-height: calc(100vh - 60px);
   font-family: 'Poppins', sans-serif;
 }
-
-/* === Overview (Vue d'ensemble) === */
 .sa-overview-page {
   display: flex;
   flex-direction: column;
@@ -230,9 +227,6 @@
   font-size: 1.4rem;
   color: #111827;
 }
-
-/* === Generic table + notification reused by new UI === */
-
 .sa-table-wrapper {
   margin-top: 8px;
 }
@@ -355,8 +349,6 @@
   background: rgba(37, 99, 235, 0.12);
   color: #1d4ed8;
 }
-
-/* === Transactions (Historique des transactions) === */
 .sa-transactions-page {
   display: flex;
   flex-direction: column;
@@ -427,8 +419,6 @@
 .sa-search-input input:focus {
   outline: none;
 }
-
-/* === Clients (Liste des clients) === */
 .sa-clients-page {
   display: flex;
   flex-direction: column;
@@ -500,8 +490,6 @@
   font-size: 0.8rem;
   cursor: pointer;
 }
-
-/* === Alerts Page === */
 .sa-alerts-page {
   display: flex;
   flex-direction: column;
@@ -524,8 +512,6 @@
   align-items: center;
   gap: 12px;
 }
-
-/* === Occupancy Page === */
 .sa-occupancy-page {
   display: flex;
   flex-direction: column;
@@ -548,8 +534,6 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
-
-/* Notification System */
 .notifications-container {
   position: fixed;
   top: 20px;
@@ -619,8 +603,6 @@
     opacity: 1;
   }
 }
-
-/* Responsive Notification tweaks */
 @media (max-width: 768px) {
   .notifications-container {
     top: 10px;
@@ -632,15 +614,11 @@
     max-width: none;
   }
 }
-
-/* Responsive adjustments */
 @media (max-width: 1024px) {
   .sa-overview-top {
     grid-template-columns: 1fr;
   }
 }
-
-/* === Chat Page === */
 .sa-chat-page {
   display: flex;
   width: 100%;
@@ -910,8 +888,6 @@
     grid-template-columns: 1fr;
   }
 }
-
-/* Form styles matching Super Admin */
 .sa-form {
   padding: 0;
 }
@@ -967,8 +943,6 @@
   cursor: pointer;
   transition: all 0.2s;
 }
-
-/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1176,8 +1150,6 @@
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-
-/* Filter and search styles */
 .sa-filters-section {
   display: flex;
   gap: 12px;
@@ -1228,8 +1200,6 @@
 .sa-search-input-wrapper input::placeholder {
   color: #9ca3af;
 }
-
-/* Loading and empty states */
 .loading,
 .no-data {
   text-align: center;
@@ -1255,8 +1225,6 @@
   font-size: 0.9rem;
   color: #374151;
 }
-
-/* Button styles */
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -1285,9 +1253,6 @@
   transform: none;
   box-shadow: none;
 }
-
-
-/* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .accounting-content {
     padding: 12px;
@@ -1487,8 +1452,6 @@
     font-size: 0.85rem;
   }
 }
-
-/* === Tenant detail page (same as Sales Manager) === */
 .sa-tenant-detail-hero {
   display: flex;
   align-items: center;

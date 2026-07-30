@@ -1,7 +1,7 @@
 .tenant-dashboard {
   padding: 20px;
   background: transparent;
-  min-height: calc(100vh - 60px); /* Adjust based on header height */
+  min-height: calc(100vh - 60px);
 }
 
 .dashboard-header {
@@ -252,8 +252,6 @@
   font-family: 'Poppins', sans-serif;
   font-weight: 400;
 }
-
-/* Form Styles */
 .form-group {
   margin-bottom: 20px;
 }
@@ -292,8 +290,6 @@
   resize: vertical;
   min-height: 80px;
 }
-
-/* Photo Upload Styles */
 .photo-upload-area {
   margin-top: 8px;
 }
@@ -377,8 +373,6 @@
 .photo-name {
   display: none;
 }
-
-/* Large preview styling for maintenance submit modal */
 .maintenance-photo-preview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -430,8 +424,6 @@
   text-align: center;
   word-break: break-all;
 }
-
-/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -538,8 +530,6 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
-
-/* Notification System */
 .notifications-container {
   position: fixed;
   top: 20px;
@@ -604,8 +594,6 @@
     opacity: 1;
   }
 }
-
-/* Payment Options Styles */
 .payment-options {
   margin-bottom: 30px;
 }
@@ -661,8 +649,6 @@
 .payment-method-btn span {
   font-weight: 500;
 }
-
-/* Payment History Styles */
 .payment-history {
   margin-top: 30px;
 }
@@ -707,8 +693,6 @@
   color: #10b981;
   font-weight: 500;
 }
-
-/* Download Button Styles */
 .download-btn {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
@@ -735,8 +719,6 @@
 .download-btn svg {
   color: white;
 }
-
-/* Responsive Design */
 @media (max-width: 768px) {
   .modal-content {
     min-width: auto;
@@ -766,8 +748,6 @@
     min-width: auto;
     max-width: none;
   }
-  
-  /* Mobile-specific payment styles */
   .payment-methods {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -791,8 +771,6 @@
     font-size: 11px;
   }
 }
-
-/* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .sa-overview-metrics {
     grid-template-columns: 1fr;

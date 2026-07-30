@@ -1,106 +1,77 @@
 import { buildApiUrl, apiRequest } from '../config/api';
 import { API_CONFIG } from '../config/api';
-
-// Sales Manager API Service
 export const salesManagerService = {
-  // Get overview statistics (enhanced with new fields)
   getOverview: async () => {
     const url = buildApiUrl(API_CONFIG.ENDPOINTS.SALES_MANAGER.OVERVIEW);
     return await apiRequest(url);
   },
-
-  // Get single property with units (for edit form)
   getProperty: async (propertyId) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.PROPERTIES}/${propertyId}`);
     return await apiRequest(url);
   },
-
-  // Get all properties (with optional query filters)
   getProperties: async (filters = {}) => {
     let url = buildApiUrl(API_CONFIG.ENDPOINTS.SALES_MANAGER.PROPERTIES);
     const queryParams = new URLSearchParams();
-    
+
     if (filters.status) queryParams.append('status', filters.status);
     if (filters.type) queryParams.append('type', filters.type);
     if (filters.urgency) queryParams.append('urgency', filters.urgency);
-    
+
     if (queryParams.toString()) {
       url += `?${queryParams.toString()}`;
     }
-    
+
     return await apiRequest(url);
   },
-
-  // Get properties by occupancy status
   getPropertiesByOccupancy: async (status) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.PROPERTIES}/occupancy/${status}`);
     return await apiRequest(url);
   },
-
-  // Get properties that are strictly for sale (listings)
   getSalesProperties: async () => {
     const url = buildApiUrl('/api/salesmanager/sales-properties');
     return await apiRequest(url);
   },
-
-  // Get all clients
   getClients: async () => {
     const url = buildApiUrl(API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS);
     return await apiRequest(url);
   },
-
-  // Get full tenant details by ID (client + property + alerts + maintenances + payments + notes)
   getClient: async (clientId) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}`);
     return await apiRequest(url);
   },
-
-  // Get where a tenant is assigned (building/unit), if any
   getClientUnitAssignment: async (clientId) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}/unit-assignment`);
     return await apiRequest(url);
   },
-
-  // Bulk delete tenants (password confirmation required)
   bulkDeleteClients: async ({ clientIds, password }) => {
     const url = buildApiUrl('/api/salesmanager/clients/bulk-delete');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify({ clientIds, password }),
+      body: JSON.stringify({ clientIds, password })
     });
   },
-
-  // Get full maintenance request by ID (for tenant detail view)
   getMaintenance: async (maintenanceId) => {
     const url = buildApiUrl(`/api/salesmanager/maintenances/${maintenanceId}`);
     return await apiRequest(url);
   },
-
-  // Create a maintenance/incident report on behalf of a tenant
   createMaintenance: async (payload) => {
     const url = buildApiUrl('/api/salesmanager/maintenances');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
   },
-
-  // Add private note about a tenant
   addClientNote: async (clientId, { note }) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}/notes`);
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify({ note }),
+      body: JSON.stringify({ note })
     });
   },
-
-  // Get approved client applications for onboarding
   getApprovedClients: async () => {
     const url = buildApiUrl('/api/salesmanager/approved-clients');
     return await apiRequest(url);
   },
-
-  // Approved client documents (uploaded by administrative agent)
   getApprovedClientDocuments: async (clientId) => {
     const url = buildApiUrl(`/api/salesmanager/approved-clients/${clientId}/documents`);
     return await apiRequest(url);
@@ -110,47 +81,35 @@ export const salesManagerService = {
     const url = buildApiUrl(`/api/salesmanager/approved-clients/${clientId}/checklist`);
     return await apiRequest(url);
   },
-
-  // Get waiting list clients
   getWaitingListClients: async () => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/waiting-list`);
     return await apiRequest(url);
   },
-
-  // Create new client/tenant
   createClient: async (clientData) => {
     const url = buildApiUrl(API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS);
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(clientData),
+      body: JSON.stringify(clientData)
     });
   },
-
-  // Update client/tenant profile
   updateClient: async (clientId, clientData) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.CLIENTS}/${clientId}`);
     return await apiRequest(url, {
       method: 'PUT',
-      body: JSON.stringify(clientData),
+      body: JSON.stringify(clientData)
     });
   },
-
-  // Get unpaid rents
   getUnpaidRents: async () => {
     const url = buildApiUrl('/api/salesmanager/unpaid-rents');
     return await apiRequest(url);
   },
-
-  // Update unpaid rent
   updateUnpaidRent: async (unpaidRentId, updateData) => {
     const url = buildApiUrl(`/api/salesmanager/unpaid-rents/${unpaidRentId}`);
     return await apiRequest(url, {
       method: 'PUT',
-      body: JSON.stringify(updateData),
+      body: JSON.stringify(updateData)
     });
   },
-
-  // Get all alerts (with optional type filter)
   getAlerts: async (type = null) => {
     let url = buildApiUrl(API_CONFIG.ENDPOINTS.SALES_MANAGER.ALERTS);
     if (type) {
@@ -158,68 +117,50 @@ export const salesManagerService = {
     }
     return await apiRequest(url);
   },
-
-  // Get unpaid rent alerts
   getUnpaidRentAlerts: async () => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.ALERTS}/unpaid-rents`);
     return await apiRequest(url);
   },
-
-  // Create new alert
   createAlert: async (alertData) => {
     const url = buildApiUrl(API_CONFIG.ENDPOINTS.SALES_MANAGER.ALERTS);
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(alertData),
+      body: JSON.stringify(alertData)
     });
   },
-
-  // Update alert status
   updateAlert: async (alertId, status) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.ALERTS}/${alertId}`);
     return await apiRequest(url, {
       method: 'PUT',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status })
     });
   },
-
-  // Create new property
   createProperty: async (propertyData) => {
     const url = buildApiUrl(API_CONFIG.ENDPOINTS.SALES_MANAGER.PROPERTIES);
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(propertyData),
+      body: JSON.stringify(propertyData)
     });
   },
-
-  // Update property
   updateProperty: async (propertyId, propertyData) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.PROPERTIES}/${propertyId}`);
     return await apiRequest(url, {
       method: 'PUT',
-      body: JSON.stringify(propertyData),
+      body: JSON.stringify(propertyData)
     });
   },
-
-  // Delete property (and its units)
   deleteProperty: async (propertyId) => {
     const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.SALES_MANAGER.PROPERTIES}/${propertyId}`);
     return await apiRequest(url, { method: 'DELETE' });
   },
-
-  // Get advertisements
   getAdvertisements: async () => {
     const url = buildApiUrl('/api/salesmanager/advertisements');
     return await apiRequest(url);
   },
-
-  // Listings overview (listing/visit metrics, moved from commercial)
   getListingsOverview: async () => {
     const url = buildApiUrl('/api/salesmanager/listings-overview');
     return await apiRequest(url);
   },
-
-  // Listings
   listListings: async (filters = {}) => {
     let url = buildApiUrl('/api/salesmanager/listings');
     const queryParams = new URLSearchParams();
@@ -233,7 +174,7 @@ export const salesManagerService = {
     const url = buildApiUrl('/api/salesmanager/listings');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(listingData),
+      body: JSON.stringify(listingData)
     });
   },
 
@@ -241,11 +182,9 @@ export const salesManagerService = {
     const url = buildApiUrl(`/api/salesmanager/listings/${id}`);
     return await apiRequest(url, {
       method: 'PUT',
-      body: JSON.stringify(listingData),
+      body: JSON.stringify(listingData)
     });
   },
-
-  // Visits
   listVisits: async (filters = {}) => {
     let url = buildApiUrl('/api/salesmanager/visits');
     const queryParams = new URLSearchParams();
@@ -261,7 +200,7 @@ export const salesManagerService = {
     const url = buildApiUrl('/api/salesmanager/visits');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(visitData),
+      body: JSON.stringify(visitData)
     });
   },
 
@@ -269,17 +208,13 @@ export const salesManagerService = {
     const url = buildApiUrl(`/api/salesmanager/visits/${id}/status`);
     return await apiRequest(url, {
       method: 'PUT',
-      body: JSON.stringify({ status, notes }),
+      body: JSON.stringify({ status, notes })
     });
   },
-
-  // Interested clients history
   getInterestedClientsHistory: async () => {
     const url = buildApiUrl('/api/salesmanager/clients/history');
     return await apiRequest(url);
   },
-
-  // Visit requests
   listRequests: async (filters = {}) => {
     let url = buildApiUrl('/api/salesmanager/requests');
     const queryParams = new URLSearchParams();
@@ -292,7 +227,7 @@ export const salesManagerService = {
     const url = buildApiUrl('/api/salesmanager/requests');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(requestData),
+      body: JSON.stringify(requestData)
     });
   },
 
@@ -300,7 +235,7 @@ export const salesManagerService = {
     const url = buildApiUrl(`/api/salesmanager/requests/${id}`);
     return await apiRequest(url, {
       method: 'PUT',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status })
     });
   },
 
@@ -308,133 +243,98 @@ export const salesManagerService = {
     const url = buildApiUrl(`/api/salesmanager/requests/${id}/follow-up`);
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message })
     });
   },
-
-  // Get owners (landlords) for property assignment (includes numberOfAssetsManaged, numberOfTenants, revenue)
   getOwners: async () => {
     const url = buildApiUrl('/api/salesmanager/owners');
     return await apiRequest(url);
   },
-
-  // Get assets (properties) under management of an owner – renting and selling tables
   getOwnerAssets: async (ownerId) => {
     const url = buildApiUrl(`/api/salesmanager/owners/${ownerId}/properties`);
     return await apiRequest(url);
   },
-
-  // Get building payment-management data (units, tenants, arrears, unpaid list) for a property
   getPropertyBuildingDetail: async (propertyId) => {
     const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/building-detail`);
     return await apiRequest(url);
   },
-
-  // Recovery (unpaid invoices per building) summary
   getRecoverySummary: async () => {
     const url = buildApiUrl('/api/salesmanager/recovery');
     return await apiRequest(url);
   },
-
-  // Send recovery reminder (sms/email) to one or more units
   sendRecoveryReminder: async (payload) => {
     const url = buildApiUrl('/api/salesmanager/recovery/remind');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
   },
-
-  // Alerts page: list properties for selecting tenants
   getAlertProperties: async () => {
     const url = buildApiUrl('/api/salesmanager/alerts/properties');
     return await apiRequest(url);
   },
-
-  // Alerts page: list tenants for a property
   getAlertPropertyTenants: async (propertyId) => {
     const url = buildApiUrl(`/api/salesmanager/alerts/properties/${propertyId}/tenants`);
     return await apiRequest(url);
   },
-
-  // Alerts page: list all tenants for a property (including paid) for bulk selection
   getAlertPropertyTenantsAll: async (propertyId) => {
     const url = buildApiUrl(`/api/salesmanager/alerts/properties/${propertyId}/tenants?scope=all`);
     return await apiRequest(url);
   },
-
-  // Alerts page: list all unpaid tenants across properties
   getAlertUnpaidTenants: async () => {
     const url = buildApiUrl('/api/salesmanager/alerts/unpaid-tenants');
     return await apiRequest(url);
   },
-
-  // Alerts page: list all tenants across properties (including unassigned) for bulk sending
   getAlertAllTenants: async () => {
     const url = buildApiUrl('/api/salesmanager/alerts/all-tenants');
     return await apiRequest(url);
   },
-
-  // Alerts page: send alert to a tenant (sms/email)
   sendTenantAlert: async ({ clientId, channel, message, subject, urgency }) => {
     const url = buildApiUrl('/api/salesmanager/alerts/send');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify({ clientId, channel, message, subject, urgency }),
+      body: JSON.stringify({ clientId, channel, message, subject, urgency })
     });
   },
-
-  // Alerts page: send one alert to multiple tenants
   sendTenantAlertBulk: async ({ clientIds, channel, message, subject, urgency }) => {
     const url = buildApiUrl('/api/salesmanager/alerts/send-bulk');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify({ clientIds, channel, message, subject, urgency }),
+      body: JSON.stringify({ clientIds, channel, message, subject, urgency })
     });
   },
-
-  // Add apartment/unit to a building (Property Management)
   addApartmentToBuilding: async (propertyId, payload) => {
     const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/units`);
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
   },
-
-  // Update apartment/unit details (Edit apartment - full details aligned with state of entry/exit)
   updatePropertyUnit: async (propertyId, unitId, payload) => {
     const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/units/${unitId}`);
     return await apiRequest(url, {
       method: 'PUT',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
   },
-
-  // Delete apartment/unit from a building or villa
   deletePropertyUnit: async (propertyId, unitId) => {
     const url = buildApiUrl(`/api/salesmanager/properties/${propertyId}/units/${unitId}`);
     return await apiRequest(url, { method: 'DELETE' });
   },
-
-  // Import clients/tenants from Excel or CSV
-  // Note: Backend endpoint accepts .xlsx, .xls, and .csv files
   importClientsFromExcel: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    
-    // Determine file type for better error messages
     const fileName = file.name || '';
     const isCSV = fileName.toLowerCase().endsWith('.csv');
     const fileType = isCSV ? 'CSV' : 'Excel';
-    
+
     const url = buildApiUrl('/api/salesmanager/clients/import-excel');
     const token = localStorage.getItem('token');
-    
+
     return await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': token || '',
+        'Authorization': token || ''
       },
       body: formData
     }).then(async (response) => {
@@ -443,15 +343,12 @@ export const salesManagerService = {
         try {
           const errorJson = JSON.parse(errorText);
           let errorMessage = errorJson.error || errorJson.message || `Failed to import ${fileType} file: ${response.status}`;
-          
-          // Provide helpful error message if CSV is rejected
           if (isCSV && errorMessage.includes('Invalid file type') && errorMessage.includes('.xlsx and .xls')) {
             errorMessage = 'CSV file support needs to be enabled on the backend. Please contact the administrator or use .xlsx/.xls format.';
           }
-          
+
           throw new Error(errorMessage);
         } catch (e) {
-          // If error is already an Error object, rethrow it
           if (e instanceof Error && e.message) {
             throw e;
           }
@@ -461,9 +358,6 @@ export const salesManagerService = {
       return response.json();
     });
   },
-
-  // Import properties from Excel or CSV
-  // Backend endpoint accepts .xlsx, .xls, and .csv files
   importPropertiesFromFile: async (file, { ownerId } = {}) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -475,7 +369,7 @@ export const salesManagerService = {
     return await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': token || '',
+        'Authorization': token || ''
       },
       body: formData
     }).then(async (response) => {
@@ -492,22 +386,18 @@ export const salesManagerService = {
       return response.json();
     });
   },
-
-  // Bulk delete properties (password confirmation required)
   bulkDeleteProperties: async ({ propertyIds, password }) => {
     const url = buildApiUrl('/api/salesmanager/properties/bulk-delete');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify({ propertyIds, password }),
+      body: JSON.stringify({ propertyIds, password })
     });
   },
-
-  // Link Fast - associate tenant to property/unit
   linkFastAssociate: async ({ clientId, propertyId, unitId, forceMove = true }) => {
     const url = buildApiUrl('/api/salesmanager/link-fast/associate');
     return await apiRequest(url, {
       method: 'POST',
-      body: JSON.stringify({ clientId, propertyId, unitId: unitId ?? null, forceMove }),
+      body: JSON.stringify({ clientId, propertyId, unitId: unitId ?? null, forceMove })
     });
-  },
+  }
 };

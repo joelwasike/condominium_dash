@@ -1,32 +1,32 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  BarChart3, 
-  Briefcase, 
-  Building, 
-  Wallet, 
+import {
+  BarChart3,
+  Briefcase,
+  Building,
+  Wallet,
   Link as LinkIcon,
   ArrowLeftRight,
   User,
   Settings,
-  Activity
-} from 'lucide-react';
+  Activity } from
+'lucide-react';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
 
   const navigationItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: Activity },
-    { path: '/analytics', label: 'Analytics', icon: BarChart3 },
-    { path: '/transactions', label: 'Transactions', icon: Briefcase },
-    { path: '/settlements', label: 'Settlements', icon: Building },
-    { path: '/wallet-transfers', label: 'Wallet Transfers', icon: Wallet },
-    { path: '/payment-links', label: 'Payment Links', icon: LinkIcon },
-    { path: '/forex', label: 'Forex', icon: ArrowLeftRight },
-    { path: '/user-management', label: 'User Management', icon: User },
-    { path: '/settings', label: 'Settings', icon: Settings },
-  ];
+  { path: '/dashboard', label: 'Dashboard', icon: Activity },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { path: '/transactions', label: 'Transactions', icon: Briefcase },
+  { path: '/settlements', label: 'Settlements', icon: Building },
+  { path: '/wallet-transfers', label: 'Wallet Transfers', icon: Wallet },
+  { path: '/payment-links', label: 'Payment Links', icon: LinkIcon },
+  { path: '/forex', label: 'Forex', icon: ArrowLeftRight },
+  { path: '/user-management', label: 'User Management', icon: User },
+  { path: '/settings', label: 'Settings', icon: Settings }];
+
 
   return (
     <>
@@ -43,23 +43,23 @@ const Sidebar = ({ isOpen, onClose }) => {
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
-            
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={`nav-item ${isActive ? 'active' : ''}`}
-                onClick={onClose}
-              >
+                onClick={onClose}>
+                
                 <Icon size={20} />
                 <span>{item.label}</span>
-              </Link>
-            );
+              </Link>);
+
           })}
         </nav>
       </div>
-    </>
-  );
+    </>);
+
 };
 
 export default Sidebar;
