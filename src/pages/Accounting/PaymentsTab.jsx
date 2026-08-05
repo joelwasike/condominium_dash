@@ -3,6 +3,7 @@ import { Plus, Search } from 'lucide-react';
 import { Receipt } from 'lucide-react';
 import { accountingService } from '../../services/accountingService';
 import RentReceiptTemplate from '../../components/RentReceiptTemplate';
+import SearchableSelect from '../../components/SearchableSelect';
 import { t } from '../../utils/i18n';
 import { buildReceiptData, buildRentReceiptContext, findTenantByName } from '../../utils/rentReceiptData';
 import {
@@ -392,6 +393,18 @@ PaymentsTab.CollectionModal = (props) => {
   const tenantList = collectionPaymentType === 'deposit' ?
   Array.isArray(depositEligibleTenants) ? depositEligibleTenants : [] :
   tenants;
+  const tenantSelectOptions = tenantList.map((item) => {
+    const id = item.tenantId ?? item.TenantID ?? item.id ?? '';
+    const name = item.tenantName || item.TenantName || item.name || item.Name || '';
+    const property = item.property || item.Property || '';
+    const email = item.email || item.Email || '';
+    const phone = item.phone || item.Phone || '';
+    return {
+      value: id,
+      label: `${name}${property ? ` — ${property}` : ''}`,
+      search: `${name} ${property} ${email} ${phone}`
+    };
+  }).filter((opt) => opt.value !== '');
 
   return (
     <div className="modal-overlay" onClick={() => {setShowCollectionPaymentModal(false);setCollectionPaymentType(null);}}>
@@ -472,11 +485,14 @@ PaymentsTab.CollectionModal = (props) => {
           }}>
               <div className="form-group">
                 <label htmlFor="tenantName">Tenant *</label>
-                <select
+                <SearchableSelect
                 id="tenantName"
+                options={tenantSelectOptions}
                 value={collectionPaymentForm.tenantId || ''}
-                onChange={(e) => {
-                  const selectedId = e.target.value;
+                required
+                placeholder="Select tenant"
+                searchPlaceholder="Search tenants…"
+                onChange={(selectedId) => {
                   const selectedTenant = tenantList.find(
                     (item) => String(item.tenantId ?? item.TenantID ?? item.id ?? '') === String(selectedId)
                   );
@@ -492,21 +508,8 @@ PaymentsTab.CollectionModal = (props) => {
                   } else {
                     setCollectionPaymentForm({ ...collectionPaymentForm, tenant: '', tenantId: '', property: '', amount: '' });
                   }
-                }}
-                required>
-                
-                  <option value="">Select tenant</option>
-                  {tenantList.map((item) => {
-                  const id = item.tenantId ?? item.TenantID ?? item.id ?? '';
-                  const name = item.tenantName || item.TenantName || item.name || item.Name || '';
-                  const property = item.property || item.Property || '';
-                  return (
-                    <option key={id || name} value={id}>
-                        {name}{property ? ` — ${property}` : ''}
-                      </option>);
+                }} />
 
-                })}
-                </select>
               </div>
               <div className="form-group">
                 <label htmlFor="tenantProperty">Property *</label>
@@ -648,10 +651,13 @@ PaymentsTab.CollectionModal = (props) => {
           }}>
               <div className="form-group">
                 <label>Validated Client *</label>
-                <select
+                <SearchableSelect
+                options={tenantSelectOptions}
                 value={collectionPaymentForm.tenantId || ''}
-                onChange={(e) => {
-                  const selectedId = e.target.value;
+                required
+                placeholder="Select validated client"
+                searchPlaceholder="Search tenants…"
+                onChange={(selectedId) => {
                   const selectedTenant = tenantList.find(
                     (item) => String(item.tenantId ?? item.TenantID ?? item.id ?? '') === String(selectedId)
                   );
@@ -672,21 +678,8 @@ PaymentsTab.CollectionModal = (props) => {
                   } else {
                     setCollectionPaymentForm({ ...collectionPaymentForm, tenant: '', tenantId: '', property: '', depositAmount: '', applicationFees: false, appFeesAmount: '', sodeciAmount: '', cie10Amount: '', cie15Amount: '' });
                   }
-                }}
-                required>
-                
-                  <option value="">Select validated client</option>
-                  {tenantList.map((item) => {
-                  const id = item.tenantId ?? item.TenantID ?? item.id ?? '';
-                  const name = item.tenantName || item.TenantName || item.name || item.Name || '';
-                  const property = item.property || item.Property || '';
-                  return (
-                    <option key={id || name} value={id}>
-                        {name} {property ? ` - ${property}` : ''}
-                      </option>);
+                }} />
 
-                })}
-                </select>
               </div>
               <div className="form-group">
                 <label>Property *</label>

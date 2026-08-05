@@ -1735,18 +1735,67 @@ const SalesManagerDashboard = () => {
         const clientId = editingClient.ID ?? editingClient.id;
         if (clientId) {
           try {
-            await salesManagerService.updateClient(clientId, { status: 'Inactive' });
+            // Clear the tenant's own property/unit link too, not just the unit record,
+            // so the tenant profile no longer shows as assigned anywhere.
+            await salesManagerService.updateClient(clientId, { property: '', unitNumber: '', status: 'Inactive' });
           } catch (clientErr) {
-            console.warn('Unit cleared but could not set tenant status to Inactive:', clientErr);
-            addNotification('Tenant removed from unit; could not set status to Inactive.', 'warning');
+            console.warn('Unit cleared but could not fully unlink tenant profile:', clientErr);
+            addNotification('Tenant removed from unit; could not fully clear tenant profile.', 'warning');
           }
         }
       }
+      setEditSelectedPropertyId('');
+      setEditSelectedPropertyAddress('');
+      setEditAssignPropertyId('');
+      setEditAssignUnitId('');
       addNotification('Tenant removed from unit. Apartment is now vacant and tenant status set to Inactive.', 'success');
       setTenantAssignment(null);
       await loadData();
     } catch (err) {
       addNotification(err.message || 'Failed to remove tenant from unit', 'error');
+    } finally {
+      setRemoveFromUnitLoading(false);
+    }
+  };
+
+  // Unassigns a tenant that's linked directly to a standalone property (villa/apartment
+  // tracked via Property.Tenant, not a building PropertyUnit) — the "Remove tenant from this
+  // unit" flow above only covers building units, so this handles the other case: it clears
+  // the tenant's own property/unit link and frees up the property record itself.
+  const handleUnassignFromProperty = async () => {
+    if (!editingClient) return;
+    const clientId = editingClient.ID ?? editingClient.id;
+    if (!clientId) return;
+    setRemoveFromUnitLoading(true);
+    try {
+      await salesManagerService.updateClient(clientId, { property: '', unitNumber: '', status: 'Inactive' });
+
+      if (editSelectedPropertyId) {
+        const propRecord = (editPropertyOptions || []).find((p) => String(p.id ?? p.ID) === String(editSelectedPropertyId));
+        const numberOfUnits = propRecord?.numberOfUnits ?? propRecord?.NumberOfUnits ?? 1;
+        const currentFilled = propRecord?.filledUnits ?? propRecord?.FilledUnits ?? 1;
+        const nextFilled = Math.max(0, currentFilled - 1);
+        const nextStatus = numberOfUnits > 1 && nextFilled > 0 ? propRecord?.status ?? propRecord?.Status ?? 'Occupied' : 'Vacant';
+        try {
+          await salesManagerService.updateProperty(editSelectedPropertyId, {
+            tenant: '',
+            status: nextStatus,
+            filledUnits: nextFilled
+          });
+        } catch (propErr) {
+          console.warn('Tenant unassigned but could not free the property record:', propErr);
+          addNotification('Tenant unassigned; could not mark the property as vacant.', 'warning');
+        }
+      }
+
+      setEditSelectedPropertyId('');
+      setEditSelectedPropertyAddress('');
+      setEditAssignPropertyId('');
+      setEditAssignUnitId('');
+      addNotification('Tenant unassigned from the property. It is now vacant.', 'success');
+      await loadData();
+    } catch (err) {
+      addNotification(err.message || 'Failed to unassign tenant from property', 'error');
     } finally {
       setRemoveFromUnitLoading(false);
     }
@@ -6610,6 +6659,16 @@ const SalesManagerDashboard = () => {
                         {removeFromUnitLoading ? 'Removing…' : 'Remove tenant from this unit'}
                       </button>
                       <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#6b7280' }}>The apartment will be set to vacant and the tenant status to Inactive.</span>
+                    </> :
+                editSelectedPropertyAddress ?
+                <>
+                      <p style={{ margin: '0 0 12px 0', color: '#374151', fontSize: '0.875rem' }}>
+                        Currently assigned to <strong>{editSelectedPropertyAddress}</strong>.
+                      </p>
+                      <button type="button" className="action-button secondary" disabled={removeFromUnitLoading} onClick={handleUnassignFromProperty}>
+                        {removeFromUnitLoading ? 'Unassigning…' : 'Unassign from property'}
+                      </button>
+                      <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#6b7280' }}>The property will be set to vacant and the tenant status to Inactive.</span>
                     </> :
 
                 <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>This tenant is not assigned to any apartment unit.</p>

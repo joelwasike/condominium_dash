@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Link2, Save } from 'lucide-react';
 import { salesManagerService } from '../../services/salesManagerService';
+import SearchableSelect from '../../components/SearchableSelect';
 
 const card = { background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 12px rgba(15, 23, 42, 0.06)', border: '1px solid #f1f5f9' };
 const title = { margin: 0, fontSize: '1.05rem', color: '#0f172a' };
@@ -399,19 +400,14 @@ const LinkFastTab = ({ clients, properties, addNotification, loadData }) => {
                     <td style={{ padding: '14px', color: '#334155' }}>
                       {row.currentTenant || '—'}
                     </td>
-                    <td style={{ padding: '14px' }}>
-                      <select
-                    style={select}
+                    <td style={{ padding: '14px', minWidth: '220px' }}>
+                      <SearchableSelect
+                    options={tenantOptions.map((tenant) => ({ value: tenant.id, label: tenant.label, search: tenant.search }))}
                     value={row.tenantId}
-                    onChange={(e) => updateRow(row.id, { tenantId: e.target.value })}>
-                    
-                        <option value="">Select tenant</option>
-                        {tenantOptions.map((tenant) =>
-                    <option key={tenant.id} value={tenant.id}>
-                            {tenant.label}
-                          </option>
-                    )}
-                      </select>
+                    onChange={(newValue) => updateRow(row.id, { tenantId: newValue })}
+                    placeholder="Select tenant"
+                    searchPlaceholder="Search tenants…" />
+
                     </td>
                     <td style={{ padding: '14px' }}>
                       {row.status === 'occupied' ?
