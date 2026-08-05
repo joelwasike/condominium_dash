@@ -58,28 +58,35 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
   );
 
   const paymentAmount = amount;
+  // Pre-existing advance credit the tenant already banked from an earlier overpayment — this
+  // offsets whatever would otherwise still be "due" for the current period below.
+  const priorAdvance = readMoney(data?.RentPaidAdvance, data?.rentPaidAdvance);
   // `storedRentDue` (RentDue/UnpaidRentAmount/OutstandingAmount) is the tenant's full ledger
   // balance when it's present — already inclusive of the current period — so it must NOT be
   // added to `rentPrice` (the current month's rent, shown for reference on line 3) again below.
   // Only the months-in-arrears estimate (used when no stored figure exists) needs rentPrice
-  // added on top, since it only accounts for prior months.
+  // added on top, and even then only the portion not already covered by prior advance credit —
+  // otherwise a tenant who's already paid ahead would have a fresh month charged against every
+  // later payment, and none of it would ever show up as "Rent paid in advance."
   const usingStoredRentDue = storedRentDue > 0;
   const rentDue = isCollection ?
   0 :
   usingStoredRentDue ?
   storedRentDue :
-  Math.max(0, readMoney(data?.MonthsInArrears, data?.monthsInArrears) * monthlyRent - readMoney(data?.RentPaidAdvance, data?.rentPaidAdvance));
+  Math.max(0, readMoney(data?.MonthsInArrears, data?.monthsInArrears) * monthlyRent - priorAdvance);
 
   const rentPrice = isCollection ? amount : monthlyRent > 0 ? monthlyRent : amount;
-  const rentPaidAdvance = isCollection ?
-  0 :
-  Math.max(0, paymentAmount - (usingStoredRentDue ? rentDue : rentDue + rentPrice));
+  const currentPeriodDue = usingStoredRentDue ? 0 : Math.max(0, rentPrice - priorAdvance);
   const totalDueBeforePayment = isCollection ?
   amount :
 
   data?.TotalDueBeforePayment != null || data?.totalDueBeforePayment != null ?
   readMoney(data?.TotalDueBeforePayment, data?.totalDueBeforePayment) :
-  usingStoredRentDue ? rentDue : rentDue + rentPrice;
+  rentDue + currentPeriodDue;
+
+  const rentPaidAdvance = isCollection ?
+  0 :
+  Math.max(0, paymentAmount - totalDueBeforePayment);
 
   const balanceAfter = isCollection ?
   0 :

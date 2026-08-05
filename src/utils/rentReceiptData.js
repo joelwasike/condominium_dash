@@ -17,9 +17,12 @@ export const findTenantByName = (tenantList, name) => {
 export const buildRentReceiptContext = (tenant, paymentAmount) => {
   const monthlyRent = normalizeMoney(tenant?.monthlyRent ?? tenant?.MonthlyRent ?? tenant?.rent ?? tenant?.Rent);
   const monthsInArrears = normalizeMoney(tenant?.monthsInArrears ?? tenant?.MonthsInArrears);
+  // NOTE: the backend field is `rentPaidAdvance` (no "In") — `rentPaidInAdvance` was never a
+  // real field name, so this lookup always fell through to 0 and any credit the tenant had
+  // already banked from a prior overpayment was silently ignored on every later receipt.
   const priorAdvance = normalizeMoney(
-    tenant?.rentPaidInAdvance ??
-    tenant?.RentPaidInAdvance ??
+    tenant?.rentPaidAdvance ??
+    tenant?.RentPaidAdvance ??
     tenant?.advanceRent ??
     tenant?.AdvanceRent ??
     tenant?.rentInAdvance ??
@@ -37,11 +40,16 @@ export const buildRentReceiptContext = (tenant, paymentAmount) => {
   // balance, which is already the tenant's FULL amount owed — it already includes whatever
   // is due for the current period, not just prior months. Adding `monthlyRent` on top of it
   // double-counts the current month's rent (this is the "3. Rent price" line on the receipt),
-  // inflating the total. The month-count fallback below is the only case that genuinely needs
-  // the current month added on, since it estimates arrears from *past* months only.
+  // inflating the total.
   const usingDirectDue = directDue > 0;
   const arrearsDue = usingDirectDue ? directDue : Math.max(0, monthlyRent * monthsInArrears - priorAdvance);
-  const totalDueBeforePayment = usingDirectDue ? arrearsDue : arrearsDue + monthlyRent;
+  // When there's no outstanding arrears, the tenant may already have advance credit banked
+  // from an earlier overpayment (priorAdvance) — that credit covers part or all of the current
+  // period, so only the remainder (if any) is genuinely still due. Without this, a tenant who's
+  // already paid ahead would have a fresh month's rent charged against every later payment,
+  // and none of it would ever register as "Rent paid in advance."
+  const currentPeriodDue = usingDirectDue ? 0 : Math.max(0, monthlyRent - priorAdvance);
+  const totalDueBeforePayment = usingDirectDue ? arrearsDue : arrearsDue + currentPeriodDue;
   const rentPaidAdvance = Math.max(0, paymentAmount - totalDueBeforePayment);
   const balanceAfterPayment = Math.max(0, totalDueBeforePayment - paymentAmount);
 
