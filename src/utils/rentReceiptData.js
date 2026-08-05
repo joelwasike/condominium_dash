@@ -33,8 +33,15 @@ export const buildRentReceiptContext = (tenant, paymentAmount) => {
     tenant?.balanceToPayEstimate ??
     tenant?.BalanceToPayEstimate
   );
-  const arrearsDue = directDue > 0 ? directDue : Math.max(0, monthlyRent * monthsInArrears - priorAdvance);
-  const totalDueBeforePayment = arrearsDue + monthlyRent;
+  // `directDue` (outstandingAmount / balanceToPayEstimate) comes from the backend's ledger
+  // balance, which is already the tenant's FULL amount owed — it already includes whatever
+  // is due for the current period, not just prior months. Adding `monthlyRent` on top of it
+  // double-counts the current month's rent (this is the "3. Rent price" line on the receipt),
+  // inflating the total. The month-count fallback below is the only case that genuinely needs
+  // the current month added on, since it estimates arrears from *past* months only.
+  const usingDirectDue = directDue > 0;
+  const arrearsDue = usingDirectDue ? directDue : Math.max(0, monthlyRent * monthsInArrears - priorAdvance);
+  const totalDueBeforePayment = usingDirectDue ? arrearsDue : arrearsDue + monthlyRent;
   const rentPaidAdvance = Math.max(0, paymentAmount - totalDueBeforePayment);
   const balanceAfterPayment = Math.max(0, totalDueBeforePayment - paymentAmount);
 

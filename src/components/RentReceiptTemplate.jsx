@@ -58,22 +58,28 @@ const RentReceiptTemplate = ({ data, isCollection = false }) => {
   );
 
   const paymentAmount = amount;
+  // `storedRentDue` (RentDue/UnpaidRentAmount/OutstandingAmount) is the tenant's full ledger
+  // balance when it's present — already inclusive of the current period — so it must NOT be
+  // added to `rentPrice` (the current month's rent, shown for reference on line 3) again below.
+  // Only the months-in-arrears estimate (used when no stored figure exists) needs rentPrice
+  // added on top, since it only accounts for prior months.
+  const usingStoredRentDue = storedRentDue > 0;
   const rentDue = isCollection ?
   0 :
-  storedRentDue > 0 ?
+  usingStoredRentDue ?
   storedRentDue :
   Math.max(0, readMoney(data?.MonthsInArrears, data?.monthsInArrears) * monthlyRent - readMoney(data?.RentPaidAdvance, data?.rentPaidAdvance));
 
   const rentPrice = isCollection ? amount : monthlyRent > 0 ? monthlyRent : amount;
   const rentPaidAdvance = isCollection ?
   0 :
-  Math.max(0, paymentAmount - (rentDue + rentPrice));
+  Math.max(0, paymentAmount - (usingStoredRentDue ? rentDue : rentDue + rentPrice));
   const totalDueBeforePayment = isCollection ?
   amount :
 
   data?.TotalDueBeforePayment != null || data?.totalDueBeforePayment != null ?
   readMoney(data?.TotalDueBeforePayment, data?.totalDueBeforePayment) :
-  rentDue + rentPrice;
+  usingStoredRentDue ? rentDue : rentDue + rentPrice;
 
   const balanceAfter = isCollection ?
   0 :
