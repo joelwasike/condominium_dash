@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { PencilLine, Bell, ShieldCheck, ToggleLeft, ToggleRight, Lock, Mail, Upload, Camera, X } from 'lucide-react';
+import { PencilLine, Bell, ShieldCheck, ToggleLeft, ToggleRight, Lock, Mail, Upload, Camera, X, AlertTriangle } from 'lucide-react';
 import './SettingsPage.css';
 import { profileService } from '../services/profileService';
 import { cloudinaryService } from '../services/cloudinaryService';
+import { agencyDirectorService } from '../services/agencyDirectorService';
+
+const RESET_SCOPE_OPTIONS = [
+  { value: 'accounting', label: 'Accountant dashboard', description: 'Tenant payments, landlord payments, expenses, deposits, collections, cashier accounts' },
+  { value: 'tenants', label: 'All tenants', description: 'Tenant profiles, leases, notes, document checklists' },
+  { value: 'owners', label: 'All owners', description: 'Owner accounts, profiles, and their listed properties' },
+  { value: 'properties', label: 'All properties', description: 'Managed properties, units, and marketplace listings' }
+];
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -32,6 +40,15 @@ const SettingsPage = () => {
     weeklySummary: true,
     darkMode: false
   });
+
+  // Settings → Reset (Agency Director only) — wipes a category of company data.
+  const [resetScope, setResetScope] = useState('');
+  const [resetPreview, setResetPreview] = useState(null);
+  const [resetPreviewLoading, setResetPreviewLoading] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetSubmitting, setResetSubmitting] = useState(false);
 
   const addNotification = (message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -175,6 +192,67 @@ const SettingsPage = () => {
     }
   };
 
+  const isAgencyDirector = (profileForm.role || '').toLowerCase().replace(/\s+/g, '_') === 'agency_director';
+
+  const loadResetPreview = async (scope) => {
+    if (!scope) {
+      setResetPreview(null);
+      return;
+    }
+    setResetPreviewLoading(true);
+    try {
+      const data = await agencyDirectorService.getResetPreview(scope);
+      setResetPreview(data);
+    } catch (error) {
+      console.error('Failed to load reset preview:', error);
+      addNotification(error.message || 'Failed to load what would be reset', 'error');
+      setResetPreview(null);
+    } finally {
+      setResetPreviewLoading(false);
+    }
+  };
+
+  const handleResetScopeChange = (value) => {
+    setResetScope(value);
+    loadResetPreview(value);
+  };
+
+  const openResetConfirm = () => {
+    if (!resetScope) return;
+    setResetPassword('');
+    setResetConfirmText('');
+    setShowResetConfirm(true);
+  };
+
+  const handleConfirmReset = async () => {
+    if (resetConfirmText.trim() !== 'RESET') {
+      addNotification('Type RESET exactly to confirm.', 'error');
+      return;
+    }
+    if (!resetPassword) {
+      addNotification('Enter your password to confirm.', 'error');
+      return;
+    }
+    setResetSubmitting(true);
+    try {
+      const result = await agencyDirectorService.resetData({
+        scope: resetScope,
+        password: resetPassword,
+        confirm: resetConfirmText.trim()
+      });
+      addNotification(`Reset complete — ${result?.total ?? 0} record(s) deleted.`, 'success');
+      setShowResetConfirm(false);
+      setResetPassword('');
+      setResetConfirmText('');
+      loadResetPreview(resetScope);
+    } catch (error) {
+      console.error('Failed to reset data:', error);
+      addNotification(error.message || 'Failed to reset — please try again.', 'error');
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
   const renderTabs = () =>
   <div className="settings-tabs">
       <button
@@ -195,9 +273,19 @@ const SettingsPage = () => {
       type="button"
       className={`settings-tab ${activeTab === 'security' ? 'active' : ''}`}
       onClick={() => setActiveTab('security')}>
-      
+
         Security
       </button>
+      {isAgencyDirector &&
+      <button
+      type="button"
+      className={`settings-tab ${activeTab === 'reset' ? 'active' : ''}`}
+      onClick={() => setActiveTab('reset')}
+      style={activeTab === 'reset' ? undefined : { color: '#dc2626' }}>
+
+          Reset
+        </button>
+      }
     </div>;
 
 
@@ -475,6 +563,131 @@ const SettingsPage = () => {
     </div>;
 
 
+  const renderReset = () =>
+  <div className="settings-card">
+      <div className="settings-card-header compact">
+        <div className="settings-card-title">
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertTriangle size={20} color="#dc2626" /> Reset data
+          </h2>
+          <p>Permanently delete a whole category of your company's data. This cannot be undone.</p>
+        </div>
+      </div>
+
+      <div className="settings-form">
+        <div className="form-field" style={{ maxWidth: '480px' }}>
+          <label>What do you want to reset?</label>
+          <select
+          value={resetScope}
+          onChange={(e) => handleResetScopeChange(e.target.value)}
+          disabled={resetSubmitting}
+          style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.9rem', width: '100%' }}>
+            <option value="">— Select a category —</option>
+            {RESET_SCOPE_OPTIONS.map((opt) =>
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+          )}
+          </select>
+          {resetScope &&
+        <p style={{ margin: '8px 0 0', fontSize: '0.82rem', color: '#6b7280' }}>
+              {RESET_SCOPE_OPTIONS.find((o) => o.value === resetScope)?.description}
+            </p>
+        }
+        </div>
+
+        {resetScope &&
+      <div style={{ marginTop: '20px', padding: '16px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fecaca', maxWidth: '480px' }}>
+            {resetPreviewLoading ?
+        <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem' }}>Checking what would be deleted…</p> :
+        resetPreview && resetPreview.total > 0 ?
+        <>
+                <p style={{ margin: '0 0 8px', fontWeight: 700, color: '#991b1b' }}>
+                  This will permanently delete {resetPreview.total} record{resetPreview.total === 1 ? '' : 's'}:
+                </p>
+                <ul style={{ margin: 0, paddingLeft: '18px', color: '#7f1d1d', fontSize: '0.85rem' }}>
+                  {Object.entries(resetPreview.counts || {}).map(([label, n]) =>
+            <li key={label}>{label}: {n}</li>
+            )}
+                </ul>
+              </> :
+
+        <p style={{ margin: 0, color: '#166534', fontSize: '0.85rem' }}>Nothing to delete — this category is already empty.</p>
+        }
+          </div>
+      }
+
+        <div className="form-actions">
+          <button
+          type="button"
+          className="btn-primary"
+          style={{ background: '#dc2626' }}
+          disabled={!resetScope || resetPreviewLoading || !resetPreview || resetPreview.total === 0}
+          onClick={openResetConfirm}>
+
+            Reset this data
+          </button>
+        </div>
+      </div>
+
+      {showResetConfirm &&
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+      onClick={() => !resetSubmitting && setShowResetConfirm(false)}>
+
+          <div
+        style={{ background: '#fff', borderRadius: '14px', padding: '28px', maxWidth: '440px', width: '90%', boxShadow: '0 12px 40px rgba(0,0,0,0.2)' }}
+        onClick={(e) => e.stopPropagation()}>
+
+            <h3 style={{ margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: '8px', color: '#991b1b' }}>
+              <AlertTriangle size={20} /> Confirm reset
+            </h3>
+            <p style={{ margin: '0 0 16px', color: '#374151', fontSize: '0.9rem' }}>
+              You're about to permanently delete <strong>{resetPreview?.total ?? 0}</strong> record(s) under
+              {' '}<strong>{RESET_SCOPE_OPTIONS.find((o) => o.value === resetScope)?.label}</strong>. This cannot be undone.
+            </p>
+
+            <div className="form-field" style={{ marginBottom: '14px' }}>
+              <label>Type RESET to confirm</label>
+              <input
+            type="text"
+            value={resetConfirmText}
+            onChange={(e) => setResetConfirmText(e.target.value)}
+            placeholder="RESET"
+            disabled={resetSubmitting}
+            style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.9rem', width: '100%', boxSizing: 'border-box' }} />
+
+            </div>
+            <div className="form-field" style={{ marginBottom: '20px' }}>
+              <label>Your password</label>
+              <input
+            type="password"
+            value={resetPassword}
+            onChange={(e) => setResetPassword(e.target.value)}
+            placeholder="Enter your account password"
+            disabled={resetSubmitting}
+            style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.9rem', width: '100%', boxSizing: 'border-box' }} />
+
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" className="btn-secondary" disabled={resetSubmitting} onClick={() => setShowResetConfirm(false)}>
+                Cancel
+              </button>
+              <button
+            type="button"
+            className="btn-primary"
+            style={{ background: '#dc2626' }}
+            disabled={resetSubmitting || resetConfirmText.trim() !== 'RESET' || !resetPassword}
+            onClick={handleConfirmReset}>
+
+                {resetSubmitting ? 'Deleting…' : 'Permanently delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+    }
+    </div>;
+
+
   return (
     <div className="settings-page">
       {notifications.length > 0 &&
@@ -501,6 +714,7 @@ const SettingsPage = () => {
       {activeTab === 'profile' && renderProfileForm()}
       {activeTab === 'preferences' && renderPreferences()}
       {activeTab === 'security' && renderSecurity()}
+      {activeTab === 'reset' && isAgencyDirector && renderReset()}
     </div>);
 
 };

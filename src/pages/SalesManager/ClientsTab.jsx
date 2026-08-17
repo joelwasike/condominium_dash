@@ -14,6 +14,16 @@ const statusPill = (s) => {
   const { bg, c } = m[sl] || { bg: '#f1f5f9', c: '#475569' };
   return { display: 'inline-block', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 600, background: bg, color: c };
 };
+const coveragePillStyle = (status) => {
+  const m = {
+    'up-to-date': { bg: '#dcfce7', c: '#166534' },
+    ahead: { bg: '#dbeafe', c: '#1d4ed8' },
+    arrears: { bg: '#fee2e2', c: '#991b1b' },
+    unavailable: { bg: '#f1f5f9', c: '#94a3b8' }
+  };
+  const { bg, c } = m[status] || m.unavailable;
+  return { display: 'inline-block', padding: '3px 10px', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 600, background: bg, color: c };
+};
 const btnPrimary = { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' };
 const btnOutline = { padding: '8px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 500, fontSize: '0.85rem', cursor: 'pointer' };
 const searchBar = { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', minWidth: '220px' };
@@ -293,6 +303,7 @@ const ClientsTab = ({
     const numberOfMonthsUnpaid = accounting.numberOfMonthsUnpaid ?? null;
     const penaltyToPay = accounting.penaltyToPay ?? null;
     const balanceToPayEstimate = accounting.balanceToPayEstimate ?? null;
+    const monthsCoverage = accounting.monthsCoverage ?? null;
     const name = c.Name || c.name || 'N/A';
 
     const handleAddPrivateNote = async () => {
@@ -444,6 +455,29 @@ const ClientsTab = ({
 	              <div style={dlItem}><div style={dtStyle}>Property</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</div></div>
 	              {unitNumber && unitNumber !== '—' && <div style={dlItem}><div style={dtStyle}>Unit</div><div style={ddStyle}>{unitNumber}</div></div>}
 	              <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={{ ...ddStyle, fontWeight: 700, fontSize: '1.1rem' }}>{Number(amount).toLocaleString()} XOF</div></div>
+	              {monthsCoverage?.label &&
+	              <div style={dlItem}>
+	                  <div style={dtStyle}>Month covered</div>
+	                  <div style={{ marginTop: '2px' }}>
+	                    <span style={coveragePillStyle(monthsCoverage.status)}>{monthsCoverage.label}</span>
+	                  </div>
+	                  {Array.isArray(monthsCoverage.coveredMonths) && monthsCoverage.coveredMonths.length > 1 &&
+	                <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#64748b' }}>
+	                      {monthsCoverage.coveredMonths.join(', ')} covered
+	                    </div>
+	                }
+	                  {Array.isArray(monthsCoverage.unpaidMonths) && monthsCoverage.unpaidMonths.length > 0 &&
+	                <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#991b1b' }}>
+	                      Unpaid: {monthsCoverage.unpaidMonths.join(', ')}
+	                    </div>
+	                }
+	                  {monthsCoverage.partialMonth &&
+	                <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#92400e' }}>
+	                      {monthsCoverage.partialMonth} partially paid — {Number(monthsCoverage.partialPaid || 0).toLocaleString()} of {Number((monthsCoverage.partialPaid || 0) + (monthsCoverage.partialDue || 0)).toLocaleString()} XOF
+	                    </div>
+	                }
+	                </div>
+	              }
 	              {depositPaidAmount != null &&
               <div style={dlItem}>
 	                  <div style={dtStyle}>Deposit paid amount{depositStatus ? ` (${depositStatus})` : ''}</div>

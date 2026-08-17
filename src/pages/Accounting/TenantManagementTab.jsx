@@ -44,6 +44,16 @@ const statusLabel = (ps) => {
     default:return ps || 'Unknown';
   }
 };
+const coveragePillStyle = (status) => {
+  const m = {
+    'up-to-date': { bg: '#dcfce7', c: '#166534' },
+    ahead: { bg: '#dbeafe', c: '#1d4ed8' },
+    arrears: { bg: '#fee2e2', c: '#991b1b' },
+    unavailable: { bg: '#f1f5f9', c: '#94a3b8' }
+  };
+  const { bg, c } = m[status] || m.unavailable;
+  return { display: 'inline-block', padding: '3px 10px', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 600, background: bg, color: c };
+};
 
 const getTenantId = (t) => t?.TenantID ?? t?.tenantId ?? t?.id ?? t?.ID ?? null;
 
@@ -182,6 +192,7 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
   const numberOfMonthsUnpaid = accounting.numberOfMonthsUnpaid ?? null;
   const penaltyToPay = accounting.penaltyToPay ?? null;
   const balanceToPayEstimate = accounting.balanceToPayEstimate ?? null;
+  const monthsCoverage = accounting.monthsCoverage ?? null;
 
   const name = c.Name || c.name || c.TenantName || c.tenantName || 'N/A';
   const email = c.Email || c.email || '';
@@ -376,6 +387,29 @@ const TenantDetailView = ({ selectedTenant, onBack, addNotification }) => {
             <div style={dlItem}><div style={dtStyle}>Property</div><div style={{ ...ddStyle, display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> {propertyAddr}</div></div>
             {unitNumber && unitNumber !== '—' && <div style={dlItem}><div style={dtStyle}>Unit</div><div style={ddStyle}>{unitNumber}</div></div>}
             <div style={dlItem}><div style={dtStyle}>Monthly rent</div><div style={{ ...ddStyle, fontWeight: 700, fontSize: '1.1rem' }}>{Number(amount).toLocaleString()} XOF</div></div>
+            {monthsCoverage?.label &&
+            <div style={dlItem}>
+                <div style={dtStyle}>Month covered</div>
+                <div style={{ marginTop: '2px' }}>
+                  <span style={coveragePillStyle(monthsCoverage.status)}>{monthsCoverage.label}</span>
+                </div>
+                {Array.isArray(monthsCoverage.coveredMonths) && monthsCoverage.coveredMonths.length > 1 &&
+              <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#64748b' }}>
+                    {monthsCoverage.coveredMonths.join(', ')} covered
+                  </div>
+              }
+                {Array.isArray(monthsCoverage.unpaidMonths) && monthsCoverage.unpaidMonths.length > 0 &&
+              <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#991b1b' }}>
+                    Unpaid: {monthsCoverage.unpaidMonths.join(', ')}
+                  </div>
+              }
+                {monthsCoverage.partialMonth &&
+              <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#92400e' }}>
+                    {monthsCoverage.partialMonth} partially paid — {Number(monthsCoverage.partialPaid || 0).toLocaleString()} of {Number((monthsCoverage.partialPaid || 0) + (monthsCoverage.partialDue || 0)).toLocaleString()} XOF
+                  </div>
+              }
+              </div>
+            }
             {depositPaidAmount != null &&
             <div style={dlItem}>
                 <div style={dtStyle}>Deposit paid amount{depositStatus ? ` (${depositStatus})` : ''}</div>
@@ -785,6 +819,7 @@ const TenantManagementTab = ({ loading, addNotification, tenants = [] }) => {
   const getPS = (t) => t.PaymentStatus || t.paymentStatus || '';
   const getLP = (t) => t.LastPaymentDate || t.lastPaymentDate || null;
   const getAmt = (t) => t.MonthlyRent || t.monthlyRent || t.Amount || t.amount || 0;
+  const getMC = (t) => t.MonthsCoverage || t.monthsCoverage || null;
 
   const filtered = tenants.filter((t) => {
     const ps = getPS(t).toLowerCase();
@@ -909,6 +944,7 @@ const TenantManagementTab = ({ loading, addNotification, tenants = [] }) => {
                 <th>Client</th>
                 <th>Property</th>
                 <th>Status</th>
+                <th>Month Covered</th>
                 <th>Last Payment</th>
                 <th>Monthly Rent</th>
                 <th>Contact</th>
@@ -916,13 +952,14 @@ const TenantManagementTab = ({ loading, addNotification, tenants = [] }) => {
             </thead>
             <tbody>
               {loading ?
-              <tr><td colSpan={6} className="sa-table-empty">Loading tenants…</td></tr> :
+              <tr><td colSpan={7} className="sa-table-empty">Loading tenants…</td></tr> :
               filtered.length === 0 ?
-              <tr><td colSpan={6} className="sa-table-empty">No tenants found.</td></tr> :
+              <tr><td colSpan={7} className="sa-table-empty">No tenants found.</td></tr> :
               filtered.map((tenant, idx) => {
                 const id = getTenantId(tenant);
                 const ps = getPS(tenant);
                 const lp = getLP(tenant);
+                const mc = getMC(tenant);
                 return (
                   <tr
                     key={id ?? idx}
@@ -931,7 +968,7 @@ const TenantManagementTab = ({ loading, addNotification, tenants = [] }) => {
                     tabIndex={0}
                     onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();setSelectedTenant(tenant);}}}
                     style={{ cursor: 'pointer' }}>
-                    
+
                     <td>
                       <div className="sa-cell-main">
                         <span className="sa-cell-title">{getName(tenant) || 'N/A'}</span>
@@ -940,6 +977,11 @@ const TenantManagementTab = ({ loading, addNotification, tenants = [] }) => {
                     </td>
                     <td>{getProp(tenant) || 'N/A'}</td>
                     <td><span style={statusPill(ps)}>{statusLabel(ps)}</span></td>
+                    <td>
+                      {mc?.label ?
+                    <span style={coveragePillStyle(mc.status)} title={mc.label}>{mc.label}</span> :
+                    <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>}
+                    </td>
                     <td>{lp ? new Date(lp).toLocaleDateString() : 'N/A'}</td>
                     <td>{getAmt(tenant).toLocaleString()} XOF</td>
                     <td>

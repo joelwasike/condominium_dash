@@ -1,4 +1,4 @@
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG, apiRequest, buildApiUrl } from '../config/api';
 
 const AGENCY_DIRECTOR_BASE_URL = `${API_CONFIG.BASE_URL}/api/agency-director`;
 
@@ -773,5 +773,22 @@ export const agencyDirectorService = {
     if (!response.ok) throw new Error('Failed to fetch monthly comparison');
     const data = await parseJson(response);
     return Array.isArray(data) ? data : data?.monthlyData ?? data?.data ?? [];
+  },
+
+  // Settings → Reset: lists the resettable data categories.
+  getResetScopes: async () => {
+    return apiRequest(buildApiUrl('/api/agency-director/reset'));
+  },
+  // Row-count preview for one category, shown in the confirmation dialog before resetting.
+  getResetPreview: async (scope) => {
+    return apiRequest(buildApiUrl(`/api/agency-director/reset?scope=${encodeURIComponent(scope)}`));
+  },
+  // Permanently deletes every record in `scope` for this company. Requires the director's own
+  // account password plus the literal confirmation text "RESET".
+  resetData: async ({ scope, password, confirm }) => {
+    return apiRequest(buildApiUrl('/api/agency-director/reset'), {
+      method: 'POST',
+      body: JSON.stringify({ scope, password, confirm })
+    });
   }
 };
