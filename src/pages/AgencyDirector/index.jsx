@@ -266,6 +266,11 @@ const AgencyDirectorDashboard = () => {
     return normalized === 'tenant' || normalized === 'client' || normalized === 'resident' || normalized === 'occupant';
   };
 
+  const isLandlordRole = (role) => {
+    const normalized = normalizeRole(role);
+    return normalized === 'landlord' || normalized === 'owner' || normalized === 'propertyowner';
+  };
+
   const getPropertyUnits = (property) => {
     const units = property?.units ?? property?.Units ?? [];
     return Array.isArray(units) ? units : [];
@@ -1274,7 +1279,10 @@ const AgencyDirectorDashboard = () => {
 
   const agencyUsers = useMemo(() => {
     if (!Array.isArray(users)) return [];
-    return users.filter((user) => !isTenantRole(user.Role || user.role));
+    return users.filter((user) => {
+      const role = user.Role || user.role;
+      return !isTenantRole(role) && !isLandlordRole(role);
+    });
   }, [users]);
   const filteredUsers = useMemo(() => {
     if (!agencyUsers || !Array.isArray(agencyUsers)) return [];
