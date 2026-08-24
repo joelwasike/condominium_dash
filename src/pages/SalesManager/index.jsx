@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, Building, Calendar, ClipboardList, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download, ArrowLeft, Mail, Phone, MapPin, DollarSign, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle, Link2 } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, Building, Calendar, ClipboardList, UserPlus, Upload, X, FileText, Filter, Search, Plus, MessageCircle, Settings, Megaphone, FileSpreadsheet, Copy, Check, Download, ArrowLeft, Mail, Phone, MapPin, DollarSign, Wrench, FileCheck, StickyNote, Receipt, MessageSquare, AlertCircle, Link2, ImagePlus } from 'lucide-react';
 import Modal from '../../components/Modal';
 import DocumentUpload from '../../components/DocumentUpload';
 import ContractUpload from '../../components/ContractUpload';
@@ -21,6 +21,7 @@ import LinkFastTab from './LinkFastTab';
 import RequestsTab from './RequestsTab';
 import ClientsTab from './ClientsTab';
 import PropertyManagementTab from './PropertyManagementTab';
+import PropertyPhotosTab from './PropertyPhotosTab';
 import AlertsTab from './AlertsTab';
 import AdvertisementsTab from './AdvertisementsTab';
 import MessagesTab from './MessagesTab';
@@ -1049,6 +1050,7 @@ const SalesManagerDashboard = () => {
     { id: 'sales-tracking', label: 'Sales Tracking', icon: FileText },
     { id: 'clients', label: 'Tenant Management', icon: Users },
     { id: 'property-management', label: 'Property Management', icon: Building },
+    { id: 'property-photos', label: 'Property Photos', icon: ImagePlus },
     { id: 'link-fast', label: 'Link Fast', icon: Link2 },
     { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
     { id: 'advertisements', label: 'Advertisements', icon: Megaphone },
@@ -2499,6 +2501,8 @@ const SalesManagerDashboard = () => {
         return <ClientsTab loading={loading} clients={clients} setClients={setClients} filteredClients={filteredClients} waitingListClients={waitingListClients} unpaidRents={unpaidRents} clientStatusFilter={clientStatusFilter} setClientStatusFilter={setClientStatusFilter} clientPropertyFilter={clientPropertyFilter} setClientPropertyFilter={setClientPropertyFilter} clientSearchText={clientSearchText} setClientSearchText={setClientSearchText} handleEditClient={handleEditClient} handleEditUnpaidRent={handleEditUnpaidRent} setImportMode={setImportMode} setExcelFile={setExcelFile} setShowTenantCreationModal={setShowTenantCreationModal} selectedTenantId={selectedTenantId} setSelectedTenantId={setSelectedTenantId} tenantDetail={tenantDetail} setTenantDetail={setTenantDetail} tenantDetailLoading={tenantDetailLoading} addNotification={addNotification} setEditingClient={setEditingClient} setShowEditClientModal={setShowEditClientModal} />;
       case 'property-management':
         return <PropertyManagementTab properties={properties} owners={owners} loading={loading} pmView={pmView} setPmView={setPmView} pmOwnerId={pmOwnerId} setPmOwnerId={setPmOwnerId} pmOwnerName={pmOwnerName} setPmOwnerName={setPmOwnerName} ownerAssets={ownerAssets} setOwnerAssets={setOwnerAssets} pmPropertyId={pmPropertyId} pmBuildingName={pmBuildingName} buildingDetail={buildingDetail} setBuildingDetail={setBuildingDetail} landDetail={landDetail} setLandDetail={setLandDetail} pmLoading={pmLoading} setPmLoading={setPmLoading} propertyManagementSearch={propertyManagementSearch} setPropertyManagementSearch={setPropertyManagementSearch} setShowAddBuildingModal={setShowAddBuildingModal} setShowAddVillaModal={setShowAddVillaModal} setShowAddLandModal={setShowAddLandModal} setShowAddApartmentModal={setShowAddApartmentModal} setShowEditApartmentModal={setShowEditApartmentModal} setEditingUnit={setEditingUnit} setEditApartmentPictures={setEditApartmentPictures} setEditApartmentStatusChoice={setEditApartmentStatusChoice} setShowViewApartmentModal={setShowViewApartmentModal} setViewingUnit={setViewingUnit} setShowCreatePropertyModal={setShowCreatePropertyModal} setShowPropertyImportModal={setShowPropertyImportModal} setPropertyImportFile={setPropertyImportFile} setSelectedPropertyType={setSelectedPropertyType} propertyCategoryFilter={propertyCategoryFilter} setPropertyCategoryFilter={setPropertyCategoryFilter} setCreatePropertyImages={setCreatePropertyImages} setSelectedPropertyDetail={setSelectedPropertyDetail} openEditPropertyModal={openEditPropertyModal} openScheduleVisit={openScheduleVisit} addNotification={addNotification} loadData={loadData} handleSeeOwner={handleSeeOwner} handleViewBuilding={handleViewBuilding} handleViewVilla={handleViewVilla} handleViewLand={handleViewLand} parseUnitPictures={parseUnitPictures} />;
+      case 'property-photos':
+        return <PropertyPhotosTab properties={properties} addNotification={addNotification} loadData={loadData} />;
       case 'link-fast':
         return <LinkFastTab clients={clients} properties={properties} addNotification={addNotification} loadData={loadData} />;
       case 'alerts':
